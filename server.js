@@ -170,6 +170,8 @@ io.on('connection', (socket) => {
             const isLegendary = catchData.isLegendary || false;
             const isTrophy = catchData.isTrophy || false;
 
+            const tournamentId = catchData.tournamentId || null;
+
             // For special catches (rare, huge, legendary, trophy), broadcast globally to ALL players
             if (isRare || isHuge || isLegendary || isTrophy) {
                 io.emit('special-catch', {
@@ -180,15 +182,17 @@ io.on('connection', (socket) => {
                     isRare: isRare,
                     isHuge: isHuge,
                     isLegendary: isLegendary,
-                    isTrophy: isTrophy
+                    isTrophy: isTrophy,
+                    tournamentId: tournamentId
                 });
             } else {
-                // Regular catches only broadcast to other players
+                // Regular catches only broadcast to other players, but include tournamentId
                 socket.broadcast.emit('fish-caught', {
                     player: player.name,
                     fish: catchData.fish,
                     weight: catchData.weight,
-                    value: catchData.value
+                    value: catchData.value,
+                    tournamentId: tournamentId
                 });
             }
         } catch (error) {
@@ -235,6 +239,19 @@ io.on('connection', (socket) => {
         // Broadcast tournament active to all players
         io.emit('tournament-active', {
             tournamentId: data.tournamentId
+        });
+    });
+
+    socket.on('tournament-end', (data) => {
+        const player = activePlayers.get(socket.id);
+        if (!player) return;
+
+        // Broadcast tournament end to all players
+        io.emit('tournament-end', {
+            tournamentId: data.tournamentId,
+            winner: data.winner,
+            scores: data.scores,
+            catches: data.catches
         });
     });
 

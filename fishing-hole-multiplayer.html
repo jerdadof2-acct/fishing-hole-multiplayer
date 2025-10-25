@@ -1743,6 +1743,35 @@
 
                     this.socket.on('fish-caught', (data) => {
                         this.addChatMessage('other', `${data.player} caught a ${data.fish.name} (${data.weight.toFixed(1)} lbs)!`);
+                        
+                        // Update tournament scores if this is a tournament catch
+                        if (data.tournamentId && this.tournament && this.tournament.tournamentId === data.tournamentId) {
+                            if (!this.tournament.scores[data.player]) {
+                                this.tournament.scores[data.player] = {
+                                    totalWeight: 0,
+                                    fishCount: 0,
+                                    biggestCatch: 0
+                                };
+                                this.tournament.catches[data.player] = [];
+                            }
+                            
+                            this.tournament.scores[data.player].totalWeight += data.weight;
+                            this.tournament.scores[data.player].fishCount++;
+                            if (data.weight > this.tournament.scores[data.player].biggestCatch) {
+                                this.tournament.scores[data.player].biggestCatch = data.weight;
+                            }
+                            
+                            this.tournament.catches[data.player].push({
+                                fish: data.fish.name,
+                                weight: data.weight,
+                                timestamp: Date.now()
+                            });
+                            
+                            // Update tournament display if active
+                            if (this.tournament.phase === 'active') {
+                                this.updateTournamentDisplay();
+                            }
+                        }
                     });
 
                     this.socket.on('special-catch', (data) => {
@@ -1787,11 +1816,12 @@
                         // Only create tournament for other players (not if we already have one)
                         if (!this.tournament) {
                             // Create a read-only tournament instance for viewing
+                            // Use the same startTime so countdown matches
                             this.tournament = {
                                 active: true,
                                 phase: 'joining',
                                 participants: data.participants || [],
-                                startTime: Date.now(),
+                                startTime: Date.now() - (data.elapsedTime || 0), // Match the host's countdown
                                 duration: 5 * 60 * 1000, // 5 minutes
                                 joinPeriod: 60 * 1000, // 60 seconds to join
                                 scores: {},
@@ -1833,6 +1863,25 @@
                             this.updateTournamentDisplay();
                             this.showGlobalAnnouncement('🎣 TOURNAMENT FISHING HAS BEGUN! 🎣', '#00ff00');
                             this.addChatMessage('system', '🎣 TOURNAMENT FISHING HAS BEGUN! Good luck!');
+                        }
+                    });
+
+                    this.socket.on('tournament-end', (data) => {
+                        // Update tournament scores and show results for viewers
+                        if (this.tournament && this.tournament.tournamentId === data.tournamentId) {
+                            this.tournament.scores = data.scores;
+                            this.tournament.catches = data.catches;
+                            this.tournament.phase = 'ended';
+                            
+                            // Show results
+                            this.showTournamentResults();
+                            this.addChatMessage('system', `Tournament ended! Winner: ${data.winner} with ${Math.max(...Object.values(data.scores).map(s => s.totalWeight)).toFixed(2)} lbs!`);
+                            
+                            // Clear tournament after showing results
+                            setTimeout(() => {
+                                this.tournament = null;
+                                this.updateTournamentDisplay();
+                            }, 10000);
                         }
                     });
 
@@ -3217,7 +3266,8 @@
                         isRare: isRare,
                         isHuge: isHuge,
                         isLegendary: isLegendary,
-                        isTrophy: isTrophy
+                        isTrophy: isTrophy,
+                        tournamentId: this.tournament && this.tournament.active ? this.tournament.tournamentId : null
                     });
                 }
                 
@@ -3473,7 +3523,8 @@
                 if (this.socket && this.connected) {
                     this.socket.emit('tournament-start', {
                         tournamentId: this.tournament.tournamentId,
-                        participants: this.tournament.participants
+                        participants: this.tournament.participants,
+                        elapsedTime: Date.now() - this.tournament.startTime
                     });
                 }
                 
@@ -3554,6 +3605,16 @@
                 
                 this.addChatMessage('system', `Tournament ended! Winner: ${winner} with ${highestWeight.toFixed(2)} lbs!`);
                 this.addChatMessage('system', '🎣 Returning to normal fishing mode - your equipment and stats are active again!');
+                
+                // Broadcast tournament end to all players
+                if (this.socket && this.connected) {
+                    this.socket.emit('tournament-end', {
+                        tournamentId: this.tournament.tournamentId,
+                        winner: winner,
+                        scores: this.tournament.scores,
+                        catches: this.tournament.catches
+                    });
+                }
                 
                 // Show tournament results
                 this.showTournamentResults();
