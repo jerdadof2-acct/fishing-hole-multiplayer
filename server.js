@@ -20,9 +20,13 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // PostgreSQL connection pool
+const dbUrl = process.env.DATABASE_URL;
+console.log('DATABASE_URL exists:', !!dbUrl);
+console.log('DATABASE_URL starts with:', dbUrl ? dbUrl.substring(0, 20) : 'N/A');
+
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('railway') ? { rejectUnauthorized: false } : false
+    connectionString: dbUrl,
+    ssl: dbUrl?.includes('railway') || dbUrl?.includes('postgres') ? { rejectUnauthorized: false } : false
 });
 
 // Handle connection errors gracefully
@@ -32,7 +36,16 @@ pool.on('error', (err) => {
 
 // Initialize database tables
 async function initDatabase() {
+    if (!dbUrl) {
+        console.log('No DATABASE_URL found, skipping database initialization');
+        return;
+    }
+    
     try {
+        // Test connection first
+        await pool.query('SELECT NOW()');
+        console.log('Database connection successful');
+        
         await pool.query(`
             CREATE TABLE IF NOT EXISTS players (
                 id SERIAL PRIMARY KEY,
