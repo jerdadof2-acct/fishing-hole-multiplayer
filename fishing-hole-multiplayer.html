@@ -1,0 +1,4048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fishing Hole - Multiplayer BBS Style</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .main-area {
+            display: flex;
+            flex-direction: column;
+            background: #000;
+            border: 2px solid #00ff00;
+        }
+
+        .game-layout {
+            display: flex;
+            flex: 1;
+            gap: 10px;
+        }
+
+        .left-sidebar, .right-sidebar {
+            width: 250px;
+            background: #000;
+            border: 2px solid #00ff00;
+            padding: 10px;
+            overflow-y: auto;
+        }
+
+        .center-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-section {
+            background: #000;
+            border-top: 2px solid #00ff00;
+            padding: 10px;
+        }
+
+        .header {
+            background: #001100;
+            padding: 10px;
+            text-align: center;
+            border-bottom: 2px solid #00ff00;
+        }
+
+        .header h1 {
+            color: #00ff00;
+            font-size: 1.8rem;
+            text-shadow: 0 0 10px #00ff00;
+        }
+
+        .login-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .login-box {
+            background: #001100;
+            border: 2px solid #00ff00;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 0 20px #00ff00;
+        }
+
+        .login-box h2 {
+            color: #00ff00;
+            margin-bottom: 20px;
+        }
+
+        .login-input {
+            background: #000;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 10px;
+            margin: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+        }
+
+        .login-input::placeholder {
+            color: #004400;
+        }
+
+        .login-btn {
+            background: #000;
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+        }
+
+        .login-btn:hover {
+            background: #00ff00;
+            color: #000;
+        }
+
+        .fishing-area {
+            flex: 1;
+            position: relative;
+            background: linear-gradient(180deg, #001122 0%, #002244 50%, #003366 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            min-height: 0; /* Allow flex shrinking */
+        }
+
+        .fisherman-row {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            max-width: 100%;
+            margin-bottom: 10px;
+            padding: 0 20px;
+            flex-shrink: 0;
+        }
+
+        .fishing-lake {
+            width: calc(100% - 40px);
+            max-width: calc(100vw - 600px); /* Account for sidebars + padding */
+            height: calc(100vh - 300px); /* Account for header, controls, chat */
+            min-height: 400px;
+            max-height: 600px;
+            background: 
+                radial-gradient(ellipse at center, #004488 0%, #002244 70%, #001122 100%),
+                repeating-linear-gradient(
+                    0deg,
+                    rgba(0, 100, 200, 0.1) 0px,
+                    rgba(0, 150, 255, 0.2) 2px,
+                    rgba(0, 100, 200, 0.1) 4px
+                );
+            border: 3px solid #00ff00;
+            position: relative;
+            overflow: visible;
+            box-shadow: 
+                0 0 20px rgba(0, 255, 0, 0.3), 
+                inset 0 0 50px rgba(0, 100, 200, 0.5),
+                inset 0 10px 100px rgba(0, 200, 255, 0.3);
+            animation: waterShimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes waterShimmer {
+            0%, 100% {
+                background-position: 0% 0%, 0 0;
+            }
+            50% {
+                background-position: 0% 0%, 0 20px;
+            }
+        }
+
+        .fisherman {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid #00ff00;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.8);
+            color: #00ff00;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .fisherman-initial {
+            font-size: 14px;
+            line-height: 1;
+        }
+
+        .fisherman-name {
+            font-size: 8px;
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 35px;
+        }
+
+        .fisherman.you {
+            background: #00ff00;
+            color: #000;
+            border-color: #00ff00;
+        }
+
+        .fisherman.other {
+            background: #004488;
+            color: #00ff00;
+            border-color: #00ff00;
+        }
+
+        .fisherman.fishing {
+            animation: fishingBob 2s ease-in-out infinite;
+        }
+
+        @keyframes fishingBob {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .fishing-line {
+            position: absolute;
+            width: 2px;
+            background: #8B4513;
+            z-index: 5;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .fishing-line.casting {
+            animation: lineCast 2s ease-in-out infinite;
+        }
+
+        @keyframes lineCast {
+            0%, 100% { transform: rotate(-1deg); }
+            50% { transform: rotate(1deg); }
+        }
+
+        .hook {
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            width: 8px;
+            height: 8px;
+            background: #C0C0C0;
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            transform: translateX(-50%);
+        }
+
+        .fishing-line {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 2px;
+            height: 0;
+            background: #8B4513;
+            transform: translateX(-50%);
+            transition: height 0.5s ease;
+            z-index: 5;
+        }
+
+        .fishing-line.casting {
+            height: 100px;
+            animation: lineBob 2s ease-in-out infinite;
+        }
+
+        @keyframes lineBob {
+            0%, 100% { transform: translateX(-50%) rotate(-1deg); }
+            50% { transform: translateX(-50%) rotate(1deg); }
+        }
+
+        .hook {
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            width: 12px;
+            height: 12px;
+            background: #C0C0C0;
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            transform: translateX(-50%);
+        }
+
+        .hook-splash {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            pointer-events: none;
+            transform: translateX(-50%);
+            z-index: 5;
+        }
+
+        .hook-splash::before,
+        .hook-splash::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(135, 206, 250, 0.6) 0%, rgba(135, 206, 250, 0) 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: splashRipple 1.2s infinite ease-out;
+        }
+
+        .hook-splash::before {
+            width: 15px;
+            height: 15px;
+            animation-delay: 0s;
+        }
+
+        .hook-splash::after {
+            width: 25px;
+            height: 25px;
+            animation-delay: 0.2s;
+        }
+
+        .hook-landing-splash {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 6;
+        }
+
+        .hook-landing-splash::before,
+        .hook-landing-splash::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            border: 3px solid rgba(200, 230, 255, 0.7);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: landingSplash 1.2s ease-out forwards;
+            box-shadow: 0 0 20px rgba(200, 230, 255, 0.5);
+        }
+
+        .hook-landing-splash::before {
+            width: 30px;
+            height: 30px;
+            animation-delay: 0s;
+        }
+
+        .hook-landing-splash::after {
+            width: 50px;
+            height: 50px;
+            animation-delay: 0.15s;
+        }
+
+        .hook-landing-splash .splash-wave {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid rgba(200, 230, 255, 0.7);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: landingSplash 1.2s ease-out forwards;
+            box-shadow: 0 0 20px rgba(200, 230, 255, 0.5);
+            width: 70px;
+            height: 70px;
+            animation-delay: 0.3s;
+        }
+
+        @keyframes landingSplash {
+            0% {
+                width: 10px;
+                height: 10px;
+                opacity: 1;
+                border-width: 3px;
+            }
+            50% {
+                opacity: 0.7;
+                border-width: 2px;
+            }
+            100% {
+                width: 80px;
+                height: 80px;
+                opacity: 0;
+                border-width: 0px;
+            }
+        }
+
+        @keyframes splashRipple {
+            0% {
+                width: 8px;
+                height: 8px;
+                opacity: 0.8;
+            }
+            30% {
+                opacity: 0.6;
+            }
+            100% {
+                width: 35px;
+                height: 35px;
+                opacity: 0;
+            }
+        }
+
+        .ripples {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .ripple {
+            position: absolute;
+            border: 2px solid rgba(135, 206, 250, 0.4);
+            border-radius: 50%;
+            animation: ripple 4s ease-in-out infinite;
+            box-shadow: 0 0 10px rgba(135, 206, 250, 0.3);
+        }
+
+        .mouse-ripple {
+            position: absolute;
+            border: 3px solid rgba(200, 230, 255, 0.6);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: mouseRipple 1.5s ease-out forwards;
+            box-shadow: 0 0 15px rgba(200, 230, 255, 0.5);
+        }
+
+        @keyframes ripple {
+            0% {
+                transform: scale(0);
+                opacity: 0.8;
+                border-width: 2px;
+            }
+            50% {
+                opacity: 0.4;
+                border-width: 1px;
+            }
+            100% {
+                transform: scale(2.5);
+                opacity: 0;
+                border-width: 0px;
+            }
+        }
+
+        @keyframes mouseRipple {
+            0% {
+                transform: scale(0);
+                opacity: 0.8;
+                border-width: 3px;
+            }
+            50% {
+                opacity: 0.5;
+                border-width: 2px;
+            }
+            100% {
+                transform: scale(3);
+                opacity: 0;
+                border-width: 0px;
+            }
+        }
+
+        .controls {
+            background: #001100;
+            padding: 15px;
+            text-align: center;
+            border-top: 2px solid #00ff00;
+            flex-shrink: 0; /* Prevent controls from shrinking */
+            z-index: 10; /* Ensure controls stay visible */
+        }
+
+        .btn {
+            background: #000;
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            padding: 8px 16px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            background: #00ff00;
+            color: #000;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn.casting {
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+
+        .section {
+            margin-bottom: 20px;
+            border: 1px solid #004400;
+            padding: 10px;
+        }
+
+        .section h3 {
+            color: #00ff00;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .player-info {
+            font-size: 16px;
+            background: #001100;
+            padding: 15px;
+            border: 3px solid #00ff00;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+
+        .stat-line {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+            font-weight: bold;
+        }
+
+        .stat-line:last-child {
+            border-bottom: none;
+        }
+
+        .stat-line span {
+            color: #00ffff;
+            font-weight: bold;
+        }
+
+        .player-stats {
+            background: #001100;
+            padding: 15px;
+            border: 3px solid #00ff00;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+
+        .player-stats .stat-line {
+            margin: 6px 0;
+            padding: 4px 0;
+        }
+
+        .player-stats .stat-line span {
+            color: #ffff00;
+            font-weight: bold;
+        }
+
+        .achievements {
+            background: #001100;
+            padding: 15px;
+            border: 3px solid #00ff00;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+
+        .achievement-item {
+            margin: 8px 0;
+            padding: 5px;
+            background: #002200;
+            border: 1px solid #00ff00;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .achievement-item.locked {
+            opacity: 0.5;
+            color: #666;
+        }
+
+        .leaderboard {
+            background: #001100;
+            padding: 15px;
+            border: 3px solid #00ff00;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+
+        .leaderboard-category {
+            margin-bottom: 20px;
+        }
+
+        .leaderboard-category:last-child {
+            margin-bottom: 0;
+        }
+
+        .leaderboard-category h4 {
+            color: #00ff00;
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            text-align: center;
+            border-bottom: 1px solid #00ff00;
+            padding-bottom: 5px;
+        }
+
+        .leaderboard-list {
+            min-height: 60px;
+        }
+
+        .leaderboard-item {
+            margin: 4px 0;
+            padding: 6px 8px;
+            border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+            font-size: 12px;
+            background: #002200;
+            border-radius: 3px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .leaderboard-item:first-child {
+            color: #ffd700;
+            font-weight: bold;
+            background: #003300;
+        }
+
+        .leaderboard-item:nth-child(2) {
+            color: #c0c0c0;
+        }
+
+        .leaderboard-item:nth-child(3) {
+            color: #cd7f32;
+        }
+
+        .leaderboard-item .rank {
+            background: #00ff00;
+            color: #000;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 10px;
+            margin-right: 8px;
+        }
+
+        .leaderboard-item .player-name {
+            flex: 1;
+            color: #00ffff;
+        }
+
+        .leaderboard-item .weight {
+            color: #ffff00;
+            font-weight: bold;
+        }
+
+        .tournament-info {
+            background: #001100;
+            padding: 15px;
+            border: 3px solid #00ff00;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+
+        .inventory-tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        .inventory-tabs .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: #002200;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .inventory-tabs .tab-btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+
+        .inventory-tabs .tab-btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+
+        .inventory-tabs .tab-btn.active {
+            background: #00ff00;
+            color: #000;
+        }
+
+        .catch-item {
+            background: #002200;
+            border: 1px solid #00ff00;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .fish-name {
+            font-weight: bold;
+            color: #00ffff;
+            font-size: 16px;
+        }
+
+        .fish-details {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+        }
+
+        .fish-details span {
+            color: #00ff00;
+        }
+
+        .weight {
+            color: #ffff00 !important;
+        }
+
+        .value {
+            color: #00ff00 !important;
+        }
+
+        .location {
+            color: #00ffff !important;
+        }
+
+        .time {
+            color: #888 !important;
+        }
+
+        .rank {
+            background: #00ff00;
+            color: #000;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .stat-item {
+            background: #002200;
+            border: 1px solid #00ff00;
+            border-radius: 4px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-label {
+            color: #00ff00;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            color: #00ffff;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+        }
+
+        .game-status {
+            background: #001100;
+            padding: 15px;
+            border: 3px solid #00ff00;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+
+        .status-item {
+            margin: 6px 0;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+            font-size: 12px;
+        }
+
+        .status-item span {
+            color: #00ffff;
+            font-weight: bold;
+        }
+
+        .online-players {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .player-item {
+            padding: 2px 5px;
+            margin: 2px 0;
+            background: #001100;
+            border-left: 3px solid #00ff00;
+        }
+
+        .player-item.fishing {
+            border-left-color: #00ffff;
+        }
+
+        .chat-area {
+            height: 200px;
+            overflow-y: auto;
+            background: #000;
+            border: 1px solid #004400;
+            padding: 5px;
+            margin-bottom: 10px;
+        }
+
+        .chat-message {
+            margin: 2px 0;
+            font-size: 11px;
+        }
+
+        .chat-message.system {
+            color: #ffff00;
+        }
+
+        .chat-message.own {
+            color: #00ffff;
+        }
+
+        .chat-message.other {
+            color: #00ff00;
+        }
+
+        .chat-message.legendary {
+            color: #ff00ff;
+            font-weight: bold;
+            text-shadow: 0 0 5px #ff00ff;
+            animation: legendaryGlow 2s infinite;
+        }
+
+        .chat-message.rare {
+            color: #00ffff;
+            font-weight: bold;
+            text-shadow: 0 0 5px #00ffff;
+        }
+
+        .chat-message.huge {
+            color: #ffff00;
+            font-weight: bold;
+            text-shadow: 0 0 5px #ffff00;
+        }
+
+        @keyframes legendaryGlow {
+            0%, 100% { text-shadow: 0 0 5px #ff00ff; }
+            50% { text-shadow: 0 0 15px #ff00ff, 0 0 25px #ff00ff; }
+        }
+
+        .chat-input {
+            width: 100%;
+            background: #000;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .tournament-info {
+            background: #001100;
+            border: 1px solid #ffff00;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .tournament-info h4 {
+            color: #ffff00;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        .tournament-timer {
+            text-align: center;
+            font-size: 14px;
+            color: #ffff00;
+        }
+
+        .leaderboard {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 2px 5px;
+            margin: 1px 0;
+            background: #001100;
+        }
+
+        .leaderboard-item.current {
+            background: #004400;
+        }
+
+        .catch-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #000;
+            border: 2px solid #00ff00;
+            padding: 20px;
+            text-align: center;
+            z-index: 15;
+            display: none;
+            box-shadow: 0 0 20px #00ff00;
+        }
+
+        .catch-message.show {
+            display: block;
+            animation: flash 0.5s ease-out;
+        }
+
+        @keyframes flash {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .fishing-status {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border: 1px solid #00ff00;
+        }
+
+        .location-selector {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+
+        .location-btn {
+            background: #000;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 5px 10px;
+            margin: 2px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+        }
+
+        .location-btn:hover {
+            background: #00ff00;
+            color: #000;
+        }
+
+        .location-btn.active {
+            background: #00ff00;
+            color: #000;
+        }
+
+        .location-btn.locked {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .location-dropdown {
+            margin: 10px 0;
+        }
+
+        .location-dropdown select {
+            width: 100%;
+            padding: 8px;
+            background: #001100;
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .location-dropdown select option {
+            background: #001100;
+            color: #00ff00;
+            padding: 5px;
+        }
+
+        .location-dropdown select option:disabled {
+            color: #666;
+            background: #333;
+        }
+
+        /* Tackle Shop Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .modal-content {
+            background-color: #001100;
+            margin: 5% auto;
+            padding: 0;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            background: #002200;
+            padding: 15px;
+            border-bottom: 2px solid #00ff00;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #00ff00;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+        }
+
+        .close-btn:hover {
+            color: #ffff00;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .shop-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #00ff00;
+        }
+
+        .tab-btn {
+            background: #001100;
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            border-bottom: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .tab-btn:hover {
+            background: #002200;
+        }
+
+        .tab-btn.active {
+            background: #00ff00;
+            color: #000;
+        }
+
+        .shop-content {
+            min-height: 300px;
+        }
+
+        .tackle-item {
+            background: #001100;
+            border: 2px solid #00ff00;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .tackle-item.equipped {
+            border-color: #ffff00;
+            background: #002200;
+        }
+
+        .tackle-item.locked {
+            border-color: #666;
+            background: #333;
+            color: #666;
+        }
+
+        .tackle-info {
+            flex: 1;
+        }
+
+        .tackle-name {
+            font-weight: bold;
+            color: #00ff00;
+            margin-bottom: 5px;
+        }
+
+        .tackle-item.locked .tackle-name {
+            color: #666;
+        }
+
+        .tackle-stats {
+            font-size: 12px;
+            color: #ccc;
+            margin-bottom: 5px;
+        }
+
+        .tackle-description {
+            font-size: 11px;
+            color: #999;
+            font-style: italic;
+        }
+
+        .tackle-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .tackle-btn {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .tackle-btn:hover {
+            background: #ffff00;
+        }
+
+        .tackle-btn:disabled {
+            background: #666;
+            color: #999;
+            cursor: not-allowed;
+        }
+
+        .tackle-btn.equip {
+            background: #ffff00;
+            color: #000;
+        }
+
+        .tackle-btn.buy {
+            background: #00ff00;
+            color: #000;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1400px) {
+            .fishing-lake {
+                max-width: calc(100vw - 550px);
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .left-sidebar, .right-sidebar {
+                width: 200px;
+            }
+            
+            .fishing-lake {
+                max-width: calc(100vw - 450px);
+            }
+        }
+
+        @media (max-width: 992px) {
+            .game-layout {
+                flex-direction: column;
+            }
+            
+            .left-sidebar, .right-sidebar {
+                width: 100%;
+                max-height: 200px;
+            }
+            
+            .fishing-lake {
+                max-width: 100%;
+                width: calc(100% - 40px);
+            }
+        }
+
+        @media (max-height: 800px) {
+            .fishing-lake {
+                height: calc(100vh - 250px);
+                min-height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="main-area">
+            <div class="header">
+                <h1>FISHING HOLE - MULTIPLAYER</h1>
+            </div>
+
+            <div class="game-layout">
+                <!-- Left Sidebar -->
+                <div class="left-sidebar">
+                    <div class="section">
+                        <h3>PLAYER INFO</h3>
+                        <div class="player-info" id="player-info">
+                            <div class="stat-line">Name: <span id="player-name">Guest</span></div>
+                            <div class="stat-line">Level: <span id="player-level">1</span></div>
+                            <div class="stat-line">Exp: <span id="player-exp">0</span> / <span id="next-level-exp">100</span></div>
+                            <div class="stat-line">Money: $<span id="player-money">100</span></div>
+                            <div class="stat-line">Fish: <span id="fish-caught">0</span></div>
+                            <div class="stat-line">Weight: <span id="total-weight">0</span> lbs</div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h3>PLAYER STATS</h3>
+                        <div class="player-stats" id="player-stats">
+                            <div class="stat-line">Accuracy: <span id="stat-accuracy">50</span>/100</div>
+                            <div class="stat-line">Luck: <span id="stat-luck">50</span>/100</div>
+                            <div class="stat-line">Patience: <span id="stat-patience">50</span>/100</div>
+                            <div class="stat-line">Strength: <span id="stat-strength">50</span>/100</div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h3>ACHIEVEMENTS</h3>
+                        <div class="achievements" id="achievements">
+                            <div class="achievement-item">🎣 Novice Angler</div>
+                            <div class="achievement-item locked">🐟 Big Fish Hunter</div>
+                            <div class="achievement-item locked">💎 Rare Collector</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Center Game Area -->
+                <div class="center-area">
+                    <div class="fishing-area">
+                        <div class="fisherman-row" id="fisherman-row">
+                            <!-- Fishermen will be added here -->
+                        </div>
+                        <div class="fishing-lake" id="fishing-lake">
+                            <div class="ripples" id="ripples"></div>
+                        </div>
+
+                        <div class="fishing-status">
+                            <div>Location: <span id="current-location">Lake Shore</span></div>
+                            <div>Difficulty: <span id="location-difficulty">Easy</span></div>
+                            <div>Cost: $<span id="location-cost">0</span></div>
+                        </div>
+
+                        <div class="location-dropdown">
+                            <select id="location-select" onchange="game.changeLocation(this.value)">
+                                <!-- Locations will be dynamically added here -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="controls">
+                        <button class="btn" id="cast-btn">CAST LINE (SPACEBAR)</button>
+                        <button class="btn" id="shop-btn">TACKLE SHOP</button>
+                        <button class="btn" id="tournament-btn">TOURNAMENT</button>
+                        <button class="btn" id="inventory-btn">INVENTORY</button>
+                        <button class="btn" id="save-btn">SAVE GAME</button>
+                        <button class="btn" id="export-btn">EXPORT SAVE</button>
+                        <input type="file" id="import-input" accept=".json" style="display: none;">
+                        <button class="btn" id="import-btn">IMPORT SAVE</button>
+                        <button class="btn" id="sound-btn">🔊 SOUND ON</button>
+                    </div>
+                </div>
+
+                <!-- Right Sidebar -->
+                <div class="right-sidebar">
+                    <div class="section">
+                        <h3>ONLINE PLAYERS</h3>
+                        <div class="online-players" id="online-players">
+                            <!-- Players will be added here -->
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h3>LEADERBOARD</h3>
+                        <div class="leaderboard" id="leaderboard">
+                            <div class="leaderboard-category">
+                                <h4>🏆 BIGGEST FISH</h4>
+                                <div class="leaderboard-list" id="biggest-fish-leaderboard">
+                                    <div class="leaderboard-item">Loading...</div>
+                                </div>
+                            </div>
+                            <div class="leaderboard-category">
+                                <h4>🎣 BIGGEST BAGS</h4>
+                                <div class="leaderboard-list" id="biggest-bags-leaderboard">
+                                    <div class="leaderboard-item">Loading...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h3>TOURNAMENT INFO</h3>
+                        <div class="tournament-info" id="tournament-info">
+                            <div>No active tournament</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Section -->
+            <div class="chat-section">
+                <div class="section">
+                    <h3>CHAT</h3>
+                    <div class="chat-area" id="chat-area">
+                        <div class="chat-message system">Welcome to Fishing Hole!</div>
+                    </div>
+                    <div class="chat-input-container">
+                        <input type="text" id="chat-input" placeholder="Type a message...">
+                    </div>
+                </div>
+                <div class="section">
+                    <h3>GAME STATUS</h3>
+                    <div class="game-status" id="game-status">
+                        <div class="status-item">Auto-save: <span id="auto-save-status">Active</span></div>
+                        <div class="status-item">Last Save: <span id="last-save-time">Never</span></div>
+                        <div class="status-item">Data Size: <span id="data-size">0 KB</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inventory Modal -->
+            <div class="modal" id="inventory-modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>INVENTORY</h2>
+                        <button class="close-btn" id="close-inventory">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="inventory-tabs">
+                            <button class="tab-btn active" data-tab="recent">Recent Catches</button>
+                            <button class="tab-btn" data-tab="biggest">Biggest Fish</button>
+                            <button class="tab-btn" data-tab="stats">Statistics</button>
+                        </div>
+                        <div class="inventory-content" id="inventory-content">
+                            <!-- Content will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tackle Shop Modal -->
+            <div class="modal" id="tackle-shop-modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>🎣 TACKLE SHOP</h2>
+                        <button class="close-btn" id="close-shop">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="shop-tabs">
+                            <button class="tab-btn active" data-tab="rods">RODS</button>
+                            <button class="tab-btn" data-tab="reels">REELS</button>
+                            <button class="tab-btn" data-tab="lines">LINES</button>
+                            <button class="tab-btn" data-tab="hooks">HOOKS</button>
+                            <button class="tab-btn" data-tab="baits">BAITS</button>
+                        </div>
+                        <div class="shop-content" id="shop-content">
+                            <!-- Content will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="catch-message" id="catch-message">
+                <div id="catch-text"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="login-screen" id="login-screen">
+        <div class="login-box">
+            <h2>FISHING HOLE LOGIN</h2>
+            <input type="text" class="login-input" id="player-name-input" placeholder="Enter your name" value="Jerry">
+            <br>
+            <button class="login-btn" id="login-btn">ENTER FISHING HOLE</button>
+        </div>
+    </div>
+
+    <script>
+        class FishingHoleMultiplayer {
+            constructor() {
+                this.player = {
+                    name: 'Guest',
+                    level: 1,
+                    money: 100,
+                    experience: 0,
+                    totalCaught: 0,
+                    totalWeight: 0,
+                    biggestCatch: 0,
+                    locationUnlocks: [0, 1], // Start with first two locations unlocked
+                    tackleUnlocks: {
+                        rods: [0], // Basic Rod unlocked
+                        reels: [0], // Basic Reel unlocked
+                        lines: [0], // Basic Line unlocked
+                        hooks: [0], // Basic Hook unlocked
+                        baits: [0]  // Basic Bait unlocked
+                    },
+                    gear: {
+                        rod: 'Basic Rod',
+                        reel: 'Basic Reel',
+                        line: 'Monofilament',
+                        hook: 'Basic Hook',
+                        bait: 'Basic Bait'
+                    },
+                    stats: {
+                        accuracy: 50,
+                        luck: 50,
+                        patience: 50,
+                        strength: 50
+                    },
+                    achievements: [],
+                    recentCatches: [],
+                    top10BiggestFish: [], // Always keep track of top 10 biggest fish ever caught
+                    seasonalCatches: {
+                        spring: { caught: 0, biggest: 0 },
+                        summer: { caught: 0, biggest: 0 },
+                        fall: { caught: 0, biggest: 0 },
+                        winter: { caught: 0, biggest: 0 }
+                    },
+                    tournamentStats: {
+                        tournamentsPlayed: 0,
+                        tournamentsWon: 0,
+                        biggestTournamentFish: 0,
+                        biggestTournamentBag: 0,
+                        totalTournamentWeight: 0,
+                        totalTournamentFish: 0
+                    }
+                };
+
+                this.locations = [
+                    // Freshwater Locations
+                    { name: 'Lake Shore', difficulty: 'Easy', fish: [0, 1, 2], cost: 0, unlockLevel: 1, description: 'Perfect for beginners' },
+                    { name: 'River Bend', difficulty: 'Easy', fish: [0, 1, 2, 3], cost: 0, unlockLevel: 2, description: 'Gentle flowing waters' },
+                    { name: 'Deep Lake', difficulty: 'Medium', fish: [2, 3, 4, 5], cost: 50, unlockLevel: 3, description: 'Deep waters with bigger fish' },
+                    { name: 'Mountain Stream', difficulty: 'Medium', fish: [3, 4, 5, 6], cost: 75, unlockLevel: 5, description: 'Cold mountain waters' },
+                    { name: 'Secret Pond', difficulty: 'Hard', fish: [4, 5, 6, 7], cost: 150, unlockLevel: 8, description: 'Hidden treasure spot' },
+                    { name: 'Legendary Waters', difficulty: 'Expert', fish: [6, 7, 8, 9], cost: 300, unlockLevel: 12, description: 'Where legends are born' },
+                    
+                    // Saltwater Locations
+                    { name: 'Ocean Pier', difficulty: 'Medium', fish: [10, 11, 12], cost: 100, unlockLevel: 6, description: 'Saltwater fishing spot' },
+                    { name: 'Deep Sea', difficulty: 'Hard', fish: [12, 13, 14], cost: 250, unlockLevel: 10, description: 'Deep ocean fishing' },
+                    { name: 'Trophy Waters', difficulty: 'Expert', fish: [25, 26, 27, 28, 29, 30, 31, 32], cost: 500, unlockLevel: 15, description: 'Trophy fish paradise' },
+                    
+                    // Special Locations
+                    { name: 'Crystal Lake', difficulty: 'Hard', fish: [15, 16, 17, 18], cost: 200, unlockLevel: 9, description: 'Magical crystal-clear waters' },
+                    { name: 'Abyss', difficulty: 'Expert', fish: [19, 20, 21, 22, 23], cost: 400, unlockLevel: 14, description: 'Bottomless depths' },
+                    { name: 'Fishing Tournament', difficulty: 'Tournament', fish: [24, 25, 26, 27, 28], cost: 100, unlockLevel: 10, description: 'Competitive fishing event' }
+                ];
+
+                this.currentLocation = 0;
+                this.isCasting = false;
+                this.otherPlayers = [];
+                this.tournament = null;
+                this.leaderboardData = {
+                    biggestFish: [],
+                    biggestBags: []
+                };
+
+                // Sound system
+                this.audioContext = null;
+                this.sounds = {};
+                this.soundEnabled = true;
+                this.initAudio();
+
+                this.fishTypes = [
+                    // Common Fish (0-4)
+                    { name: 'Minnow', rarity: 'Common', minWeight: 0.1, maxWeight: 0.5, value: 5, experience: 1, season: 'All' },
+                    { name: 'Sunfish', rarity: 'Common', minWeight: 0.3, maxWeight: 1.2, value: 8, experience: 2, season: 'All' },
+                    { name: 'Bass', rarity: 'Common', minWeight: 1.0, maxWeight: 5.0, value: 15, experience: 5, season: 'All' },
+                    { name: 'Perch', rarity: 'Common', minWeight: 0.5, maxWeight: 2.0, value: 12, experience: 3, season: 'All' },
+                    { name: 'Crappie', rarity: 'Common', minWeight: 0.8, maxWeight: 3.0, value: 18, experience: 4, season: 'All' },
+                    
+                    // Uncommon Fish (5-9)
+                    { name: 'Trout', rarity: 'Uncommon', minWeight: 0.5, maxWeight: 3.0, value: 25, experience: 10, season: 'Spring/Fall' },
+                    { name: 'Pike', rarity: 'Uncommon', minWeight: 2.0, maxWeight: 8.0, value: 40, experience: 15, season: 'All' },
+                    { name: 'Walleye', rarity: 'Uncommon', minWeight: 1.5, maxWeight: 6.0, value: 35, experience: 12, season: 'Spring/Fall' },
+                    { name: 'Muskie', rarity: 'Uncommon', minWeight: 5.0, maxWeight: 15.0, value: 60, experience: 20, season: 'All' },
+                    { name: 'Carp', rarity: 'Uncommon', minWeight: 3.0, maxWeight: 20.0, value: 30, experience: 8, season: 'All' },
+                    
+                    // Rare Fish (10-14)
+                    { name: 'Salmon', rarity: 'Rare', minWeight: 8.0, maxWeight: 25.0, value: 80, experience: 25, season: 'Fall' },
+                    { name: 'Catfish', rarity: 'Rare', minWeight: 5.0, maxWeight: 30.0, value: 70, experience: 22, season: 'All' },
+                    { name: 'Sturgeon', rarity: 'Rare', minWeight: 20.0, maxWeight: 50.0, value: 120, experience: 35, season: 'All' },
+                    { name: 'Marlin', rarity: 'Rare', minWeight: 50.0, maxWeight: 200.0, value: 200, experience: 50, season: 'All' },
+                    { name: 'Tuna', rarity: 'Rare', minWeight: 30.0, maxWeight: 150.0, value: 150, experience: 40, season: 'All' },
+                    
+                    // Epic Fish (15-19)
+                    { name: 'Crystal Bass', rarity: 'Epic', minWeight: 10.0, maxWeight: 35.0, value: 300, experience: 60, season: 'All' },
+                    { name: 'Golden Trout', rarity: 'Epic', minWeight: 5.0, maxWeight: 20.0, value: 250, experience: 55, season: 'Spring' },
+                    { name: 'Ice Pike', rarity: 'Epic', minWeight: 15.0, maxWeight: 40.0, value: 350, experience: 65, season: 'Winter' },
+                    { name: 'Shadow Catfish', rarity: 'Epic', minWeight: 25.0, maxWeight: 60.0, value: 400, experience: 70, season: 'All' },
+                    { name: 'Abyssal Eel', rarity: 'Epic', minWeight: 30.0, maxWeight: 80.0, value: 500, experience: 80, season: 'All' },
+                    
+                    // Legendary Fish (20-24)
+                    { name: 'Ancient Sturgeon', rarity: 'Legendary', minWeight: 100.0, maxWeight: 300.0, value: 1000, experience: 150, season: 'All' },
+                    { name: 'Leviathan', rarity: 'Legendary', minWeight: 200.0, maxWeight: 500.0, value: 2000, experience: 200, season: 'All' },
+                    { name: 'Phoenix Fish', rarity: 'Legendary', minWeight: 50.0, maxWeight: 150.0, value: 1500, experience: 180, season: 'All' },
+                    { name: 'Dragon Carp', rarity: 'Legendary', minWeight: 80.0, maxWeight: 200.0, value: 1800, experience: 190, season: 'All' },
+                    { name: 'Tournament King', rarity: 'Legendary', minWeight: 60.0, maxWeight: 120.0, value: 1200, experience: 160, season: 'All' },
+                    
+                    // Trophy Fish (25-32)
+                    { name: 'Trophy Bass', rarity: 'Trophy', minWeight: 20.0, maxWeight: 50.0, value: 500, experience: 100, season: 'All' },
+                    { name: 'Trophy Pike', rarity: 'Trophy', minWeight: 30.0, maxWeight: 70.0, value: 600, experience: 110, season: 'All' },
+                    { name: 'Trophy Salmon', rarity: 'Trophy', minWeight: 40.0, maxWeight: 80.0, value: 700, experience: 120, season: 'Fall' },
+                    { name: 'Trophy Marlin', rarity: 'Trophy', minWeight: 100.0, maxWeight: 300.0, value: 1000, experience: 150, season: 'All' },
+                    { name: 'Trophy Tuna', rarity: 'Trophy', minWeight: 80.0, maxWeight: 200.0, value: 800, experience: 130, season: 'All' },
+                    { name: 'Trophy Sturgeon', rarity: 'Trophy', minWeight: 150.0, maxWeight: 400.0, value: 1200, experience: 170, season: 'All' },
+                    { name: 'Trophy Catfish', rarity: 'Trophy', minWeight: 60.0, maxWeight: 150.0, value: 900, experience: 140, season: 'All' },
+                    { name: 'Trophy King', rarity: 'Trophy', minWeight: 200.0, maxWeight: 500.0, value: 1500, experience: 200, season: 'All' }
+                ];
+
+                // Complete tackle system
+                this.tackle = {
+                    rods: [
+                        { name: 'Basic Rod', cost: 0, catchBonus: 0, strength: 10, description: 'Starting rod', unlockLevel: 1 },
+                        { name: 'Fiberglass Rod', cost: 100, catchBonus: 5, strength: 15, description: 'Better durability', unlockLevel: 3 },
+                        { name: 'Carbon Fiber Rod', cost: 300, catchBonus: 10, strength: 20, description: 'Lightweight and strong', unlockLevel: 6 },
+                        { name: 'Pro Rod', cost: 600, catchBonus: 15, strength: 25, description: 'Professional grade', unlockLevel: 9 },
+                        { name: 'Master Rod', cost: 1000, catchBonus: 20, strength: 30, description: 'Master angler equipment', unlockLevel: 12 },
+                        { name: 'Legendary Rod', cost: 2000, catchBonus: 25, strength: 40, description: 'Legendary craftsmanship', unlockLevel: 15 },
+                        { name: 'Trophy Rod', cost: 5000, catchBonus: 30, strength: 50, description: 'Trophy fishing specialist', unlockLevel: 18 }
+                    ],
+                    reels: [
+                        { name: 'Basic Reel', cost: 0, speedBonus: 0, smoothness: 10, description: 'Simple reel', unlockLevel: 1 },
+                        { name: 'Spinning Reel', cost: 75, speedBonus: 5, smoothness: 15, description: 'Smooth retrieval', unlockLevel: 4 },
+                        { name: 'Baitcasting Reel', cost: 200, speedBonus: 10, smoothness: 20, description: 'Precision casting', unlockLevel: 7 },
+                        { name: 'Fly Reel', cost: 400, speedBonus: 15, smoothness: 25, description: 'Fly fishing specialist', unlockLevel: 10 },
+                        { name: 'Big Game Reel', cost: 800, speedBonus: 20, smoothness: 30, description: 'Heavy duty fishing', unlockLevel: 13 },
+                        { name: 'Trophy Reel', cost: 1500, speedBonus: 25, smoothness: 40, description: 'Trophy fishing specialist', unlockLevel: 16 }
+                    ],
+                    lines: [
+                        { name: 'Monofilament', cost: 0, strength: 10, visibility: 5, description: 'Basic fishing line', unlockLevel: 1 },
+                        { name: 'Braided Line', cost: 50, strength: 15, visibility: 3, description: 'Strong and thin', unlockLevel: 5 },
+                        { name: 'Fluorocarbon', cost: 100, strength: 12, visibility: 1, description: 'Nearly invisible', unlockLevel: 8 },
+                        { name: 'Wire Line', cost: 200, strength: 25, visibility: 8, description: 'Heavy duty fishing', unlockLevel: 12 },
+                        { name: 'Titanium Line', cost: 500, strength: 35, visibility: 2, description: 'Ultimate strength', unlockLevel: 16 }
+                    ],
+                    hooks: [
+                        { name: 'Basic Hook', cost: 0, catchBonus: 0, size: 8, description: 'Standard hook', unlockLevel: 1 },
+                        { name: 'Barbed Hook', cost: 25, catchBonus: 5, size: 8, description: 'Better fish retention', unlockLevel: 3 },
+                        { name: 'Circle Hook', cost: 50, catchBonus: 3, size: 6, description: 'Fish-friendly design', unlockLevel: 5 },
+                        { name: 'Treble Hook', cost: 75, catchBonus: 8, size: 6, description: 'Triple hook design', unlockLevel: 7 },
+                        { name: 'Jig Hook', cost: 100, catchBonus: 10, size: 4, description: 'Jig fishing specialist', unlockLevel: 10 },
+                        { name: 'Trophy Hook', cost: 200, catchBonus: 15, size: 2, description: 'Trophy fish specialist', unlockLevel: 15 }
+                    ],
+                    baits: [
+                        { name: 'Basic Bait', cost: 0, catchBonus: 0, durability: 10, description: 'Simple worm bait', unlockLevel: 1 },
+                        { name: 'Live Bait', cost: 20, catchBonus: 8, durability: 15, description: 'Live worm', unlockLevel: 2 },
+                        { name: 'Artificial Lure', cost: 50, catchBonus: 5, durability: 25, description: 'Reusable lure', unlockLevel: 4 },
+                        { name: 'Premium Bait', cost: 100, catchBonus: 12, durability: 20, description: 'High-quality bait', unlockLevel: 6 },
+                        { name: 'Specialty Bait', cost: 200, catchBonus: 18, durability: 15, description: 'Rare fish attractant', unlockLevel: 10 },
+                        { name: 'Trophy Bait', cost: 500, catchBonus: 25, durability: 10, description: 'Trophy fish magnet', unlockLevel: 15 }
+                    ]
+                };
+
+                this.init();
+            }
+
+            init() {
+                this.loadGameData();
+                this.setupEventListeners();
+                this.positionPlayers();
+                this.simulateMultiplayer();
+                this.updateDisplay();
+                this.updateAchievementsDisplay();
+                this.updateLeaderboard();
+                this.createAnimatedRipples();
+                this.startAutoSave(); // Start auto-save
+            }
+
+            initAudio() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    this.createSounds();
+                } catch (error) {
+                    console.log('Web Audio API not supported, sounds disabled');
+                }
+            }
+
+            createSounds() {
+                if (!this.audioContext) return;
+
+                // Casting sound - whoosh with line release
+                this.sounds.cast = () => {
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    oscillator.frequency.setValueAtTime(200, this.audioContext.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(50, this.audioContext.currentTime + 0.3);
+                    
+                    gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
+                    
+                    oscillator.start();
+                    oscillator.stop(this.audioContext.currentTime + 0.3);
+                };
+
+                // Reeling sound - mechanical whirring
+                this.sounds.reel = () => {
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    const filter = this.audioContext.createBiquadFilter();
+                    
+                    oscillator.connect(filter);
+                    filter.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    oscillator.type = 'sawtooth';
+                    oscillator.frequency.setValueAtTime(80, this.audioContext.currentTime);
+                    oscillator.frequency.linearRampToValueAtTime(120, this.audioContext.currentTime + 0.5);
+                    
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(200, this.audioContext.currentTime);
+                    
+                    gainNode.gain.setValueAtTime(0.2, this.audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.5);
+                    
+                    oscillator.start();
+                    oscillator.stop(this.audioContext.currentTime + 0.5);
+                };
+
+                // Fish caught sound - splash and success
+                this.sounds.catch = () => {
+                    // Splash sound
+                    const splashOsc = this.audioContext.createOscillator();
+                    const splashGain = this.audioContext.createGain();
+                    const splashFilter = this.audioContext.createBiquadFilter();
+                    
+                    splashOsc.connect(splashFilter);
+                    splashFilter.connect(splashGain);
+                    splashGain.connect(this.audioContext.destination);
+                    
+                    splashOsc.type = 'noise';
+                    splashFilter.type = 'bandpass';
+                    splashFilter.frequency.setValueAtTime(800, this.audioContext.currentTime);
+                    splashFilter.Q.setValueAtTime(1, this.audioContext.currentTime);
+                    
+                    splashGain.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+                    splashGain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.2);
+                    
+                    splashOsc.start();
+                    splashOsc.stop(this.audioContext.currentTime + 0.2);
+                    
+                    // Success chime
+                    setTimeout(() => {
+                        const chimeOsc = this.audioContext.createOscillator();
+                        const chimeGain = this.audioContext.createGain();
+                        
+                        chimeOsc.connect(chimeGain);
+                        chimeGain.connect(this.audioContext.destination);
+                        
+                        chimeOsc.frequency.setValueAtTime(523, this.audioContext.currentTime); // C5
+                        chimeOsc.frequency.setValueAtTime(659, this.audioContext.currentTime + 0.1); // E5
+                        chimeOsc.frequency.setValueAtTime(784, this.audioContext.currentTime + 0.2); // G5
+                        
+                        chimeGain.gain.setValueAtTime(0.2, this.audioContext.currentTime);
+                        chimeGain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
+                        
+                        chimeOsc.start();
+                        chimeOsc.stop(this.audioContext.currentTime + 0.3);
+                    }, 100);
+                };
+
+                // Big fish caught - deeper splash and fanfare
+                this.sounds.bigCatch = () => {
+                    // Big splash
+                    const bigSplashOsc = this.audioContext.createOscillator();
+                    const bigSplashGain = this.audioContext.createGain();
+                    const bigSplashFilter = this.audioContext.createBiquadFilter();
+                    
+                    bigSplashOsc.connect(bigSplashFilter);
+                    bigSplashFilter.connect(bigSplashGain);
+                    bigSplashGain.connect(this.audioContext.destination);
+                    
+                    bigSplashOsc.type = 'noise';
+                    bigSplashFilter.type = 'bandpass';
+                    bigSplashFilter.frequency.setValueAtTime(400, this.audioContext.currentTime);
+                    bigSplashFilter.Q.setValueAtTime(0.5, this.audioContext.currentTime);
+                    
+                    bigSplashGain.gain.setValueAtTime(0.4, this.audioContext.currentTime);
+                    bigSplashGain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.4);
+                    
+                    bigSplashOsc.start();
+                    bigSplashOsc.stop(this.audioContext.currentTime + 0.4);
+                    
+                    // Fanfare
+                    setTimeout(() => {
+                        this.playFanfare();
+                    }, 200);
+                };
+
+                // Level up celebration - champagne cork and fireworks
+                this.sounds.levelUp = () => {
+                    // Champagne cork pop
+                    const corkOsc = this.audioContext.createOscillator();
+                    const corkGain = this.audioContext.createGain();
+                    const corkFilter = this.audioContext.createBiquadFilter();
+                    
+                    corkOsc.connect(corkFilter);
+                    corkFilter.connect(corkGain);
+                    corkGain.connect(this.audioContext.destination);
+                    
+                    corkOsc.type = 'sawtooth';
+                    corkOsc.frequency.setValueAtTime(200, this.audioContext.currentTime);
+                    corkOsc.frequency.exponentialRampToValueAtTime(20, this.audioContext.currentTime + 0.1);
+                    
+                    corkFilter.type = 'highpass';
+                    corkFilter.frequency.setValueAtTime(100, this.audioContext.currentTime);
+                    
+                    corkGain.gain.setValueAtTime(0.5, this.audioContext.currentTime);
+                    corkGain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+                    
+                    corkOsc.start();
+                    corkOsc.stop(this.audioContext.currentTime + 0.1);
+                    
+                    // Fireworks burst
+                    setTimeout(() => {
+                        this.playFireworks();
+                    }, 150);
+                };
+            }
+
+            playFanfare() {
+                const notes = [523, 659, 784, 1047]; // C, E, G, C (octave)
+                notes.forEach((freq, index) => {
+                    setTimeout(() => {
+                        const osc = this.audioContext.createOscillator();
+                        const gain = this.audioContext.createGain();
+                        
+                        osc.connect(gain);
+                        gain.connect(this.audioContext.destination);
+                        
+                        osc.frequency.setValueAtTime(freq, this.audioContext.currentTime);
+                        gain.gain.setValueAtTime(0.15, this.audioContext.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
+                        
+                        osc.start();
+                        osc.stop(this.audioContext.currentTime + 0.3);
+                    }, index * 100);
+                });
+            }
+
+            playFireworks() {
+                // Multiple firework bursts
+                for (let i = 0; i < 3; i++) {
+                    setTimeout(() => {
+                        const osc = this.audioContext.createOscillator();
+                        const gain = this.audioContext.createGain();
+                        const filter = this.audioContext.createBiquadFilter();
+                        
+                        osc.connect(filter);
+                        filter.connect(gain);
+                        gain.connect(this.audioContext.destination);
+                        
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(200 + Math.random() * 200, this.audioContext.currentTime);
+                        osc.frequency.exponentialRampToValueAtTime(50, this.audioContext.currentTime + 0.5);
+                        
+                        filter.type = 'lowpass';
+                        filter.frequency.setValueAtTime(1000, this.audioContext.currentTime);
+                        filter.frequency.exponentialRampToValueAtTime(100, this.audioContext.currentTime + 0.5);
+                        
+                        gain.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.5);
+                        
+                        osc.start();
+                        osc.stop(this.audioContext.currentTime + 0.5);
+                    }, i * 200);
+                }
+            }
+
+            playSound(soundName) {
+                if (this.soundEnabled && this.audioContext && this.sounds[soundName]) {
+                    // Resume audio context if suspended (required by some browsers)
+                    if (this.audioContext.state === 'suspended') {
+                        this.audioContext.resume();
+                    }
+                    this.sounds[soundName]();
+                }
+            }
+
+            toggleSound() {
+                this.soundEnabled = !this.soundEnabled;
+                const soundBtn = document.getElementById('sound-btn');
+                soundBtn.textContent = this.soundEnabled ? '🔊 SOUND ON' : '🔇 SOUND OFF';
+                
+                if (this.soundEnabled) {
+                    this.addChatMessage('system', 'Sound effects enabled!');
+                } else {
+                    this.addChatMessage('system', 'Sound effects disabled!');
+                }
+            }
+
+            showCongratulationsPopup(type, items) {
+                const level = this.player.level;
+                let title = '';
+                let itemList = '';
+                
+                if (type === 'location') {
+                    title = `Congratulations on reaching Level ${level}!`;
+                    itemList = `You have unlocked new fishing locations:\n• ${items.join('\n• ')}`;
+                } else if (type === 'tackle') {
+                    title = `Congratulations on reaching Level ${level}!`;
+                    itemList = `You have unlocked new tackle:\n• ${items.join('\n• ')}`;
+                }
+                
+                // Create popup modal
+                const popup = document.createElement('div');
+                popup.className = 'congratulations-popup';
+                popup.innerHTML = `
+                    <div class="congratulations-content">
+                        <div class="congratulations-header">
+                            <h2>🎉 ${title} 🎉</h2>
+                        </div>
+                        <div class="congratulations-body">
+                            <p>${itemList}</p>
+                        </div>
+                        <div class="congratulations-footer">
+                            <button class="btn" onclick="this.parentElement.parentElement.parentElement.remove()">Awesome!</button>
+                        </div>
+                    </div>
+                `;
+                
+                // Add CSS for the popup
+                popup.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.8);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 10000;
+                    animation: fadeIn 0.5s ease-out;
+                `;
+                
+                // Add CSS for the content
+                const style = document.createElement('style');
+                style.textContent = `
+                    .congratulations-content {
+                        background: linear-gradient(135deg, #001100, #003300);
+                        border: 3px solid #00ff00;
+                        border-radius: 15px;
+                        padding: 30px;
+                        max-width: 500px;
+                        text-align: center;
+                        box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+                        animation: slideIn 0.5s ease-out;
+                    }
+                    
+                    .congratulations-header h2 {
+                        color: #ffff00;
+                        margin: 0 0 20px 0;
+                        font-size: 24px;
+                        text-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
+                    }
+                    
+                    .congratulations-body {
+                        color: #00ffff;
+                        font-size: 16px;
+                        line-height: 1.6;
+                        margin-bottom: 25px;
+                        white-space: pre-line;
+                    }
+                    
+                    .congratulations-footer .btn {
+                        background: #00ff00;
+                        color: #000;
+                        border: none;
+                        padding: 12px 30px;
+                        font-size: 16px;
+                        font-weight: bold;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                    }
+                    
+                    .congratulations-footer .btn:hover {
+                        background: #00cc00;
+                        transform: scale(1.05);
+                    }
+                    
+                    @keyframes fadeIn {
+                        from { opacity: 0; }
+                        to { opacity: 1; }
+                    }
+                    
+                    @keyframes slideIn {
+                        from { transform: translateY(-50px); opacity: 0; }
+                        to { transform: translateY(0); opacity: 1; }
+                    }
+                `;
+                
+                document.head.appendChild(style);
+                document.body.appendChild(popup);
+                
+                // Auto-remove after 10 seconds
+                setTimeout(() => {
+                    if (popup.parentElement) {
+                        popup.remove();
+                        style.remove();
+                    }
+                }, 10000);
+            }
+
+            setupEventListeners() {
+                document.getElementById('cast-btn').addEventListener('click', () => this.castLine());
+                document.getElementById('shop-btn').addEventListener('click', () => this.openShop());
+                document.getElementById('tournament-btn').addEventListener('click', () => this.toggleTournament());
+                document.getElementById('inventory-btn').addEventListener('click', () => this.openInventory());
+                document.getElementById('save-btn').addEventListener('click', () => this.manualSave());
+                document.getElementById('export-btn').addEventListener('click', () => this.exportGameData());
+                document.getElementById('import-btn').addEventListener('click', () => document.getElementById('import-input').click());
+                document.getElementById('import-input').addEventListener('change', (e) => this.importGameData(e));
+                document.getElementById('sound-btn').addEventListener('click', () => this.toggleSound());
+
+                // Login button
+                document.getElementById('login-btn').addEventListener('click', () => this.login());
+
+                // Inventory tab buttons
+                document.querySelectorAll('.inventory-tabs .tab-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.switchInventoryTab(e.target.dataset.tab));
+                });
+
+                // Tackle shop buttons (delegated event listener)
+                document.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('tackle-btn')) {
+                        const action = e.target.dataset.action;
+                        const category = e.target.dataset.category;
+                        const index = parseInt(e.target.dataset.index);
+                        
+                        if (action === 'buy') {
+                            this.buyTackle(category, index);
+                        } else if (action === 'equip') {
+                            this.equipTackle(category, index);
+                        }
+                    }
+                });
+
+                // Keyboard controls
+                document.addEventListener('keydown', (e) => {
+                    // Spacebar to cast (only when not in input fields)
+                    if (e.code === 'Space' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+                        e.preventDefault();
+                        if (!this.isCasting) {
+                            this.castLine();
+                        }
+                    }
+                });
+
+                // Mouse interaction with water
+                this.setupWaterInteractions();
+
+                // Tackle shop modal events
+                document.getElementById('close-shop').addEventListener('click', () => this.closeShop());
+                document.getElementById('tackle-shop-modal').addEventListener('click', (e) => {
+                    if (e.target.id === 'tackle-shop-modal') {
+                        this.closeShop();
+                    }
+                });
+
+                // Inventory modal events
+                document.getElementById('close-inventory').addEventListener('click', () => this.closeInventory());
+                document.getElementById('inventory-modal').addEventListener('click', (e) => {
+                    if (e.target.id === 'inventory-modal') {
+                        this.closeInventory();
+                    }
+                });
+
+                // Shop tab events (only for tackle shop tabs)
+                document.querySelectorAll('#tackle-shop-modal .tab-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.switchShopTab(e.target.dataset.tab));
+                });
+
+                document.getElementById('chat-input').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && e.target.value.trim()) {
+                        this.sendMessage(e.target.value);
+                        e.target.value = '';
+                    }
+                });
+            }
+
+            login() {
+                const name = document.getElementById('player-name-input').value.trim();
+                if (!name) {
+                    alert('Please enter your name!');
+                    return;
+                }
+
+                this.player.name = name;
+                document.getElementById('login-screen').classList.add('hidden');
+                this.addChatMessage('system', `${name} entered the fishing hole!`);
+                this.positionPlayers(); // Reposition players with new name
+                this.updateDisplay();
+            }
+
+            positionPlayers() {
+                const fishermanRow = document.getElementById('fisherman-row');
+                const lake = document.getElementById('fishing-lake');
+                
+                // Clear existing fishermen and lines
+                fishermanRow.innerHTML = '';
+                lake.querySelectorAll('.fishing-line').forEach(l => l.remove());
+                
+                // Add current player
+                const playerFisher = document.createElement('div');
+                playerFisher.className = 'fisherman you';
+                playerFisher.id = 'player-fisher';
+                playerFisher.innerHTML = `
+                    <div class="fisherman-initial">${this.player.name.charAt(0).toUpperCase()}</div>
+                    <div class="fisherman-name">${this.player.name}</div>
+                `;
+                fishermanRow.appendChild(playerFisher);
+                
+                // Add other players
+                this.otherPlayers.forEach((player, index) => {
+                    const fisher = document.createElement('div');
+                    fisher.className = 'fisherman other';
+                    fisher.innerHTML = `
+                        <div class="fisherman-initial">${player.name.charAt(0).toUpperCase()}</div>
+                        <div class="fisherman-name">${player.name}</div>
+                    `;
+                    fisher.title = `${player.name} - Level ${player.level}`;
+                    fishermanRow.appendChild(fisher);
+                });
+            }
+
+            createAnimatedRipples() {
+                const ripplesContainer = document.getElementById('ripples');
+                
+                // Create multiple ripples at random positions
+                for (let i = 0; i < 8; i++) {
+                    setTimeout(() => {
+                        this.createRipple(ripplesContainer);
+                    }, i * 500); // Stagger the creation
+                }
+                
+                // Continue creating ripples periodically
+                setInterval(() => {
+                    this.createRipple(ripplesContainer);
+                }, 2000);
+            }
+
+            createRipple(container) {
+                const ripple = document.createElement('div');
+                ripple.className = 'ripple';
+                
+                // Random position within the lake
+                const x = Math.random() * 80 + 10; // 10% to 90% of width
+                const y = Math.random() * 80 + 10; // 10% to 90% of height
+                const size = Math.random() * 30 + 20; // 20px to 50px
+                
+                ripple.style.left = x + '%';
+                ripple.style.top = y + '%';
+                ripple.style.width = size + 'px';
+                ripple.style.height = size + 'px';
+                
+                // Random animation delay
+                ripple.style.animationDelay = Math.random() * 2 + 's';
+                
+                container.appendChild(ripple);
+                
+                // Remove ripple after animation completes
+                setTimeout(() => {
+                    if (ripple.parentNode) {
+                        ripple.parentNode.removeChild(ripple);
+                    }
+                }, 4000);
+            }
+
+            setupWaterInteractions() {
+                const lake = document.getElementById('fishing-lake');
+                let isDragging = false;
+                let lastRippleTime = 0;
+                const rippleThrottle = 100; // Minimum ms between ripples when dragging
+
+                // Click on water
+                lake.addEventListener('click', (e) => {
+                    this.createMouseRipple(e, lake);
+                });
+
+                // Mouse down - start dragging
+                lake.addEventListener('mousedown', (e) => {
+                    isDragging = true;
+                    this.createMouseRipple(e, lake);
+                });
+
+                // Mouse move while dragging - create ripples
+                lake.addEventListener('mousemove', (e) => {
+                    if (isDragging) {
+                        const now = Date.now();
+                        if (now - lastRippleTime > rippleThrottle) {
+                            this.createMouseRipple(e, lake);
+                            lastRippleTime = now;
+                        }
+                    }
+                });
+
+                // Mouse up - stop dragging
+                lake.addEventListener('mouseup', () => {
+                    isDragging = false;
+                });
+
+                // Mouse leave - stop dragging
+                lake.addEventListener('mouseleave', () => {
+                    isDragging = false;
+                });
+
+                // Touch support for mobile
+                lake.addEventListener('touchstart', (e) => {
+                    isDragging = true;
+                    const touch = e.touches[0];
+                    this.createMouseRipple({ clientX: touch.clientX, clientY: touch.clientY }, lake);
+                }, { passive: true });
+
+                lake.addEventListener('touchmove', (e) => {
+                    if (isDragging) {
+                        e.preventDefault();
+                        const touch = e.touches[0];
+                        const now = Date.now();
+                        if (now - lastRippleTime > rippleThrottle) {
+                            this.createMouseRipple({ clientX: touch.clientX, clientY: touch.clientY }, lake);
+                            lastRippleTime = now;
+                        }
+                    }
+                }, { passive: false }); // Must be non-passive because we use preventDefault()
+
+                lake.addEventListener('touchend', () => {
+                    isDragging = false;
+                }, { passive: true });
+            }
+
+            createMouseRipple(e, lake) {
+                const ripple = document.createElement('div');
+                ripple.className = 'mouse-ripple';
+                
+                // Get position relative to lake
+                const rect = lake.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                // Set position
+                ripple.style.left = x + 'px';
+                ripple.style.top = y + 'px';
+                ripple.style.width = '20px';
+                ripple.style.height = '20px';
+                ripple.style.transform = 'translate(-50%, -50%)';
+                
+                // Add to lake
+                lake.appendChild(ripple);
+                
+                // Remove after animation
+                setTimeout(() => {
+                    if (ripple.parentNode) {
+                        ripple.remove();
+                    }
+                }, 1500);
+            }
+
+            castLine() {
+                if (this.isCasting) return;
+
+                this.isCasting = true;
+                const castBtn = document.getElementById('cast-btn');
+                castBtn.textContent = 'REELING... (SPACEBAR)';
+                castBtn.classList.add('casting');
+                castBtn.disabled = true;
+
+                // Add fishing line for current player
+                this.addFishingLine(0, true);
+                this.playSound('cast'); // Casting sound
+                
+                const ripples = document.getElementById('ripples');
+                ripples.classList.add('active');
+
+                // Calculate catch chance
+                const catchChance = this.calculateCatchChance();
+                
+                setTimeout(() => {
+                    this.reelIn(catchChance);
+                }, 2000 + Math.random() * 3000);
+            }
+
+            addFishingLine(playerIndex, isCasting = false) {
+                const fishermanRow = document.getElementById('fisherman-row');
+                const lake = document.getElementById('fishing-lake');
+                const fishermen = fishermanRow.querySelectorAll('.fisherman');
+                
+                if (playerIndex >= fishermen.length) return null;
+                
+                const fisherman = fishermen[playerIndex];
+                const fishermanRect = fisherman.getBoundingClientRect();
+                const lakeRect = lake.getBoundingClientRect();
+                
+                const line = document.createElement('div');
+                line.className = 'fishing-line';
+                if (isCasting) line.classList.add('casting');
+                
+                // Position line from fisherman to lake
+                const fishermanCenterX = fishermanRect.left + fishermanRect.width / 2;
+                const fishermanBottom = fishermanRect.bottom;
+                const lakeTop = lakeRect.top;
+                const lakeHeight = lakeRect.height;
+                
+                // Calculate responsive cast distance based on lake size
+                // Cast further on larger screens, less on smaller screens
+                const screenWidth = window.innerWidth;
+                const screenHeight = window.innerHeight;
+                
+                // Base distance calculation - proportion of lake height
+                let castDistance = lakeHeight * 0.5; // Cast halfway into lake by default
+                
+                // Adjust based on screen size
+                if (screenWidth >= 1400 && screenHeight >= 800) {
+                    // Large screens - cast much further
+                    castDistance = lakeHeight * 0.7; // 70% of lake height
+                } else if (screenWidth >= 1200 && screenHeight >= 700) {
+                    // Medium screens - cast moderately
+                    castDistance = lakeHeight * 0.6; // 60% of lake height
+                } else if (screenWidth >= 992 && screenHeight >= 600) {
+                    // Small screens - cast less
+                    castDistance = lakeHeight * 0.5; // 50% of lake height
+                } else {
+                    // Very small screens - cast minimally
+                    castDistance = lakeHeight * 0.4; // 40% of lake height
+                }
+                
+                // Ensure minimum cast distance
+                const minCast = 80;
+                const maxCast = lakeHeight * 0.8; // Never more than 80% of lake
+                castDistance = Math.max(minCast, Math.min(castDistance, maxCast));
+                
+                const lineLength = lakeTop - fishermanBottom + castDistance;
+                
+                line.style.left = (fishermanCenterX - lakeRect.left) + 'px';
+                line.style.top = '0px';
+                line.style.height = lineLength + 'px';
+                
+                const hook = document.createElement('div');
+                hook.className = 'hook';
+                line.appendChild(hook);
+                
+                // Add splash animation at the hook (bottom of the line)
+                const splash = document.createElement('div');
+                splash.className = 'hook-splash';
+                splash.style.left = line.style.left;
+                splash.style.top = lineLength + 'px'; // Position at bottom of line where hook is
+                lake.appendChild(splash);
+                
+                // Store splash reference on line for cleanup
+                line.dataset.splashId = splash.id || `splash-${Date.now()}-${Math.random()}`;
+                splash.id = line.dataset.splashId;
+                
+                lake.appendChild(line);
+                
+                // Create landing splash effect when hook hits water (after line extends)
+                setTimeout(() => {
+                    this.createHookLandingSplash(line.style.left, lineLength, lake);
+                }, 300); // Small delay to simulate hook reaching water
+                
+                return line;
+            }
+
+            createHookLandingSplash(left, top, lake) {
+                const landingSplash = document.createElement('div');
+                landingSplash.className = 'hook-landing-splash';
+                
+                // Parse left position (could be "123px" or a number)
+                const leftValue = typeof left === 'string' ? parseFloat(left) : left;
+                landingSplash.style.left = leftValue + 'px';
+                landingSplash.style.top = top + 'px';
+                
+                // Add third splash wave element
+                const splashWave = document.createElement('div');
+                splashWave.className = 'splash-wave';
+                landingSplash.appendChild(splashWave);
+                
+                // Add to lake
+                lake.appendChild(landingSplash);
+                
+                // Remove after animation completes
+                setTimeout(() => {
+                    if (landingSplash.parentNode) {
+                        landingSplash.remove();
+                    }
+                }, 1500);
+            }
+
+            calculateCatchChance() {
+                // During tournaments, everyone has equal chance (level playing field)
+                if (this.tournament && this.tournament.phase === 'active') {
+                    // Equal base chance for all players regardless of equipment/stats
+                    return 0.7; // 70% base chance, same for everyone
+                }
+                
+                // Normal fishing uses player equipment and stats
+                let chance = 0.7; // 70% base chance
+                
+                const location = this.locations[this.currentLocation];
+                if (location.difficulty === 'Easy') chance += 0.1;
+                else if (location.difficulty === 'Medium') chance -= 0.1;
+                
+                // Add tackle bonuses
+                const rod = this.tackle.rods.find(r => r.name === this.player.gear.rod);
+                const reel = this.tackle.reels.find(r => r.name === this.player.gear.reel);
+                const line = this.tackle.lines.find(l => l.name === this.player.gear.line);
+                const hook = this.tackle.hooks.find(h => h.name === this.player.gear.hook);
+                const bait = this.tackle.baits.find(b => b.name === this.player.gear.bait);
+                
+                if (rod) chance += rod.catchBonus / 100;
+                if (reel) chance += reel.speedBonus / 200; // Smaller bonus for reels
+                if (line) chance += line.strength / 1000; // Very small bonus for lines
+                if (hook) chance += hook.catchBonus / 100;
+                if (bait) chance += bait.catchBonus / 100;
+                
+                // Add player stats bonuses
+                const accuracyBonus = (this.player.stats.accuracy - 50) * 0.001; // Accuracy affects catch rate
+                const luckBonus = (this.player.stats.luck - 50) * 0.002; // Luck affects catch rate
+                const patienceBonus = (this.player.stats.patience - 50) * 0.0005; // Patience affects waiting
+                const strengthBonus = (this.player.stats.strength - 50) * 0.0008; // Strength affects line strength
+                
+                chance += accuracyBonus + luckBonus + patienceBonus + strengthBonus;
+                
+                // Add level bonus
+                chance += (this.player.level - 1) * 0.02;
+                
+                return Math.min(0.95, Math.max(0.2, chance));
+            }
+
+            reelIn(catchChance) {
+                this.isCasting = false;
+                this.playSound('reel'); // Reeling sound
+                
+                // Remove fishing line and splash
+                const lake = document.getElementById('fishing-lake');
+                const lines = lake.querySelectorAll('.fishing-line');
+                lines.forEach(line => {
+                    // Remove associated splash
+                    const splashId = line.dataset.splashId;
+                    if (splashId) {
+                        const splash = document.getElementById(splashId);
+                        if (splash) splash.remove();
+                    }
+                    line.remove();
+                });
+                
+                // Clean up any remaining splashes
+                const splashes = lake.querySelectorAll('.hook-splash');
+                splashes.forEach(splash => splash.remove());
+                
+                const ripples = document.getElementById('ripples');
+                ripples.classList.remove('active');
+                
+                const castBtn = document.getElementById('cast-btn');
+                castBtn.textContent = 'CAST LINE (SPACEBAR)';
+                castBtn.classList.remove('casting');
+                castBtn.disabled = false;
+
+                const caughtFish = Math.random() < catchChance;
+                
+                if (caughtFish) {
+                    this.catchRandomFish();
+                } else {
+                    this.showMessage('No fish this time!', '#ffff00');
+                }
+            }
+
+            catchRandomFish() {
+                const location = this.locations[this.currentLocation];
+                const availableFish = location.fish;
+                const randomFishType = availableFish[Math.floor(Math.random() * availableFish.length)];
+                const fishData = this.fishTypes[randomFishType];
+
+                // During tournaments, fish can be MUCH bigger (up to 3x max weight)
+                let weight;
+                if (this.tournament && this.tournament.phase === 'active') {
+                    // Tournament mode: fish can be 1x to 3x their normal max weight
+                    const baseWeight = fishData.minWeight + Math.random() * (fishData.maxWeight - fishData.minWeight);
+                    const tournamentMultiplier = 1.0 + Math.random() * 2.0; // 1.0x to 3.0x
+                    weight = baseWeight * tournamentMultiplier;
+                } else {
+                    // Normal fishing: standard weight range
+                    weight = fishData.minWeight + Math.random() * (fishData.maxWeight - fishData.minWeight);
+                }
+                
+                const value = Math.floor(fishData.value * (1 + weight / fishData.maxWeight));
+                const experience = Math.floor(fishData.experience * (1 + weight / fishData.maxWeight));
+
+                // Record the catch
+                const catchData = {
+                    fish: fishData,
+                    weight: weight,
+                    value: value,
+                    experience: experience,
+                    location: location.name,
+                    timestamp: Date.now()
+                };
+                
+                this.player.recentCatches.push(catchData);
+                
+                // Keep only last 50 catches to prevent memory issues
+                if (this.player.recentCatches.length > 50) {
+                    this.player.recentCatches = this.player.recentCatches.slice(-50);
+                }
+
+                // Update player stats
+                this.player.money += value;
+                this.player.experience += experience;
+                this.player.totalCaught++;
+                this.player.totalWeight += weight;
+
+                // Update biggest catch (only for normal fishing, not tournaments)
+                if ((!this.tournament || this.tournament.phase !== 'active') && weight > this.player.biggestCatch) {
+                    this.player.biggestCatch = weight;
+                }
+
+                // Update top 10 biggest fish (only goes up, never down)
+                // BUT: Tournament catches don't count toward normal leaderboards
+                if (!this.tournament || this.tournament.phase !== 'active') {
+                    this.updateTop10BiggestFish(catchData);
+                }
+
+                // Determine if this is a special catch
+                const isRare = fishData.rarity === 'Rare' || fishData.rarity === 'Epic' || fishData.rarity === 'Legendary' || fishData.rarity === 'Trophy';
+                const isHuge = weight > fishData.maxWeight * 0.8; // 80% of max weight
+                const isLegendary = fishData.rarity === 'Legendary';
+                const isTrophy = fishData.rarity === 'Trophy';
+                
+                // Play appropriate sound
+                if (isLegendary || isTrophy) {
+                    this.playSound('levelUp'); // Special celebration sound
+                } else if (isRare || isHuge) {
+                    this.playSound('bigCatch'); // Big fish sound
+                } else {
+                    this.playSound('catch'); // Regular fish sound
+                }
+
+                // Check for level up
+                this.checkLevelUp();
+
+                // Update leaderboard
+                this.updateLeaderboard();
+
+                // Show catch message with rarity color
+                let messageColor = '#00ff00'; // Default green
+                let messageText = `Caught ${fishData.name}! ${weight.toFixed(1)}lbs, +$${value}`;
+                
+                // Special handling for tournament fish
+                if (this.tournament && this.tournament.phase === 'active') {
+                    const normalMax = fishData.maxWeight;
+                    if (weight > normalMax * 1.5) {
+                        messageColor = '#ff00ff'; // Magenta for MEGA tournament fish
+                        messageText = `🎣 TOURNAMENT MEGA CATCH! ${fishData.name}! ${weight.toFixed(1)}lbs (${(weight/normalMax).toFixed(1)}x normal size!), +$${value}`;
+                    } else if (weight > normalMax) {
+                        messageColor = '#ffff00'; // Yellow for oversized tournament fish
+                        messageText = `🎣 TOURNAMENT BIG CATCH! ${fishData.name}! ${weight.toFixed(1)}lbs, +$${value}`;
+                    }
+                } else {
+                    // Normal fishing colors
+                    if (isLegendary || isTrophy) messageColor = '#ff00ff'; // Magenta
+                    else if (isRare) messageColor = '#00ffff'; // Cyan
+                    else if (isHuge) messageColor = '#ffff00'; // Yellow
+                }
+                
+                this.showMessage(messageText, messageColor);
+                
+                // Show special banner for rare/legendary fish
+                if (isRare || isHuge) {
+                    this.showRareFishBanner(fishData, weight, value, isLegendary, isTrophy);
+                }
+                
+                // Update tournament scores if in tournament
+                if (this.tournament && this.tournament.phase === 'active') {
+                    if (this.tournament.scores[this.player.name]) {
+                        this.tournament.scores[this.player.name].totalWeight += weight;
+                        this.tournament.scores[this.player.name].fishCount++;
+                        if (weight > this.tournament.scores[this.player.name].biggestCatch) {
+                            this.tournament.scores[this.player.name].biggestCatch = weight;
+                        }
+                        // Store the catch for tournament results
+                        if (this.tournament.catches[this.player.name]) {
+                            this.tournament.catches[this.player.name].push({
+                                fish: fishData.name,
+                                weight: weight,
+                                value: value,
+                                timestamp: Date.now()
+                            });
+                        }
+                        // Update tournament display to show new stats
+                        this.updateTournamentDisplay();
+                    }
+                }
+
+                // Notify other players with special announcement for rare fish
+                this.broadcastCatch(fishData, weight, value, isRare, isHuge, isLegendary, isTrophy);
+
+                this.updateDisplay();
+                this.saveGameData(); // Auto-save after catching fish
+            }
+
+            checkLevelUp() {
+                const expNeeded = this.player.level * 100;
+                if (this.player.experience >= expNeeded) {
+                    this.player.level++;
+                    this.player.experience -= expNeeded;
+                    
+                    // Improve stats on level up
+                    const statBonuses = this.improveStats();
+                    
+                    this.showMessage(`Level Up! Now level ${this.player.level}! ${statBonuses}`, '#ffff00');
+                    this.addChatMessage('system', `${this.player.name} reached level ${this.player.level}!`);
+                    this.playSound('levelUp'); // Level up celebration sound
+                    
+                    // Check for new location unlocks
+                    this.checkLocationUnlocks();
+                    
+                    // Check for new tackle unlocks
+                    this.checkTackleUnlocks();
+                    
+                    // Check for achievements
+                    this.checkAchievements();
+                }
+            }
+
+            improveStats() {
+                const bonuses = [];
+                const level = this.player.level;
+                
+                // Every level: +1 to all stats
+                this.player.stats.accuracy = Math.min(100, this.player.stats.accuracy + 1);
+                this.player.stats.luck = Math.min(100, this.player.stats.luck + 1);
+                this.player.stats.patience = Math.min(100, this.player.stats.patience + 1);
+                this.player.stats.strength = Math.min(100, this.player.stats.strength + 1);
+                bonuses.push('+1 All Stats');
+                
+                // Every 2 levels: +2 Accuracy
+                if (level % 2 === 0) {
+                    this.player.stats.accuracy = Math.min(100, this.player.stats.accuracy + 2);
+                    bonuses.push('+2 Accuracy');
+                }
+                
+                // Every 3 levels: +3 Luck
+                if (level % 3 === 0) {
+                    this.player.stats.luck = Math.min(100, this.player.stats.luck + 3);
+                    bonuses.push('+3 Luck');
+                }
+                
+                // Every 4 levels: +2 Patience
+                if (level % 4 === 0) {
+                    this.player.stats.patience = Math.min(100, this.player.stats.patience + 2);
+                    bonuses.push('+2 Patience');
+                }
+                
+                // Every 5 levels: +4 Strength
+                if (level % 5 === 0) {
+                    this.player.stats.strength = Math.min(100, this.player.stats.strength + 4);
+                    bonuses.push('+4 Strength');
+                }
+                
+                return bonuses.join(', ');
+            }
+
+            checkAchievements() {
+                const achievements = [
+                    {
+                        id: 'first_catch',
+                        name: '🎣 Novice Angler',
+                        description: 'Catch your first fish',
+                        condition: () => this.player.totalCaught >= 1,
+                        unlocked: this.player.achievements.includes('first_catch')
+                    },
+                    {
+                        id: 'big_fish',
+                        name: '🐟 Big Fish Hunter',
+                        description: 'Catch a fish over 10 lbs',
+                        condition: () => this.player.biggestCatch >= 10,
+                        unlocked: this.player.achievements.includes('big_fish')
+                    },
+                    {
+                        id: 'level_5',
+                        name: '⭐ Rising Star',
+                        description: 'Reach level 5',
+                        condition: () => this.player.level >= 5,
+                        unlocked: this.player.achievements.includes('level_5')
+                    },
+                    {
+                        id: 'level_10',
+                        name: '🌟 Expert Angler',
+                        description: 'Reach level 10',
+                        condition: () => this.player.level >= 10,
+                        unlocked: this.player.achievements.includes('level_10')
+                    },
+                    {
+                        id: 'money_maker',
+                        name: '💰 Money Maker',
+                        description: 'Earn $1000',
+                        condition: () => this.player.money >= 1000,
+                        unlocked: this.player.achievements.includes('money_maker')
+                    },
+                    {
+                        id: 'fish_master',
+                        name: '🐠 Fish Master',
+                        description: 'Catch 100 fish',
+                        condition: () => this.player.totalCaught >= 100,
+                        unlocked: this.player.achievements.includes('fish_master')
+                    }
+                ];
+
+                achievements.forEach(achievement => {
+                    if (!achievement.unlocked && achievement.condition()) {
+                        this.player.achievements.push(achievement.id);
+                        this.showMessage(`Achievement Unlocked: ${achievement.name}!`, '#ffd700');
+                        this.addChatMessage('system', `${this.player.name} unlocked: ${achievement.name}!`);
+                        this.updateAchievementsDisplay();
+                    }
+                });
+            }
+
+            updateAchievementsDisplay() {
+                const achievementsContainer = document.getElementById('achievements');
+                const achievements = [
+                    { id: 'first_catch', name: '🎣 Novice Angler', description: 'Catch your first fish' },
+                    { id: 'big_fish', name: '🐟 Big Fish Hunter', description: 'Catch a fish over 10 lbs' },
+                    { id: 'level_5', name: '⭐ Rising Star', description: 'Reach level 5' },
+                    { id: 'level_10', name: '🌟 Expert Angler', description: 'Reach level 10' },
+                    { id: 'money_maker', name: '💰 Money Maker', description: 'Earn $1000' },
+                    { id: 'fish_master', name: '🐠 Fish Master', description: 'Catch 100 fish' }
+                ];
+
+                achievementsContainer.innerHTML = achievements.map(achievement => {
+                    const unlocked = this.player.achievements.includes(achievement.id);
+                    return `<div class="achievement-item ${unlocked ? '' : 'locked'}" title="${achievement.description}">${achievement.name}</div>`;
+                }).join('');
+            }
+
+            checkLocationUnlocks() {
+                let newUnlocks = [];
+                this.locations.forEach((location, index) => {
+                    if (!this.player.locationUnlocks.includes(index) && this.player.level >= location.unlockLevel) {
+                        this.player.locationUnlocks.push(index);
+                        newUnlocks.push(location.name);
+                    }
+                });
+                
+                if (newUnlocks.length > 0) {
+                    this.showCongratulationsPopup('location', newUnlocks);
+                    this.showMessage(`New locations unlocked: ${newUnlocks.join(', ')}!`, '#00ffff');
+                    this.addChatMessage('system', `New locations unlocked: ${newUnlocks.join(', ')}!`);
+                    this.updateLocationButtons(); // Refresh dropdown to show unlocked locations
+                }
+            }
+
+            checkTackleUnlocks() {
+                let newUnlocks = [];
+                
+                // Check rod unlocks
+                this.tackle.rods.forEach((rod, index) => {
+                    if (!this.player.tackleUnlocks.rods.includes(index) && this.player.level >= rod.unlockLevel) {
+                        this.player.tackleUnlocks.rods.push(index);
+                        newUnlocks.push(rod.name);
+                    }
+                });
+                
+                // Check reel unlocks
+                this.tackle.reels.forEach((reel, index) => {
+                    if (!this.player.tackleUnlocks.reels.includes(index) && this.player.level >= reel.unlockLevel) {
+                        this.player.tackleUnlocks.reels.push(index);
+                        newUnlocks.push(reel.name);
+                    }
+                });
+                
+                // Check line unlocks
+                this.tackle.lines.forEach((line, index) => {
+                    if (!this.player.tackleUnlocks.lines.includes(index) && this.player.level >= line.unlockLevel) {
+                        this.player.tackleUnlocks.lines.push(index);
+                        newUnlocks.push(line.name);
+                    }
+                });
+                
+                // Check hook unlocks
+                this.tackle.hooks.forEach((hook, index) => {
+                    if (!this.player.tackleUnlocks.hooks.includes(index) && this.player.level >= hook.unlockLevel) {
+                        this.player.tackleUnlocks.hooks.push(index);
+                        newUnlocks.push(hook.name);
+                    }
+                });
+                
+                // Check bait unlocks
+                this.tackle.baits.forEach((bait, index) => {
+                    if (!this.player.tackleUnlocks.baits.includes(index) && this.player.level >= bait.unlockLevel) {
+                        this.player.tackleUnlocks.baits.push(index);
+                        newUnlocks.push(bait.name);
+                    }
+                });
+                
+                if (newUnlocks.length > 0) {
+                    this.showCongratulationsPopup('tackle', newUnlocks);
+                    this.showMessage(`New tackle unlocked: ${newUnlocks.join(', ')}!`, '#ff00ff');
+                    this.addChatMessage('system', `New tackle unlocked: ${newUnlocks.join(', ')}!`);
+                }
+                
+                this.saveGameData(); // Auto-save after unlocking new content
+            }
+
+            changeLocation(index) {
+                // Convert string to number if needed
+                index = parseInt(index);
+                
+                if (isNaN(index) || index < 0 || index >= this.locations.length) {
+                    this.showMessage('Invalid location!', '#ff0000');
+                    return;
+                }
+                
+                const location = this.locations[index];
+                
+                // Check if location is unlocked
+                if (!this.player.locationUnlocks.includes(index)) {
+                    this.showMessage(`Location locked! Reach level ${location.unlockLevel} to unlock.`, '#ff0000');
+                    return;
+                }
+                
+                if (this.player.money < location.cost) {
+                    this.showMessage('Not enough money!', '#ff0000');
+                    return;
+                }
+
+                this.currentLocation = index;
+                this.player.money -= location.cost;
+                
+                // Update location buttons
+                document.querySelectorAll('.location-btn').forEach((btn, i) => {
+                    btn.classList.toggle('active', i === index);
+                });
+
+                this.updateDisplay();
+                this.addChatMessage('system', `${this.player.name} moved to ${location.name}`);
+                this.saveGameData(); // Auto-save after changing location
+            }
+
+            simulateMultiplayer() {
+                // Simulate other players
+                const playerNames = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry'];
+                
+                // Add 3-6 random players
+                const numPlayers = Math.floor(Math.random() * 4) + 3;
+                for (let i = 0; i < numPlayers; i++) {
+                    this.otherPlayers.push({
+                        name: playerNames[Math.floor(Math.random() * playerNames.length)],
+                        level: Math.floor(Math.random() * 10) + 1,
+                        fishing: false,
+                        catches: Math.floor(Math.random() * 50),
+                        isCasting: false,
+                        biggestCatch: Math.random() * 15, // Random biggest catch 0-15 lbs
+                        recentCatches: this.generateSimulatedCatches(Math.floor(Math.random() * 20) + 5) // 5-25 catches
+                    });
+                }
+
+                // Simulate other players fishing
+                setInterval(() => {
+                    this.otherPlayers.forEach((player, index) => {
+                        if (!player.isCasting && Math.random() < 0.1) {
+                            this.simulateOtherPlayerFishing(index);
+                        }
+                    });
+                }, 3000 + Math.random() * 5000);
+
+                // Update leaderboard periodically
+                setInterval(() => {
+                    this.updateLeaderboard();
+                }, 5000); // Update every 5 seconds
+
+                // Simulate other players catching fish
+                setInterval(() => {
+                    if (Math.random() < 0.2) {
+                        const randomPlayer = this.otherPlayers[Math.floor(Math.random() * this.otherPlayers.length)];
+                        const fishTypes = Object.keys(this.fishTypes);
+                        const randomFish = fishTypes[Math.floor(Math.random() * fishTypes.length)];
+                        const fishData = this.fishTypes[randomFish];
+                        
+                        this.addChatMessage('other', `${randomPlayer.name} caught a ${fishData.name}!`);
+                    }
+                }, 5000 + Math.random() * 10000);
+
+                this.updateOnlinePlayers();
+            }
+
+            simulateOtherPlayerFishing(playerIndex) {
+                const player = this.otherPlayers[playerIndex];
+                player.isCasting = true;
+                player.fishing = true;
+                
+                // Add fishing line for this player
+                this.addFishingLine(playerIndex + 1, true);
+                
+                // Update fisherman visual
+                const fishermen = document.querySelectorAll('.fisherman');
+                if (fishermen[playerIndex + 1]) {
+                    fishermen[playerIndex + 1].classList.add('fishing');
+                }
+                
+                // Simulate fishing duration
+                setTimeout(() => {
+                    player.isCasting = false;
+                    player.fishing = false;
+                    
+                    // Remove fishing line and splash
+                    const lake = document.getElementById('fishing-lake');
+                    const lines = lake.querySelectorAll('.fishing-line');
+                    lines.forEach(line => {
+                        // Remove associated splash
+                        const splashId = line.dataset.splashId;
+                        if (splashId) {
+                            const splash = document.getElementById(splashId);
+                            if (splash) splash.remove();
+                        }
+                        line.remove();
+                    });
+                    
+                    // Clean up any remaining splashes
+                    const splashes = lake.querySelectorAll('.hook-splash');
+                    splashes.forEach(splash => splash.remove());
+                    
+                    // Update fisherman visual
+                    const fishermen = document.querySelectorAll('.fisherman');
+                    if (fishermen[playerIndex + 1]) {
+                        fishermen[playerIndex + 1].classList.remove('fishing');
+                    }
+                    
+                    // Random chance to catch fish
+                    if (Math.random() < 0.6) {
+                        const randomFishType = Math.floor(Math.random() * this.fishTypes.length);
+                        const fishData = this.fishTypes[randomFishType];
+                        
+                        const weight = fishData.minWeight + Math.random() * (fishData.maxWeight - fishData.minWeight);
+                        const value = Math.floor(fishData.value * (1 + weight / fishData.maxWeight));
+                        
+                        // Add catch to player's recent catches
+                        const catchData = {
+                            fish: fishData,
+                            weight: weight,
+                            value: value,
+                            experience: Math.floor(fishData.experience * (1 + weight / fishData.maxWeight)),
+                            location: this.locations[Math.floor(Math.random() * this.locations.length)].name,
+                            timestamp: Date.now()
+                        };
+                        
+                        player.recentCatches.push(catchData);
+                        
+                        // Keep only last 50 catches
+                        if (player.recentCatches.length > 50) {
+                            player.recentCatches = player.recentCatches.slice(-50);
+                        }
+                        
+                        // Update biggest catch
+                        if (weight > player.biggestCatch) {
+                            player.biggestCatch = weight;
+                        }
+                        
+                        this.addChatMessage('other', `${player.name} caught a ${fishData.name} (${weight.toFixed(1)} lbs)!`);
+                    }
+                }, 2000 + Math.random() * 3000);
+            }
+
+            updateOnlinePlayers() {
+                const container = document.getElementById('online-players');
+                container.innerHTML = '';
+                
+                // Add current player
+                const playerItem = document.createElement('div');
+                playerItem.className = 'player-item';
+                playerItem.innerHTML = `${this.player.name} (You) - Level ${this.player.level}`;
+                container.appendChild(playerItem);
+
+                // Add other players
+                this.otherPlayers.forEach(player => {
+                    const item = document.createElement('div');
+                    item.className = `player-item ${player.fishing ? 'fishing' : ''}`;
+                    item.innerHTML = `${player.name} - Level ${player.level} ${player.fishing ? '(Fishing)' : ''}`;
+                    container.appendChild(item);
+                });
+            }
+
+            broadcastCatch(fishData, weight, value, isRare = false, isHuge = false, isLegendary = false, isTrophy = false) {
+                const fishName = fishData.name;
+                const rarity = fishData.rarity;
+                
+                // Create special announcement for rare fish
+                if (isLegendary || isTrophy) {
+                    this.addChatMessage('legendary', `🏆 LEGENDARY CATCH! ${this.player.name} caught a ${fishName}! ${weight.toFixed(1)}lbs, +$${value} 🏆`);
+                    this.showGlobalAnnouncement(`🏆 LEGENDARY CATCH! ${this.player.name} caught a ${fishName}! ${weight.toFixed(1)}lbs 🏆`, '#ff00ff');
+                } else if (isRare) {
+                    this.addChatMessage('rare', `💎 RARE CATCH! ${this.player.name} caught a ${fishName}! ${weight.toFixed(1)}lbs, +$${value} 💎`);
+                    this.showGlobalAnnouncement(`💎 RARE CATCH! ${this.player.name} caught a ${fishName}! ${weight.toFixed(1)}lbs 💎`, '#00ffff');
+                } else if (isHuge) {
+                    this.addChatMessage('huge', `🐟 HUGE FISH! ${this.player.name} caught a massive ${fishName}! ${weight.toFixed(1)}lbs, +$${value} 🐟`);
+                    this.showGlobalAnnouncement(`🐟 HUGE FISH! ${this.player.name} caught a massive ${fishName}! ${weight.toFixed(1)}lbs 🐟`, '#ffff00');
+                } else {
+                    this.addChatMessage('own', `You caught a ${fishName}! ${weight.toFixed(1)}lbs, +$${value}`);
+                }
+            }
+
+            showRareFishBanner(fishData, weight, value, isLegendary, isTrophy) {
+                const banner = document.createElement('div');
+                banner.className = 'rare-fish-banner';
+                
+                let bannerClass = 'rare';
+                let icon = '💎';
+                let title = 'RARE CATCH!';
+                
+                if (isLegendary) {
+                    bannerClass = 'legendary';
+                    icon = '🏆';
+                    title = 'LEGENDARY CATCH!';
+                } else if (isTrophy) {
+                    bannerClass = 'trophy';
+                    icon = '🏅';
+                    title = 'TROPHY CATCH!';
+                }
+                
+                banner.innerHTML = `
+                    <div class="banner-content ${bannerClass}">
+                        <div class="banner-icon">${icon}</div>
+                        <div class="banner-text">
+                            <h2>${title}</h2>
+                            <p>${fishData.name} - ${weight.toFixed(1)}lbs</p>
+                            <p>+$${value} | ${fishData.rarity}</p>
+                        </div>
+                        <div class="banner-icon">${icon}</div>
+                    </div>
+                `;
+                
+                // Add CSS for the banner
+                const style = document.createElement('style');
+                style.textContent = `
+                    .rare-fish-banner {
+                        position: fixed;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        z-index: 10001;
+                        animation: bannerSlideIn 0.8s ease-out;
+                    }
+                    
+                    .banner-content {
+                        background: linear-gradient(135deg, #001100, #003300);
+                        border: 4px solid;
+                        border-radius: 20px;
+                        padding: 30px 50px;
+                        text-align: center;
+                        box-shadow: 0 0 40px;
+                        display: flex;
+                        align-items: center;
+                        gap: 20px;
+                        min-width: 400px;
+                    }
+                    
+                    .banner-content.legendary {
+                        border-color: #ff00ff;
+                        box-shadow: 0 0 40px rgba(255, 0, 255, 0.8);
+                    }
+                    
+                    .banner-content.rare {
+                        border-color: #00ffff;
+                        box-shadow: 0 0 40px rgba(0, 255, 255, 0.8);
+                    }
+                    
+                    .banner-content.trophy {
+                        border-color: #ffff00;
+                        box-shadow: 0 0 40px rgba(255, 255, 0, 0.8);
+                    }
+                    
+                    .banner-icon {
+                        font-size: 48px;
+                        animation: bounce 1s infinite;
+                    }
+                    
+                    .banner-text h2 {
+                        margin: 0 0 10px 0;
+                        font-size: 28px;
+                        text-shadow: 0 0 10px;
+                    }
+                    
+                    .banner-text p {
+                        margin: 5px 0;
+                        font-size: 18px;
+                    }
+                    
+                    .banner-content.legendary h2 {
+                        color: #ff00ff;
+                    }
+                    
+                    .banner-content.rare h2 {
+                        color: #00ffff;
+                    }
+                    
+                    .banner-content.trophy h2 {
+                        color: #ffff00;
+                    }
+                    
+                    @keyframes bannerSlideIn {
+                        from { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+                        to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+                    }
+                    
+                    @keyframes bounce {
+                        0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+                        40% { transform: translateY(-10px); }
+                        60% { transform: translateY(-5px); }
+                    }
+                `;
+                
+                document.head.appendChild(style);
+                document.body.appendChild(banner);
+                
+                // Auto-remove after 5 seconds
+                setTimeout(() => {
+                    if (banner.parentElement) {
+                        banner.style.animation = 'bannerSlideIn 0.5s ease-in reverse';
+                        setTimeout(() => {
+                            banner.remove();
+                            style.remove();
+                        }, 500);
+                    }
+                }, 5000);
+            }
+
+            showGlobalAnnouncement(message, color) {
+                const announcement = document.createElement('div');
+                announcement.className = 'global-announcement';
+                announcement.innerHTML = `
+                    <div class="announcement-content" style="color: ${color}; border-color: ${color}; box-shadow: 0 0 20px ${color}40;">
+                        ${message}
+                    </div>
+                `;
+                
+                // Add CSS for the announcement
+                const style = document.createElement('style');
+                style.textContent = `
+                    .global-announcement {
+                        position: fixed;
+                        top: 20px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        z-index: 10000;
+                        animation: announcementSlideDown 0.6s ease-out;
+                    }
+                    
+                    .announcement-content {
+                        background: linear-gradient(135deg, #001100, #003300);
+                        border: 3px solid;
+                        border-radius: 10px;
+                        padding: 15px 30px;
+                        text-align: center;
+                        font-size: 18px;
+                        font-weight: bold;
+                        text-shadow: 0 0 10px;
+                        white-space: nowrap;
+                        max-width: 90vw;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    }
+                    
+                    @keyframes announcementSlideDown {
+                        from { transform: translateX(-50%) translateY(-100px); opacity: 0; }
+                        to { transform: translateX(-50%) translateY(0); opacity: 1; }
+                    }
+                `;
+                
+                document.head.appendChild(style);
+                document.body.appendChild(announcement);
+                
+                // Auto-remove after 4 seconds
+                setTimeout(() => {
+                    if (announcement.parentElement) {
+                        announcement.style.animation = 'announcementSlideDown 0.4s ease-in reverse';
+                        setTimeout(() => {
+                            announcement.remove();
+                            style.remove();
+                        }, 400);
+                    }
+                }, 4000);
+            }
+
+            addChatMessage(type, message) {
+                const chatArea = document.getElementById('chat-area');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `chat-message ${type}`;
+                messageDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                chatArea.appendChild(messageDiv);
+                chatArea.scrollTop = chatArea.scrollHeight;
+            }
+
+            sendMessage(message) {
+                this.addChatMessage('own', message);
+                // In a real app, this would send to other players
+            }
+
+            toggleTournament() {
+                if (!this.tournament) {
+                    this.startTournament();
+                } else {
+                    this.leaveTournament();
+                }
+            }
+
+            startTournament() {
+                this.tournament = {
+                    active: true,
+                    phase: 'joining',
+                    participants: [this.player.name, ...this.otherPlayers.slice(0, 3).map(p => p.name)],
+                    startTime: Date.now(),
+                    duration: 5 * 60 * 1000, // 5 minutes
+                    joinPeriod: 60 * 1000, // 60 seconds to join
+                    scores: {},
+                    tournamentId: Date.now().toString(),
+                    catches: {} // Store individual catches for tournament
+                };
+
+                this.tournament.participants.forEach(name => {
+                    this.tournament.scores[name] = {
+                        totalWeight: 0,
+                        fishCount: 0,
+                        biggestCatch: 0
+                    };
+                    this.tournament.catches[name] = []; // Initialize catches array
+                });
+
+                this.updateTournamentDisplay();
+                this.showGlobalAnnouncement('🎣 TOURNAMENT STARTING! 🎣', '#ffff00');
+                this.addChatMessage('system', '🎣 TOURNAMENT STARTING! 60 seconds to join!');
+                
+                // Start countdown
+                this.startTournamentCountdown();
+            }
+
+            startTournamentCountdown() {
+                let countdown = 60;
+                this.tournament.countdownInterval = setInterval(() => {
+                    countdown--;
+                    
+                    // Update display with countdown
+                    this.updateTournamentDisplay();
+                    
+                    if (countdown > 0 && countdown <= 10) {
+                        // Show countdown for last 10 seconds
+                        this.showGlobalAnnouncement(`🏆 TOURNAMENT STARTS IN ${countdown} SECONDS! 🏆`, '#ff00ff');
+                        this.addChatMessage('system', `Tournament starts in ${countdown} seconds!`);
+                    }
+                    
+                    if (countdown <= 0) {
+                        clearInterval(this.tournament.countdownInterval);
+                        this.startTournamentFishing();
+                    }
+                }, 1000);
+            }
+
+            startTournamentFishing() {
+                this.tournament.phase = 'active';
+                this.tournament.startTime = Date.now();
+                this.updateTournamentDisplay();
+                this.showGlobalAnnouncement('🎣 TOURNAMENT FISHING HAS BEGUN! 🎣', '#00ff00');
+                this.addChatMessage('system', '🎣 TOURNAMENT FISHING HAS BEGUN! 5 minutes to catch the biggest fish!');
+                this.addChatMessage('system', '⚖️ Tournament Mode: Everyone has equal catch chances (equipment/stats disabled)!');
+                this.addChatMessage('system', '🐟 TOURNAMENT FISH: Fish can be up to 3x bigger than normal! MEGA catches possible!');
+                
+                // End tournament after duration
+                setTimeout(() => {
+                    this.endTournament();
+                }, this.tournament.duration);
+            }
+
+            endTournament() {
+                this.tournament.phase = 'ended';
+                this.tournament.active = false;
+                
+                // Clear update intervals
+                if (this.tournament.updateInterval) {
+                    clearTimeout(this.tournament.updateInterval);
+                }
+                if (this.tournament.countdownInterval) {
+                    clearInterval(this.tournament.countdownInterval);
+                }
+                
+                // Calculate winner
+                let winner = null;
+                let highestWeight = 0;
+                
+                Object.entries(this.tournament.scores).forEach(([name, score]) => {
+                    if (score.totalWeight > highestWeight) {
+                        highestWeight = score.totalWeight;
+                        winner = name;
+                    }
+                });
+                
+                this.addChatMessage('system', `Tournament ended! Winner: ${winner} with ${highestWeight.toFixed(2)} lbs!`);
+                this.addChatMessage('system', '🎣 Returning to normal fishing mode - your equipment and stats are active again!');
+                
+                // Show tournament results
+                this.showTournamentResults();
+                
+                // Clear tournament after showing results
+                setTimeout(() => {
+                    this.tournament = null;
+                    this.updateTournamentDisplay();
+                }, 10000);
+            }
+
+            showTournamentResults() {
+                // Calculate biggest bags (top 10 fish) for each player
+                const playersWithBags = Object.entries(this.tournament.catches).map(([name, catches]) => {
+                    const top10Fish = [...catches]
+                        .sort((a, b) => b.weight - a.weight)
+                        .slice(0, 10);
+                    
+                    const bagWeight = top10Fish.reduce((total, catchData) => total + catchData.weight, 0);
+                    
+                    return {
+                        name: name,
+                        bagWeight: bagWeight,
+                        top10Fish: top10Fish,
+                        biggestFish: this.tournament.scores[name].biggestCatch
+                    };
+                }).filter(player => player.bagWeight > 0);
+
+                // Sort by bag weight
+                const biggestBags = playersWithBags
+                    .sort((a, b) => b.bagWeight - a.bagWeight)
+                    .slice(0, 3);
+
+                // Sort by biggest single fish
+                const topFish = playersWithBags
+                    .sort((a, b) => b.biggestFish - a.biggestFish)
+                    .slice(0, 3);
+
+                // Show results
+                this.showGlobalAnnouncement('🏆 TOURNAMENT RESULTS 🏆', '#ff00ff');
+                this.addChatMessage('system', '==================== TOURNAMENT RESULTS ====================');
+                
+                // Biggest Bags (Top 10 Total Weight)
+                this.addChatMessage('system', '🏆 BIGGEST BAGS (Top 10 Fish Total Weight):');
+                if (biggestBags.length > 0) {
+                    biggestBags.forEach((player, index) => {
+                        const rank = index + 1;
+                        const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉';
+                        this.addChatMessage('system', `${medal} ${rank}. ${player.name}: ${player.bagWeight.toFixed(2)} lbs (${player.top10Fish.length} fish)`);
+                    });
+                } else {
+                    this.addChatMessage('system', 'No catches recorded');
+                }
+                
+                this.addChatMessage('system', '');
+                
+                // Top Fish Overall
+                this.addChatMessage('system', '🐟 TOP FISH OVERALL:');
+                if (topFish.length > 0) {
+                    topFish.forEach((player, index) => {
+                        const rank = index + 1;
+                        const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉';
+                        this.addChatMessage('system', `${medal} ${rank}. ${player.name}: ${player.biggestFish.toFixed(2)} lbs`);
+                    });
+                } else {
+                    this.addChatMessage('system', 'No catches recorded');
+                }
+                
+                this.addChatMessage('system', '============================================================');
+            }
+
+            leaveTournament() {
+                this.tournament = null;
+                this.updateTournamentDisplay();
+                this.addChatMessage('system', 'Tournament ended.');
+            }
+
+            updateTournamentDisplay() {
+                const container = document.getElementById('tournament-info');
+                
+                if (!this.tournament) {
+                    container.innerHTML = `
+                        <h4>No Active Tournament</h4>
+                        <div class="tournament-timer">Join a tournament to compete!</div>
+                    `;
+                    return;
+                }
+
+                // Show countdown during joining phase
+                if (this.tournament.phase === 'joining') {
+                    const countdownStart = this.tournament.startTime;
+                    const countdownElapsed = Date.now() - countdownStart;
+                    const countdown = Math.max(0, 60 - Math.floor(countdownElapsed / 1000));
+                    
+                    container.innerHTML = `
+                        <h4>🎣 TOURNAMENT STARTING</h4>
+                        <div class="tournament-timer" style="font-size: 18px; font-weight: bold; color: #ffff00;">
+                            Starts in: ${countdown} seconds
+                        </div>
+                        <div style="margin-top: 10px;">Participants: ${this.tournament.participants.length}</div>
+                        <div style="margin-top: 5px; font-size: 12px; color: #00ffff;">Get ready to fish!</div>
+                    `;
+                    return;
+                }
+
+                // Show active tournament stats
+                if (this.tournament.phase === 'active') {
+                    const timeLeft = Math.max(0, this.tournament.duration - (Date.now() - this.tournament.startTime));
+                    const minutes = Math.floor(timeLeft / 60000);
+                    const seconds = Math.floor((timeLeft % 60000) / 1000);
+
+                    // Find biggest fish caught so far
+                    let biggestFish = 0;
+                    let biggestFishPlayer = 'None';
+                    Object.entries(this.tournament.scores).forEach(([name, score]) => {
+                        if (score.biggestCatch > biggestFish) {
+                            biggestFish = score.biggestCatch;
+                            biggestFishPlayer = name;
+                        }
+                    });
+
+                    // Calculate total fish caught
+                    let totalFish = 0;
+                    Object.values(this.tournament.scores).forEach(score => {
+                        totalFish += score.fishCount;
+                    });
+
+                    container.innerHTML = `
+                        <h4>🎣 TOURNAMENT ACTIVE</h4>
+                        <div class="tournament-timer" style="font-size: 16px; font-weight: bold; color: #00ff00;">
+                            Time: ${minutes}:${seconds.toString().padStart(2, '0')}
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <div style="font-size: 12px; color: #ffff00;">🐟 Biggest Fish:</div>
+                            <div style="font-size: 11px; color: #00ffff; margin-left: 10px;">
+                                ${biggestFishPlayer}: ${biggestFish.toFixed(1)} lbs
+                            </div>
+                        </div>
+                        <div style="margin-top: 8px;">
+                            <div style="font-size: 12px; color: #ffff00;">👥 Participants:</div>
+                            <div style="font-size: 11px; color: #00ffff; margin-left: 10px;">
+                                ${this.tournament.participants.length} players | ${totalFish} fish caught
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Update every second during active phase
+                    if (this.tournament.updateInterval) {
+                        clearInterval(this.tournament.updateInterval);
+                    }
+                    this.tournament.updateInterval = setTimeout(() => {
+                        if (this.tournament && this.tournament.phase === 'active') {
+                            this.updateTournamentDisplay();
+                        }
+                    }, 1000);
+                    return;
+                }
+
+                // Show ended tournament
+                if (this.tournament.phase === 'ended') {
+                    container.innerHTML = `
+                        <h4>🏆 TOURNAMENT ENDED</h4>
+                        <div class="tournament-timer">Check results below!</div>
+                    `;
+                }
+            }
+
+            openShop() {
+                document.getElementById('tackle-shop-modal').style.display = 'block';
+                this.switchShopTab('rods'); // Start with rods tab
+            }
+
+            closeShop() {
+                document.getElementById('tackle-shop-modal').style.display = 'none';
+            }
+
+            switchShopTab(tabName) {
+                // Update tab buttons (only shop tabs)
+                document.querySelectorAll('#tackle-shop-modal .tab-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.tab === tabName);
+                });
+
+                // Update content
+                this.renderShopContent(tabName);
+            }
+
+            renderShopContent(tabName) {
+                const content = document.getElementById('shop-content');
+                
+                // Only handle tackle shop tabs
+                const validTabs = ['rods', 'reels', 'lines', 'hooks', 'baits'];
+                if (!validTabs.includes(tabName)) {
+                    return; // Not a tackle shop tab, ignore
+                }
+                
+                const tackle = this.tackle[tabName];
+                
+                content.innerHTML = '';
+                
+                // Safety check for tackle array
+                if (!tackle || !Array.isArray(tackle)) {
+                    content.innerHTML = '<p style="color: #ff0000;">Error loading tackle items. Please refresh the page.</p>';
+                    console.error('Tackle not found for tab:', tabName, 'Available:', Object.keys(this.tackle));
+                    return;
+                }
+                
+                tackle.forEach((item, index) => {
+                    const isUnlocked = this.player.tackleUnlocks[tabName].includes(index);
+                    const isOwned = this.player.gear[tabName.toLowerCase()] === item.name;
+                    const canAfford = this.player.money >= item.cost;
+                    
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = `tackle-item ${isOwned ? 'equipped' : ''} ${!isUnlocked ? 'locked' : ''}`;
+                    
+                    let statsText = '';
+                    if (tabName === 'rods') {
+                        statsText = `+${item.catchBonus}% catch, ${item.strength} strength`;
+                    } else if (tabName === 'reels') {
+                        statsText = `+${item.speedBonus}% speed, ${item.smoothness} smoothness`;
+                    } else if (tabName === 'lines') {
+                        statsText = `${item.strength} strength, ${item.visibility} visibility`;
+                    } else if (tabName === 'hooks') {
+                        statsText = `+${item.catchBonus}% catch, size ${item.size}`;
+                    } else if (tabName === 'baits') {
+                        statsText = `+${item.catchBonus}% catch, ${item.durability} durability`;
+                    }
+                    
+                    itemDiv.innerHTML = `
+                        <div class="tackle-info">
+                            <div class="tackle-name">${item.name}</div>
+                            <div class="tackle-stats">${statsText}</div>
+                            <div class="tackle-description">${item.description}</div>
+                        </div>
+                        <div class="tackle-actions">
+                            ${!isUnlocked ? 
+                                `<div style="color: #666; font-size: 12px;">Locked - Level ${item.unlockLevel}</div>` :
+                                isOwned ? 
+                                    `<div style="color: #ffff00; font-size: 12px;">EQUIPPED</div>` :
+                                    canAfford ?
+                                        `<button class="tackle-btn buy" data-action="buy" data-category="${tabName}" data-index="${index}">BUY $${item.cost}</button>` :
+                                        `<div style="color: #ff6666; font-size: 12px;">Need $${item.cost}</div>`
+                            }
+                            ${isOwned && !isUnlocked ? '' : isOwned ? '' : isUnlocked && this.player.gear[tabName.toLowerCase()] !== item.name ? 
+                                `<button class="tackle-btn equip" data-action="equip" data-category="${tabName}" data-index="${index}">EQUIP</button>` : ''
+                            }
+                        </div>
+                    `;
+                    
+                    content.appendChild(itemDiv);
+                });
+            }
+
+            buyTackle(category, index) {
+                const item = this.tackle[category][index];
+                
+                if (this.player.money < item.cost) {
+                    this.showMessage('Not enough money!', '#ff0000');
+                    return;
+                }
+                
+                this.player.money -= item.cost;
+                this.player.gear[category.toLowerCase()] = item.name;
+                
+                this.showMessage(`Bought ${item.name}!`, '#00ff00');
+                this.addChatMessage('system', `${this.player.name} bought ${item.name}!`);
+                
+                this.updateDisplay();
+                this.renderShopContent(category);
+                this.saveGameData();
+            }
+
+            equipTackle(category, index) {
+                const item = this.tackle[category][index];
+                this.player.gear[category.toLowerCase()] = item.name;
+                
+                this.showMessage(`Equipped ${item.name}!`, '#00ff00');
+                this.addChatMessage('system', `${this.player.name} equipped ${item.name}!`);
+                
+                this.updateDisplay();
+                this.renderShopContent(category);
+                this.saveGameData();
+            }
+
+            openInventory() {
+                document.getElementById('inventory-modal').style.display = 'block';
+                this.switchInventoryTab('recent');
+            }
+
+            closeInventory() {
+                document.getElementById('inventory-modal').style.display = 'none';
+            }
+
+            switchInventoryTab(tabName) {
+                // Update tab buttons
+                document.querySelectorAll('.inventory-tabs .tab-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.dataset.tab === tabName) {
+                        btn.classList.add('active');
+                    }
+                });
+
+                // Render content
+                this.renderInventoryContent(tabName);
+            }
+
+            renderInventoryContent(tabName) {
+                const content = document.getElementById('inventory-content');
+                
+                switch(tabName) {
+                    case 'recent':
+                        this.renderRecentCatches(content);
+                        break;
+                    case 'biggest':
+                        this.renderBiggestFish(content);
+                        break;
+                    case 'stats':
+                        this.renderStatistics(content);
+                        break;
+                }
+            }
+
+            renderRecentCatches(container) {
+                if (this.player.recentCatches.length === 0) {
+                    container.innerHTML = '<div class="no-data">No fish caught yet!</div>';
+                    return;
+                }
+
+                const html = this.player.recentCatches.slice(-10).reverse().map(catchData => `
+                    <div class="catch-item">
+                        <div class="fish-name">${catchData.fish.name}</div>
+                        <div class="fish-details">
+                            <span class="weight">${catchData.weight.toFixed(1)} lbs</span>
+                            <span class="value">$${catchData.value}</span>
+                            <span class="location">${catchData.location}</span>
+                            <span class="time">${new Date(catchData.timestamp).toLocaleTimeString()}</span>
+                        </div>
+                    </div>
+                `).join('');
+
+                container.innerHTML = html;
+            }
+
+            renderBiggestFish(container) {
+                const biggestFish = this.player.recentCatches
+                    .sort((a, b) => b.weight - a.weight)
+                    .slice(0, 10);
+
+                if (biggestFish.length === 0) {
+                    container.innerHTML = '<div class="no-data">No fish caught yet!</div>';
+                    return;
+                }
+
+                const html = biggestFish.map((catchData, index) => `
+                    <div class="catch-item">
+                        <div class="rank">#${index + 1}</div>
+                        <div class="fish-name">${catchData.fish.name}</div>
+                        <div class="fish-details">
+                            <span class="weight">${catchData.weight.toFixed(1)} lbs</span>
+                            <span class="value">$${catchData.value}</span>
+                            <span class="location">${catchData.location}</span>
+                        </div>
+                    </div>
+                `).join('');
+
+                container.innerHTML = html;
+            }
+
+            renderStatistics(container) {
+                const stats = {
+                    totalFish: this.player.totalCaught,
+                    totalWeight: this.player.totalWeight.toFixed(1),
+                    biggestCatch: this.player.biggestCatch.toFixed(1),
+                    totalMoney: this.player.money,
+                    level: this.player.level,
+                    experience: this.player.experience,
+                    tournamentsPlayed: this.player.tournamentStats.tournamentsPlayed,
+                    tournamentsWon: this.player.tournamentStats.tournamentsWon
+                };
+
+                const html = `
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">Total Fish</div>
+                            <div class="stat-value">${stats.totalFish}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Total Weight</div>
+                            <div class="stat-value">${stats.totalWeight} lbs</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Biggest Catch</div>
+                            <div class="stat-value">${stats.biggestCatch} lbs</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Total Money</div>
+                            <div class="stat-value">$${stats.totalMoney}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Level</div>
+                            <div class="stat-value">${stats.level}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Experience</div>
+                            <div class="stat-value">${stats.experience}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Tournaments Played</div>
+                            <div class="stat-value">${stats.tournamentsPlayed}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Tournaments Won</div>
+                            <div class="stat-value">${stats.tournamentsWon}</div>
+                        </div>
+                    </div>
+                `;
+
+                container.innerHTML = html;
+            }
+
+            showMessage(text, color) {
+                const message = document.getElementById('catch-text');
+                message.textContent = text;
+                message.style.color = color;
+                document.getElementById('catch-message').classList.add('show');
+
+                setTimeout(() => {
+                    document.getElementById('catch-message').classList.remove('show');
+                }, 3000);
+            }
+
+            updateDisplay() {
+                document.getElementById('player-name').textContent = this.player.name;
+                document.getElementById('player-level').textContent = this.player.level;
+                document.getElementById('player-money').textContent = this.player.money;
+                document.getElementById('fish-caught').textContent = this.player.totalCaught;
+                document.getElementById('total-weight').textContent = this.player.totalWeight.toFixed(1);
+
+                // Update experience display
+                const expNeeded = this.player.level * 100;
+                document.getElementById('player-exp').textContent = this.player.experience;
+                document.getElementById('next-level-exp').textContent = expNeeded;
+
+                // Update player stats
+                document.getElementById('stat-accuracy').textContent = this.player.stats.accuracy;
+                document.getElementById('stat-luck').textContent = this.player.stats.luck;
+                document.getElementById('stat-patience').textContent = this.player.stats.patience;
+                document.getElementById('stat-strength').textContent = this.player.stats.strength;
+
+                const location = this.locations[this.currentLocation];
+                document.getElementById('current-location').textContent = location.name;
+                document.getElementById('location-difficulty').textContent = location.difficulty;
+                document.getElementById('location-cost').textContent = location.cost;
+
+                // Update location buttons
+                this.updateLocationButtons();
+
+                this.updateOnlinePlayers();
+                this.updateTournamentDisplay();
+            }
+
+            updateLocationButtons() {
+                const select = document.getElementById('location-select');
+                select.innerHTML = '';
+                
+                this.locations.forEach((location, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = location.name;
+                    
+                    // Check if location is unlocked
+                    if (!this.player.locationUnlocks.includes(index)) {
+                        option.disabled = true;
+                        option.textContent += ` (Locked - Level ${location.unlockLevel})`;
+                    }
+                    
+                    // Check if it's the current location
+                    if (index === this.currentLocation) {
+                        option.selected = true;
+                    }
+                    
+                    select.appendChild(option);
+                });
+            }
+
+            saveGameData() {
+                const gameData = {
+                    player: this.player,
+                    currentLocation: this.currentLocation,
+                    timestamp: Date.now(),
+                    version: '1.0' // For future compatibility
+                };
+                
+                try {
+                    const dataString = JSON.stringify(gameData);
+                    const dataSize = Math.round(dataString.length / 1024 * 100) / 100; // KB
+                    
+                    // Save main game data
+                    localStorage.setItem('fishingHoleGame', dataString);
+                    
+                    // Create a backup save
+                    localStorage.setItem('fishingHoleGame_backup', dataString);
+                    
+                    // Update status display
+                    this.updateGameStatus(dataSize);
+                    
+                    console.log('Game data saved successfully');
+                    
+                    // Show save confirmation occasionally
+                    if (Math.random() < 0.1) { // 10% chance
+                        this.addChatMessage('system', 'Progress saved!');
+                    }
+                } catch (error) {
+                    console.error('Failed to save game data:', error);
+                    this.addChatMessage('system', 'Warning: Could not save progress!');
+                    this.updateGameStatus(0, 'Error');
+                }
+            }
+
+            updateGameStatus(dataSize, status = 'Active') {
+                const lastSaveTime = new Date().toLocaleTimeString();
+                document.getElementById('last-save-time').textContent = lastSaveTime;
+                document.getElementById('data-size').textContent = `${dataSize} KB`;
+                document.getElementById('auto-save-status').textContent = status;
+            }
+
+            generateSimulatedCatches(count) {
+                const catches = [];
+                for (let i = 0; i < count; i++) {
+                    const randomFish = this.fishTypes[Math.floor(Math.random() * this.fishTypes.length)];
+                    const weight = randomFish.minWeight + Math.random() * (randomFish.maxWeight - randomFish.minWeight);
+                    const value = Math.floor(randomFish.value * (1 + weight / randomFish.maxWeight));
+                    
+                    catches.push({
+                        fish: randomFish,
+                        weight: weight,
+                        value: value,
+                        experience: Math.floor(randomFish.experience * (1 + weight / randomFish.maxWeight)),
+                        location: this.locations[Math.floor(Math.random() * this.locations.length)].name,
+                        timestamp: Date.now() - Math.random() * 86400000 // Random time in last 24 hours
+                    });
+                }
+                return catches.sort((a, b) => b.timestamp - a.timestamp); // Sort by newest first
+            }
+
+            updateLeaderboard() {
+                // Update biggest fish leaderboard
+                this.updateBiggestFishLeaderboard();
+                
+                // Update biggest bags leaderboard
+                this.updateBiggestBagsLeaderboard();
+            }
+
+            updateBiggestFishLeaderboard() {
+                // Only show real players (current player only for now)
+                const realPlayers = [
+                    {
+                        name: this.player.name,
+                        biggestFish: this.player.biggestCatch,
+                        recentCatches: this.player.recentCatches
+                    }
+                ];
+
+                // Sort by biggest fish
+                const biggestFishLeaders = realPlayers
+                    .filter(player => player.biggestFish > 0)
+                    .sort((a, b) => b.biggestFish - a.biggestFish)
+                    .slice(0, 3);
+
+                // Update display
+                const container = document.getElementById('biggest-fish-leaderboard');
+                if (biggestFishLeaders.length === 0) {
+                    container.innerHTML = '<div class="leaderboard-item">No fish caught yet</div>';
+                } else {
+                    container.innerHTML = biggestFishLeaders.map((player, index) => `
+                        <div class="leaderboard-item">
+                            <span class="rank">#${index + 1}</span>
+                            <span class="player-name">${player.name}</span>
+                            <span class="weight">${player.biggestFish.toFixed(1)} lbs</span>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            updateTop10BiggestFish(catchData) {
+                // Initialize if needed
+                if (!this.player.top10BiggestFish) {
+                    this.player.top10BiggestFish = [];
+                }
+
+                // Add the new catch
+                this.player.top10BiggestFish.push(catchData);
+
+                // Sort by weight (biggest first) and keep only top 10
+                this.player.top10BiggestFish.sort((a, b) => b.weight - a.weight);
+                this.player.top10BiggestFish = this.player.top10BiggestFish.slice(0, 10);
+            }
+
+            updateBiggestBagsLeaderboard() {
+                // Only show real players (current player only for now)
+                const realPlayers = [
+                    {
+                        name: this.player.name,
+                        top10BiggestFish: this.player.top10BiggestFish || []
+                    }
+                ];
+
+                // Calculate top 10 BIGGEST fish weight for each player
+                const playersWithBags = realPlayers.map(player => {
+                    // Use the persistent top10BiggestFish array (never goes down)
+                    const top10Fish = player.top10BiggestFish || [];
+                    
+                    const bagWeight = top10Fish.reduce((total, catchData) => total + catchData.weight, 0);
+                    
+                    return {
+                        name: player.name,
+                        bagWeight: bagWeight,
+                        fishCount: top10Fish.length,
+                        top10Fish: top10Fish // Store for display
+                    };
+                }).filter(player => player.bagWeight > 0 && player.fishCount >= 1);
+
+                // Sort by bag weight (total of top 10 biggest fish)
+                const biggestBagsLeaders = playersWithBags
+                    .sort((a, b) => b.bagWeight - a.bagWeight)
+                    .slice(0, 3);
+
+                // Update display
+                const container = document.getElementById('biggest-bags-leaderboard');
+                if (biggestBagsLeaders.length === 0) {
+                    container.innerHTML = '<div class="leaderboard-item">No fish caught yet</div>';
+                } else {
+                    container.innerHTML = biggestBagsLeaders.map((player, index) => `
+                        <div class="leaderboard-item">
+                            <span class="rank">#${index + 1}</span>
+                            <span class="player-name">${player.name}</span>
+                            <span class="weight">${player.bagWeight.toFixed(1)} lbs</span>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            // Auto-save every 30 seconds
+            startAutoSave() {
+                setInterval(() => {
+                    this.saveGameData();
+                }, 30000); // 30 seconds
+            }
+
+            manualSave() {
+                this.saveGameData();
+                this.showMessage('Game saved successfully!', '#00ff00');
+                this.addChatMessage('system', 'Game progress saved!');
+            }
+
+            exportGameData() {
+                const gameData = {
+                    player: this.player,
+                    currentLocation: this.currentLocation,
+                    timestamp: Date.now(),
+                    version: '1.0'
+                };
+                
+                const dataStr = JSON.stringify(gameData, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(dataBlob);
+                link.download = `fishing-hole-save-${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+                
+                this.addChatMessage('system', 'Game data exported!');
+            }
+
+            importGameData(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const gameData = JSON.parse(e.target.result);
+                        
+                        if (gameData.player && gameData.version) {
+                            this.player = { ...this.player, ...gameData.player };
+                            this.currentLocation = gameData.currentLocation || 0;
+                            
+                            this.updateDisplay();
+                            this.updateAchievementsDisplay();
+                            this.saveGameData();
+                            
+                            this.showMessage('Game data imported successfully!', '#00ff00');
+                            this.addChatMessage('system', 'Game data imported!');
+                        } else {
+                            this.showMessage('Invalid game data file!', '#ff0000');
+                        }
+                    } catch (error) {
+                        this.showMessage('Error importing game data!', '#ff0000');
+                        console.error('Import error:', error);
+                    }
+                };
+                reader.readAsText(file);
+            }
+
+            loadGameData() {
+                try {
+                    const savedData = localStorage.getItem('fishingHoleGame');
+                    if (savedData) {
+                        const gameData = JSON.parse(savedData);
+                        
+                        // Load player data with proper defaults for new features
+                        if (gameData.player) {
+                            // Merge saved data with defaults to ensure new features are initialized
+                            this.player = {
+                                ...this.player,
+                                ...gameData.player,
+                                // Ensure new features have defaults if not in saved data
+                                stats: {
+                                    accuracy: 50,
+                                    luck: 50,
+                                    patience: 50,
+                                    strength: 50,
+                                    ...gameData.player.stats
+                                },
+                                achievements: gameData.player.achievements || [],
+                                recentCatches: gameData.player.recentCatches || [],
+                                top10BiggestFish: gameData.player.top10BiggestFish || [],
+                                seasonalCatches: {
+                                    spring: { caught: 0, biggest: 0 },
+                                    summer: { caught: 0, biggest: 0 },
+                                    fall: { caught: 0, biggest: 0 },
+                                    winter: { caught: 0, biggest: 0 },
+                                    ...gameData.player.seasonalCatches
+                                },
+                                tournamentStats: {
+                                    tournamentsPlayed: 0,
+                                    tournamentsWon: 0,
+                                    biggestTournamentFish: 0,
+                                    biggestTournamentBag: 0,
+                                    totalTournamentWeight: 0,
+                                    totalTournamentFish: 0,
+                                    ...gameData.player.tournamentStats
+                                }
+                            };
+                        }
+                        
+                        // Load current location
+                        if (gameData.currentLocation !== undefined) {
+                            this.currentLocation = gameData.currentLocation;
+                        }
+                        
+                        console.log('Game data loaded successfully');
+                        this.addChatMessage('system', `Welcome back, ${this.player.name}! Your progress has been loaded.`);
+                        
+                        // Show loaded stats
+                        this.addChatMessage('system', `Level ${this.player.level} | ${this.player.totalCaught} fish caught | $${this.player.money} earned`);
+                        
+                        // Initialize top10BiggestFish if empty (migrate from recentCatches)
+                        if (!this.player.top10BiggestFish || this.player.top10BiggestFish.length === 0) {
+                            this.player.top10BiggestFish = [];
+                            // Migrate existing catches to top10BiggestFish
+                            if (this.player.recentCatches && this.player.recentCatches.length > 0) {
+                                this.player.recentCatches.forEach(catchData => {
+                                    this.updateTop10BiggestFish(catchData);
+                                });
+                            }
+                        } else {
+                            // Ensure it's sorted correctly
+                            this.player.top10BiggestFish.sort((a, b) => b.weight - a.weight);
+                            this.player.top10BiggestFish = this.player.top10BiggestFish.slice(0, 10);
+                        }
+                        
+                        // Check for any unlocks that should have happened
+                        this.checkLocationUnlocks();
+                        this.checkTackleUnlocks();
+                        this.updateLocationButtons();
+                    } else {
+                        console.log('No saved game data found, starting fresh');
+                        this.addChatMessage('system', 'Welcome to Fishing Hole! Start your fishing adventure!');
+                    }
+                } catch (error) {
+                    console.error('Failed to load game data:', error);
+                    this.addChatMessage('system', 'Welcome to Fishing Hole! Start your fishing adventure!');
+                }
+            }
+        }
+
+        // Start the game
+        const game = new FishingHoleMultiplayer();
+    </script>
+</body>
+</html>
