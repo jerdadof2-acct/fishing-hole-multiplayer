@@ -1677,6 +1677,7 @@
                             recentCatches: []
                         }));
                         this.updateOnlinePlayers();
+                        this.positionPlayers(); // Update visual positioning
                     });
 
                     this.socket.on('fish-caught', (data) => {
@@ -1694,6 +1695,28 @@
                     this.socket.on('error', (error) => {
                         console.error('Server error:', error);
                         this.addChatMessage('system', `Error: ${error.message}`);
+                    });
+
+                    this.socket.on('player-casting', (data) => {
+                        // Find player and show their casting animation
+                        const playerIndex = this.otherPlayers.findIndex(p => p.name === data.name);
+                        if (playerIndex !== -1) {
+                            this.otherPlayers[playerIndex].isCasting = true;
+                            this.addFishingLine(playerIndex + 1, true); // +1 because index 0 is current player
+                            
+                            // Auto-reel after a delay (simulated)
+                            setTimeout(() => {
+                                if (this.otherPlayers[playerIndex]) {
+                                    this.otherPlayers[playerIndex].isCasting = false;
+                                    const lines = document.querySelectorAll('.fishing-line');
+                                    lines.forEach(line => {
+                                        if (line.dataset.playerIndex == (playerIndex + 1).toString()) {
+                                            line.remove();
+                                        }
+                                    });
+                                }
+                            }, 3000 + Math.random() * 2000);
+                        }
                     });
                 } catch (error) {
                     console.error('Failed to connect to server:', error);
@@ -2326,6 +2349,11 @@
                 this.addFishingLine(0, true);
                 this.playSound('cast'); // Casting sound
                 
+                // Notify server
+                if (this.socket && this.connected) {
+                    this.socket.emit('cast-line');
+                }
+                
                 const ripples = document.getElementById('ripples');
                 ripples.classList.add('active');
 
@@ -2350,6 +2378,7 @@
                 
                 const line = document.createElement('div');
                 line.className = 'fishing-line';
+                line.dataset.playerIndex = playerIndex.toString();
                 if (isCasting) line.classList.add('casting');
                 
                 // Position line from fisherman to lake
@@ -3919,15 +3948,31 @@
                 this.updateBiggestBagsLeaderboard();
             }
 
-            updateBiggestFishLeaderboard() {
-                // Only show real players (current player only for now)
+            async updateBiggestFishLeaderboard() {
+                // Fetch leaderboard from server
+                let serverPlayers = [];
+                try {
+                    const response = await fetch(`${this.serverUrl}/api/leaderboard`);
+                    serverPlayers = await response.json();
+                } catch (error) {
+                    console.error('Failed to fetch leaderboard:', error);
+                }
+
+                // Combine with local player
                 const realPlayers = [
                     {
                         name: this.player.name,
                         biggestFish: this.player.biggestCatch,
                         recentCatches: this.player.recentCatches
-                    }
-                ];
+                    },
+                    ...serverPlayers.map(p => ({
+                        name: p.name,
+                        biggestFish: p.biggest_catch || 0,
+                        recentCatches: []
+                    }))
+                ].filter((p, index, self) => 
+                    index === self.findIndex(pl => pl.name === p.name)
+                );
 
                 // Sort by biggest fish
                 const biggestFishLeaders = realPlayers
@@ -3964,21 +4009,36 @@
                 this.player.top10BiggestFish = this.player.top10BiggestFish.slice(0, 10);
             }
 
-            updateBiggestBagsLeaderboard() {
-                // Only show real players (current player only for now)
+            async updateBiggestBagsLeaderboard() {
+                // Fetch leaderboard from server
+                let serverPlayers = [];
+                try {
+                    const response = await fetch(`${this.serverUrl}/api/leaderboard`);
+                    serverPlayers = await response.json();
+                } catch (error) {
+                    console.error('Failed to fetch leaderboard:', error);
+                }
+
+                // Combine with local player
                 const realPlayers = [
                     {
                         name: this.player.name,
                         top10BiggestFish: this.player.top10BiggestFish || []
-                    }
-                ];
+                    },
+                    ...serverPlayers.map(p => ({
+                        name: p.name,
+                        top10BiggestFish: p.top10_biggest_fish || []
+                    }))
+                ].filter((p, index, self) => 
+                    index === self.findIndex(pl => pl.name === p.name)
+                );
 
                 // Calculate top 10 BIGGEST fish weight for each player
                 const playersWithBags = realPlayers.map(player => {
                     // Use the persistent top10BiggestFish array (never goes down)
                     const top10Fish = player.top10BiggestFish || [];
                     
-                    const bagWeight = top10Fish.reduce((total, catchData) => total + catchData.weight, 0);
+                    const bagWeight = top10Fish.reduce((total, catchData) => total + (catchData.weight || 0), 0);
                     
                     return {
                         name: player.name,

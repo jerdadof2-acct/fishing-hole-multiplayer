@@ -152,6 +152,14 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('cast-line', () => {
+        const player = activePlayers.get(socket.id);
+        if (!player) return;
+        
+        // Broadcast casting to other players
+        socket.broadcast.emit('player-casting', { name: player.name });
+    });
+
     socket.on('catch-fish', async (catchData) => {
         try {
             const player = activePlayers.get(socket.id);
@@ -251,6 +259,24 @@ app.get('/', (req, res) => {
 // Health check endpoint
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: Date.now() });
+});
+
+// Get leaderboard data
+app.get('/api/leaderboard', async (req, res) => {
+    try {
+        const players = await pool.query(`
+            SELECT name, biggest_catch, top10_biggest_fish 
+            FROM players 
+            WHERE biggest_catch > 0 OR (top10_biggest_fish IS NOT NULL AND jsonb_array_length(top10_biggest_fish) > 0)
+            ORDER BY biggest_catch DESC
+            LIMIT 10
+        `);
+        
+        res.json(players.rows);
+    } catch (error) {
+        console.error('Leaderboard error:', error);
+        res.json([]);
+    }
 });
 
 // Start server

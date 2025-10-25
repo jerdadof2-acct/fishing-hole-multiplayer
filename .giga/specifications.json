@@ -1,0 +1,22 @@
+[
+  {
+    "fileName": "main-overview.mdc",
+    "description": "Complete system overview covering the fishing game architecture, core systems, and component interactions"
+  },
+  {
+    "fileName": "player-progression-model.mdc",
+    "description": "Detailed documentation of player state management, including levels, experience, achievements, inventory systems, and location unlocking mechanics"
+  },
+  {
+    "fileName": "tournament-system.mdc",
+    "description": "Comprehensive documentation of tournament mechanics, leaderboards, result tracking, and statistical calculations"
+  },
+  {
+    "fileName": "realtime-multiplayer.mdc",
+    "description": "Documentation of real-time player synchronization, catch broadcasting, and chat system implementation"
+  },
+  {
+    "fileName": "data-flow.mdc",
+    "description": "Detailed mapping of data flow between game components, including player state updates, tournament events, and seasonal tracking"
+  }
+]
