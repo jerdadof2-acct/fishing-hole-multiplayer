@@ -1784,24 +1784,53 @@
                     });
 
                     this.socket.on('tournament-start', (data) => {
-                        // Only show for other players' tournaments
-                        if (!this.tournament || this.tournament.tournamentId !== data.tournamentId) {
+                        // Only create tournament for other players (not if we already have one)
+                        if (!this.tournament) {
+                            // Create a read-only tournament instance for viewing
+                            this.tournament = {
+                                active: true,
+                                phase: 'joining',
+                                participants: data.participants || [],
+                                startTime: Date.now(),
+                                duration: 5 * 60 * 1000, // 5 minutes
+                                joinPeriod: 60 * 1000, // 60 seconds to join
+                                scores: {},
+                                tournamentId: data.tournamentId,
+                                catches: {},
+                                isViewer: true // Mark as viewer-only (not participant)
+                            };
+                            
+                            // Initialize scores for all participants
+                            this.tournament.participants.forEach(name => {
+                                this.tournament.scores[name] = {
+                                    totalWeight: 0,
+                                    fishCount: 0,
+                                    biggestCatch: 0
+                                };
+                                this.tournament.catches[name] = [];
+                            });
+                            
+                            this.updateTournamentDisplay();
                             this.showGlobalAnnouncement('🎣 TOURNAMENT STARTING! 🎣', '#ffff00');
                             this.addChatMessage('system', '🎣 A tournament is starting! Join by clicking TOURNAMENT button!');
                         }
                     });
 
                     this.socket.on('tournament-countdown', (data) => {
-                        // Only show for other players' tournaments
-                        if (!this.tournament || this.tournament.phase !== 'joining') {
+                        // Show countdown for viewers
+                        if (this.tournament && this.tournament.isViewer) {
                             this.showGlobalAnnouncement(`🏆 TOURNAMENT STARTS IN ${data.seconds} SECONDS! 🏆`, '#ff00ff');
                             this.addChatMessage('system', `Tournament starts in ${data.seconds} seconds!`);
+                            this.updateTournamentDisplay(); // Update the display
                         }
                     });
 
                     this.socket.on('tournament-active', (data) => {
-                        // Only show for other players' tournaments
-                        if (!this.tournament || this.tournament.tournamentId !== data.tournamentId) {
+                        // Switch to active phase for viewers
+                        if (this.tournament && this.tournament.isViewer && this.tournament.tournamentId === data.tournamentId) {
+                            this.tournament.phase = 'active';
+                            this.tournament.startTime = Date.now();
+                            this.updateTournamentDisplay();
                             this.showGlobalAnnouncement('🎣 TOURNAMENT FISHING HAS BEGUN! 🎣', '#00ff00');
                             this.addChatMessage('system', '🎣 TOURNAMENT FISHING HAS BEGUN! Good luck!');
                         }
