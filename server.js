@@ -22,7 +22,12 @@ app.use(express.static('public'));
 // PostgreSQL connection pool
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    ssl: process.env.DATABASE_URL?.includes('railway') ? { rejectUnauthorized: false } : false
+});
+
+// Handle connection errors gracefully
+pool.on('error', (err) => {
+    console.error('Unexpected error on idle client', err);
 });
 
 // Initialize database tables
@@ -68,6 +73,7 @@ async function initDatabase() {
         console.log('Database initialized successfully');
     } catch (error) {
         console.error('Database initialization error:', error);
+        console.log('Server will continue but database features may be limited');
     }
 }
 
