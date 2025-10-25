@@ -24,10 +24,21 @@ const dbUrl = process.env.DATABASE_URL;
 console.log('DATABASE_URL exists:', !!dbUrl);
 console.log('DATABASE_URL starts with:', dbUrl ? dbUrl.substring(0, 20) : 'N/A');
 
-const pool = new Pool({
+// Parse connection string for Railway
+let poolConfig = {
     connectionString: dbUrl,
     ssl: dbUrl?.includes('railway') || dbUrl?.includes('postgres') ? { rejectUnauthorized: false } : false
-});
+};
+
+// Handle Railway internal hostname issue
+if (dbUrl && dbUrl.includes('postgres.railway.internal')) {
+    // Try to use external connection if internal fails
+    console.log('Warning: Using Railway internal hostname, connection may fail');
+    // Railway services should be able to connect via internal networking
+    // But if not, you may need to use the external URL from PostgreSQL service
+}
+
+const pool = new Pool(poolConfig);
 
 // Handle connection errors gracefully
 pool.on('error', (err) => {
