@@ -1727,16 +1727,24 @@
                     });
 
                     this.socket.on('player-list', (players) => {
-                        // Update online players list
-                        this.otherPlayers = players.filter(name => name !== this.player.name).map(name => ({
+                        // Separate real players from simulated ones
+                        const realPlayerNames = players.filter(name => name !== this.player.name);
+                        const simulatedPlayers = this.otherPlayers.filter(p => p.isSimulated);
+                        
+                        // Map real players
+                        const realPlayers = realPlayerNames.map(name => ({
                             name: name,
                             level: 1,
                             fishing: false,
                             catches: 0,
                             isCasting: false,
                             biggestCatch: 0,
-                            recentCatches: []
+                            recentCatches: [],
+                            isSimulated: false // Mark as real player
                         }));
+                        
+                        // Combine real players with simulated ones
+                        this.otherPlayers = [...realPlayers, ...simulatedPlayers];
                         this.updateOnlinePlayers();
                         this.positionPlayers(); // Update visual positioning
                     });
@@ -3111,27 +3119,29 @@
             }
 
             simulateMultiplayer() {
-                // Simulate other players
-                const playerNames = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry'];
+                // Simulate other players with unique AI names
+                const aiNames = ['Bot_Alpha', 'Bot_Beta', 'Bot_Gamma', 'Bot_Delta', 'Bot_Epsilon', 'Bot_Zeta', 'Bot_Eta', 'Bot_Theta'];
                 
-                // Add 3-6 random players
+                // Add 3-6 random AI players
                 const numPlayers = Math.floor(Math.random() * 4) + 3;
                 for (let i = 0; i < numPlayers; i++) {
                     this.otherPlayers.push({
-                        name: playerNames[Math.floor(Math.random() * playerNames.length)],
+                        name: aiNames[i], // Use unique AI names
                         level: Math.floor(Math.random() * 10) + 1,
                         fishing: false,
                         catches: Math.floor(Math.random() * 50),
                         isCasting: false,
                         biggestCatch: Math.random() * 15, // Random biggest catch 0-15 lbs
-                        recentCatches: this.generateSimulatedCatches(Math.floor(Math.random() * 20) + 5) // 5-25 catches
+                        recentCatches: this.generateSimulatedCatches(Math.floor(Math.random() * 20) + 5), // 5-25 catches
+                        isSimulated: true // Mark as AI player
                     });
                 }
 
-                // Simulate other players fishing
+                // Simulate other players fishing (only AI players)
                 setInterval(() => {
                     this.otherPlayers.forEach((player, index) => {
-                        if (!player.isCasting && Math.random() < 0.1) {
+                        // Only simulate AI players, not real players
+                        if (player.isSimulated && !player.isCasting && Math.random() < 0.1) {
                             this.simulateOtherPlayerFishing(index);
                         }
                     });
@@ -3229,7 +3239,10 @@
                             player.biggestCatch = weight;
                         }
                         
-                        this.addChatMessage('other', `${player.name} caught a ${fishData.name} (${weight.toFixed(1)} lbs)!`);
+                        // Only show chat message for simulated (AI) players, not real players
+                        if (player.isSimulated) {
+                            this.addChatMessage('other', `${player.name} caught a ${fishData.name} (${weight.toFixed(1)} lbs)!`);
+                        }
                     }
                 }, 2000 + Math.random() * 3000);
             }
