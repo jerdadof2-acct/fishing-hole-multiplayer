@@ -207,6 +207,37 @@ io.on('connection', (socket) => {
         });
     });
 
+    socket.on('tournament-start', (data) => {
+        const player = activePlayers.get(socket.id);
+        if (!player) return;
+
+        // Broadcast tournament start to all players
+        io.emit('tournament-start', {
+            tournamentId: data.tournamentId,
+            participants: data.participants
+        });
+    });
+
+    socket.on('tournament-countdown', (data) => {
+        const player = activePlayers.get(socket.id);
+        if (!player) return;
+
+        // Broadcast countdown to all players
+        io.emit('tournament-countdown', {
+            seconds: data.seconds
+        });
+    });
+
+    socket.on('tournament-active', (data) => {
+        const player = activePlayers.get(socket.id);
+        if (!player) return;
+
+        // Broadcast tournament active to all players
+        io.emit('tournament-active', {
+            tournamentId: data.tournamentId
+        });
+    });
+
     socket.on('save-game', async (playerData) => {
         try {
             const player = activePlayers.get(socket.id);

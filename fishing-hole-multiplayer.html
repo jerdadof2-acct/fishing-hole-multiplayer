@@ -1783,6 +1783,30 @@
                         this.addChatMessage('system', `Error: ${error.message}`);
                     });
 
+                    this.socket.on('tournament-start', (data) => {
+                        // Only show for other players' tournaments
+                        if (!this.tournament || this.tournament.tournamentId !== data.tournamentId) {
+                            this.showGlobalAnnouncement('🎣 TOURNAMENT STARTING! 🎣', '#ffff00');
+                            this.addChatMessage('system', '🎣 A tournament is starting! Join by clicking TOURNAMENT button!');
+                        }
+                    });
+
+                    this.socket.on('tournament-countdown', (data) => {
+                        // Only show for other players' tournaments
+                        if (!this.tournament || this.tournament.phase !== 'joining') {
+                            this.showGlobalAnnouncement(`🏆 TOURNAMENT STARTS IN ${data.seconds} SECONDS! 🏆`, '#ff00ff');
+                            this.addChatMessage('system', `Tournament starts in ${data.seconds} seconds!`);
+                        }
+                    });
+
+                    this.socket.on('tournament-active', (data) => {
+                        // Only show for other players' tournaments
+                        if (!this.tournament || this.tournament.tournamentId !== data.tournamentId) {
+                            this.showGlobalAnnouncement('🎣 TOURNAMENT FISHING HAS BEGUN! 🎣', '#00ff00');
+                            this.addChatMessage('system', '🎣 TOURNAMENT FISHING HAS BEGUN! Good luck!');
+                        }
+                    });
+
                     this.socket.on('player-casting', (data) => {
                         // Find player and show their casting animation
                         const playerIndex = this.otherPlayers.findIndex(p => p.name === data.name);
@@ -3416,6 +3440,14 @@
                 this.showGlobalAnnouncement('🎣 TOURNAMENT STARTING! 🎣', '#ffff00');
                 this.addChatMessage('system', '🎣 TOURNAMENT STARTING! 60 seconds to join!');
                 
+                // Broadcast tournament start to all players
+                if (this.socket && this.connected) {
+                    this.socket.emit('tournament-start', {
+                        tournamentId: this.tournament.tournamentId,
+                        participants: this.tournament.participants
+                    });
+                }
+                
                 // Start countdown
                 this.startTournamentCountdown();
             }
@@ -3432,6 +3464,11 @@
                         // Show countdown for last 10 seconds
                         this.showGlobalAnnouncement(`🏆 TOURNAMENT STARTS IN ${countdown} SECONDS! 🏆`, '#ff00ff');
                         this.addChatMessage('system', `Tournament starts in ${countdown} seconds!`);
+                        
+                        // Broadcast countdown to all players
+                        if (this.socket && this.connected) {
+                            this.socket.emit('tournament-countdown', { seconds: countdown });
+                        }
                     }
                     
                     if (countdown <= 0) {
@@ -3449,6 +3486,13 @@
                 this.addChatMessage('system', '🎣 TOURNAMENT FISHING HAS BEGUN! 5 minutes to catch the biggest fish!');
                 this.addChatMessage('system', '⚖️ Tournament Mode: Everyone has equal catch chances (equipment/stats disabled)!');
                 this.addChatMessage('system', '🐟 TOURNAMENT FISH: Fish can be up to 3x bigger than normal! MEGA catches possible!');
+                
+                // Broadcast tournament start to all players
+                if (this.socket && this.connected) {
+                    this.socket.emit('tournament-active', {
+                        tournamentId: this.tournament.tournamentId
+                    });
+                }
                 
                 // End tournament after duration
                 setTimeout(() => {
