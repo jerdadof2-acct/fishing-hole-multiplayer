@@ -1795,7 +1795,7 @@
 
                 // Fish caught sound - splash and success
                 this.sounds.catch = () => {
-                    // Splash sound
+                    // Splash sound - use sawtooth instead of noise
                     const splashOsc = this.audioContext.createOscillator();
                     const splashGain = this.audioContext.createGain();
                     const splashFilter = this.audioContext.createBiquadFilter();
@@ -1804,7 +1804,7 @@
                     splashFilter.connect(splashGain);
                     splashGain.connect(this.audioContext.destination);
                     
-                    splashOsc.type = 'noise';
+                    splashOsc.type = 'sawtooth'; // Changed from 'noise' to 'sawtooth'
                     splashFilter.type = 'bandpass';
                     splashFilter.frequency.setValueAtTime(800, this.audioContext.currentTime);
                     splashFilter.Q.setValueAtTime(1, this.audioContext.currentTime);
@@ -1846,7 +1846,7 @@
                     bigSplashFilter.connect(bigSplashGain);
                     bigSplashGain.connect(this.audioContext.destination);
                     
-                    bigSplashOsc.type = 'noise';
+                    bigSplashOsc.type = 'sawtooth'; // Changed from 'noise' to 'sawtooth'
                     bigSplashFilter.type = 'bandpass';
                     bigSplashFilter.frequency.setValueAtTime(400, this.audioContext.currentTime);
                     bigSplashFilter.Q.setValueAtTime(0.5, this.audioContext.currentTime);
@@ -3967,7 +3967,7 @@
                     },
                     ...serverPlayers.map(p => ({
                         name: p.name,
-                        biggestFish: p.biggest_catch || 0,
+                        biggestFish: Number(p.biggest_catch) || 0,
                         recentCatches: []
                     }))
                 ].filter((p, index, self) => 
@@ -3985,13 +3985,16 @@
                 if (biggestFishLeaders.length === 0) {
                     container.innerHTML = '<div class="leaderboard-item">No fish caught yet</div>';
                 } else {
-                    container.innerHTML = biggestFishLeaders.map((player, index) => `
+                    container.innerHTML = biggestFishLeaders.map((player, index) => {
+                        const weight = Number(player.biggestFish) || 0;
+                        return `
                         <div class="leaderboard-item">
                             <span class="rank">#${index + 1}</span>
                             <span class="player-name">${player.name}</span>
-                            <span class="weight">${player.biggestFish.toFixed(1)} lbs</span>
+                            <span class="weight">${weight.toFixed(1)} lbs</span>
                         </div>
-                    `).join('');
+                    `;
+                    }).join('');
                 }
             }
 
