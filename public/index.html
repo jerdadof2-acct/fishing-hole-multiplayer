@@ -256,13 +256,32 @@
 
         .hook {
             position: absolute;
-            bottom: -8px;
+            bottom: -12px;
             left: 50%;
-            width: 8px;
-            height: 8px;
-            background: #C0C0C0;
-            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            width: 16px;
+            height: 20px;
             transform: translateX(-50%);
+            /* Bobber shape - elongated oval */
+            background: radial-gradient(ellipse at center, #ff3333 0%, #cc0000 50%, #990000 100%);
+            border-radius: 50% 50% 50% 50% / 70% 70% 50% 50%;
+            border: 2px solid #990000;
+            box-shadow: 
+                0 0 3px rgba(255, 255, 255, 0.3),
+                inset 0 -5px 5px rgba(0, 0, 0, 0.3);
+            /* Add a small white highlight for 3D effect */
+            position: relative;
+        }
+        
+        .hook::before {
+            content: '';
+            position: absolute;
+            top: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 6px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 70%);
+            border-radius: 50%;
         }
 
         .fishing-line {
@@ -289,13 +308,30 @@
 
         .hook {
             position: absolute;
-            bottom: -8px;
+            bottom: -12px;
             left: 50%;
-            width: 12px;
-            height: 12px;
-            background: #C0C0C0;
-            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            width: 14px;
+            height: 18px;
             transform: translateX(-50%);
+            /* Bobber shape - elongated oval */
+            background: radial-gradient(ellipse at center, #ff3333 0%, #cc0000 50%, #990000 100%);
+            border-radius: 50% 50% 50% 50% / 70% 70% 50% 50%;
+            border: 2px solid #990000;
+            box-shadow: 
+                0 0 3px rgba(255, 255, 255, 0.3),
+                inset 0 -5px 5px rgba(0, 0, 0, 0.3);
+        }
+        
+        .hook::before {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 5px;
+            height: 5px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 70%);
+            border-radius: 50%;
         }
 
         .hook-splash {
