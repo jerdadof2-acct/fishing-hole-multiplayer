@@ -165,13 +165,32 @@ io.on('connection', (socket) => {
             const player = activePlayers.get(socket.id);
             if (!player) return;
 
-            // Broadcast catch to all players
-            socket.broadcast.emit('fish-caught', {
-                player: player.name,
-                fish: catchData.fish,
-                weight: catchData.weight,
-                value: catchData.value
-            });
+            const isRare = catchData.isRare || false;
+            const isHuge = catchData.isHuge || false;
+            const isLegendary = catchData.isLegendary || false;
+            const isTrophy = catchData.isTrophy || false;
+
+            // For special catches (rare, huge, legendary, trophy), broadcast globally to ALL players
+            if (isRare || isHuge || isLegendary || isTrophy) {
+                io.emit('special-catch', {
+                    player: player.name,
+                    fish: catchData.fish,
+                    weight: catchData.weight,
+                    value: catchData.value,
+                    isRare: isRare,
+                    isHuge: isHuge,
+                    isLegendary: isLegendary,
+                    isTrophy: isTrophy
+                });
+            } else {
+                // Regular catches only broadcast to other players
+                socket.broadcast.emit('fish-caught', {
+                    player: player.name,
+                    fish: catchData.fish,
+                    weight: catchData.weight,
+                    value: catchData.value
+                });
+            }
         } catch (error) {
             console.error('Catch fish error:', error);
         }

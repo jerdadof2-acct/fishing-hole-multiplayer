@@ -1684,6 +1684,31 @@
                         this.addChatMessage('other', `${data.player} caught a ${data.fish.name} (${data.weight.toFixed(1)} lbs)!`);
                     });
 
+                    this.socket.on('special-catch', (data) => {
+                        // Show special catch announcements to ALL players, including the one who caught it
+                        const fishName = data.fish.name;
+                        const weight = data.weight;
+                        const value = data.value;
+                        const isRare = data.isRare || false;
+                        const isHuge = data.isHuge || false;
+                        const isLegendary = data.isLegendary || false;
+                        const isTrophy = data.isTrophy || false;
+                        
+                        // Only show for other players (not the one who caught it)
+                        if (data.player !== this.player.name) {
+                            if (isLegendary || isTrophy) {
+                                this.addChatMessage('legendary', `🏆 LEGENDARY CATCH! ${data.player} caught a ${fishName}! ${weight.toFixed(1)}lbs, +$${value} 🏆`);
+                                this.showGlobalAnnouncement(`🏆 LEGENDARY CATCH! ${data.player} caught a ${fishName}! ${weight.toFixed(1)}lbs 🏆`, '#ff00ff');
+                            } else if (isRare) {
+                                this.addChatMessage('rare', `💎 RARE CATCH! ${data.player} caught a ${fishName}! ${weight.toFixed(1)}lbs, +$${value} 💎`);
+                                this.showGlobalAnnouncement(`💎 RARE CATCH! ${data.player} caught a ${fishName}! ${weight.toFixed(1)}lbs 💎`, '#00ffff');
+                            } else if (isHuge) {
+                                this.addChatMessage('huge', `🐟 HUGE FISH! ${data.player} caught a massive ${fishName}! ${weight.toFixed(1)}lbs, +$${value} 🐟`);
+                                this.showGlobalAnnouncement(`🐟 HUGE FISH! ${data.player} caught a massive ${fishName}! ${weight.toFixed(1)}lbs 🐟`, '#ffff00');
+                            }
+                        }
+                    });
+
                     this.socket.on('chat-message', (data) => {
                         this.addChatMessage('other', `${data.player}: ${data.message}`);
                     });
@@ -3074,7 +3099,11 @@
                     this.socket.emit('catch-fish', {
                         fish: fishData,
                         weight: weight,
-                        value: value
+                        value: value,
+                        isRare: isRare,
+                        isHuge: isHuge,
+                        isLegendary: isLegendary,
+                        isTrophy: isTrophy
                     });
                 }
                 
