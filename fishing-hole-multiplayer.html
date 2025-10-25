@@ -1432,9 +1432,16 @@
         </div>
     </div>
 
+    <!-- Socket.io Client Library -->
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    
     <script>
         class FishingHoleMultiplayer {
             constructor() {
+                // WebSocket connection for multiplayer
+                this.socket = null;
+                this.serverUrl = window.location.origin; // Will connect to Railway server
+                this.connected = false;
                 this.player = {
                     name: 'Guest',
                     level: 1,
@@ -1614,6 +1621,7 @@
 
             init() {
                 this.loadGameData();
+                this.connectToServer(); // Connect to Railway server
                 this.setupEventListeners();
                 this.positionPlayers();
                 this.simulateMultiplayer();
@@ -1622,6 +1630,90 @@
                 this.updateLeaderboard();
                 this.createAnimatedRipples();
                 this.startAutoSave(); // Start auto-save
+            }
+
+            connectToServer() {
+                try {
+                    this.socket = io(this.serverUrl, {
+                        transports: ['websocket', 'polling']
+                    });
+
+                    this.socket.on('connect', () => {
+                        console.log('Connected to server');
+                        this.connected = true;
+                        this.addChatMessage('system', 'Connected to multiplayer server!');
+                        
+                        // Join game after login
+                        if (this.player.name !== 'Guest') {
+                            this.joinGame();
+                        }
+                    });
+
+                    this.socket.on('disconnect', () => {
+                        console.log('Disconnected from server');
+                        this.connected = false;
+                        this.addChatMessage('system', 'Disconnected from server');
+                    });
+
+                    this.socket.on('player-joined', (data) => {
+                        this.addChatMessage('other', `${data.name} joined the game!`);
+                        this.updateOnlinePlayers();
+                    });
+
+                    this.socket.on('player-left', (data) => {
+                        this.addChatMessage('other', `${data.name} left the game`);
+                        this.updateOnlinePlayers();
+                    });
+
+                    this.socket.on('player-list', (players) => {
+                        // Update online players list
+                        this.otherPlayers = players.filter(name => name !== this.player.name).map(name => ({
+                            name: name,
+                            level: 1,
+                            fishing: false,
+                            catches: 0,
+                            isCasting: false,
+                            biggestCatch: 0,
+                            recentCatches: []
+                        }));
+                        this.updateOnlinePlayers();
+                    });
+
+                    this.socket.on('fish-caught', (data) => {
+                        this.addChatMessage('other', `${data.player} caught a ${data.fish.name} (${data.weight.toFixed(1)} lbs)!`);
+                    });
+
+                    this.socket.on('chat-message', (data) => {
+                        this.addChatMessage('other', `${data.player}: ${data.message}`);
+                    });
+
+                    this.socket.on('game-saved', () => {
+                        console.log('Game saved to server');
+                    });
+
+                    this.socket.on('error', (error) => {
+                        console.error('Server error:', error);
+                        this.addChatMessage('system', `Error: ${error.message}`);
+                    });
+                } catch (error) {
+                    console.error('Failed to connect to server:', error);
+                    this.addChatMessage('system', 'Multiplayer unavailable - playing offline');
+                }
+            }
+
+            joinGame() {
+                if (this.socket && this.connected) {
+                    this.socket.emit('join-game', {
+                        name: this.player.name,
+                        level: this.player.level,
+                        money: this.player.money,
+                        experience: this.player.experience,
+                        locationUnlocks: this.player.locationUnlocks,
+                        tackleUnlocks: this.player.tackleUnlocks,
+                        gear: this.player.gear,
+                        stats: this.player.stats
+                    });
+                }
             }
 
             initAudio() {
@@ -2052,6 +2144,9 @@
                 document.getElementById('login-screen').classList.add('hidden');
                 this.addChatMessage('system', `${name} entered the fishing hole!`);
                 this.positionPlayers(); // Reposition players with new name
+                
+                // Join multiplayer game
+                this.joinGame();
                 this.updateDisplay();
             }
 
@@ -2945,6 +3040,15 @@
                 const fishName = fishData.name;
                 const rarity = fishData.rarity;
                 
+                // Send catch to server for multiplayer
+                if (this.socket && this.connected) {
+                    this.socket.emit('catch-fish', {
+                        fish: fishData,
+                        weight: weight,
+                        value: value
+                    });
+                }
+                
                 // Create special announcement for rare fish
                 if (isLegendary || isTrophy) {
                     this.addChatMessage('legendary', `🏆 LEGENDARY CATCH! ${this.player.name} caught a ${fishName}! ${weight.toFixed(1)}lbs, +$${value} 🏆`);
@@ -3153,7 +3257,10 @@
 
             sendMessage(message) {
                 this.addChatMessage('own', message);
-                // In a real app, this would send to other players
+                // Send to server for multiplayer
+                if (this.socket && this.connected) {
+                    this.socket.emit('chat-message', message);
+                }
             }
 
             toggleTournament() {
@@ -3761,6 +3868,11 @@
                     this.updateGameStatus(dataSize);
                     
                     console.log('Game data saved successfully');
+                    
+                    // Save to server if connected
+                    if (this.socket && this.connected) {
+                        this.socket.emit('save-game', this.player);
+                    }
                     
                     // Show save confirmation occasionally
                     if (Math.random() < 0.1) { // 10% chance
