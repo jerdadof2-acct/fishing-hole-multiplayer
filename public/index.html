@@ -6143,29 +6143,37 @@
                     return;
                 }
                 
+                // Clear any existing timeouts to prevent conflicts
+                if (this.messageTimeout) {
+                    clearTimeout(this.messageTimeout);
+                }
+                if (this.messageHideTimeout) {
+                    clearTimeout(this.messageHideTimeout);
+                }
+                
                 messageEl.textContent = text;
                 messageEl.style.color = color;
                 
-                // Force visibility with !important for mobile - ensure it's visible
+                // Force visibility - remove any conflicting classes first
+                messageContainer.classList.remove('show');
+                messageContainer.style.display = 'none';
+                
+                // Force a reflow to ensure styles are applied
+                void messageContainer.offsetHeight;
+                
+                // Now show the message
                 messageContainer.style.display = 'block';
                 messageContainer.style.visibility = 'visible';
                 messageContainer.style.opacity = '1';
                 messageContainer.style.zIndex = '10000';
                 messageContainer.classList.add('show');
                 
-                // Ensure it stays visible
-                setTimeout(() => {
-                    if (messageContainer.classList.contains('show')) {
-                        messageContainer.style.display = 'block';
-                    }
-                }, 50);
-                
-                // Remove the show class after 3 seconds
-                setTimeout(() => {
+                // Hide after 3 seconds
+                this.messageTimeout = setTimeout(() => {
                     messageContainer.classList.remove('show');
-                    setTimeout(() => {
+                    this.messageHideTimeout = setTimeout(() => {
                         messageContainer.style.display = 'none';
-                    }, 500); // Small delay to allow fade out
+                    }, 500);
                 }, 3000);
             }
 
