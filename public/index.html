@@ -1435,6 +1435,8 @@
             max-height: 80vh;
             overflow-y: auto;
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+            position: relative;
+            z-index: 10002; /* Higher than modal background */
         }
 
         .modal-header {
@@ -2024,16 +2026,21 @@
             }
 
             .mobile-menu-bar {
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
+                position: fixed !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
                 display: flex;
                 background: rgba(15, 25, 40, 0.95);
                 border-top: 1px solid rgba(100, 200, 255, 0.3);
                 padding: 8px;
                 flex-shrink: 0;
-                z-index: 999;
+                z-index: 999 !important; /* Static ad bar, never changes */
+                pointer-events: none; /* Allow clicks to pass through to content below */
+            }
+            
+            .mobile-menu-bar .ad-container {
+                pointer-events: auto; /* But allow clicks on the ad itself */
             }
 
             .mobile-menu-btn {
@@ -2506,6 +2513,9 @@
                         <div>Patience: <span id="mobile-stat-patience">50</span></div>
                         <div>Strength: <span id="mobile-stat-strength">50</span></div>
                     </div>
+                </div>
+                <div class="mobile-panel" style="margin-top: 15px;">
+                    <button class="mobile-btn" id="mobile-help-btn" style="width: 100%; padding: 12px; font-size: 14px; margin-top: 10px;">❓ HELP & GUIDE</button>
                 </div>
                 <div class="mobile-panel">
                     <h4>ACHIEVEMENTS</h4>
@@ -3611,6 +3621,7 @@
                 const mobileSaveBtn = document.getElementById('mobile-save-btn');
                 const mobileExportBtn = document.getElementById('mobile-export-btn');
                 const mobileSoundBtn = document.getElementById('mobile-sound-btn');
+                const mobileHelpBtn = document.getElementById('mobile-help-btn');
                 const mobileSendBtn = document.getElementById('mobile-send-btn');
                 const mobileChatInput = document.getElementById('mobile-chat-input');
 
@@ -3621,6 +3632,7 @@
                 if (mobileSaveBtn) mobileSaveBtn.addEventListener('click', () => this.manualSave());
                 if (mobileExportBtn) mobileExportBtn.addEventListener('click', () => this.exportGameData());
                 if (mobileSoundBtn) mobileSoundBtn.addEventListener('click', () => this.toggleSound());
+                if (mobileHelpBtn) mobileHelpBtn.addEventListener('click', () => this.openHelp());
                 
                 if (mobileSendBtn) {
                     mobileSendBtn.addEventListener('click', () => {
