@@ -3083,10 +3083,13 @@
                     accessories: 'none'
                 };
                 
+                // Store a consistent seed for preview (will be replaced with player name on login)
+                window.avatarPreviewSeed = 'preview';
+                
                 // Generate DiceBear avatar URL
                 const generateAvatarUrl = (options, seed = null) => {
-                    // Use provided seed or generate random one
-                    const avatarSeed = seed || Math.random().toString(36).substring(7);
+                    // Use provided seed or the preview seed
+                    const avatarSeed = seed || window.avatarPreviewSeed;
                     
                     // Map hair colors to DiceBear format (correct capitalization)
                     const hairColorMap = {
@@ -3110,9 +3113,34 @@
                         'sunglasses': 'Sunglasses'
                     };
                     
-                    // Build URL for DiceBear avataaars style (start simple, just seed)
-                    // DiceBear will randomize based on seed - we can add customization later
-                    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(avatarSeed)}`;
+                    // Build URL for DiceBear avataaars style with customization
+                    const params = new URLSearchParams();
+                    params.set('seed', avatarSeed);
+                    
+                    // Hair color
+                    const hairColor = hairColorMap[options.hairColor] || 'Brown';
+                    params.set('hairColor', hairColor);
+                    
+                    // Hair style based on gender
+                    if (options.style === 'male') {
+                        // Use a consistent male hair style - users can still get variety from seed
+                        params.set('top', 'ShortHairShortWaved');
+                        // Add facial hair if selected
+                        if (options.facialHair && options.facialHair !== 'none') {
+                            params.set('facialHairType', facialHairMap[options.facialHair]);
+                            params.set('facialHairColor', hairColor);
+                        }
+                    } else {
+                        // Female hair style
+                        params.set('top', 'LongHairStraight');
+                    }
+                    
+                    // Add accessories if selected
+                    if (options.accessories && options.accessories !== 'none') {
+                        params.set('accessoriesType', accessoriesMap[options.accessories]);
+                    }
+                    
+                    return `https://api.dicebear.com/7.x/avataaars/svg?${params.toString()}`;
                 };
                 
                 // Update preview function
@@ -3352,9 +3380,32 @@
                     'sunglasses': 'Sunglasses'
                 };
                 
-                // Build URL for DiceBear avataaars style (start simple, just seed)
-                // DiceBear will randomize based on seed - we can add customization later
-                return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(playerName)}`;
+                // Build URL for DiceBear avataaars style with customization
+                const params = new URLSearchParams();
+                params.set('seed', playerName);
+                
+                // Hair color
+                const hairColor = hairColorMap[options.hairColor] || 'Brown';
+                params.set('hairColor', hairColor);
+                
+                // Hair style based on gender
+                if (options.style === 'male') {
+                    params.set('top', 'ShortHairShortWaved');
+                    // Add facial hair if selected
+                    if (options.facialHair && options.facialHair !== 'none') {
+                        params.set('facialHairType', facialHairMap[options.facialHair]);
+                        params.set('facialHairColor', hairColor);
+                    }
+                } else {
+                    params.set('top', 'LongHairStraight');
+                }
+                
+                // Add accessories if selected
+                if (options.accessories && options.accessories !== 'none') {
+                    params.set('accessoriesType', accessoriesMap[options.accessories]);
+                }
+                
+                return `https://api.dicebear.com/7.x/avataaars/svg?${params.toString()}`;
             }
 
             positionPlayers() {
