@@ -6142,11 +6142,19 @@
                 messageEl.textContent = text;
                 messageEl.style.color = color;
                 
-                // Force visibility with !important for mobile
+                // Force visibility with !important for mobile - ensure it's visible
                 messageContainer.style.display = 'block';
                 messageContainer.style.visibility = 'visible';
                 messageContainer.style.opacity = '1';
+                messageContainer.style.zIndex = '10000';
                 messageContainer.classList.add('show');
+                
+                // Ensure it stays visible
+                setTimeout(() => {
+                    if (messageContainer.classList.contains('show')) {
+                        messageContainer.style.display = 'block';
+                    }
+                }, 50);
                 
                 // Remove the show class after 3 seconds
                 setTimeout(() => {
