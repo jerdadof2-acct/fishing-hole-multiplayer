@@ -25,7 +25,7 @@
     
     <!-- Additional SEO -->
     <link rel="canonical" href="https://fishing-hole-multiplayer-production.up.railway.app/">
-    <meta name="theme-color" content="#00ff00">
+    <meta name="theme-color" content="#2196f3">
     
     <!-- Favicon and PWA -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E🎣%3C/text%3E%3C/svg%3E">
@@ -238,47 +238,47 @@
         .char-part-option {
             font-size: 24px;
             padding: 5px 8px;
-            border: 2px solid #004400;
+            border: 2px solid rgba(100, 200, 255, 0.3);
             border-radius: 5px;
             cursor: pointer;
             transition: all 0.2s ease;
-            background: #000;
+            background: rgba(15, 25, 40, 0.9);
             font-size: 18px;
         }
 
         .char-part-option:hover {
-            border-color: #00ff00;
-            background: #001100;
+            border-color: rgba(100, 200, 255, 0.5);
+            background: rgba(20, 30, 50, 0.8);
             transform: scale(1.1);
         }
 
         .char-part-option.selected {
-            border-color: #00ff00;
-            background: #003300;
-            box-shadow: 0 0 10px #00ff00;
+            border-color: rgba(100, 200, 255, 0.5);
+            background: rgba(42, 82, 152, 0.6);
+            box-shadow: 0 0 15px rgba(100, 200, 255, 0.4);
         }
 
         .char-option-btn {
             padding: 6px 12px;
-            border: 2px solid #004400;
+            border: 2px solid rgba(100, 200, 255, 0.3);
             border-radius: 5px;
             cursor: pointer;
             transition: all 0.2s ease;
-            background: #000;
-            color: #00ff00;
+            background: rgba(15, 25, 40, 0.9);
+            color: #64b5f6;
             font-size: 11px;
             font-weight: bold;
         }
 
         .char-option-btn:hover {
-            border-color: #00ff00;
-            background: #001100;
+            border-color: rgba(100, 200, 255, 0.5);
+            background: rgba(20, 30, 50, 0.8);
             transform: scale(1.05);
         }
 
         .char-option-btn[data-selected="true"] {
-            border-color: #00ff00;
-            background: #003300;
+            border-color: rgba(100, 200, 255, 0.5);
+            background: rgba(42, 82, 152, 0.6);
             box-shadow: 0 0 8px #00ff00;
         }
 
@@ -333,7 +333,7 @@
                 /* Depth highlights */
                 radial-gradient(ellipse at 30% 40%, rgba(0, 150, 220, 0.2) 0%, transparent 50%),
                 radial-gradient(ellipse at 70% 60%, rgba(0, 150, 220, 0.15) 0%, transparent 50%);
-            border: 3px solid #00ff00;
+            border: 2px solid rgba(100, 200, 255, 0.4);
             position: relative;
             overflow: visible;
             box-shadow: 
@@ -357,7 +357,7 @@
             width: 60px;
             height: 80px;
             border-radius: 50%;
-            border: 2px solid #00ff00;
+            border: 2px solid rgba(100, 200, 255, 0.4);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -365,7 +365,7 @@
             font-size: 40px;
             font-weight: bold;
             background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
-            color: #00ff00;
+            color: #64b5f6;
             position: relative;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -397,17 +397,17 @@
             background: rgba(0, 0, 0, 0.95);
             padding: 2px 4px;
             border-radius: 3px;
-            border: 1px solid #00ff00;
-            color: #00ff00;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            color: #64b5f6;
             font-weight: bold;
             text-shadow: 0 0 5px rgba(0, 255, 0, 0.8);
             box-shadow: 0 0 8px rgba(0, 255, 0, 0.5);
         }
 
         .fisherman.you {
-            background: linear-gradient(135deg, #00aa00 0%, #00ff00 50%, #00aa00 100%);
+            background: linear-gradient(135deg, #64b5f6 0%, #42a5f5 50%, #2196f3 100%);
             color: #000;
-            border-color: #00ff00;
+            border-color: rgba(100, 200, 255, 0.5);
             box-shadow: 
                 0 0 20px rgba(0, 255, 0, 0.6),
                 inset 0 0 10px rgba(0, 0, 0, 0.3);
@@ -415,8 +415,8 @@
 
         .fisherman.other {
             background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
-            color: #00ff00;
-            border-color: #00ff00;
+            color: #64b5f6;
+            border-color: rgba(100, 200, 255, 0.5);
         }
 
         .fisherman.fishing {
@@ -773,10 +773,10 @@
         }
 
         .controls {
-            background: #001100;
+            background: rgba(20, 30, 50, 0.8);
             padding: 15px;
             text-align: center;
-            border-top: 2px solid #00ff00;
+            border-top: 2px solid rgba(100, 200, 255, 0.4);
             flex-shrink: 0; /* Prevent controls from shrinking */
             z-index: 10; /* Ensure controls stay visible */
         }
@@ -885,9 +885,9 @@
         }
 
         .achievements {
-            background: #001100;
+            background: rgba(20, 30, 50, 0.8);
             padding: 10px;
-            border: 3px solid #00ff00;
+            border: 2px solid rgba(100, 200, 255, 0.4);
             border-radius: 8px;
             margin-bottom: 15px;
             box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
@@ -979,7 +979,7 @@
         }
 
         .leaderboard-item .rank {
-            background: #00ff00;
+            background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
             color: #000;
             padding: 1px 4px;
             border-radius: 2px;
@@ -999,9 +999,9 @@
         }
 
         .tournament-info {
-            background: #001100;
+            background: rgba(20, 30, 50, 0.8);
             padding: 15px;
-            border: 3px solid #00ff00;
+            border: 2px solid rgba(100, 200, 255, 0.4);
             border-radius: 8px;
             margin-bottom: 10px;
             margin-top: 10px;
@@ -1017,9 +1017,9 @@
         .inventory-tabs .tab-btn {
             flex: 1;
             padding: 10px;
-            background: #002200;
-            border: 1px solid #00ff00;
-            color: #00ff00;
+            background: rgba(30, 50, 80, 0.8);
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            color: #64b5f6;
             cursor: pointer;
             font-family: 'Courier New', monospace;
             font-size: 14px;
@@ -1034,13 +1034,13 @@
         }
 
         .inventory-tabs .tab-btn.active {
-            background: #00ff00;
+            background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
             color: #000;
         }
 
         .catch-item {
-            background: #002200;
-            border: 1px solid #00ff00;
+            background: rgba(30, 50, 80, 0.8);
+            border: 1px solid rgba(100, 200, 255, 0.3);
             border-radius: 4px;
             padding: 10px;
             margin: 8px 0;
@@ -1062,7 +1062,7 @@
         }
 
         .fish-details span {
-            color: #00ff00;
+            color: #64b5f6;
         }
 
         .weight {
@@ -1082,7 +1082,7 @@
         }
 
         .rank {
-            background: #00ff00;
+            background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
             color: #000;
             padding: 4px 8px;
             border-radius: 4px;
@@ -1097,15 +1097,15 @@
         }
 
         .stat-item {
-            background: #002200;
-            border: 1px solid #00ff00;
+            background: rgba(30, 50, 80, 0.8);
+            border: 1px solid rgba(100, 200, 255, 0.3);
             border-radius: 4px;
             padding: 15px;
             text-align: center;
         }
 
         .stat-label {
-            color: #00ff00;
+            color: #64b5f6;
             font-size: 12px;
             margin-bottom: 5px;
         }
@@ -1124,9 +1124,9 @@
         }
 
         .game-status {
-            background: #001100;
+            background: rgba(20, 30, 50, 0.8);
             padding: 15px;
-            border: 3px solid #00ff00;
+            border: 2px solid rgba(100, 200, 255, 0.4);
             border-radius: 8px;
             margin-bottom: 15px;
             box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
@@ -1152,8 +1152,8 @@
         .player-item {
             padding: 2px 5px;
             margin: 2px 0;
-            background: #001100;
-            border-left: 3px solid #00ff00;
+            background: rgba(20, 30, 50, 0.8);
+            border-left: 3px solid rgba(100, 200, 255, 0.5);
         }
 
         .player-item.fishing {
@@ -1237,7 +1237,7 @@
         }
 
         .tournament-info {
-            background: #001100;
+            background: rgba(20, 30, 50, 0.8);
             border: 1px solid #ffff00;
             padding: 10px;
             margin-bottom: 10px;
@@ -1265,11 +1265,11 @@
             justify-content: space-between;
             padding: 2px 5px;
             margin: 1px 0;
-            background: #001100;
+            background: rgba(20, 30, 50, 0.8);
         }
 
         .leaderboard-item.current {
-            background: #004400;
+            background: rgba(15, 25, 40, 0.6);
         }
 
         .catch-message {
@@ -1277,13 +1277,13 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: #000;
-            border: 2px solid #00ff00;
+            background: rgba(15, 25, 40, 0.9);
+            border: 2px solid rgba(100, 200, 255, 0.4);
             padding: 20px;
             text-align: center;
             z-index: 15;
             display: none;
-            box-shadow: 0 0 20px #00ff00;
+            box-shadow: 0 0 20px rgba(100, 200, 255, 0.5);
         }
 
         .catch-message.show {
@@ -1308,9 +1308,9 @@
         }
 
         .location-btn {
-            background: #000;
-            border: 1px solid #00ff00;
-            color: #00ff00;
+            background: rgba(15, 25, 40, 0.9);
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            color: #64b5f6;
             padding: 5px 10px;
             margin: 2px;
             cursor: pointer;
@@ -1319,12 +1319,12 @@
         }
 
         .location-btn:hover {
-            background: #00ff00;
+            background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
             color: #000;
         }
 
         .location-btn.active {
-            background: #00ff00;
+            background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
             color: #000;
         }
 
@@ -1337,8 +1337,8 @@
         .location-dropdown {
             margin: 15px 0;
             padding: 10px;
-            background: #001100;
-            border: 3px solid #00ff00;
+            background: rgba(20, 30, 50, 0.8);
+            border: 2px solid rgba(100, 200, 255, 0.4);
             border-radius: 8px;
             box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
         }
@@ -1346,9 +1346,9 @@
         .location-dropdown select {
             width: 100%;
             padding: 12px;
-            background: #000;
-            color: #00ff00;
-            border: 2px solid #00ff00;
+            background: rgba(15, 25, 40, 0.9);
+            color: #64b5f6;
+            border: 2px solid rgba(100, 200, 255, 0.4);
             border-radius: 4px;
             font-size: 16px;
             font-weight: bold;
@@ -1358,13 +1358,13 @@
         }
 
         .location-dropdown select:hover {
-            background: #001100;
+            background: rgba(20, 30, 50, 0.8);
             box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
         }
 
         .location-dropdown select option {
-            background: #001100;
-            color: #00ff00;
+            background: rgba(20, 30, 50, 0.8);
+            color: #64b5f6;
             padding: 8px;
             font-size: 14px;
         }
@@ -1494,7 +1494,7 @@
 
         .tackle-item.equipped {
             border-color: #ffff00;
-            background: #002200;
+            background: rgba(30, 50, 80, 0.8);
         }
 
         .tackle-item.locked {
@@ -1509,7 +1509,7 @@
 
         .tackle-name {
             font-weight: bold;
-            color: #00ff00;
+            color: #64b5f6;
             margin-bottom: 5px;
         }
 
@@ -1536,7 +1536,7 @@
         }
 
         .tackle-btn {
-            background: #00ff00;
+            background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
             color: #000;
             border: none;
             padding: 5px 10px;
@@ -1563,7 +1563,7 @@
         }
 
         .tackle-btn.buy {
-            background: #00ff00;
+            background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
             color: #000;
         }
 
@@ -1648,8 +1648,8 @@
                 justify-content: space-between;
                 align-items: center;
                 padding: 8px;
-                background: #001100;
-                border-bottom: 2px solid #00ff00;
+                background: rgba(20, 30, 50, 0.8);
+                border-bottom: 2px solid rgba(100, 200, 255, 0.4);
                 flex-shrink: 0;
                 position: sticky;
                 top: 72px;
@@ -1673,7 +1673,7 @@
 
             .mobile-header-stats {
                 font-size: 10px;
-                color: #00ff00;
+                color: #64b5f6;
             }
 
             .mobile-header-right {
@@ -1702,7 +1702,7 @@
                 height: 50px;
                 font-size: 28px;
                 border-radius: 50%;
-                border: 2px solid #00ff00;
+                border: 2px solid rgba(100, 200, 255, 0.4);
                 display: flex;
                 flex-direction: column;
                 align-items: center;
@@ -1725,8 +1725,8 @@
                 background: rgba(0, 0, 0, 0.95);
                 padding: 1px 3px;
                 border-radius: 2px;
-                border: 1px solid #00ff00;
-                color: #00ff00;
+                border: 1px solid rgba(100, 200, 255, 0.3);
+                color: #64b5f6;
                 font-weight: bold;
             }
 
@@ -1736,7 +1736,7 @@
                 min-height: 200px;
                 background: linear-gradient(135deg, #1e3a5f 0%, #4a90e2 50%, #1e3a5f 100%);
                 border-radius: 15px;
-                border: 3px solid #00ff00;
+                border: 2px solid rgba(100, 200, 255, 0.4);
                 position: relative;
                 overflow: visible;
                 box-shadow: 
@@ -1792,9 +1792,9 @@
 
             .mobile-btn {
                 padding: 12px;
-                background: #001100;
-                border: 2px solid #00ff00;
-                color: #00ff00;
+                background: rgba(20, 30, 50, 0.8);
+                border: 2px solid rgba(100, 200, 255, 0.4);
+                color: #64b5f6;
                 font-size: 12px;
                 font-weight: bold;
                 cursor: pointer;
@@ -1803,7 +1803,7 @@
             }
 
             .mobile-btn:active {
-                background: #00ff00;
+                background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
                 color: #000;
             }
 
@@ -1814,8 +1814,8 @@
             }
 
             .mobile-panel {
-                background: #001100;
-                border: 2px solid #00ff00;
+                background: rgba(20, 30, 50, 0.8);
+                border: 2px solid rgba(100, 200, 255, 0.4);
                 border-radius: 8px;
                 padding: 10px;
             }
@@ -1823,8 +1823,8 @@
             .mobile-panel h4 {
                 font-size: 12px;
                 margin-bottom: 8px;
-                color: #00ff00;
-                border-bottom: 1px solid #00ff00;
+                color: #64b5f6;
+                border-bottom: 1px solid rgba(100, 200, 255, 0.3);
                 padding-bottom: 4px;
             }
 
@@ -1841,7 +1841,7 @@
                 left: 0;
                 right: 0;
                 background: rgba(0, 0, 0, 0.95);
-                border-top: 2px solid #00ff00;
+                border-top: 2px solid rgba(100, 200, 255, 0.4);
                 padding: 5px;
                 max-height: 100px;
                 display: flex;
@@ -1856,9 +1856,9 @@
             .mobile-chat-input input {
                 flex: 1;
                 padding: 6px;
-                background: #000;
-                border: 1px solid #00ff00;
-                color: #00ff00;
+                background: rgba(15, 25, 40, 0.9);
+                border: 1px solid rgba(100, 200, 255, 0.3);
+                color: #64b5f6;
                 font-size: 12px;
             }
 
@@ -1868,8 +1868,8 @@
                 left: 0;
                 right: 0;
                 display: flex;
-                background: #001100;
-                border-top: 2px solid #00ff00;
+                background: rgba(20, 30, 50, 0.8);
+                border-top: 2px solid rgba(100, 200, 255, 0.4);
                 padding: 8px;
                 gap: 5px;
                 flex-shrink: 0;
@@ -1879,9 +1879,9 @@
             .mobile-menu-btn {
                 flex: 1;
                 padding: 10px;
-                background: #001100;
-                border: 2px solid #00ff00;
-                color: #00ff00;
+                background: rgba(20, 30, 50, 0.8);
+                border: 2px solid rgba(100, 200, 255, 0.4);
+                color: #64b5f6;
                 font-size: 11px;
                 font-weight: bold;
                 cursor: pointer;
@@ -1889,19 +1889,19 @@
             }
 
             .mobile-menu-btn:active {
-                background: #00ff00;
+                background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
                 color: #000;
             }
 
             /* Mobile Title */
             .mobile-title {
                 padding: 8px;
-                background: #001100;
-                border-bottom: 2px solid #00ff00;
+                background: rgba(20, 30, 50, 0.8);
+                border-bottom: 2px solid rgba(100, 200, 255, 0.4);
                 text-align: center;
                 font-size: 14px;
                 font-weight: bold;
-                color: #00ff00;
+                color: #64b5f6;
                 flex-shrink: 0;
                 position: sticky;
                 top: 0;
@@ -1911,8 +1911,8 @@
             /* Mobile Tabs */
             .mobile-tabs {
                 display: flex;
-                background: #001100;
-                border-bottom: 2px solid #00ff00;
+                background: rgba(20, 30, 50, 0.8);
+                border-bottom: 2px solid rgba(100, 200, 255, 0.4);
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
                 flex-shrink: 0;
@@ -1924,10 +1924,10 @@
             .mobile-tab-btn {
                 flex: 1;
                 padding: 8px 4px;
-                background: #001100;
+                background: rgba(20, 30, 50, 0.8);
                 border: none;
-                border-right: 1px solid #00ff00;
-                color: #00ff00;
+                border-right: 1px solid rgba(100, 200, 255, 0.3);
+                color: #64b5f6;
                 font-size: 9px;
                 font-weight: bold;
                 cursor: pointer;
@@ -1939,7 +1939,7 @@
             }
 
             .mobile-tab-btn.active {
-                background: #00ff00;
+                background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
                 color: #000;
             }
 
@@ -1985,11 +1985,11 @@
             }
 
             .shop-tabs::-webkit-scrollbar-track {
-                background: #001100;
+                background: rgba(20, 30, 50, 0.8);
             }
 
             .shop-tabs::-webkit-scrollbar-thumb {
-                background: #00ff00;
+                background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
                 border-radius: 5px;
             }
 
@@ -3173,7 +3173,7 @@
                 style.textContent = `
                     .congratulations-content {
                         background: linear-gradient(135deg, #001100, #003300);
-                        border: 3px solid #00ff00;
+                        border: 2px solid rgba(100, 200, 255, 0.4);
                         border-radius: 15px;
                         padding: 30px;
                         max-width: 500px;
@@ -3198,7 +3198,7 @@
                     }
                     
                     .congratulations-footer .btn {
-                        background: #00ff00;
+                        background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
                         color: #000;
                         border: none;
                         padding: 12px 30px;
