@@ -3630,7 +3630,12 @@
 
                 // Inventory tab buttons
                 document.querySelectorAll('.inventory-tabs .tab-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => this.switchInventoryTab(e.target.dataset.tab));
+                    btn.addEventListener('click', (e) => {
+                        const tabName = e.currentTarget.dataset.tab || e.target.closest('.tab-btn')?.dataset.tab;
+                        if (tabName) {
+                            this.switchInventoryTab(tabName);
+                        }
+                    });
                 });
 
                 // Tackle shop buttons (delegated event listener)
@@ -5871,11 +5876,19 @@
                     case 'recent':
                         this.renderRecentCatches(content);
                         break;
+                    case 'top10':
                     case 'biggest':
                         this.renderBiggestFish(content);
                         break;
+                    case 'gear':
+                        this.renderEquippedGear(content);
+                        break;
                     case 'stats':
                         this.renderStatistics(content);
+                        break;
+                    default:
+                        // Default to recent catches if unknown tab
+                        this.renderRecentCatches(content);
                         break;
                 }
             }
@@ -5975,6 +5988,41 @@
                     </div>
                 `;
 
+                container.innerHTML = html;
+            }
+
+            renderEquippedGear(container) {
+                const rod = this.player.gear.rod || 'None';
+                const reel = this.player.gear.reel || 'None';
+                const line = this.player.gear.line || 'None';
+                const hook = this.player.gear.hook || 'None';
+                const bait = this.player.gear.bait || 'None';
+                
+                const html = `
+                    <div style="padding: 20px;">
+                        <div style="margin-bottom: 15px; padding: 12px; background: rgba(20, 30, 50, 0.6); border-radius: 8px; border-left: 4px solid rgba(100, 200, 255, 0.5);">
+                            <div style="font-weight: bold; color: #64b5f6; margin-bottom: 5px;">🎣 Rod</div>
+                            <div style="color: #ffffff; font-size: 14px;">${rod}</div>
+                        </div>
+                        <div style="margin-bottom: 15px; padding: 12px; background: rgba(20, 30, 50, 0.6); border-radius: 8px; border-left: 4px solid rgba(100, 200, 255, 0.5);">
+                            <div style="font-weight: bold; color: #64b5f6; margin-bottom: 5px;">🎣 Reel</div>
+                            <div style="color: #ffffff; font-size: 14px;">${reel}</div>
+                        </div>
+                        <div style="margin-bottom: 15px; padding: 12px; background: rgba(20, 30, 50, 0.6); border-radius: 8px; border-left: 4px solid rgba(100, 200, 255, 0.5);">
+                            <div style="font-weight: bold; color: #64b5f6; margin-bottom: 5px;">🪝 Line</div>
+                            <div style="color: #ffffff; font-size: 14px;">${line}</div>
+                        </div>
+                        <div style="margin-bottom: 15px; padding: 12px; background: rgba(20, 30, 50, 0.6); border-radius: 8px; border-left: 4px solid rgba(100, 200, 255, 0.5);">
+                            <div style="font-weight: bold; color: #64b5f6; margin-bottom: 5px;">🪝 Hook</div>
+                            <div style="color: #ffffff; font-size: 14px;">${hook}</div>
+                        </div>
+                        <div style="padding: 12px; background: rgba(20, 30, 50, 0.6); border-radius: 8px; border-left: 4px solid rgba(100, 200, 255, 0.5);">
+                            <div style="font-weight: bold; color: #64b5f6; margin-bottom: 5px;">🐛 Bait</div>
+                            <div style="color: #ffffff; font-size: 14px;">${bait}</div>
+                        </div>
+                    </div>
+                `;
+                
                 container.innerHTML = html;
             }
 
