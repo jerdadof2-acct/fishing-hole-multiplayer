@@ -2168,8 +2168,11 @@
                 <div class="mobile-panel">
                     <h4>CHARACTER INFO</h4>
                     <div style="font-size: 10px; margin: 10px 0;">
-                        <div>Character: <span id="mobile-character-display">🧑‍🦰</span></div>
-                        <div style="margin-top: 10px;">
+                        <div style="text-align: center; margin-bottom: 10px;">
+                            <img id="mobile-character-display-img" src="" alt="Character" style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid #00ff00;">
+                        </div>
+                        <div style="display: flex; gap: 5px; flex-direction: column; margin-top: 10px;">
+                            <button class="mobile-btn" onclick="game.changeCharacter()" style="background: #003300; border-color: #00ff00; color: #00ff00; font-size: 10px; padding: 8px;">🐱 CHANGE CHARACTER</button>
                             <button class="mobile-btn" onclick="game.resetCharacter()" style="background: #330000; border-color: #ff0000; color: #ff0000; font-size: 10px; padding: 8px;">RESET CHARACTER</button>
                         </div>
                     </div>
@@ -2429,9 +2432,37 @@
 
             init() {
                 this.loadGameData();
+                
+                // Check if player has saved data (has played before)
+                const savedData = localStorage.getItem('fishingHoleGame');
+                if (savedData) {
+                    const gameData = JSON.parse(savedData);
+                    // If player has a name and character saved, auto-login
+                    if (gameData.player && gameData.player.name && gameData.player.name !== 'Guest' && gameData.player.character) {
+                        // Set player data from saved game
+                        this.player.name = gameData.player.name;
+                        this.player.character = gameData.player.character;
+                        this.player.avatarOptions = gameData.player.avatarOptions || { type: 'cat', url: gameData.player.character };
+                        
+                        // Hide login screen and show game
+                        const loginScreen = document.getElementById('login-screen');
+                        if (loginScreen) {
+                            loginScreen.classList.add('hidden');
+                        }
+                        
+                        // Initialize game
+                        this.addChatMessage('system', `${this.player.name} entered the fishing hole!`);
+                        this.positionPlayers();
+                        this.joinGame();
+                    }
+                }
+                
                 this.connectToServer(); // Connect to Railway server
                 this.setupEventListeners();
-                this.positionPlayers();
+                if (!this.player.name || this.player.name === 'Guest') {
+                    // Only position players if not auto-logged in
+                    this.positionPlayers();
+                }
                 this.simulateMultiplayer();
                 this.updateDisplay();
                 this.updateAchievementsDisplay();
@@ -5425,9 +5456,12 @@
                 if (mobileStatPatience) mobileStatPatience.textContent = this.player.stats.patience;
                 if (mobileStatStrength) mobileStatStrength.textContent = this.player.stats.strength;
                 
-                // Update character display
-                const mobileCharacterDisplay = document.getElementById('mobile-character-display');
-                if (mobileCharacterDisplay) mobileCharacterDisplay.textContent = this.player.character || '🧑‍🦰';
+                // Update character display (image)
+                const mobileCharacterDisplayImg = document.getElementById('mobile-character-display-img');
+                if (mobileCharacterDisplayImg && this.player.character) {
+                    mobileCharacterDisplayImg.src = this.player.character;
+                    mobileCharacterDisplayImg.style.display = 'block';
+                }
 
                 // Update location dropdown (both desktop and mobile)
                 this.updateLocationButtons();
@@ -5905,6 +5939,50 @@
                 this.positionPlayers();
                 this.addChatMessage('system', 'Character reset! Starting fresh...');
                 this.saveGameData();
+            }
+
+            changeCharacter() {
+                // Show character selector modal/overlay
+                const loginScreen = document.getElementById('login-screen');
+                if (loginScreen) {
+                    // Hide the login button and show character selector only
+                    const loginBtn = document.getElementById('login-btn');
+                    const nameInput = document.getElementById('player-name-input');
+                    if (loginBtn) loginBtn.style.display = 'none';
+                    if (nameInput) nameInput.style.display = 'none';
+                    
+                    // Show login screen as character selector
+                    loginScreen.classList.remove('hidden');
+                    
+                    // Update button to say "SELECT CHARACTER" instead of login
+                    const charSelectBtn = document.createElement('button');
+                    charSelectBtn.className = 'login-btn';
+                    charSelectBtn.id = 'char-select-btn';
+                    charSelectBtn.textContent = 'SELECT CHARACTER';
+                    charSelectBtn.onclick = () => {
+                        const selectedCatUrl = window.selectedCat || this.player.character;
+                        this.player.character = selectedCatUrl;
+                        this.player.avatarOptions = { type: 'cat', url: selectedCatUrl };
+                        this.saveGameData();
+                        loginScreen.classList.add('hidden');
+                        this.positionPlayers();
+                        this.updateDisplay();
+                        this.addChatMessage('system', 'Character updated!');
+                        
+                        // Restore login button
+                        if (loginBtn) loginBtn.style.display = 'block';
+                        if (nameInput) nameInput.style.display = 'block';
+                        charSelectBtn.remove();
+                    };
+                    
+                    // Replace or add the button
+                    const existingBtn = document.getElementById('char-select-btn');
+                    if (existingBtn) {
+                        existingBtn.replaceWith(charSelectBtn);
+                    } else {
+                        loginScreen.appendChild(charSelectBtn);
+                    }
+                }
             }
         }
 
