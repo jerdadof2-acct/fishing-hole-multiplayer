@@ -1791,6 +1791,33 @@
             .mobile-controls {
                 grid-template-columns: 1fr 1fr 1fr;
             }
+
+            /* Fix shop tabs on mobile */
+            .shop-tabs {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: thin;
+            }
+
+            .shop-tabs::-webkit-scrollbar {
+                height: 5px;
+            }
+
+            .shop-tabs::-webkit-scrollbar-track {
+                background: #001100;
+            }
+
+            .shop-tabs::-webkit-scrollbar-thumb {
+                background: #00ff00;
+                border-radius: 5px;
+            }
+
+            .tab-btn {
+                flex-shrink: 0;
+                padding: 8px 12px;
+                font-size: 11px;
+                white-space: nowrap;
+            }
         }
     </style>
 </head>
