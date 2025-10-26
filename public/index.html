@@ -1780,6 +1780,7 @@
                 height: 100vh;
                 overflow-y: auto;
                 overflow-x: hidden;
+                z-index: 1; /* Low z-index so modals appear above */
             }
 
             .mobile-header {
@@ -2120,7 +2121,7 @@
                 overflow-x: hidden;
                 padding: 10px;
                 min-height: 0;
-                padding-bottom: 10px; /* Minimal padding since controls are fixed */
+                padding-bottom: 180px; /* Space for location dropdown (~60px) + controls (~64px) + ad (~66px) */
                 margin-bottom: 0;
                 position: relative;
                 z-index: 1; /* Ensure tab content stays below modals */
@@ -2145,6 +2146,8 @@
                 margin: 0;
                 padding: 8px;
                 order: 3; /* Location dropdown after lake */
+                position: relative;
+                z-index: 2; /* Above lake but below controls */
             }
 
             .mobile-controls {
@@ -2318,121 +2321,6 @@
                 </div>
             </div>
 
-            <!-- Inventory Modal -->
-            <div class="modal" id="inventory-modal">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h2>INVENTORY</h2>
-                        <button class="close-btn" id="close-inventory">&times;</button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="inventory-tabs">
-                            <button class="tab-btn active" data-tab="recent">Recent Catches</button>
-                            <button class="tab-btn" data-tab="biggest">Biggest Fish</button>
-                            <button class="tab-btn" data-tab="stats">Statistics</button>
-                        </div>
-                        <div class="inventory-content" id="inventory-content">
-                            <!-- Content will be populated here -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tackle Shop Modal -->
-            <div class="modal" id="tackle-shop-modal">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h2>🎣 TACKLE SHOP</h2>
-                        <button class="close-btn" id="close-shop">&times;</button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="shop-tabs">
-                            <button class="tab-btn active" data-tab="rods">RODS</button>
-                            <button class="tab-btn" data-tab="reels">REELS</button>
-                            <button class="tab-btn" data-tab="lines">LINES</button>
-                            <button class="tab-btn" data-tab="hooks">HOOKS</button>
-                            <button class="tab-btn" data-tab="baits">BAITS</button>
-                        </div>
-                        <div class="shop-content" id="shop-content">
-                            <!-- Content will be populated by JavaScript -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Help Modal -->
-            <div class="modal" id="help-modal">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h2>❓ HELP & GUIDE</h2>
-                        <button class="close-btn" id="close-help">&times;</button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="help-content">
-                            <h3>🐱 Welcome to Kitty Creek Fishing Club!</h3>
-                            <p>Compete with other fisher-cats in real-time tournaments, catch legendary fish, and become the purrfect angler!</p>
-                            
-                            <h3>🎮 How to Play</h3>
-                            <ol>
-                                <li><strong>Cast Your Line:</strong> Click "CAST LINE" or press <code>Space</code> to start fishing</li>
-                                <li><strong>Wait for a Bite:</strong> Watch for ripples in the water - fish will bite!</li>
-                                <li><strong>Catch Fish:</strong> When you see "CAUGHT!", you've got one!</li>
-                                <li><strong>Level Up:</strong> Gain experience to unlock new locations and tackle</li>
-                                <li><strong>Join Tournaments:</strong> Compete with other players for prizes!</li>
-                            </ol>
-                            
-                            <h3>⌨️ Keyboard Shortcuts</h3>
-                            <div class="help-shortcuts">
-                                <div class="shortcut-item">
-                                    <span class="shortcut-key">Space</span> - Cast line / Reel in
-                                </div>
-                                <div class="shortcut-item">
-                                    <span class="shortcut-key">S</span> - Open Tackle Shop
-                                </div>
-                                <div class="shortcut-item">
-                                    <span class="shortcut-key">T</span> - Join Tournament
-                                </div>
-                                <div class="shortcut-item">
-                                    <span class="shortcut-key">I</span> - View Inventory
-                                </div>
-                                <div class="shortcut-item">
-                                    <span class="shortcut-key">H</span> - Open Help
-                                </div>
-                            </div>
-                            
-                            <h3>💡 Tips & Hints</h3>
-                            <ul>
-                                <li><strong>Better Gear = Better Fish:</strong> Upgrade your rod, reel, and tackle to catch rare fish</li>
-                                <li><strong>Location Matters:</strong> Different locations have different fish types and rarities</li>
-                                <li><strong>Tournament Strategy:</strong> Fish as fast as possible during tournaments - biggest total weight wins!</li>
-                                <li><strong>Auto-Save:</strong> The game automatically saves your progress every 30 seconds</li>
-                                <li><strong>Big Catches:</strong> Rare, Huge, Legendary, and Trophy fish broadcast to all players!</li>
-                                <li><strong>Level Benefits:</strong> Higher levels unlock better locations and equipment</li>
-                            </ul>
-                            
-                            <h3>🏆 Tournament Rules</h3>
-                            <ul>
-                                <li>Tournaments run for 5 minutes</li>
-                                <li>The player with the highest total weight wins</li>
-                                <li>Prize money is split based on players participating</li>
-                                <li>All catches count toward your tournament score</li>
-                            </ul>
-                            
-                            <h3>🎣 Fish Rarities</h3>
-                            <ul>
-                                <li><strong>Common:</strong> Regular fish from any location</li>
-                                <li><strong>Rare:</strong> Special fish with increased value</li>
-                                <li><strong>Huge:</strong> Massive versions of regular fish</li>
-                                <li><strong>Legendary:</strong> Extremely rare and valuable</li>
-                                <li><strong>Trophy:</strong> The ultimate catch!</li>
-                            </ul>
-                            
-                            <h3>💬 Chat</h3>
-                            <p>Only notable catches (rare, huge, legendary, trophy) and level-ups are shown in chat to keep things clean!</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <!-- Catch message (must be outside both layouts to work on mobile) -->
@@ -2576,6 +2464,124 @@
                 <div>Advertisement</div>
             </div>
         </div>
+        </div>
+
+        <!-- Modals - Outside mobile-game-layout to ensure proper z-index stacking -->
+        <!-- Tackle Shop Modal -->
+        <div class="modal" id="tackle-shop-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🎣 TACKLE SHOP</h2>
+                    <button class="close-btn" id="close-shop">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="shop-tabs">
+                        <button class="tab-btn active" data-tab="rods">RODS</button>
+                        <button class="tab-btn" data-tab="reels">REELS</button>
+                        <button class="tab-btn" data-tab="lines">LINES</button>
+                        <button class="tab-btn" data-tab="hooks">HOOKS</button>
+                        <button class="tab-btn" data-tab="baits">BAITS</button>
+                    </div>
+                    <div class="shop-content" id="shop-content"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory Modal -->
+        <div class="modal" id="inventory-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🎒 INVENTORY</h2>
+                    <button class="close-btn" id="close-inventory">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="inventory-tabs">
+                        <button class="tab-btn active" data-tab="recent">RECENT CATCHES</button>
+                        <button class="tab-btn" data-tab="top10">TOP 10 BIGGEST</button>
+                        <button class="tab-btn" data-tab="gear">EQUIPPED GEAR</button>
+                    </div>
+                    <div id="inventory-content"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Modal -->
+        <div class="modal" id="help-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>❓ HELP & GUIDE</h2>
+                    <button class="close-btn" id="close-help">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="help-content">
+                        <h3>🐱 Welcome to Kitty Creek Fishing Club!</h3>
+                        <p>Compete with other fisher-cats in real-time tournaments, catch legendary fish, and become the purrfect angler!</p>
+                        
+                        <h3>🎮 How to Play</h3>
+                        <ol>
+                            <li><strong>Cast Your Line:</strong> Click the CAST button or press Spacebar to throw your line into the water</li>
+                            <li><strong>Wait for a Bite:</strong> Watch the water for ripples - when you see movement, reel in quickly!</li>
+                            <li><strong>Catch Fish:</strong> Reel in before the fish gets away</li>
+                            <li><strong>Upgrade Gear:</strong> Visit the Shop to buy better rods, reels, and tackle</li>
+                            <li><strong>Level Up:</strong> Gain experience to unlock new locations and tackle</li>
+                            <li><strong>Join Tournaments:</strong> Compete with other players for prizes!</li>
+                        </ol>
+                        
+                        <h3>⌨️ Keyboard Shortcuts</h3>
+                        <div class="help-shortcuts">
+                            <div class="shortcut-item">
+                                <span class="shortcut-key">Space</span> - Cast line / Reel in
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-key">S</span> - Open Tackle Shop
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-key">T</span> - Join Tournament
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-key">I</span> - View Inventory
+                            </div>
+                            <div class="shortcut-item">
+                                <span class="shortcut-key">H</span> - Open Help
+                            </div>
+                        </div>
+                        
+                        <h3>💡 Tips & Hints</h3>
+                        <ul>
+                            <li><strong>Better Gear = Better Fish:</strong> Upgrade your rod, reel, and tackle to catch rare fish</li>
+                            <li><strong>Location Matters:</strong> Different locations have different fish types and rarities</li>
+                            <li><strong>Tournament Strategy:</strong> Fish as fast as possible during tournaments - biggest total weight wins!</li>
+                            <li><strong>Auto-Save:</strong> The game automatically saves your progress every 30 seconds</li>
+                            <li><strong>Big Catches:</strong> Rare, Huge, Legendary, and Trophy fish broadcast to all players!</li>
+                        </ul>
+                        
+                        <h3>🏆 Tournament Rules</h3>
+                        <ul>
+                            <li>Tournaments run for a set time period</li>
+                            <li>Total weight of all catches determines the winner</li>
+                            <li>Bigger fish = more weight = better chance to win!</li>
+                            <li>Check the leaderboard to see how you rank</li>
+                        </ul>
+                        
+                        <h3>🐟 Fish Rarities</h3>
+                        <ul>
+                            <li><strong>Common:</strong> Easy to catch, lower value</li>
+                            <li><strong>Uncommon:</strong> Regular fish, moderate value</li>
+                            <li><strong>Rare:</strong> Special fish with higher value</li>
+                            <li><strong>Huge:</strong> Large fish, excellent weight</li>
+                            <li><strong>Legendary:</strong> Extremely rare catches!</li>
+                            <li><strong>Trophy:</strong> The ultimate prize fish!</li>
+                        </ul>
+                        
+                        <h3>💬 Chat Rules</h3>
+                        <ul>
+                            <li>Be respectful to other players</li>
+                            <li>No spamming or inappropriate content</li>
+                            <li>Have fun and happy fishing!</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
         </div>
 
     </div>
