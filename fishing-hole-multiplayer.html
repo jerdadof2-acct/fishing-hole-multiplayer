@@ -2213,52 +2213,17 @@
                 <label style="color: #00ff00; display: block; margin-bottom: 8px;">Customize Your Character:</label>
                 
                 <!-- Character Preview -->
-                <div style="text-align: center; margin: 15px 0; min-height: 120px; background: #000; border: 2px solid #00ff00; border-radius: 8px; padding: 10px; display: flex; align-items: center; justify-content: center;">
-                    <div id="character-preview-avatar" style="font-size: 80px; line-height: 1;">👤</div>
+                <div style="text-align: center; margin: 15px 0; min-height: 120px; background: #000; border: 2px solid #00ff00; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                    <img id="character-preview-avatar" src="https://robohash.org/cat-1?set=set4&size=200x200" alt="Cat Avatar" style="width: 100px; height: 100px; border-radius: 50%; border: 2px solid #00ff00;">
+                    <div style="color: #00ff00; font-size: 11px; margin-top: 8px;">Your Fishing Cat 🐱</div>
                 </div>
                 
-                <!-- Avatar Customization -->
+                <!-- Cat Selector -->
                 <div style="margin-bottom: 10px;">
-                    <label style="color: #00ff00; font-size: 12px; display: block; margin-bottom: 5px;">Customize Your Character:</label>
-                    
-                    <!-- Gender -->
-                    <div style="margin-bottom: 8px;">
-                        <div style="color: #00ff00; font-size: 11px; margin-bottom: 3px;">Gender:</div>
-                        <div class="character-selector-small">
-                            <div class="char-option-btn" data-option="style" data-value="male" data-selected="true">Male</div>
-                            <div class="char-option-btn" data-option="style" data-value="female">Female</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Hair Color -->
-                    <div style="margin-bottom: 8px;">
-                        <div style="color: #00ff00; font-size: 11px; margin-bottom: 3px;">Hair Color:</div>
-                        <div class="character-selector-small">
-                            <div class="char-option-btn" data-option="hairColor" data-value="Brown" data-selected="true">Brown</div>
-                            <div class="char-option-btn" data-option="hairColor" data-value="Black">Black</div>
-                            <div class="char-option-btn" data-option="hairColor" data-value="Blonde">Blonde</div>
-                            <div class="char-option-btn" data-option="hairColor" data-value="Gray">Gray</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Facial Hair (Male only) -->
-                    <div style="margin-bottom: 8px;" id="facial-hair-section">
-                        <div style="color: #00ff00; font-size: 11px; margin-bottom: 3px;">Facial Hair:</div>
-                        <div class="character-selector-small">
-                            <div class="char-option-btn" data-option="facialHair" data-value="none" data-selected="true">None</div>
-                            <div class="char-option-btn" data-option="facialHair" data-value="beard">Beard</div>
-                            <div class="char-option-btn" data-option="facialHair" data-value="mustache">Mustache</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Accessories -->
-                    <div style="margin-bottom: 8px;">
-                        <div style="color: #00ff00; font-size: 11px; margin-bottom: 3px;">Accessories:</div>
-                        <div class="character-selector-small">
-                            <div class="char-option-btn" data-option="accessories" data-value="none" data-selected="true">None</div>
-                            <div class="char-option-btn" data-option="accessories" data-value="glasses">Glasses</div>
-                            <div class="char-option-btn" data-option="accessories" data-value="sunglasses">Sunglasses</div>
-                        </div>
+                    <label style="color: #00ff00; font-size: 12px; display: block; margin-bottom: 8px;">Choose Your Fishing Cat:</label>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button id="random-cat-btn" style="background: #00ff00; color: #000; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px;">🎲 Random Cat</button>
+                        <button id="prev-cat-btn" style="background: #666; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px; display: none;">◀ Previous</button>
                     </div>
                 </div>
                 
@@ -3075,70 +3040,58 @@
                 // Login button
                 document.getElementById('login-btn').addEventListener('click', () => this.login());
 
-                // Character customization with DiceBear API
-                window.avatarOptions = {
-                    style: 'male',
-                    hairColor: 'Brown',
-                    facialHair: 'none',
-                    accessories: 'none'
+                // Cat avatar selection system
+                window.selectedCat = null;
+                window.previousCat = null;
+                window.catSeedCounter = 1;
+                
+                // Generate cat avatar URL using RoboHash set4 (cats)
+                const generateCatUrl = (seed) => {
+                    return `https://robohash.org/${seed}?set=set4&size=200x200`;
                 };
                 
-                // Store a consistent seed for preview
-                window.avatarPreviewSeed = 'character-preview-12345';
-                
-                // Generate DiceBear avatar URL - simpler approach
-                const generateAvatarUrl = (options, seed = null) => {
-                    const avatarSeed = seed || window.avatarPreviewSeed;
-                    
-                    // Start with just seed - DiceBear will generate based on seed
-                    // Each seed produces a consistent unique avatar
-                    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(avatarSeed)}`;
+                // Get random cat
+                const getRandomCat = () => {
+                    const seed = `cat-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+                    return generateCatUrl(seed);
                 };
                 
-                // Update preview function
-                const updatePreview = () => {
-                    const previewDiv = document.getElementById('character-preview-avatar');
-                    if (previewDiv) {
-                        // Generate a unique seed based on all options combined
-                        const optionSeed = `${window.avatarPreviewSeed}-${window.avatarOptions.style}-${window.avatarOptions.hairColor}-${window.avatarOptions.facialHair}-${window.avatarOptions.accessories}`;
-                        const avatarUrl = generateAvatarUrl(window.avatarOptions, optionSeed);
+                // Update preview with cat
+                const updateCatPreview = (catUrl) => {
+                    const previewImg = document.getElementById('character-preview-avatar');
+                    if (previewImg) {
+                        previewImg.src = catUrl;
+                        window.selectedCat = catUrl;
                         
-                        // Use img tag instead of div
-                        previewDiv.innerHTML = `<img src="${avatarUrl}" alt="Avatar Preview" style="width: 100px; height: 100px; border-radius: 50%;" onerror="this.style.display='none'; this.outerHTML='<div style=\\'font-size: 80px;\\'>👤</div>';" />`;
-                        previewDiv.style.display = 'flex';
-                    }
-                    
-                    // Hide/show facial hair section based on gender
-                    const facialHairSection = document.getElementById('facial-hair-section');
-                    if (facialHairSection) {
-                        facialHairSection.style.display = window.avatarOptions.style === 'male' ? 'block' : 'none';
+                        // Show previous button if we have a previous cat
+                        const prevBtn = document.getElementById('prev-cat-btn');
+                        if (prevBtn && window.previousCat) {
+                            prevBtn.style.display = 'block';
+                        }
                     }
                 };
                 
-                // Handle option button clicks
-                document.querySelectorAll('.char-option-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const option = btn.dataset.option;
-                        const value = btn.dataset.value;
-                        
-                        // Remove selected from other buttons in same group
-                        document.querySelectorAll(`.char-option-btn[data-option="${option}"]`).forEach(b => {
-                            b.removeAttribute('data-selected');
-                        });
-                        
-                        // Mark this button as selected
-                        btn.setAttribute('data-selected', 'true');
-                        
-                        // Update avatar options
-                        window.avatarOptions[option] = value;
-                        
-                        // Update preview
-                        updatePreview();
-                    });
+                // Random cat button
+                document.getElementById('random-cat-btn').addEventListener('click', () => {
+                    // Save current as previous before generating new one
+                    if (window.selectedCat) {
+                        window.previousCat = window.selectedCat;
+                    }
+                    const newCat = getRandomCat();
+                    updateCatPreview(newCat);
                 });
                 
-                // Initialize preview
-                updatePreview();
+                // Previous cat button
+                document.getElementById('prev-cat-btn').addEventListener('click', () => {
+                    if (window.previousCat) {
+                        const temp = window.selectedCat;
+                        updateCatPreview(window.previousCat);
+                        window.previousCat = temp;
+                    }
+                });
+                
+                // Initialize with first cat
+                updateCatPreview(generateCatUrl('cat-initial'));
 
                 // Inventory tab buttons
                 document.querySelectorAll('.inventory-tabs .tab-btn').forEach(btn => {
@@ -3266,16 +3219,10 @@
 
                 this.player.name = name;
                 
-                // Get selected avatar from character builder
-                const previewDiv = document.getElementById('character-preview-avatar');
-                const currentOptions = window.avatarOptions || { style: 'male', hairColor: 'Brown', facialHair: 'none', accessories: 'none' };
-                
-                // Store avatar options
-                this.player.avatarOptions = { ...currentOptions };
-                
-                // Generate DiceBear avatar URL using player name + options as seed
-                const avatarSeed = `${name}-${currentOptions.style}-${currentOptions.hairColor}-${currentOptions.facialHair}-${currentOptions.accessories}`;
-                this.player.character = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(avatarSeed)}`;
+                // Get selected cat avatar
+                const selectedCatUrl = window.selectedCat || 'https://robohash.org/cat-default?set=set4&size=200x200';
+                this.player.character = selectedCatUrl;
+                this.player.avatarOptions = { type: 'cat', url: selectedCatUrl };
                 document.getElementById('login-screen').classList.add('hidden');
                 this.addChatMessage('system', `${name} entered the fishing hole!`);
                 this.positionPlayers(); // Reposition players with new name
