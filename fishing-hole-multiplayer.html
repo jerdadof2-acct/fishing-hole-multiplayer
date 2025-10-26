@@ -221,26 +221,17 @@
         }
 
         .fisherman {
-            width: 50px;
-            height: 60px;
+            width: 60px;
+            height: 80px;
             border-radius: 50%;
             border: 2px solid #00ff00;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-end;
-            font-size: 12px;
+            justify-content: center;
+            font-size: 40px;
             font-weight: bold;
-            background: 
-                /* Rod arm */
-                linear-gradient(45deg, transparent 35%, #8b4513 35%, #8b4513 38%, transparent 38%),
-                /* Head */
-                radial-gradient(circle at 50% 20%, #fdbcb4 10%, #d4a574 25%, transparent 30%),
-                /* Hat */
-                linear-gradient(to bottom, #8b0000 0%, #8b0000 15%, transparent 15%),
-                /* Body */
-                linear-gradient(to bottom, transparent 20%, #4169e1 20%, #4169e1 50%, #654321 50%, #654321 100%);
-            background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
             color: #00ff00;
             position: relative;
             cursor: pointer;
@@ -251,28 +242,10 @@
             overflow: visible;
         }
         
-        .fisherman::before {
-            content: '';
-            position: absolute;
-            top: -15px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 40px;
-            height: 3px;
-            background: linear-gradient(to right, #8b4513 0%, #8b4513 50%, transparent 50%);
-            z-index: 2;
-        }
-        
-        .fisherman::after {
-            content: '';
-            position: absolute;
-            top: -17px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 3px;
-            height: 10px;
-            background: #ffff00;
-            z-index: 3;
+        .fisherman-character {
+            font-size: 48px;
+            line-height: 1;
+            margin-bottom: 5px;
         }
 
         .fisherman-initial {
@@ -294,31 +267,16 @@
         }
 
         .fisherman.you {
-            background: 
-                /* Rod arm */
-                linear-gradient(45deg, transparent 35%, #8b4513 35%, #8b4513 38%, transparent 38%),
-                /* Head */
-                radial-gradient(circle at 50% 20%, #fdbcb4 10%, #d4a574 25%, transparent 30%),
-                /* Hat */
-                linear-gradient(to bottom, #00ff00 0%, #00ff00 15%, transparent 15%),
-                /* Body */
-                linear-gradient(to bottom, transparent 20%, #00aa00 20%, #00aa00 50%, #006600 50%, #006600 100%);
-            background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+            background: linear-gradient(135deg, #00aa00 0%, #00ff00 50%, #00aa00 100%);
             color: #000;
             border-color: #00ff00;
+            box-shadow: 
+                0 0 20px rgba(0, 255, 0, 0.6),
+                inset 0 0 10px rgba(0, 0, 0, 0.3);
         }
 
         .fisherman.other {
-            background: 
-                /* Rod arm */
-                linear-gradient(45deg, transparent 35%, #8b4513 35%, #8b4513 38%, transparent 38%),
-                /* Head */
-                radial-gradient(circle at 50% 20%, #fdbcb4 10%, #d4a574 25%, transparent 30%),
-                /* Hat */
-                linear-gradient(to bottom, #004488 0%, #004488 15%, transparent 15%),
-                /* Body */
-                linear-gradient(to bottom, transparent 20%, #4169e1 20%, #4169e1 50%, #654321 50%, #654321 100%);
-            background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
             color: #00ff00;
             border-color: #00ff00;
         }
@@ -2491,17 +2449,19 @@
                 playerFisher.className = 'fisherman you';
                 playerFisher.id = 'player-fisher';
                 playerFisher.innerHTML = `
-                    <div class="fisherman-initial">${this.player.name.charAt(0).toUpperCase()}</div>
+                    <div class="fisherman-character">🧑‍🦰</div>
                     <div class="fisherman-name">${this.player.name}</div>
                 `;
                 fishermanRow.appendChild(playerFisher);
                 
                 // Add other players
+                const characterEmojis = ['🧑', '👨', '👨‍🦱', '👨‍🦳', '🧔', '👨‍🦰', '👨‍🦲', '👴'];
                 this.otherPlayers.forEach((player, index) => {
                     const fisher = document.createElement('div');
                     fisher.className = 'fisherman other';
+                    const emoji = characterEmojis[index % characterEmojis.length];
                     fisher.innerHTML = `
-                        <div class="fisherman-initial">${player.name.charAt(0).toUpperCase()}</div>
+                        <div class="fisherman-character">${emoji}</div>
                         <div class="fisherman-name">${player.name}</div>
                     `;
                     fisher.title = `${player.name} - Level ${player.level}`;
