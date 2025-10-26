@@ -6114,8 +6114,6 @@
                     }
                 });
                 
-                this.addChatMessage('system', `Tournament ended! Winner: ${winner} with ${highestWeight.toFixed(2)} lbs!`);
-                
                 // Award prize money to winner (only if playing against other real players)
                 const realPlayerCount = this.tournament.participants.filter(name => 
                     !this.otherPlayers.find(p => p.name === name && p.isSimulated)
@@ -6144,14 +6142,14 @@
                     });
                 }
                 
-                // Show tournament results
+                // Show tournament results (broadcasts top 3)
                 this.showTournamentResults();
                 
-                // Clear tournament after showing results
+                // Keep tournament results visible for 1 minute, then clear
                 setTimeout(() => {
                     this.tournament = null;
                     this.updateTournamentDisplay();
-                }, 10000);
+                }, 60000); // 60 seconds
             }
 
             showTournamentResults() {
@@ -6167,11 +6165,36 @@
                         name: name,
                         bagWeight: bagWeight,
                         top10Fish: top10Fish,
-                        biggestFish: this.tournament.scores[name].biggestCatch
+                        biggestFish: this.tournament.scores[name].biggestCatch,
+                        totalWeight: this.tournament.scores[name].totalWeight
                     };
                 }).filter(player => player.bagWeight > 0);
 
-                // Sort by bag weight
+                // Sort by total weight (tournament winner)
+                const top3Players = playersWithBags
+                    .sort((a, b) => b.totalWeight - a.totalWeight)
+                    .slice(0, 3);
+                
+                // BROADCAST TOP 3 ON MAIN SCREEN
+                if (top3Players.length > 0) {
+                    let podiumText = '🏆 TOURNAMENT RESULTS 🏆<br>';
+                    top3Players.forEach((player, index) => {
+                        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
+                        podiumText += `${medal} ${player.name}: ${player.totalWeight.toFixed(2)} lbs<br>`;
+                    });
+                    
+                    // Show as global announcement for 5 seconds
+                    this.showGlobalAnnouncement(podiumText, '#ffd700');
+                    
+                    // Also show in chat
+                    this.addChatMessage('system', `🏆 Tournament Results:`);
+                    top3Players.forEach((player, index) => {
+                        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
+                        this.addChatMessage('system', `${medal} ${player.name}: ${player.totalWeight.toFixed(2)} lbs`);
+                    });
+                }
+
+                // Sort by bag weight for modal display
                 const biggestBags = playersWithBags
                     .sort((a, b) => b.bagWeight - a.bagWeight)
                     .slice(0, 3);
