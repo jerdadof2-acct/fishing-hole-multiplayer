@@ -1823,43 +1823,47 @@
             }
         }
 
-        /* Tablet Layout (768px - 1024px) - TRUE Responsive Reorganization */
+        /* Tablet Layout (768px - 1024px) - Based on REAL tablet dimensions */
+        /* Common tablets: iPad 768x1024, Android 800x1280, iPad Pro 1024x1366 */
+        /* Working with: 768-1024px width, 1024-1366px height */
         @media (min-width: 769px) and (max-width: 1024px) {
-            /* REORGANIZE: Move sidebars to collapsible tabs, not just shrink them */
+            /* GOAL: Everything must fit on screen without horizontal scroll */
+            /* Available space: ~1024px height - 768px typical portrait height */
             
             body {
                 overflow-y: auto;
+                overflow-x: hidden;
             }
             
             .game-container {
-                height: auto;
-                min-height: 100vh;
+                height: 100vh;
+                overflow-y: auto;
             }
             
             .main-area {
-                flex: 1;
                 min-height: 100vh;
             }
             
-            /* Compact header */
+            /* Compact header - 40px */
             .header {
-                padding: 10px 15px;
+                padding: 8px 15px;
+                flex-shrink: 0;
             }
             
             .header h1 {
-                font-size: 20px;
+                font-size: 18px;
             }
             
-            /* REORGANIZE: Sidebars become horizontal tab bar */
+            /* Layout: Column stack */
             .game-layout {
                 flex-direction: column;
-                padding-bottom: 140px; /* Space for chat (40) + controls + ad */
+                padding-bottom: 0;
             }
             
-            /* Convert sidebars to horizontal tab-like layout */
+            /* Sidebars: Horizontal scrollable tabs - 80px */
             .left-sidebar, .right-sidebar {
                 width: 100%;
-                max-height: 100px;
+                height: 80px;
                 overflow-x: auto;
                 overflow-y: hidden;
                 padding: 4px;
@@ -1873,58 +1877,58 @@
             
             .left-sidebar .section,
             .right-sidebar .section {
-                min-width: 180px;
-                max-width: 220px;
-                padding: 6px;
+                min-width: 160px;
+                max-width: 200px;
+                padding: 4px;
                 margin-bottom: 0;
                 flex-shrink: 0;
                 background: rgba(20, 30, 50, 0.8);
-                border-radius: 6px;
+                border-radius: 4px;
             }
             
             .section h3 {
-                font-size: 11px;
-                margin-bottom: 4px;
+                font-size: 10px;
+                margin-bottom: 2px;
                 white-space: nowrap;
             }
             
             .stat-line {
-                font-size: 10px;
-                margin: 2px 0;
-                padding: 1px 0;
+                font-size: 9px;
+                margin: 1px 0;
+                padding: 0;
                 white-space: nowrap;
             }
             
             .player-info {
-                padding: 6px;
-                font-size: 10px;
+                padding: 4px;
+                font-size: 9px;
             }
             
-            /* RESPONSIVE: Lake takes remaining dynamic space */
+            /* Lake: Flexible - takes remaining space */
             .fishing-area {
                 flex: 1;
                 min-height: 300px;
                 display: flex;
                 flex-direction: column;
+                padding-bottom: 220px; /* Space for controls (60) + ad (90) + chat (40) + margin (30) */
             }
             
             .fishing-lake {
                 width: calc(100% - 40px);
                 flex: 1;
-                min-height: 300px;
-                max-height: none;
+                min-height: 250px;
             }
             
-            /* REORGANIZE: Controls become horizontal fixed bar */
+            /* Controls: Fixed bottom - 60px */
             .controls {
                 position: fixed;
-                bottom: 140px; /* Above chat (40) + ad (90) + margin (10) */
+                bottom: 130px; /* Above chat (40) + ad (90) */
                 left: 0;
                 right: 0;
                 display: flex;
                 flex-wrap: wrap;
-                gap: 6px;
-                padding: 8px;
+                gap: 4px;
+                padding: 6px;
                 background: rgba(20, 30, 50, 0.95);
                 border-top: 2px solid rgba(100, 200, 255, 0.3);
                 z-index: 140;
@@ -1932,14 +1936,14 @@
             }
             
             .control-btn {
-                font-size: 11px;
-                padding: 8px 12px;
-                min-width: 100px;
+                font-size: 10px;
+                padding: 6px 10px;
+                min-width: 80px;
                 flex: 1;
-                max-width: 150px;
+                max-width: 120px;
             }
             
-            /* RESPONSIVE: Chat stays fixed at bottom */
+            /* Chat: Fixed bottom - 40px */
             .chat-section {
                 position: fixed;
                 bottom: 0;
@@ -1949,14 +1953,14 @@
             }
             
             .chat-section.expanded {
-                height: 160px;
+                height: 150px;
             }
             
             .chat-section.collapsed {
                 height: 40px;
             }
             
-            /* RESPONSIVE: Ad positioned above chat */
+            /* Ad: Fixed above chat - 90px */
             #desktop-ad-bottom {
                 position: fixed;
                 bottom: 40px; /* Above collapsed chat */
@@ -1973,44 +1977,44 @@
             /* When chat expanded, ad moves up */
             .chat-section.expanded ~ * #desktop-ad-bottom,
             body:has(.chat-section.expanded) #desktop-ad-bottom {
-                bottom: 160px;
+                bottom: 150px;
             }
             
             /* Adjust controls when chat expanded */
             .chat-section.expanded ~ * .controls,
             body:has(.chat-section.expanded) .controls {
-                bottom: 250px; /* Above expanded chat (160) + ad (90) */
+                bottom: 240px; /* Above expanded chat (150) + ad (90) */
             }
             
-            /* Compact sections for scrollable sidebar */
+            /* Compact everything */
             .section {
-                padding: 6px;
+                padding: 4px;
                 margin-bottom: 0;
             }
             
             .achievements {
-                max-height: 60px;
-                padding: 4px;
+                max-height: 50px;
+                padding: 2px;
                 overflow-y: auto;
             }
             
             .achievement-item {
-                font-size: 9px;
-                padding: 2px 4px;
+                font-size: 8px;
+                padding: 1px 3px;
             }
             
             .leaderboard-list {
-                max-height: 60px;
+                max-height: 50px;
                 overflow-y: auto;
             }
             
             .leaderboard-item {
-                font-size: 9px;
-                padding: 2px 4px;
+                font-size: 8px;
+                padding: 1px 3px;
             }
             
             .online-players {
-                max-height: 60px;
+                max-height: 50px;
                 overflow-y: auto;
             }
         }
