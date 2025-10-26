@@ -2429,6 +2429,10 @@
             <!-- Inventory Tab -->
             <div class="mobile-tab-panel" id="mobile-tab-inventory">
                 <div class="mobile-panel">
+                    <h4>EQUIPPED GEAR</h4>
+                    <div id="mobile-equipped-gear" style="font-size: 11px; line-height: 1.6;"></div>
+                </div>
+                <div class="mobile-panel" style="margin-top: 15px;">
                     <h4>RECENT CATCHES</h4>
                     <div id="mobile-recent-catches" style="font-size: 10px;"></div>
                 </div>
@@ -6077,6 +6081,36 @@
                 if (mobileCharacterDisplayImg && this.player.character) {
                     mobileCharacterDisplayImg.src = this.player.character;
                     mobileCharacterDisplayImg.style.display = 'block';
+                }
+                
+                // Update mobile equipped gear
+                const mobileEquippedGear = document.getElementById('mobile-equipped-gear');
+                if (mobileEquippedGear) {
+                    mobileEquippedGear.innerHTML = `
+                        <div style="margin-bottom: 8px;"><strong>🎣 Rod:</strong> ${this.player.gear.rod || 'None'}</div>
+                        <div style="margin-bottom: 8px;"><strong>🎣 Reel:</strong> ${this.player.gear.reel || 'None'}</div>
+                        <div style="margin-bottom: 8px;"><strong>🪝 Line:</strong> ${this.player.gear.line || 'None'}</div>
+                        <div style="margin-bottom: 8px;"><strong>🪝 Hook:</strong> ${this.player.gear.hook || 'None'}</div>
+                        <div><strong>🐛 Bait:</strong> ${this.player.gear.bait || 'None'}</div>
+                    `;
+                }
+                
+                // Update mobile recent catches (last 5)
+                const mobileRecentCatches = document.getElementById('mobile-recent-catches');
+                if (mobileRecentCatches) {
+                    if (this.player.recentCatches.length === 0) {
+                        mobileRecentCatches.innerHTML = '<div style="color: #888; padding: 10px;">No fish caught yet!</div>';
+                    } else {
+                        const recentCatches = this.player.recentCatches.slice(-5).reverse();
+                        mobileRecentCatches.innerHTML = recentCatches.map(catchData => `
+                            <div style="padding: 8px; margin-bottom: 5px; background: rgba(20, 30, 50, 0.6); border-radius: 6px; border-left: 3px solid rgba(100, 200, 255, 0.5);">
+                                <div style="font-weight: bold; color: #64b5f6;">${catchData.fish.name}</div>
+                                <div style="font-size: 9px; color: #aaa; margin-top: 3px;">
+                                    ${catchData.weight.toFixed(1)} lbs • $${catchData.value} • ${catchData.location}
+                                </div>
+                            </div>
+                        `).join('');
+                    }
                 }
 
                 // Update location dropdown (both desktop and mobile)
