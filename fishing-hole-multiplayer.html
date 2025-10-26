@@ -4994,15 +4994,36 @@
                     });
                 }
 
-                // Simulate other players fishing (only AI players)
+                // Simulate other players fishing (only AI players) - staggered timing
+                // Start each AI player with a random delay to stagger their actions
+                this.otherPlayers.forEach((player, index) => {
+                    if (player.isSimulated) {
+                        // Each AI player starts fishing at a different time
+                        const initialDelay = index * 1000 + Math.random() * 2000; // Stagger: 1-3s apart per player
+                        setTimeout(() => {
+                            // Start the first cast for this AI player
+                            if (Math.random() < 0.5) {
+                                this.simulateOtherPlayerFishing(index);
+                            }
+                        }, initialDelay);
+                    }
+                });
+                
+                // Continuous simulation with random intervals
                 setInterval(() => {
                     this.otherPlayers.forEach((player, index) => {
                         // Only simulate AI players, not real players
-                        if (player.isSimulated && !player.isCasting && Math.random() < 0.1) {
-                            this.simulateOtherPlayerFishing(index);
+                        if (player.isSimulated && !player.isCasting && Math.random() < 0.15) {
+                            // Random delay before casting (0-3 seconds)
+                            const castDelay = Math.random() * 3000;
+                            setTimeout(() => {
+                                if (this.otherPlayers[index] && !this.otherPlayers[index].isCasting) {
+                                    this.simulateOtherPlayerFishing(index);
+                                }
+                            }, castDelay);
                         }
                     });
-                }, 3000 + Math.random() * 5000);
+                }, 4000 + Math.random() * 4000); // Check every 4-8 seconds
 
                 // Update leaderboard periodically
                 setInterval(() => {
@@ -5041,30 +5062,42 @@
                     fishermen[playerIndex + 1].classList.add('fishing');
                 }
                 
-                // Simulate fishing duration
+                // Simulate fishing duration - randomized between 2-5 seconds
+                const fishingDuration = 2000 + Math.random() * 3000;
                 setTimeout(() => {
+                    if (!this.otherPlayers[playerIndex]) return; // Player might have left
+                    
                     player.isCasting = false;
                     player.fishing = false;
                     
-                    // Remove fishing line and splash
+                    // Remove fishing line and splash - use player name for reliable removal
                     const lake = document.getElementById('fishing-lake');
-                    const lines = lake.querySelectorAll('.fishing-line');
-                    lines.forEach(line => {
-                        // Remove associated splash
-                        const splashId = line.dataset.splashId;
-                        if (splashId) {
-                            const splash = document.getElementById(splashId);
-                            if (splash) splash.remove();
-                        }
-                        line.remove();
-                    });
+                    const mobileLake = document.getElementById('mobile-fishing-lake');
+                    const activeLake = window.innerWidth <= 768 ? mobileLake : lake;
                     
-                    // Clean up any remaining splashes
-                    const splashes = lake.querySelectorAll('.hook-splash');
-                    splashes.forEach(splash => splash.remove());
+                    if (activeLake) {
+                        const lines = activeLake.querySelectorAll('.fishing-line');
+                        lines.forEach(line => {
+                            // Match by player index or name
+                            if (line.dataset.playerIndex == (playerIndex + 1).toString() || 
+                                line.dataset.playerName === player.name) {
+                                // Remove associated splash
+                                const splashId = line.dataset.splashId;
+                                if (splashId) {
+                                    const splash = document.getElementById(splashId);
+                                    if (splash) splash.remove();
+                                }
+                                line.remove();
+                            }
+                        });
+                        
+                        // Clean up any remaining splashes
+                        const splashes = activeLake.querySelectorAll('.hook-splash');
+                        splashes.forEach(splash => splash.remove());
+                    }
                     
                     // Update fisherman visual
-                    const fishermen = document.querySelectorAll('.fisherman');
+                    const fishermen = document.querySelectorAll('.fisherman, .mobile-fisherman');
                     if (fishermen[playerIndex + 1]) {
                         fishermen[playerIndex + 1].classList.remove('fishing');
                     }
