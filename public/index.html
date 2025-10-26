@@ -1415,8 +1415,8 @@
         /* Tackle Shop Modal */
         .modal {
             display: none;
-            position: fixed;
-            z-index: 10001; /* Higher than mobile controls (1000) and ad bar (999) */
+            position: fixed !important;
+            z-index: 99999 !important; /* Highest priority - always on top */
             left: 0;
             top: 0;
             width: 100%;
@@ -1871,9 +1871,9 @@
 
             .mobile-fishing-lake {
                 width: 100%;
-                height: calc(100vh - 430px); /* Adjust for header, tabs, controls, ad */
-                min-height: 180px;
-                max-height: calc(100vh - 430px);
+                height: calc(100vh - 490px); /* Adjust for header (~60px), tabs (~40px), location dropdown (~60px), controls (~64px), ad (~66px) */
+                min-height: 150px;
+                max-height: calc(100vh - 490px);
                 background: linear-gradient(135deg, #1e3a5f 0%, #4a90e2 50%, #1e3a5f 100%);
                 border-radius: 15px;
                 border: 2px solid rgba(100, 200, 255, 0.4);
@@ -2120,7 +2120,7 @@
                 overflow-x: hidden;
                 padding: 10px;
                 min-height: 0;
-                padding-bottom: 165px; /* Add space for fixed controls (64px) + ad bar (66px) + buffer (35px) */
+                padding-bottom: 10px; /* Minimal padding since controls are fixed */
                 margin-bottom: 0;
                 position: relative;
                 z-index: 1; /* Ensure tab content stays below modals */
@@ -2135,7 +2135,16 @@
             }
 
             .mobile-fishing-area {
-                margin-bottom: 15px;
+                margin-bottom: 0;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .mobile-fishing-area .location-dropdown {
+                margin: 0;
+                padding: 8px;
+                order: 3; /* Location dropdown after lake */
             }
 
             .mobile-controls {
@@ -2474,8 +2483,8 @@
                     <div class="mobile-fishing-lake" id="mobile-fishing-lake">
                         <div class="ripples" id="mobile-ripples"></div>
                     </div>
-                    <div class="location-dropdown">
-                        <select id="mobile-location-select" onchange="game.changeLocation(this.value)">
+                    <div class="location-dropdown" style="background: rgba(20, 30, 50, 0.95); border: 2px solid rgba(100, 200, 255, 0.4); border-radius: 8px; padding: 8px; margin-top: 8px;">
+                        <select id="mobile-location-select" onchange="game.changeLocation(this.value)" style="width: 100%; padding: 10px; background: rgba(15, 25, 40, 0.9); color: #64b5f6; border: 2px solid rgba(100, 200, 255, 0.4); border-radius: 6px; font-size: 12px;">
                             <!-- Locations will be dynamically added here -->
                         </select>
                     </div>
