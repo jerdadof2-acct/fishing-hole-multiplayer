@@ -3075,7 +3075,7 @@
                 document.getElementById('login-btn').addEventListener('click', () => this.login());
 
                 // Character customization with DiceBear API
-                let avatarOptions = {
+                window.avatarOptions = {
                     style: 'male',
                     hairColor: 'Brown',
                     facialHair: 'none',
@@ -3135,14 +3135,26 @@
                 const updatePreview = () => {
                     const previewImg = document.getElementById('character-preview-avatar');
                     if (previewImg) {
-                        const avatarUrl = generateAvatarUrl(avatarOptions);
+                        const avatarUrl = generateAvatarUrl(window.avatarOptions);
                         previewImg.src = avatarUrl;
+                        previewImg.style.display = 'block';
+                        previewImg.alt = 'Avatar Preview';
+                        
+                        // Handle image load error
+                        previewImg.onerror = function() {
+                            console.error('Failed to load avatar:', avatarUrl);
+                            this.style.display = 'none';
+                        };
+                        
+                        previewImg.onload = function() {
+                            this.style.display = 'block';
+                        };
                     }
                     
                     // Hide/show facial hair section based on gender
                     const facialHairSection = document.getElementById('facial-hair-section');
                     if (facialHairSection) {
-                        facialHairSection.style.display = avatarOptions.style === 'male' ? 'block' : 'none';
+                        facialHairSection.style.display = window.avatarOptions.style === 'male' ? 'block' : 'none';
                     }
                 };
                 
@@ -3161,7 +3173,7 @@
                         btn.setAttribute('data-selected', 'true');
                         
                         // Update avatar options
-                        avatarOptions[option] = value;
+                        window.avatarOptions[option] = value;
                         
                         // Update preview
                         updatePreview();
@@ -3299,16 +3311,18 @@
                 
                 // Get selected avatar from character builder
                 const previewImg = document.getElementById('character-preview-avatar');
+                const currentOptions = window.avatarOptions || { style: 'male', hairColor: 'Brown', facialHair: 'none', accessories: 'none' };
+                
                 if (previewImg && previewImg.src) {
                     // Store avatar options and regenerate URL with player name as seed for consistency
-                    this.player.avatarOptions = { ...avatarOptions };
-                    // Regenerate avatar URL with player name as seed (make generateAvatarUrl accessible)
-                    const avatarUrl = this.generateAvatarUrlForPlayer(name, avatarOptions);
+                    this.player.avatarOptions = { ...currentOptions };
+                    // Regenerate avatar URL with player name as seed
+                    const avatarUrl = this.generateAvatarUrlForPlayer(name, currentOptions);
                     this.player.character = avatarUrl;
                 } else {
                     // Fallback to default avatar
-                    this.player.character = this.generateAvatarUrlForPlayer(name, { style: 'male', hairColor: 'Brown', facialHair: 'none', accessories: 'none' });
-                    this.player.avatarOptions = { style: 'male', hairColor: 'Brown', facialHair: 'none', accessories: 'none' };
+                    this.player.character = this.generateAvatarUrlForPlayer(name, currentOptions);
+                    this.player.avatarOptions = { ...currentOptions };
                 }
                 document.getElementById('login-screen').classList.add('hidden');
                 this.addChatMessage('system', `${name} entered the fishing hole!`);
