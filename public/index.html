@@ -3113,34 +3113,29 @@
                         'sunglasses': 'Sunglasses'
                     };
                     
-                    // Build URL for DiceBear avataaars style with customization
+                    // Use UI Avatars API - simpler and more reliable
+                    // It uses name-based avatars with customization options
                     const params = new URLSearchParams();
-                    params.set('seed', avatarSeed);
                     
-                    // Hair color
-                    const hairColor = hairColorMap[options.hairColor] || 'Brown';
-                    params.set('hairColor', hairColor);
+                    // Use the seed as the name
+                    params.set('name', avatarSeed);
                     
-                    // Hair style based on gender
-                    if (options.style === 'male') {
-                        // Use a consistent male hair style - users can still get variety from seed
-                        params.set('top', 'ShortHairShortWaved');
-                        // Add facial hair if selected
-                        if (options.facialHair && options.facialHair !== 'none') {
-                            params.set('facialHairType', facialHairMap[options.facialHair]);
-                            params.set('facialHairColor', hairColor);
-                        }
-                    } else {
-                        // Female hair style
-                        params.set('top', 'LongHairStraight');
-                    }
+                    // Set background color based on hair color selection
+                    const bgColors = {
+                        'Brown': '8B4513',  // Saddle brown
+                        'Black': '000000',   // Black
+                        'Blonde': 'FFD700',  // Gold
+                        'Gray': '808080'     // Gray
+                    };
+                    params.set('background', bgColors[options.hairColor] || '8B4513');
                     
-                    // Add accessories if selected
-                    if (options.accessories && options.accessories !== 'none') {
-                        params.set('accessoriesType', accessoriesMap[options.accessories]);
-                    }
+                    // Style based on gender
+                    params.set('bold', options.style === 'male' ? 'true' : 'false');
                     
-                    return `https://api.dicebear.com/7.x/avataaars/svg?${params.toString()}`;
+                    // Use the default circular style
+                    params.set('rounded', 'true');
+                    
+                    return `https://ui-avatars.com/api/?${params.toString()}`;
                 };
                 
                 // Update preview function
@@ -3157,11 +3152,8 @@
                         // Set up new handlers
                         previewImg.onerror = function() {
                             console.error('Failed to load avatar:', avatarUrl);
-                            // Try fallback with just seed
-                            const fallbackUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random().toString(36).substring(7)}`;
-                            console.log('Trying fallback URL:', fallbackUrl);
-                            this.src = fallbackUrl;
-                            this.onerror = null; // Prevent infinite loop
+                            // UI Avatars should work reliably, but if it fails, hide the image
+                            this.style.display = 'none';
                         };
                         
                         previewImg.onload = function() {
@@ -3380,32 +3372,28 @@
                     'sunglasses': 'Sunglasses'
                 };
                 
-                // Build URL for DiceBear avataaars style with customization
+                // Use UI Avatars API - simpler and more reliable
                 const params = new URLSearchParams();
-                params.set('seed', playerName);
                 
-                // Hair color
-                const hairColor = hairColorMap[options.hairColor] || 'Brown';
-                params.set('hairColor', hairColor);
+                // Use player name
+                params.set('name', playerName);
                 
-                // Hair style based on gender
-                if (options.style === 'male') {
-                    params.set('top', 'ShortHairShortWaved');
-                    // Add facial hair if selected
-                    if (options.facialHair && options.facialHair !== 'none') {
-                        params.set('facialHairType', facialHairMap[options.facialHair]);
-                        params.set('facialHairColor', hairColor);
-                    }
-                } else {
-                    params.set('top', 'LongHairStraight');
-                }
+                // Set background color based on hair color selection
+                const bgColors = {
+                    'Brown': '8B4513',  // Saddle brown
+                    'Black': '000000',   // Black
+                    'Blonde': 'FFD700',  // Gold
+                    'Gray': '808080'     // Gray
+                };
+                params.set('background', bgColors[options.hairColor] || '8B4513');
                 
-                // Add accessories if selected
-                if (options.accessories && options.accessories !== 'none') {
-                    params.set('accessoriesType', accessoriesMap[options.accessories]);
-                }
+                // Style based on gender
+                params.set('bold', options.style === 'male' ? 'true' : 'false');
                 
-                return `https://api.dicebear.com/7.x/avataaars/svg?${params.toString()}`;
+                // Use the default circular style
+                params.set('rounded', 'true');
+                
+                return `https://ui-avatars.com/api/?${params.toString()}`;
             }
 
             positionPlayers() {
