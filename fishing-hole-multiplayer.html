@@ -3285,26 +3285,50 @@
                 }
                 if (mobileFishermanRow) mobileFishermanRow.appendChild(mobilePlayerFisher);
                 
-                // Add other players
-                const characterEmojis = ['🧑', '👨', '👨‍🦱', '👨‍🦳', '🧔', '👨‍🦰', '👨‍🦲', '👴'];
+                // Add other players (all cats now!)
                 this.otherPlayers.forEach((player, index) => {
+                    // Generate or use stored cat avatar for each player
+                    if (!player.character) {
+                        // Generate a unique cat based on player name
+                        const catSeed = `cat-${player.name}-${index}`;
+                        player.character = `https://robohash.org/${catSeed}?set=set4&size=200x200`;
+                    }
+                    
                     const fisher = document.createElement('div');
                     fisher.className = 'fisherman other';
-                    const emoji = characterEmojis[index % characterEmojis.length];
-                    fisher.innerHTML = `
-                        <div class="fisherman-character">${emoji}</div>
-                        <div class="fisherman-name">${player.name}</div>
-                    `;
+                    
+                    // Check if character is an image URL (cat) or emoji
+                    const isImageUrl = player.character && (player.character.startsWith('http') || player.character.startsWith('data:'));
+                    
+                    if (isImageUrl) {
+                        fisher.innerHTML = `
+                            <img src="${player.character}" alt="${player.name}" class="fisherman-avatar" style="width: 40px; height: 40px; border-radius: 50%;">
+                            <div class="fisherman-name">${player.name}</div>
+                        `;
+                    } else {
+                        fisher.innerHTML = `
+                            <div class="fisherman-character">${player.character || '🐱'}</div>
+                            <div class="fisherman-name">${player.name}</div>
+                        `;
+                    }
                     fisher.title = `${player.name} - Level ${player.level}`;
                     if (fishermanRow) fishermanRow.appendChild(fisher);
 
                     // Add mobile other players
                     const mobileFisher = document.createElement('div');
                     mobileFisher.className = 'mobile-fisherman';
-                    mobileFisher.innerHTML = `
-                        <div class="mobile-fisherman-character">${emoji}</div>
-                        <div class="mobile-fisherman-name">${player.name}</div>
-                    `;
+                    
+                    if (isImageUrl) {
+                        mobileFisher.innerHTML = `
+                            <img src="${player.character}" alt="${player.name}" class="mobile-fisherman-avatar" style="width: 30px; height: 30px; border-radius: 50%;">
+                            <div class="mobile-fisherman-name">${player.name}</div>
+                        `;
+                    } else {
+                        mobileFisher.innerHTML = `
+                            <div class="mobile-fisherman-character">${player.character || '🐱'}</div>
+                            <div class="mobile-fisherman-name">${player.name}</div>
+                        `;
+                    }
                     if (mobileFishermanRow) mobileFishermanRow.appendChild(mobileFisher);
                 });
             }
@@ -4260,9 +4284,13 @@
                 // Simulate other players with unique AI names
                 const aiNames = ['Bot_Alpha', 'Bot_Beta', 'Bot_Gamma', 'Bot_Delta', 'Bot_Epsilon', 'Bot_Zeta', 'Bot_Eta', 'Bot_Theta'];
                 
-                // Add 3-6 random AI players
+                // Add 3-6 random AI players (all cats!)
                 const numPlayers = Math.floor(Math.random() * 4) + 3;
                 for (let i = 0; i < numPlayers; i++) {
+                    // Generate unique cat avatar for each AI player
+                    const catSeed = `cat-ai-${aiNames[i]}-${i}`;
+                    const catAvatar = `https://robohash.org/${catSeed}?set=set4&size=200x200`;
+                    
                     this.otherPlayers.push({
                         name: aiNames[i], // Use unique AI names
                         level: Math.floor(Math.random() * 10) + 1,
@@ -4271,7 +4299,8 @@
                         isCasting: false,
                         biggestCatch: Math.random() * 15, // Random biggest catch 0-15 lbs
                         recentCatches: this.generateSimulatedCatches(Math.floor(Math.random() * 20) + 5), // 5-25 catches
-                        isSimulated: true // Mark as AI player
+                        isSimulated: true, // Mark as AI player
+                        character: catAvatar // Assign cat avatar
                     });
                 }
 
