@@ -1927,13 +1927,22 @@
                 left: 0;
                 right: 0;
                 display: grid;
-                grid-template-columns: 1fr 1fr 1fr 1fr;
+                grid-template-columns: 1fr 1fr 1fr;
                 gap: 4px;
                 padding: 8px;
                 background: rgba(15, 25, 40, 0.95);
                 border-top: 1px solid rgba(100, 200, 255, 0.3);
                 z-index: 998;
                 box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.3);
+            }
+            
+            .mobile-sound-toggle {
+                transition: all 0.3s ease;
+            }
+            
+            .mobile-sound-toggle:active {
+                transform: scale(0.9);
+                background: rgba(100, 200, 255, 0.4) !important;
             }
 
             .mobile-btn {
@@ -2120,7 +2129,7 @@
             }
 
             .mobile-controls {
-                grid-template-columns: 1fr 1fr 1fr 1fr;
+                grid-template-columns: 1fr 1fr 1fr;
             }
 
             /* Fix shop tabs on mobile */
@@ -2434,8 +2443,13 @@
                 <div class="mobile-header-stats">Level <span id="mobile-player-level">1</span> | $<span id="mobile-player-money">100</span></div>
             </div>
             <div class="mobile-header-right">
-                <div>Exp: <span id="mobile-player-exp">0</span>/<span id="mobile-next-exp">100</span></div>
-                <div><span id="mobile-fish-count">0</span> fish | <span id="mobile-total-weight">0</span> lbs</div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button class="mobile-sound-toggle" id="mobile-sound-btn" style="background: rgba(100, 200, 255, 0.2); border: 1px solid rgba(100, 200, 255, 0.4); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; padding: 0;">🔊</button>
+                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                        <div>Exp: <span id="mobile-player-exp">0</span>/<span id="mobile-next-exp">100</span></div>
+                        <div><span id="mobile-fish-count">0</span> fish | <span id="mobile-total-weight">0</span> lbs</div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -2467,7 +2481,6 @@
                     <button class="mobile-btn" id="mobile-cast-btn">CAST</button>
                     <button class="mobile-btn" id="mobile-shop-btn">SHOP</button>
                     <button class="mobile-btn" id="mobile-tournament-btn">TOURNY</button>
-                    <button class="mobile-btn" id="mobile-sound-btn">🔊</button>
                 </div>
             </div>
 
@@ -3354,7 +3367,15 @@
             toggleSound() {
                 this.soundEnabled = !this.soundEnabled;
                 const soundBtn = document.getElementById('sound-btn');
-                soundBtn.textContent = this.soundEnabled ? '🔊 SOUND ON' : '🔇 SOUND OFF';
+                const mobileSoundBtn = document.getElementById('mobile-sound-btn');
+                
+                if (soundBtn) {
+                    soundBtn.textContent = this.soundEnabled ? '🔊 SOUND ON' : '🔇 SOUND OFF';
+                }
+                
+                if (mobileSoundBtn) {
+                    mobileSoundBtn.textContent = this.soundEnabled ? '🔊' : '🔇';
+                }
                 
                 if (this.soundEnabled) {
                     this.addChatMessage('system', 'Sound effects enabled!');
@@ -5966,6 +5987,12 @@
                 if (mobileStatLuck) mobileStatLuck.textContent = this.player.stats.luck;
                 if (mobileStatPatience) mobileStatPatience.textContent = this.player.stats.patience;
                 if (mobileStatStrength) mobileStatStrength.textContent = this.player.stats.strength;
+                
+                // Update mobile sound button icon
+                const mobileSoundBtn = document.getElementById('mobile-sound-btn');
+                if (mobileSoundBtn) {
+                    mobileSoundBtn.textContent = this.soundEnabled ? '🔊' : '🔇';
+                }
                 
                 // Update character display (image)
                 const mobileCharacterDisplayImg = document.getElementById('mobile-character-display-img');
