@@ -3255,14 +3255,7 @@
                 const activeFishermanRow = isMobile ? mobileFishermanRow : fishermanRow;
                 const activeLake = isMobile ? mobileLake : lake;
                 
-                // Visual debug for mobile
-                const debugInfo = { isMobile, fishermanRow: !!fishermanRow, lake: !!lake, mobileFishermanRow: !!mobileFishermanRow, mobileLake: !!mobileLake, activeFishermanRow: !!activeFishermanRow, activeLake: !!activeLake };
-                this.showDebugMessage('DEBUG: ' + JSON.stringify(debugInfo));
-                
-                if (!activeFishermanRow || !activeLake) {
-                    this.showDebugMessage('ERROR: Missing elements! fisherRow=' + !!activeFishermanRow + ' lake=' + !!activeLake);
-                    return null;
-                }
+                if (!activeFishermanRow || !activeLake) return null;
                 
                 const fishermen = activeFishermanRow.querySelectorAll('.fisherman, .mobile-fisherman');
                 
@@ -3333,7 +3326,6 @@
                 splash.id = line.dataset.splashId;
                 
                 activeLake.appendChild(line);
-                this.showDebugMessage('Line appended! left=' + line.style.left + ' top=' + line.style.top + ' height=' + line.style.height + ' lake=' + activeLake.id);
                 
                 // Create landing splash effect when hook hits water (after line extends)
                 setTimeout(() => {
@@ -4989,39 +4981,6 @@
                 }, 3000);
             }
 
-            showDebugMessage(text) {
-                // Show debug message on page (visible on mobile)
-                const debugDiv = document.getElementById('debug-info') || this.createDebugDisplay();
-                debugDiv.textContent = text;
-                debugDiv.style.display = 'block';
-                
-                // Auto-hide after 5 seconds
-                setTimeout(() => {
-                    debugDiv.style.display = 'none';
-                }, 5000);
-            }
-
-            createDebugDisplay() {
-                const debugDiv = document.createElement('div');
-                debugDiv.id = 'debug-info';
-                debugDiv.style.cssText = `
-                    position: fixed;
-                    top: 140px;
-                    left: 10px;
-                    right: 10px;
-                    background: rgba(0, 0, 0, 0.9);
-                    color: #00ff00;
-                    padding: 10px;
-                    border: 2px solid #00ff00;
-                    border-radius: 5px;
-                    font-size: 12px;
-                    z-index: 50;
-                    display: none;
-                    word-wrap: break-word;
-                `;
-                document.body.appendChild(debugDiv);
-                return debugDiv;
-            }
 
             showCatchAnimation(fishName, weight) {
                 const fishermanRow = document.getElementById('fisherman-row');
