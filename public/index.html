@@ -3085,7 +3085,6 @@
                 
                 // Generate DiceBear avatar URL
                 const generateAvatarUrl = (options, seed = null) => {
-                    const params = new URLSearchParams();
                     // Use provided seed or generate random one
                     const avatarSeed = seed || Math.random().toString(36).substring(7);
                     
