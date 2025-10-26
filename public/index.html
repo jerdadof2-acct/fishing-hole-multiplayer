@@ -3836,7 +3836,41 @@
                     if (caughtFish) {
                         this.catchRandomFish();
                     } else {
-                        this.showMessage('No fish this time!', '#ffff00');
+                        // Show humorous "no catch" messages
+                        const noCatchMessages = [
+                            "The one that got away! 🐟",
+                            "Just a nibble... try again!",
+                            "Fish saw your shadow and swam away!",
+                            "They're having a meeting down there!",
+                            "That fish laughed at your bait! 😂",
+                            "Nothing but seaweed this time!",
+                            "Fish are on lunch break! 🍔",
+                            "A ghost fish stole your bait! 👻",
+                            "Fish are watching Netflix today! 📺",
+                            "They swam away giggling!",
+                            "Your bait was too fancy for them!",
+                            "Fish are playing hide and seek!",
+                            "Maybe try a different spot?",
+                            "That fish said 'maybe next time!'",
+                            "Fish are having a party without you! 🎉",
+                            "Just a friendly turtle saying hi! 🐢",
+                            "The fish are playing tag!",
+                            "Your hook came back empty!",
+                            "Fish saw your cat and got scared! 😸",
+                            "They're doing yoga down there! 🧘",
+                            "Fish are busy playing poker! 🃏",
+                            "Your bait was too spicy! 🌶️",
+                            "Fish are on vacation! 🏖️",
+                            "They're writing their memoirs! 📝",
+                            "Fish are doing karaoke! 🎤",
+                            "Just a crab waving hello! 🦀",
+                            "Fish are practicing social distancing!",
+                            "They're having a business meeting! 💼",
+                            "Fish are doing homework! 📚",
+                            "The one that got away... and took your bait!"
+                        ];
+                        const randomMessage = noCatchMessages[Math.floor(Math.random() * noCatchMessages.length)];
+                        this.showMessage(randomMessage, '#ffff00');
                     }
                 }, 400);
             }
