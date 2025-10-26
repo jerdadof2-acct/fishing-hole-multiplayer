@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
     <!-- SEO Meta Tags -->
     <title>Fishing Hole Multiplayer - Free Online Fishing Game Tournaments</title>
@@ -1416,6 +1416,208 @@
                 min-height: 300px;
             }
         }
+
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {
+            .game-container {
+                overflow-y: auto;
+            }
+
+            .main-area {
+                padding: 5px;
+            }
+
+            .header h1 {
+                font-size: 16px;
+                padding: 5px;
+            }
+
+            .game-layout {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .left-sidebar, .right-sidebar {
+                width: 100%;
+                max-height: none;
+                overflow-y: visible;
+                padding: 8px;
+            }
+
+            .sidebar-section {
+                margin-bottom: 10px;
+                padding: 8px;
+            }
+
+            .sidebar-section h3 {
+                font-size: 12px;
+                margin-bottom: 5px;
+            }
+
+            .fishing-area {
+                order: 1;
+                padding: 10px;
+            }
+
+            .fisherman-row {
+                margin-bottom: 5px;
+            }
+
+            .fisherman {
+                width: 45px;
+                height: 60px;
+                font-size: 32px;
+            }
+
+            .fisherman-name {
+                font-size: 7px;
+                max-width: 40px;
+            }
+
+            .fishing-lake {
+                width: 100%;
+                max-width: 100%;
+                height: 40vh;
+                min-height: 250px;
+                margin: 0 auto;
+            }
+
+            .location-dropdown {
+                margin: 10px 0;
+                padding: 8px;
+            }
+
+            .location-dropdown select {
+                padding: 10px;
+                font-size: 14px;
+            }
+
+            .controls {
+                flex-wrap: wrap;
+                gap: 5px;
+                padding: 10px;
+            }
+
+            .btn {
+                padding: 8px 12px;
+                font-size: 11px;
+                flex: 1 1 calc(50% - 5px);
+                min-width: 140px;
+            }
+
+            .controls-row {
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .controls-row .btn {
+                width: 100%;
+            }
+
+            .player-info, .sidebar-section {
+                font-size: 11px;
+            }
+
+            .stat-line {
+                margin: 4px 0;
+                padding: 3px 0;
+                font-size: 10px;
+            }
+
+            .achievement-item {
+                font-size: 9px;
+                padding: 3px;
+                margin: 2px 0;
+            }
+
+            .leaderboard-item {
+                font-size: 9px;
+                padding: 3px 4px;
+            }
+
+            .chat-section {
+                max-height: 150px;
+            }
+
+            .chat-area {
+                font-size: 10px;
+                padding: 5px;
+            }
+
+            .chat-input {
+                padding: 6px;
+                font-size: 12px;
+            }
+
+            .modal-content {
+                width: 95%;
+                max-width: 95%;
+                padding: 15px;
+                max-height: 85vh;
+            }
+
+            .modal h2 {
+                font-size: 18px;
+            }
+
+            .shop-tabs, .inventory-tabs {
+                gap: 5px;
+            }
+
+            .tab-btn {
+                padding: 6px 10px;
+                font-size: 11px;
+            }
+
+            .tackle-item {
+                padding: 8px;
+                font-size: 11px;
+            }
+
+            .tackle-item-name {
+                font-size: 12px;
+            }
+
+            .tackle-item-desc {
+                font-size: 9px;
+            }
+
+            /* Hide less critical info on mobile */
+            .achievements {
+                max-height: 100px;
+            }
+
+            .game-status {
+                font-size: 9px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .fisherman {
+                width: 35px;
+                height: 50px;
+                font-size: 28px;
+            }
+
+            .fisherman-name {
+                font-size: 6px;
+                max-width: 35px;
+            }
+
+            .btn {
+                font-size: 10px;
+                padding: 6px 10px;
+            }
+
+            .header h1 {
+                font-size: 14px;
+            }
+
+            .fishing-lake {
+                height: 35vh;
+                min-height: 200px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1478,7 +1680,7 @@
                     </div>
 
                     <div class="controls">
-                        <button class="btn" id="cast-btn">CAST LINE (SPACEBAR)</button>
+                        <button class="btn" id="cast-btn">CAST LINE</button>
                         <button class="btn" id="shop-btn">TACKLE SHOP</button>
                         <button class="btn" id="tournament-btn">TOURNAMENT</button>
                         <button class="btn" id="inventory-btn">INVENTORY</button>
@@ -2661,7 +2863,7 @@
 
                 this.isCasting = true;
                 const castBtn = document.getElementById('cast-btn');
-                castBtn.textContent = 'REELING... (SPACEBAR)';
+                castBtn.textContent = 'REELING...';
                 castBtn.classList.add('casting');
                 castBtn.disabled = true;
 
@@ -2886,7 +3088,7 @@
                 ripples.classList.remove('active');
                 
                 const castBtn = document.getElementById('cast-btn');
-                castBtn.textContent = 'CAST LINE (SPACEBAR)';
+                castBtn.textContent = 'CAST LINE';
                 castBtn.classList.remove('casting');
                 castBtn.disabled = false;
 
