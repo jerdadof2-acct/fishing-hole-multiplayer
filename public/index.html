@@ -1640,11 +1640,13 @@
             width: 100%;
             max-width: 728px;
             margin: 10px auto;
+            min-height: 90px;
         }
         
         .ad-container-mobile {
             width: 100%;
             height: 50px;
+            min-height: 50px;
             margin: 8px 0;
         }
 
@@ -6171,20 +6173,66 @@
             }
 
             initMockAds() {
-                // Array of mock ads to rotate through
+                // Array of realistic mock banner ads to rotate through
                 this.mockAds = {
                     desktop: [
-                        { icon: '🎣', title: 'Premium Fishing Gear', text: 'Best Rods & Reels - Sale Now!' },
-                        { icon: '🐟', title: 'Fishing Tackle Shop', text: '50% Off Everything Today!' },
-                        { icon: '⚓', title: 'Marine Supply Co', text: 'Professional Equipment' },
-                        { icon: '🎣', title: 'Tackle Warehouse', text: 'Free Shipping on Orders $50+' },
-                        { icon: '🐱', title: 'Kitty Creek Pro Shop', text: 'Elite Fisher-Cat Gear' }
+                        {
+                            bg: 'linear-gradient(135deg, #1e88e5, #1976d2)',
+                            logo: '🎣',
+                            headline: 'Premium Fishing Gear',
+                            subtext: 'Best Rods & Reels • 50% Off Sale',
+                            cta: 'Shop Now →'
+                        },
+                        {
+                            bg: 'linear-gradient(135deg, #f57c00, #e65100)',
+                            logo: '🐟',
+                            headline: 'Fishing Tackle Warehouse',
+                            subtext: 'Free Shipping on Orders $50+',
+                            cta: 'Buy Now →'
+                        },
+                        {
+                            bg: 'linear-gradient(135deg, #7b1fa2, #6a1b9a)',
+                            logo: '⚓',
+                            headline: 'Marine Supply Co',
+                            subtext: 'Professional Equipment • Best Prices',
+                            cta: 'Learn More →'
+                        },
+                        {
+                            bg: 'linear-gradient(135deg, #00897b, #00695c)',
+                            logo: '🎣',
+                            headline: 'Tackle Pro Shop',
+                            subtext: 'Elite Gear for Serious Anglers',
+                            cta: 'Explore →'
+                        },
+                        {
+                            bg: 'linear-gradient(135deg, #42a5f5, #2196f3)',
+                            logo: '🐱',
+                            headline: 'Kitty Creek Pro Shop',
+                            subtext: 'Exclusive Fisher-Cat Equipment',
+                            cta: 'Upgrade →'
+                        }
                     ],
                     mobile: [
-                        { icon: '🐱', title: 'Upgrades', text: 'Tap to Test' },
-                        { icon: '🎣', title: 'Shop Now', text: '50% Off Sale' },
-                        { icon: '⚓', title: 'Gear', text: 'Premium Items' },
-                        { icon: '🐟', title: 'Deals', text: 'Limited Time' }
+                        {
+                            bg: 'linear-gradient(135deg, #1e88e5, #1976d2)',
+                            text: '🎣 Premium Gear • 50% Off',
+                            cta: 'Shop →'
+                        },
+                        {
+                            bg: 'linear-gradient(135deg, #f57c00, #e65100)',
+                            text: '🐟 Tackle Sale • Free Shipping',
+                            cta: 'Buy →'
+                        },
+                        {
+                            bg: 'linear-gradient(135deg, #7b1fa2, #6a1b9a)',
+                            text: '⚓ Pro Equipment • Best Deals',
+                            cta: 'Tap →'
+                        },
+                        {
+                            bg: 'linear-gradient(135deg, #42a5f5, #2196f3)',
+                            text: '🐱 Kitty Creek Shop • Upgrades',
+                            cta: 'Tap →'
+                        }
                     ]
                 };
 
@@ -6196,36 +6244,41 @@
             }
 
             rotateAds() {
-                // Rotate desktop ad
+                // Rotate desktop ad (728x90 standard banner)
                 const desktopAd = document.getElementById('desktop-ad-bottom');
                 if (desktopAd) {
                     const ad = this.mockAds.desktop[Math.floor(Math.random() * this.mockAds.desktop.length)];
                     desktopAd.innerHTML = `
-                        <a href="#" class="mock-ad" onclick="event.preventDefault(); game.handleAdClick('desktop-bottom'); return false;" style="display: block; text-decoration: none; color: inherit;">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 10px; padding: 5px;">
-                                <div style="background: linear-gradient(135deg, #42a5f5, #2196f3); color: white; padding: 8px 16px; border-radius: 6px; font-weight: bold; font-size: 14px;">
-                                    ${ad.icon} ${ad.title}
+                        <a href="#" class="mock-ad" onclick="event.preventDefault(); game.handleAdClick('desktop-bottom'); return false;" style="display: block; text-decoration: none; color: inherit; width: 100%; height: 100%; min-height: 90px;">
+                            <div style="background: ${ad.bg}; border-radius: 6px; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; height: 100%; min-height: 90px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+                                <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
+                                    <div style="font-size: 36px; line-height: 1;">${ad.logo}</div>
+                                    <div style="color: white;">
+                                        <div style="font-size: 18px; font-weight: bold; margin-bottom: 4px; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">${ad.headline}</div>
+                                        <div style="font-size: 13px; opacity: 0.95;">${ad.subtext}</div>
+                                    </div>
                                 </div>
-                                <div style="font-size: 11px; color: rgba(200,200,200,0.8);">
-                                    ${ad.text}
+                                <div style="background: rgba(255,255,255,0.25); color: white; padding: 8px 20px; border-radius: 20px; font-weight: bold; font-size: 14px; white-space: nowrap; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3);">
+                                    ${ad.cta}
                                 </div>
                             </div>
                         </a>
                     `;
                 }
 
-                // Rotate mobile ad
+                // Rotate mobile ad (320x50 standard mobile banner)
                 const mobileAd = document.getElementById('mobile-ad-bottom');
                 if (mobileAd) {
                     const ad = this.mockAds.mobile[Math.floor(Math.random() * this.mockAds.mobile.length)];
                     mobileAd.innerHTML = `
-                        <a href="#" class="mock-ad" onclick="event.preventDefault(); game.handleAdClick('mobile-bottom'); return false;" style="display: block; text-decoration: none; color: inherit; height: 100%;">
-                            <div style="display: flex; align-items: center; justify-content: center; height: 100%; gap: 8px;">
-                                <div style="background: linear-gradient(135deg, #42a5f5, #2196f3); color: white; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 11px;">
-                                    ${ad.icon} ${ad.title}
+                        <a href="#" class="mock-ad" onclick="event.preventDefault(); game.handleAdClick('mobile-bottom'); return false;" style="display: block; text-decoration: none; color: inherit; width: 100%; height: 100%;">
+                            <div style="background: ${ad.bg}; border-radius: 6px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; height: 100%; min-height: 50px; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
+                                <div style="display: flex; align-items: center; gap: 8px; flex: 1; color: white;">
+                                    <div style="font-size: 20px; line-height: 1;">${ad.text.split('•')[0]}</div>
+                                    <div style="font-size: 11px; opacity: 0.9;">${ad.text.split('•')[1] || ''}</div>
                                 </div>
-                                <div style="font-size: 9px; color: rgba(200,200,200,0.8);">
-                                    ${ad.text}
+                                <div style="background: rgba(255,255,255,0.25); color: white; padding: 6px 12px; border-radius: 15px; font-weight: bold; font-size: 11px; white-space: nowrap; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3);">
+                                    ${ad.cta}
                                 </div>
                             </div>
                         </a>
