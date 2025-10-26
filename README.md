@@ -1,15 +1,19 @@
-# Fishing Hole - Multiplayer Tournament Game
+# 🐱 Kitty Creek Fishing Club 🎣
 
-A fun, retro-styled multiplayer fishing tournament game with real-time multiplayer support.
+A purrfect multiplayer fishing tournament game with cat-themed fun, real-time multiplayer support, and hilarious AI bot competitors!
 
 ## Features
 
+- 🐱 **Cat-Themed Fun** - Play as a fisher-cat and compete with hilarious bot cats like "Sly Sylvester" and "Tommy the Stray"
 - 🎣 **Multiplayer Fishing Tournaments** - Compete with other players in real-time
 - 🏆 **Fair Play** - Equal catch chances for all players during tournaments
 - 🐟 **Mega Fish** - Tournament fish can be up to 3x bigger than normal!
 - 📊 **Leaderboards** - Track biggest fish and biggest bags
 - 🎮 **Progression System** - Unlock locations, tackle, and improve stats
-- 💾 **Persistent Data** - Save your progress with localStorage
+- 💾 **Auto-Save** - Your progress saves automatically
+- 🔊 **Cat Sound Effects** - Hear cats meow and purr when you catch fish!
+- 💬 **Real-Time Chat** - See player messages as announcement cards over the lake
+- 🎨 **Modern UI** - Polished, professional game design
 
 ## Tech Stack
 

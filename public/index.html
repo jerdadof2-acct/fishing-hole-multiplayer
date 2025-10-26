@@ -1608,18 +1608,32 @@
 
         /* Banner Ad Containers */
         .ad-container {
-            background: rgba(20, 30, 50, 0.6);
-            border: 1px dashed rgba(100, 200, 255, 0.3);
+            background: rgba(20, 30, 50, 0.8);
+            border: 2px solid rgba(100, 200, 255, 0.4);
             border-radius: 8px;
             padding: 10px;
             text-align: center;
-            color: rgba(200, 200, 200, 0.5);
+            color: rgba(200, 200, 200, 0.8);
             font-size: 12px;
             min-height: 90px;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .ad-container:hover {
+            background: rgba(30, 50, 80, 0.9);
+            border-color: rgba(100, 200, 255, 0.6);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(100, 200, 255, 0.3);
+        }
+
+        .mock-ad {
+            width: 100%;
+            height: 100%;
         }
         
         .ad-container-desktop {
@@ -2253,8 +2267,17 @@
                     
                     <!-- Banner Ad - Desktop Bottom -->
                     <div class="ad-container ad-container-desktop" id="desktop-ad-bottom">
-                        <!-- Ad will be loaded here -->
-                        <div>Advertisement</div>
+                        <!-- Mock Ad for Testing -->
+                        <a href="#" class="mock-ad" onclick="event.preventDefault(); game.handleAdClick('desktop-bottom'); return false;" style="display: block; text-decoration: none; color: inherit;">
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 10px; padding: 5px;">
+                                <div style="background: linear-gradient(135deg, #42a5f5, #2196f3); color: white; padding: 8px 16px; border-radius: 6px; font-weight: bold; font-size: 14px;">
+                                    🎣 Premium Fishing Gear
+                                </div>
+                                <div style="font-size: 11px; color: rgba(200,200,200,0.8);">
+                                    Click to Test Ad → Best Rods & Reels
+                                </div>
+                            </div>
+                        </a>
                     </div>
                 </div>
 
@@ -2458,8 +2481,17 @@
         <!-- Mobile Ad Bar (replaces old menu bar) -->
         <div class="mobile-menu-bar" style="padding: 8px;">
             <div class="ad-container ad-container-mobile" id="mobile-ad-bottom" style="margin: 0; height: 50px;">
-                <!-- Ad will be loaded here -->
-                <div>Advertisement</div>
+                <!-- Mock Ad for Testing -->
+                <a href="#" class="mock-ad" onclick="event.preventDefault(); game.handleAdClick('mobile-bottom'); return false;" style="display: block; text-decoration: none; color: inherit; height: 100%;">
+                    <div style="display: flex; align-items: center; justify-content: center; height: 100%; gap: 8px;">
+                        <div style="background: linear-gradient(135deg, #42a5f5, #2196f3); color: white; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 11px;">
+                            🐱 Upgrades
+                        </div>
+                        <div style="font-size: 9px; color: rgba(200,200,200,0.8);">
+                            Tap to Test
+                        </div>
+                    </div>
+                </a>
             </div>
         </div>
         </div>
@@ -6121,6 +6153,20 @@
             showChatBanner(message) {
                 // Use the same announcement system as big fish catches
                 this.showGlobalAnnouncement(message, '#64b5f6');
+            }
+
+            handleAdClick(location) {
+                // Mock ad click handler for testing
+                const adMessages = {
+                    'desktop-bottom': '🎣 Desktop Ad Clicked! Premium Fishing Gear Sale - 50% Off!',
+                    'mobile-bottom': '🐱 Mobile Ad Clicked! Upgrade Your Gear Now!'
+                };
+                
+                this.showMessage(adMessages[location] || 'Ad clicked!', '#ffd700');
+                this.addChatMessage('system', `Mock ad clicked at ${location} - Testing ad functionality`);
+                
+                // In production, this would track the ad click and redirect to advertiser
+                console.log(`Ad clicked at: ${location}`);
             }
 
 
