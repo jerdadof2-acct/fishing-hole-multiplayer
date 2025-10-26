@@ -1728,13 +1728,14 @@
 
                     this.socket.on('player-list', (players) => {
                         // Separate real players from simulated ones
-                        const realPlayerNames = players.filter(name => name !== this.player.name);
+                        // players is now an array of objects with {name, level}
+                        const realPlayerData = players.filter(p => p.name !== this.player.name);
                         const simulatedPlayers = this.otherPlayers.filter(p => p.isSimulated);
                         
-                        // Map real players
-                        const realPlayers = realPlayerNames.map(name => ({
-                            name: name,
-                            level: 1,
+                        // Map real players with their actual levels
+                        const realPlayers = realPlayerData.map(playerData => ({
+                            name: playerData.name,
+                            level: playerData.level || 1,
                             fishing: false,
                             catches: 0,
                             isCasting: false,
@@ -1880,6 +1881,14 @@
                             this.tournament.scores = data.scores;
                             this.tournament.catches = data.catches;
                             this.tournament.phase = 'ended';
+                            
+                            // Award prize money if this player won
+                            if (data.winner === this.player.name && data.prizeAmount > 0) {
+                                this.player.money += data.prizeAmount;
+                                this.addChatMessage('system', `🏆 Congratulations! You won $${data.prizeAmount} prize money!`);
+                                this.showMessage(`🏆 Tournament Win: +$${data.prizeAmount}!`, '#ffd700');
+                                this.saveGameData();
+                            }
                             
                             // Show results
                             this.showTournamentResults();
@@ -3617,6 +3626,22 @@
                 });
                 
                 this.addChatMessage('system', `Tournament ended! Winner: ${winner} with ${highestWeight.toFixed(2)} lbs!`);
+                
+                // Award prize money to winner (only if playing against other real players)
+                const realPlayerCount = this.tournament.participants.filter(name => 
+                    !this.otherPlayers.find(p => p.name === name && p.isSimulated)
+                ).length;
+                
+                if (winner && winner === this.player.name && realPlayerCount > 1) {
+                    const prizeMoney = 500;
+                    this.player.money += prizeMoney;
+                    this.addChatMessage('system', `🏆 Congratulations! You won $${prizeMoney} prize money!`);
+                    this.showMessage(`🏆 Tournament Win: +$${prizeMoney}!`, '#ffd700');
+                    this.saveGameData();
+                } else if (winner && winner === this.player.name && realPlayerCount === 1) {
+                    this.addChatMessage('system', '💡 No prize money - you were playing solo! Need other players for prizes.');
+                }
+                
                 this.addChatMessage('system', '🎣 Returning to normal fishing mode - your equipment and stats are active again!');
                 
                 // Broadcast tournament end to all players
@@ -3625,7 +3650,8 @@
                         tournamentId: this.tournament.tournamentId,
                         winner: winner,
                         scores: this.tournament.scores,
-                        catches: this.tournament.catches
+                        catches: this.tournament.catches,
+                        prizeAmount: realPlayerCount > 1 ? 500 : 0
                     });
                 }
                 

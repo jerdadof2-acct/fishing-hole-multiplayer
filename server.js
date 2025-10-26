@@ -135,14 +135,23 @@ io.on('connection', (socket) => {
                 ]);
             }
 
-            // Store active player
-            activePlayers.set(socket.id, { name, socket });
+            // Store active player with full data
+            activePlayers.set(socket.id, { 
+                name, 
+                socket,
+                level: playerData.level || 1,
+                money: playerData.money || 100,
+                experience: playerData.experience || 0
+            });
             
             // Broadcast player joined
             socket.broadcast.emit('player-joined', { name });
             
-            // Send list of active players
-            const playerList = Array.from(activePlayers.values()).map(p => p.name);
+            // Send list of active players with their data
+            const playerList = Array.from(activePlayers.values()).map(p => ({
+                name: p.name,
+                level: p.level || 1
+            }));
             io.emit('player-list', playerList);
             
             socket.emit('game-joined', { success: true });
@@ -251,7 +260,8 @@ io.on('connection', (socket) => {
             tournamentId: data.tournamentId,
             winner: data.winner,
             scores: data.scores,
-            catches: data.catches
+            catches: data.catches,
+            prizeAmount: data.prizeAmount || 0
         });
     });
 
