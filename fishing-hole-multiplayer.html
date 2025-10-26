@@ -158,6 +158,36 @@
             color: #000;
         }
 
+        .character-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin: 10px 0;
+        }
+
+        .character-option {
+            font-size: 40px;
+            padding: 10px;
+            border: 2px solid #004400;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #000;
+        }
+
+        .character-option:hover {
+            border-color: #00ff00;
+            background: #001100;
+            transform: scale(1.1);
+        }
+
+        .character-option.selected {
+            border-color: #00ff00;
+            background: #003300;
+            box-shadow: 0 0 15px #00ff00;
+        }
+
         .fishing-area {
             flex: 1;
             position: relative;
@@ -2073,6 +2103,15 @@
                     <h4>ACHIEVEMENTS</h4>
                     <div class="achievements" id="mobile-achievements"></div>
                 </div>
+                <div class="mobile-panel">
+                    <h4>CHARACTER INFO</h4>
+                    <div style="font-size: 10px; margin: 10px 0;">
+                        <div>Character: <span id="mobile-character-display">🧑‍🦰</span></div>
+                        <div style="margin-top: 10px;">
+                            <button class="mobile-btn" onclick="game.resetCharacter()" style="background: #330000; border-color: #ff0000; color: #ff0000; font-size: 10px; padding: 8px;">RESET CHARACTER</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Inventory Tab -->
@@ -2114,6 +2153,19 @@
             <h2>FISHING HOLE LOGIN</h2>
             <input type="text" class="login-input" id="player-name-input" placeholder="Enter your username..." value="">
             <br>
+            <div style="margin: 15px 0;">
+                <label style="color: #00ff00; display: block; margin-bottom: 8px;">Choose Your Character:</label>
+                <div class="character-selector" id="character-selector">
+                    <div class="character-option" data-emoji="🧑‍🦰">🧑‍🦰</div>
+                    <div class="character-option" data-emoji="🧑">🧑</div>
+                    <div class="character-option" data-emoji="👨">👨</div>
+                    <div class="character-option" data-emoji="👨‍🦱">👨‍🦱</div>
+                    <div class="character-option" data-emoji="👨‍🦳">👨‍🦳</div>
+                    <div class="character-option" data-emoji="🧔">🧔</div>
+                    <div class="character-option" data-emoji="👨‍🦲">👨‍🦲</div>
+                    <div class="character-option" data-emoji="👴">👴</div>
+                </div>
+            </div>
             <button class="login-btn" id="login-btn">ENTER FISHING HOLE</button>
         </div>
     </div>
@@ -2130,6 +2182,7 @@
                 this.connected = false;
                 this.player = {
                     name: 'Guest',
+                    character: '🧑‍🦰', // Default character emoji
                     level: 1,
                     money: 100,
                     experience: 0,
@@ -2924,6 +2977,19 @@
                 // Login button
                 document.getElementById('login-btn').addEventListener('click', () => this.login());
 
+                // Character selection
+                document.querySelectorAll('.character-option').forEach(option => {
+                    option.addEventListener('click', () => {
+                        document.querySelectorAll('.character-option').forEach(opt => opt.classList.remove('selected'));
+                        option.classList.add('selected');
+                    });
+                });
+                
+                // Default select first character
+                if (document.querySelector('.character-option')) {
+                    document.querySelector('.character-option').classList.add('selected');
+                }
+
                 // Inventory tab buttons
                 document.querySelectorAll('.inventory-tabs .tab-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => this.switchInventoryTab(e.target.dataset.tab));
@@ -3048,6 +3114,12 @@
                     return;
                 }
 
+                // Get selected character
+                const selectedChar = document.querySelector('.character-option.selected');
+                if (selectedChar) {
+                    this.player.character = selectedChar.dataset.emoji;
+                }
+
                 this.player.name = name;
                 document.getElementById('login-screen').classList.add('hidden');
                 this.addChatMessage('system', `${name} entered the fishing hole!`);
@@ -3056,6 +3128,7 @@
                 // Join multiplayer game
                 this.joinGame();
                 this.updateDisplay();
+                this.saveGameData(); // Save character selection
             }
 
             positionPlayers() {
@@ -3075,7 +3148,7 @@
                 playerFisher.className = 'fisherman you';
                 playerFisher.id = 'player-fisher';
                 playerFisher.innerHTML = `
-                    <div class="fisherman-character">🧑‍🦰</div>
+                    <div class="fisherman-character">${this.player.character || '🧑‍🦰'}</div>
                     <div class="fisherman-name">${this.player.name}</div>
                 `;
                 if (fishermanRow) fishermanRow.appendChild(playerFisher);
@@ -3085,7 +3158,7 @@
                 mobilePlayerFisher.className = 'mobile-fisherman';
                 mobilePlayerFisher.id = 'mobile-player-fisher';
                 mobilePlayerFisher.innerHTML = `
-                    <div class="mobile-fisherman-character">🧑‍🦰</div>
+                    <div class="mobile-fisherman-character">${this.player.character || '🧑‍🦰'}</div>
                     <div class="mobile-fisherman-name">${this.player.name}</div>
                 `;
                 if (mobileFishermanRow) mobileFishermanRow.appendChild(mobilePlayerFisher);
@@ -5130,6 +5203,10 @@
                 if (mobileStatLuck) mobileStatLuck.textContent = this.player.stats.luck;
                 if (mobileStatPatience) mobileStatPatience.textContent = this.player.stats.patience;
                 if (mobileStatStrength) mobileStatStrength.textContent = this.player.stats.strength;
+                
+                // Update character display
+                const mobileCharacterDisplay = document.getElementById('mobile-character-display');
+                if (mobileCharacterDisplay) mobileCharacterDisplay.textContent = this.player.character || '🧑‍🦰';
 
                 // Update location dropdown (both desktop and mobile)
                 this.updateLocationButtons();
@@ -5466,6 +5543,8 @@
                             this.player = {
                                 ...this.player,
                                 ...gameData.player,
+                                // Ensure character is preserved
+                                character: gameData.player.character || '🧑‍🦰',
                                 // Ensure new features have defaults if not in saved data
                                 stats: {
                                     accuracy: 50,
@@ -5534,6 +5613,77 @@
                     console.error('Failed to load game data:', error);
                     this.addChatMessage('system', 'Welcome to Fishing Hole! Start your fishing adventure!');
                 }
+            }
+
+            resetCharacter() {
+                if (!confirm('Are you sure you want to reset your character? This will delete all your progress, stats, catches, and achievements. This cannot be undone!')) {
+                    return;
+                }
+
+                // Clear saved data
+                localStorage.removeItem('fishingHoleGame');
+                
+                // Reset player to defaults (keeping name and character)
+                const savedName = this.player.name;
+                const savedCharacter = this.player.character;
+                
+                this.player = {
+                    name: savedName,
+                    character: savedCharacter,
+                    level: 1,
+                    money: 100,
+                    experience: 0,
+                    totalCaught: 0,
+                    totalWeight: 0,
+                    biggestCatch: 0,
+                    locationUnlocks: [0, 1],
+                    tackleUnlocks: {
+                        rods: [0],
+                        reels: [0],
+                        lines: [0],
+                        hooks: [0],
+                        baits: [0]
+                    },
+                    gear: {
+                        rod: 'Basic Rod',
+                        reel: 'Basic Reel',
+                        line: 'Monofilament',
+                        hook: 'Basic Hook',
+                        bait: 'Basic Bait'
+                    },
+                    stats: {
+                        accuracy: 50,
+                        luck: 50,
+                        patience: 50,
+                        strength: 50
+                    },
+                    achievements: [],
+                    recentCatches: [],
+                    top10BiggestFish: [],
+                    seasonalCatches: {
+                        spring: { caught: 0, biggest: 0 },
+                        summer: { caught: 0, biggest: 0 },
+                        fall: { caught: 0, biggest: 0 },
+                        winter: { caught: 0, biggest: 0 }
+                    },
+                    tournamentStats: {
+                        tournamentsPlayed: 0,
+                        tournamentsWon: 0,
+                        biggestTournamentFish: 0,
+                        biggestTournamentBag: 0,
+                        totalTournamentWeight: 0,
+                        totalTournamentFish: 0
+                    }
+                };
+                
+                this.currentLocation = 0;
+                this.updateDisplay();
+                this.updateLocationButtons();
+                this.updateAchievementsDisplay();
+                this.updateLeaderboard();
+                this.positionPlayers();
+                this.addChatMessage('system', 'Character reset! Starting fresh...');
+                this.saveGameData();
             }
         }
 
