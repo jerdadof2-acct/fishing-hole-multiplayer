@@ -3225,6 +3225,8 @@
                 const activeFishermanRow = fishermanRow || mobileFishermanRow;
                 const activeLake = lake || mobileLake;
                 
+                console.log('addFishingLine called:', { fishermanRow: !!fishermanRow, lake: !!lake, mobileFishermanRow: !!mobileFishermanRow, mobileLake: !!mobileLake, activeFishermanRow: !!activeFishermanRow, activeLake: !!activeLake });
+                
                 if (!activeFishermanRow || !activeLake) return null;
                 
                 const fishermen = activeFishermanRow.querySelectorAll('.fisherman, .mobile-fisherman');
@@ -3296,6 +3298,7 @@
                 splash.id = line.dataset.splashId;
                 
                 activeLake.appendChild(line);
+                console.log('Line appended to lake:', { playerIndex, left: line.style.left, top: line.style.top, height: line.style.height, lakeId: activeLake.id });
                 
                 // Create landing splash effect when hook hits water (after line extends)
                 setTimeout(() => {
