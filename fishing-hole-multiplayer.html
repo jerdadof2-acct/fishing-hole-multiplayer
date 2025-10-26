@@ -3562,6 +3562,41 @@
                 } else {
                     this.addChatMessage('system', 'Sound effects disabled!');
                 }
+                
+                localStorage.setItem('fishingGameSoundEnabled', this.soundEnabled.toString());
+            }
+
+            toggleChat() {
+                const chatSection = document.getElementById('chat-section');
+                const isCollapsed = chatSection.classList.contains('collapsed');
+                
+                if (isCollapsed) {
+                    chatSection.classList.remove('collapsed');
+                    chatSection.classList.add('expanded');
+                    localStorage.setItem('fishingGameChatExpanded', 'true');
+                    // Focus input when expanded
+                    setTimeout(() => {
+                        const chatInput = document.getElementById('chat-input');
+                        if (chatInput) chatInput.focus();
+                    }, 100);
+                } else {
+                    chatSection.classList.remove('expanded');
+                    chatSection.classList.add('collapsed');
+                    localStorage.setItem('fishingGameChatExpanded', 'false');
+                }
+            }
+
+            loadChatState() {
+                const chatExpanded = localStorage.getItem('fishingGameChatExpanded');
+                const chatSection = document.getElementById('chat-section');
+                
+                if (chatExpanded === 'true') {
+                    chatSection.classList.remove('collapsed');
+                    chatSection.classList.add('expanded');
+                } else {
+                    chatSection.classList.remove('expanded');
+                    chatSection.classList.add('collapsed');
+                }
             }
 
             showCongratulationsPopup(type, items) {
