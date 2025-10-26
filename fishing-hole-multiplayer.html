@@ -1478,15 +1478,7 @@
                 flex: 1;
                 display: flex;
                 flex-direction: column;
-                padding: 10px;
                 overflow-y: auto;
-            }
-
-            .mobile-fishing-area {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                margin-bottom: 15px;
             }
 
             .mobile-fisherman-row {
@@ -1649,6 +1641,63 @@
             .mobile-menu-btn:active {
                 background: #00ff00;
                 color: #000;
+            }
+
+            /* Mobile Tabs */
+            .mobile-tabs {
+                display: flex;
+                background: #001100;
+                border-bottom: 2px solid #00ff00;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .mobile-tab-btn {
+                flex: 1;
+                padding: 8px 4px;
+                background: #001100;
+                border: none;
+                border-right: 1px solid #00ff00;
+                color: #00ff00;
+                font-size: 9px;
+                font-weight: bold;
+                cursor: pointer;
+                white-space: nowrap;
+            }
+
+            .mobile-tab-btn:last-child {
+                border-right: none;
+            }
+
+            .mobile-tab-btn.active {
+                background: #00ff00;
+                color: #000;
+            }
+
+            .mobile-tab-btn:active {
+                background: #00aa00;
+            }
+
+            .mobile-tab-content {
+                flex: 1;
+                overflow-y: auto;
+                padding: 10px;
+            }
+
+            .mobile-tab-panel {
+                display: none;
+            }
+
+            .mobile-tab-panel.active {
+                display: block;
+            }
+
+            .mobile-fishing-area {
+                margin-bottom: 15px;
+            }
+
+            .mobile-controls {
+                grid-template-columns: 1fr 1fr 1fr;
             }
         }
     </style>
@@ -1844,31 +1893,53 @@
             </div>
         </div>
 
-        <div class="mobile-game-area">
-            <div class="mobile-fishing-area">
-                <div class="mobile-fisherman-row" id="mobile-fisherman-row">
-                    <!-- Fishermen will be added here -->
+        <!-- Mobile Tab Navigation -->
+        <div class="mobile-tabs">
+            <button class="mobile-tab-btn active" data-tab="gameplay">🎣 FISH</button>
+            <button class="mobile-tab-btn" data-tab="chat">💬 CHAT</button>
+            <button class="mobile-tab-btn" data-tab="stats">📊 STATS</button>
+            <button class="mobile-tab-btn" data-tab="inventory">🎒 INV</button>
+            <button class="mobile-tab-btn" data-tab="leaderboard">🏆 LEADER</button>
+        </div>
+
+        <!-- Mobile Tab Content -->
+        <div class="mobile-tab-content">
+            <!-- Gameplay Tab -->
+            <div class="mobile-tab-panel active" id="mobile-tab-gameplay">
+                <div class="mobile-fishing-area">
+                    <div class="mobile-fisherman-row" id="mobile-fisherman-row">
+                        <!-- Fishermen will be added here -->
+                    </div>
+                    <div class="mobile-fishing-lake" id="mobile-fishing-lake">
+                        <div class="ripples" id="mobile-ripples"></div>
+                    </div>
+                    <div class="location-dropdown">
+                        <select id="mobile-location-select" onchange="game.changeLocation(this.value)">
+                            <!-- Locations will be dynamically added here -->
+                        </select>
+                    </div>
                 </div>
-                <div class="mobile-fishing-lake" id="mobile-fishing-lake">
-                    <div class="ripples" id="mobile-ripples"></div>
-                </div>
-                <div class="location-dropdown">
-                    <select id="mobile-location-select" onchange="game.changeLocation(this.value)">
-                        <!-- Locations will be dynamically added here -->
-                    </select>
+
+                <div class="mobile-controls">
+                    <button class="mobile-btn" id="mobile-cast-btn">CAST LINE</button>
+                    <button class="mobile-btn" id="mobile-shop-btn">SHOP</button>
+                    <button class="mobile-btn" id="mobile-tournament-btn">TOURNAMENT</button>
                 </div>
             </div>
 
-            <div class="mobile-controls">
-                <button class="mobile-btn" id="mobile-cast-btn">CAST LINE</button>
-                <button class="mobile-btn" id="mobile-shop-btn">SHOP</button>
-                <button class="mobile-btn" id="mobile-tournament-btn">TOURNAMENT</button>
-                <button class="mobile-btn" id="mobile-inventory-btn">INVENTORY</button>
+            <!-- Chat Tab -->
+            <div class="mobile-tab-panel" id="mobile-tab-chat">
+                <div class="chat-area" id="mobile-chat-area" style="font-size: 10px; max-height: calc(100vh - 250px); overflow-y: auto;"></div>
+                <div class="mobile-chat-input">
+                    <input type="text" id="mobile-chat-input" placeholder="Type a message...">
+                    <button class="mobile-btn" id="mobile-send-btn" style="padding: 6px 12px;">Send</button>
+                </div>
             </div>
 
-            <div class="mobile-info-panels">
+            <!-- Stats Tab -->
+            <div class="mobile-tab-panel" id="mobile-tab-stats">
                 <div class="mobile-panel">
-                    <h4>STATS</h4>
+                    <h4>PLAYER STATS</h4>
                     <div class="mobile-stats-grid">
                         <div>Accuracy: <span id="mobile-stat-accuracy">50</span></div>
                         <div>Luck: <span id="mobile-stat-luck">50</span></div>
@@ -1876,14 +1947,30 @@
                         <div>Strength: <span id="mobile-stat-strength">50</span></div>
                     </div>
                 </div>
+                <div class="mobile-panel">
+                    <h4>ACHIEVEMENTS</h4>
+                    <div class="achievements" id="mobile-achievements"></div>
+                </div>
             </div>
-        </div>
 
-        <div class="mobile-chat-section">
-            <div class="chat-area" id="mobile-chat-area" style="font-size: 9px; max-height: 60px; overflow-y: auto;"></div>
-            <div class="mobile-chat-input">
-                <input type="text" id="mobile-chat-input" placeholder="Type a message...">
-                <button class="mobile-btn" id="mobile-send-btn" style="padding: 6px 12px;">Send</button>
+            <!-- Inventory Tab -->
+            <div class="mobile-tab-panel" id="mobile-tab-inventory">
+                <div class="mobile-panel">
+                    <h4>RECENT CATCHES</h4>
+                    <div id="mobile-recent-catches" style="font-size: 10px;"></div>
+                </div>
+            </div>
+
+            <!-- Leaderboard Tab -->
+            <div class="mobile-tab-panel" id="mobile-tab-leaderboard">
+                <div class="mobile-panel">
+                    <h4>BIGGEST FISH</h4>
+                    <div id="mobile-biggest-fish-leaderboard" style="font-size: 10px;"></div>
+                </div>
+                <div class="mobile-panel">
+                    <h4>BIGGEST BAGS</h4>
+                    <div id="mobile-biggest-bags-leaderboard" style="font-size: 10px;"></div>
+                </div>
             </div>
         </div>
 
@@ -2782,6 +2869,23 @@
                         }
                     });
                 }
+
+                // Mobile tab switching
+                document.querySelectorAll('.mobile-tab-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const tabName = btn.dataset.tab;
+                        
+                        // Remove active class from all tabs and panels
+                        document.querySelectorAll('.mobile-tab-btn').forEach(b => b.classList.remove('active'));
+                        document.querySelectorAll('.mobile-tab-panel').forEach(p => p.classList.remove('active'));
+                        
+                        // Add active class to clicked tab and corresponding panel
+                        btn.classList.add('active');
+                        const panel = document.getElementById(`mobile-tab-${tabName}`);
+                        if (panel) panel.classList.add('active');
+                    });
+                });
+
                 document.getElementById('tackle-shop-modal').addEventListener('click', (e) => {
                     if (e.target.id === 'tackle-shop-modal') {
                         this.closeShop();
