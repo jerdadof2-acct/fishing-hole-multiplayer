@@ -220,16 +220,19 @@ io.on('connection', (socket) => {
                     isTrophy: isTrophy,
                     tournamentId: tournamentId
                 });
-            } else {
-                // Regular catches only broadcast to other players, but include tournamentId
+            } else if (tournamentId) {
+                // Regular catches during tournaments - broadcast for scoring purposes only
+                // Don't show chat messages, just update tournament scores silently
                 socket.broadcast.emit('fish-caught', {
                     player: player.name,
                     fish: catchData.fish,
                     weight: catchData.weight,
                     value: catchData.value,
-                    tournamentId: tournamentId
+                    tournamentId: tournamentId,
+                    silent: true // Flag to prevent chat spam
                 });
             }
+            // Outside tournaments, regular catches are NOT broadcast to reduce chat spam
         } catch (error) {
             console.error('Catch fish error:', error);
         }
