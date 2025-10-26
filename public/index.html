@@ -2357,9 +2357,6 @@
                                 <div class="shortcut-item">
                                     <span class="shortcut-key">H</span> - Open Help
                                 </div>
-                                <div class="shortcut-item">
-                                    <span class="shortcut-key">Ctrl+S</span> - Save Game
-                                </div>
                             </div>
                             
                             <h3>💡 Tips & Hints</h3>
@@ -2367,7 +2364,7 @@
                                 <li><strong>Better Gear = Better Fish:</strong> Upgrade your rod, reel, and tackle to catch rare fish</li>
                                 <li><strong>Location Matters:</strong> Different locations have different fish types and rarities</li>
                                 <li><strong>Tournament Strategy:</strong> Fish as fast as possible during tournaments - biggest total weight wins!</li>
-                                <li><strong>Save Often:</strong> Use Ctrl+S or the Save button to keep your progress</li>
+                                <li><strong>Auto-Save:</strong> The game automatically saves your progress every 30 seconds</li>
                                 <li><strong>Big Catches:</strong> Rare, Huge, Legendary, and Trophy fish broadcast to all players!</li>
                                 <li><strong>Level Benefits:</strong> Higher levels unlock better locations and equipment</li>
                             </ul>
@@ -3688,6 +3685,7 @@
                     } else if (e.key === 'h' || e.key === 'H') {
                         e.preventDefault();
                         this.openHelp();
+                    }
                 });
             }
 
