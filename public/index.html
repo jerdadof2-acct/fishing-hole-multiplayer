@@ -5450,6 +5450,8 @@
 
             sendMessage(message) {
                 this.addChatMessage('own', message);
+                // Show own message in banner too
+                this.showChatBanner(`${this.player.name}: ${message}`);
                 // Send to server for multiplayer
                 if (this.socket && this.connected) {
                     this.socket.emit('chat-message', message);
