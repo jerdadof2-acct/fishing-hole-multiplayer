@@ -2913,6 +2913,7 @@
                 this.updateLeaderboard();
                 this.createAnimatedRipples();
                 this.startAutoSave(); // Start auto-save
+                this.initMockAds(); // Initialize rotating mock ads
             }
 
             connectToServer() {
@@ -6167,6 +6168,69 @@
                 
                 // In production, this would track the ad click and redirect to advertiser
                 console.log(`Ad clicked at: ${location}`);
+            }
+
+            initMockAds() {
+                // Array of mock ads to rotate through
+                this.mockAds = {
+                    desktop: [
+                        { icon: '🎣', title: 'Premium Fishing Gear', text: 'Best Rods & Reels - Sale Now!' },
+                        { icon: '🐟', title: 'Fishing Tackle Shop', text: '50% Off Everything Today!' },
+                        { icon: '⚓', title: 'Marine Supply Co', text: 'Professional Equipment' },
+                        { icon: '🎣', title: 'Tackle Warehouse', text: 'Free Shipping on Orders $50+' },
+                        { icon: '🐱', title: 'Kitty Creek Pro Shop', text: 'Elite Fisher-Cat Gear' }
+                    ],
+                    mobile: [
+                        { icon: '🐱', title: 'Upgrades', text: 'Tap to Test' },
+                        { icon: '🎣', title: 'Shop Now', text: '50% Off Sale' },
+                        { icon: '⚓', title: 'Gear', text: 'Premium Items' },
+                        { icon: '🐟', title: 'Deals', text: 'Limited Time' }
+                    ]
+                };
+
+                // Update ads every 10 seconds
+                this.rotateAds();
+                setInterval(() => {
+                    this.rotateAds();
+                }, 10000); // Change every 10 seconds
+            }
+
+            rotateAds() {
+                // Rotate desktop ad
+                const desktopAd = document.getElementById('desktop-ad-bottom');
+                if (desktopAd) {
+                    const ad = this.mockAds.desktop[Math.floor(Math.random() * this.mockAds.desktop.length)];
+                    desktopAd.innerHTML = `
+                        <a href="#" class="mock-ad" onclick="event.preventDefault(); game.handleAdClick('desktop-bottom'); return false;" style="display: block; text-decoration: none; color: inherit;">
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 10px; padding: 5px;">
+                                <div style="background: linear-gradient(135deg, #42a5f5, #2196f3); color: white; padding: 8px 16px; border-radius: 6px; font-weight: bold; font-size: 14px;">
+                                    ${ad.icon} ${ad.title}
+                                </div>
+                                <div style="font-size: 11px; color: rgba(200,200,200,0.8);">
+                                    ${ad.text}
+                                </div>
+                            </div>
+                        </a>
+                    `;
+                }
+
+                // Rotate mobile ad
+                const mobileAd = document.getElementById('mobile-ad-bottom');
+                if (mobileAd) {
+                    const ad = this.mockAds.mobile[Math.floor(Math.random() * this.mockAds.mobile.length)];
+                    mobileAd.innerHTML = `
+                        <a href="#" class="mock-ad" onclick="event.preventDefault(); game.handleAdClick('mobile-bottom'); return false;" style="display: block; text-decoration: none; color: inherit; height: 100%;">
+                            <div style="display: flex; align-items: center; justify-content: center; height: 100%; gap: 8px;">
+                                <div style="background: linear-gradient(135deg, #42a5f5, #2196f3); color: white; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 11px;">
+                                    ${ad.icon} ${ad.title}
+                                </div>
+                                <div style="font-size: 9px; color: rgba(200,200,200,0.8);">
+                                    ${ad.text}
+                                </div>
+                            </div>
+                        </a>
+                    `;
+                }
             }
 
 
