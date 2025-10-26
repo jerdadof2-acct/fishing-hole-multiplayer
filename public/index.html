@@ -92,20 +92,23 @@
         .chat-section {
             background: rgba(20, 30, 50, 0.95);
             border-top: 2px solid rgba(100, 200, 255, 0.4);
-            padding: 15px;
+            padding: 10px 15px;
             box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.3);
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
             z-index: 100;
-            max-height: 250px;
+            max-height: 200px;
             overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
         @media (min-width: 769px) {
             .game-layout {
-                padding-bottom: 250px; /* Space for fixed chat section */
+                padding-bottom: 200px; /* Space for fixed chat section */
             }
         }
 
@@ -1201,14 +1204,14 @@
         }
 
         .chat-area {
-            max-height: 150px;
+            max-height: 140px;
             overflow-y: auto;
             background: rgba(15, 25, 40, 0.8);
             border: 1px solid rgba(100, 200, 255, 0.3);
             border-radius: 10px;
-            padding: 12px;
-            margin-bottom: 10px;
+            padding: 10px;
             box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+            flex: 1;
         }
 
         .chat-message {
@@ -2337,22 +2340,11 @@
 
             <!-- Chat Section -->
             <div class="chat-section">
-                <div class="section">
-                    <h3>CHAT</h3>
-                    <div class="chat-area" id="chat-area">
-                        <div class="chat-message system">Welcome to Kitty Creek Fishing Club! 🐱🎣</div>
-                    </div>
-                    <div class="chat-input-container">
-                        <input type="text" id="chat-input" placeholder="Type a message...">
-                    </div>
+                <div class="chat-area" id="chat-area">
+                    <div class="chat-message system">Welcome to Kitty Creek Fishing Club! 🐱🎣</div>
                 </div>
-                <div class="section">
-                    <h3>GAME STATUS</h3>
-                    <div class="game-status" id="game-status">
-                        <div class="status-item">Auto-save: <span id="auto-save-status">Active</span></div>
-                        <div class="status-item">Last Save: <span id="last-save-time">Never</span></div>
-                        <div class="status-item">Data Size: <span id="data-size">0 KB</span></div>
-                    </div>
+                <div class="chat-input-container">
+                    <input type="text" id="chat-input" placeholder="Type a message...">
                 </div>
             </div>
 
