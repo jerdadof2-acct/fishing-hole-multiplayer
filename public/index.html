@@ -2799,37 +2799,47 @@
                 }
                 
                 // Normal fishing uses player equipment and stats
-                let chance = 0.7; // 70% base chance
+                let chance = 0.8; // 80% base chance for easier progression
                 
                 const location = this.locations[this.currentLocation];
-                if (location.difficulty === 'Easy') chance += 0.1;
-                else if (location.difficulty === 'Medium') chance -= 0.1;
                 
-                // Add tackle bonuses
+                // Progressive difficulty based on location difficulty
+                // Harder locations are harder to catch at, but have better fish
+                if (location.difficulty === 'Easy') {
+                    chance += 0.05; // Easy locations: +5% catch rate
+                } else if (location.difficulty === 'Medium') {
+                    chance -= 0.05; // Medium locations: -5% catch rate
+                } else if (location.difficulty === 'Hard') {
+                    chance -= 0.15; // Hard locations: -15% catch rate
+                } else if (location.difficulty === 'Expert') {
+                    chance -= 0.25; // Expert locations: -25% catch rate (makes it challenging!)
+                }
+                
+                // Add tackle bonuses - BETTER gear significantly improves your chances
                 const rod = this.tackle.rods.find(r => r.name === this.player.gear.rod);
                 const reel = this.tackle.reels.find(r => r.name === this.player.gear.reel);
                 const line = this.tackle.lines.find(l => l.name === this.player.gear.line);
                 const hook = this.tackle.hooks.find(h => h.name === this.player.gear.hook);
                 const bait = this.tackle.baits.find(b => b.name === this.player.gear.bait);
                 
-                if (rod) chance += rod.catchBonus / 100;
-                if (reel) chance += reel.speedBonus / 200; // Smaller bonus for reels
-                if (line) chance += line.strength / 1000; // Very small bonus for lines
-                if (hook) chance += hook.catchBonus / 100;
-                if (bait) chance += bait.catchBonus / 100;
+                if (rod) chance += rod.catchBonus / 80; // Better rods significantly help
+                if (reel) chance += reel.speedBonus / 150; // Reels help a bit
+                if (line) chance += line.strength / 800; // Lines help slightly
+                if (hook) chance += hook.catchBonus / 80; // Better hooks significantly help
+                if (bait) chance += bait.catchBonus / 80; // Better bait significantly helps
                 
                 // Add player stats bonuses
-                const accuracyBonus = (this.player.stats.accuracy - 50) * 0.001; // Accuracy affects catch rate
-                const luckBonus = (this.player.stats.luck - 50) * 0.002; // Luck affects catch rate
-                const patienceBonus = (this.player.stats.patience - 50) * 0.0005; // Patience affects waiting
-                const strengthBonus = (this.player.stats.strength - 50) * 0.0008; // Strength affects line strength
+                const accuracyBonus = (this.player.stats.accuracy - 50) * 0.0015; // Accuracy matters more
+                const luckBonus = (this.player.stats.luck - 50) * 0.002; // Luck helps
+                const patienceBonus = (this.player.stats.patience - 50) * 0.0008; // Patience helps
+                const strengthBonus = (this.player.stats.strength - 50) * 0.001; // Strength helps
                 
                 chance += accuracyBonus + luckBonus + patienceBonus + strengthBonus;
                 
-                // Add level bonus
-                chance += (this.player.level - 1) * 0.02;
+                // Add level bonus - higher level helps, but equipment matters more
+                chance += (this.player.level - 1) * 0.015;
                 
-                return Math.min(0.95, Math.max(0.2, chance));
+                return Math.min(0.92, Math.max(0.15, chance)); // Cap between 15% and 92%
             }
 
             reelIn(catchChance) {
@@ -2895,7 +2905,60 @@
             catchRandomFish() {
                 const location = this.locations[this.currentLocation];
                 const availableFish = location.fish;
-                const randomFishType = availableFish[Math.floor(Math.random() * availableFish.length)];
+                
+                // Progressive fish selection based on level and equipment
+                // Higher level locations have better fish, but you need better gear to catch them
+                let selectedFishIndex;
+                
+                // Determine difficulty modifier based on location difficulty
+                let difficultyModifier = 0;
+                if (location.difficulty === 'Easy') difficultyModifier = 0;
+                else if (location.difficulty === 'Medium') difficultyModifier = 1;
+                else if (location.difficulty === 'Hard') difficultyModifier = 2;
+                else if (location.difficulty === 'Expert') difficultyModifier = 3;
+                
+                // Calculate player's fishing power based on equipment and level
+                const rod = this.tackle.rods.find(r => r.name === this.player.gear.rod);
+                const reel = this.tackle.reels.find(r => r.name === this.player.gear.reel);
+                const hook = this.tackle.hooks.find(h => h.name === this.player.gear.hook);
+                const bait = this.tackle.baits.find(b => b.name === this.player.gear.bait);
+                
+                let fishingPower = 0;
+                if (rod) fishingPower += rod.catchBonus;
+                if (reel) fishingPower += reel.speedBonus;
+                if (hook) fishingPower += hook.catchBonus;
+                if (bait) fishingPower += bait.catchBonus;
+                fishingPower += this.player.level * 5; // Level adds to fishing power
+                
+                // Calculate chance to catch better fish
+                // Higher difficulty locations have rare/epic/legendary fish at the end of the array
+                const maxFishIndex = availableFish.length - 1;
+                const chanceForBestFish = Math.min(0.3, fishingPower / 200); // Up to 30% chance for best fish
+                
+                if (Math.random() < chanceForBestFish) {
+                    // Player catches one of the better fish from this location
+                    const topTierRange = Math.ceil(availableFish.length * 0.3); // Top 30% of fish
+                    const startIndex = Math.max(0, maxFishIndex - topTierRange);
+                    selectedFishIndex = startIndex + Math.floor(Math.random() * (maxFishIndex - startIndex + 1));
+                } else {
+                    // Standard fish selection with slight weighting toward better fish
+                    const roll = Math.random();
+                    if (roll < 0.5) {
+                        // 50% chance for bottom 40% of fish
+                        selectedFishIndex = Math.floor(Math.random() * Math.ceil(availableFish.length * 0.4));
+                    } else if (roll < 0.85) {
+                        // 35% chance for middle 40% of fish
+                        const midStart = Math.ceil(availableFish.length * 0.4);
+                        const midEnd = Math.ceil(availableFish.length * 0.8);
+                        selectedFishIndex = midStart + Math.floor(Math.random() * (midEnd - midStart));
+                    } else {
+                        // 15% chance for top 20% of fish
+                        const topStart = Math.ceil(availableFish.length * 0.8);
+                        selectedFishIndex = topStart + Math.floor(Math.random() * (maxFishIndex - topStart + 1));
+                    }
+                }
+                
+                const randomFishType = availableFish[selectedFishIndex];
                 const fishData = this.fishTypes[randomFishType];
 
                 // During tournaments, fish can be MUCH bigger (up to 3x max weight)
