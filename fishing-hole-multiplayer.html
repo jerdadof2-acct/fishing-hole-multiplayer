@@ -285,13 +285,14 @@
         .fishing-area {
             flex: 1;
             position: relative;
-            background: linear-gradient(180deg, #001122 0%, #002244 50%, #003366 100%);
+            background: linear-gradient(135deg, #0a1a2e 0%, #16213e 30%, #0f3460 70%, #1a1a2e 100%);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 20px;
-            min-height: 0; /* Allow flex shrinking */
+            padding: 30px;
+            min-height: 0;
+            box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.5);
         }
 
         .fisherman-row {
@@ -307,40 +308,44 @@
 
         .fishing-lake {
             width: calc(100% - 40px);
-            max-width: calc(100vw - 600px); /* Account for sidebars + padding */
-            height: calc(100vh - 300px); /* Account for header, controls, chat */
+            max-width: calc(100vw - 600px);
+            height: calc(100vh - 300px);
             min-height: 400px;
             max-height: 600px;
             background: 
-                /* Deep water gradient with depth */
-                radial-gradient(ellipse at center, #0055aa 0%, #003366 40%, #001122 100%),
-                /* Surface reflection */
+                /* Deep beautiful water - vibrant blues */
+                radial-gradient(ellipse at center, #1e88e5 0%, #1565c0 30%, #0d47a1 60%, #01579b 100%),
+                /* Surface sparkle and light */
                 linear-gradient(
                     180deg,
-                    rgba(135, 206, 250, 0.3) 0%,
-                    rgba(70, 130, 180, 0.2) 10%,
-                    rgba(0, 100, 200, 0.1) 30%,
-                    transparent 70%
+                    rgba(144, 202, 249, 0.4) 0%,
+                    rgba(100, 181, 246, 0.3) 8%,
+                    rgba(66, 165, 245, 0.2) 15%,
+                    rgba(33, 150, 243, 0.15) 25%,
+                    transparent 50%
                 ),
-                /* Wave pattern - more realistic */
+                /* Animated wave pattern */
                 repeating-linear-gradient(
                     0deg,
-                    rgba(100, 180, 255, 0.2) 0px,
-                    rgba(100, 180, 255, 0.2) 6px,
-                    rgba(0, 100, 200, 0.15) 6px,
-                    rgba(0, 100, 200, 0.15) 12px
+                    rgba(144, 202, 249, 0.25) 0px,
+                    rgba(144, 202, 249, 0.25) 8px,
+                    rgba(66, 165, 245, 0.2) 8px,
+                    rgba(66, 165, 245, 0.2) 16px
                 ),
-                /* Depth highlights */
-                radial-gradient(ellipse at 30% 40%, rgba(0, 150, 220, 0.2) 0%, transparent 50%),
-                radial-gradient(ellipse at 70% 60%, rgba(0, 150, 220, 0.15) 0%, transparent 50%);
-            border: 2px solid rgba(100, 200, 255, 0.4);
+                /* Depth highlights and light rays */
+                radial-gradient(ellipse at 25% 35%, rgba(100, 181, 246, 0.3) 0%, transparent 40%),
+                radial-gradient(ellipse at 75% 65%, rgba(66, 165, 245, 0.25) 0%, transparent 45%),
+                radial-gradient(ellipse at 50% 80%, rgba(33, 150, 243, 0.2) 0%, transparent 50%);
+            border: 3px solid rgba(100, 181, 246, 0.6);
+            border-radius: 20px;
             position: relative;
             overflow: visible;
             box-shadow: 
-                0 0 20px rgba(0, 255, 0, 0.3), 
-                inset 0 0 80px rgba(0, 100, 200, 0.6),
-                inset 0 10px 120px rgba(0, 200, 255, 0.4),
-                0 0 30px rgba(0, 150, 220, 0.3);
+                0 8px 32px rgba(0, 0, 0, 0.4),
+                0 0 60px rgba(33, 150, 243, 0.5),
+                inset 0 0 100px rgba(0, 100, 200, 0.7),
+                inset 0 15px 150px rgba(100, 181, 246, 0.5),
+                0 0 40px rgba(66, 165, 245, 0.4);
             animation: waterShimmer 4s ease-in-out infinite;
         }
 
@@ -370,8 +375,9 @@
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 
-                0 0 15px rgba(0, 255, 0, 0.4),
-                inset 0 0 10px rgba(0, 0, 0, 0.5);
+                0 4px 20px rgba(33, 150, 243, 0.5),
+                0 0 30px rgba(100, 181, 246, 0.4),
+                inset 0 0 15px rgba(0, 0, 0, 0.4);
             overflow: visible;
         }
         
@@ -400,8 +406,8 @@
             border: 1px solid rgba(100, 200, 255, 0.3);
             color: #64b5f6;
             font-weight: bold;
-            text-shadow: 0 0 5px rgba(0, 255, 0, 0.8);
-            box-shadow: 0 0 8px rgba(0, 255, 0, 0.5);
+            text-shadow: 0 0 5px rgba(100, 181, 246, 0.8);
+            box-shadow: 0 0 8px rgba(100, 181, 246, 0.5);
         }
 
         .fisherman.you {
@@ -409,7 +415,7 @@
             color: #000;
             border-color: rgba(100, 200, 255, 0.5);
             box-shadow: 
-                0 0 20px rgba(0, 255, 0, 0.6),
+                0 0 20px rgba(100, 181, 246, 0.6),
                 inset 0 0 10px rgba(0, 0, 0, 0.3);
         }
 
@@ -871,7 +877,7 @@
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
             margin-bottom: 15px;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+            box-shadow: 0 0 10px rgba(100, 181, 246, 0.3);
         }
 
         .player-stats .stat-line {
@@ -890,7 +896,7 @@
             border: 2px solid rgba(100, 200, 255, 0.4);
             border-radius: 8px;
             margin-bottom: 15px;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+            box-shadow: 0 0 10px rgba(100, 181, 246, 0.3);
             max-height: 200px;
             overflow-y: auto;
         }
@@ -990,7 +996,7 @@
 
         .leaderboard-item .player-name {
             flex: 1;
-            color: #00ffff;
+            color: #64b5f6;
         }
 
         .leaderboard-item .weight {
@@ -1006,7 +1012,7 @@
             margin-bottom: 10px;
             margin-top: 10px;
             min-height: 80px;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+            box-shadow: 0 0 10px rgba(100, 181, 246, 0.3);
         }
 
         .inventory-tabs {
@@ -1051,7 +1057,7 @@
 
         .fish-name {
             font-weight: bold;
-            color: #00ffff;
+            color: #64b5f6;
             font-size: 16px;
         }
 
@@ -1111,7 +1117,7 @@
         }
 
         .stat-value {
-            color: #00ffff;
+            color: #64b5f6;
             font-size: 18px;
             font-weight: bold;
         }
@@ -1129,18 +1135,18 @@
             border: 2px solid rgba(100, 200, 255, 0.4);
             border-radius: 8px;
             margin-bottom: 15px;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+            box-shadow: 0 0 10px rgba(100, 181, 246, 0.3);
         }
 
         .status-item {
             margin: 6px 0;
             padding: 4px 0;
-            border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+            border-bottom: 1px solid rgba(100, 181, 246, 0.2);
             font-size: 12px;
         }
 
         .status-item span {
-            color: #00ffff;
+            color: #64b5f6;
             font-weight: bold;
         }
 
@@ -1157,7 +1163,7 @@
         }
 
         .player-item.fishing {
-            border-left-color: #00ffff;
+            border-left-color: #64b5f6;
         }
 
         .chat-area {
@@ -1202,9 +1208,9 @@
         }
 
         .chat-message.rare {
-            color: #00ffff;
+            color: #64b5f6;
             font-weight: bold;
-            text-shadow: 0 0 5px #00ffff;
+            text-shadow: 0 0 5px rgba(100, 181, 246, 0.8);
         }
 
         .chat-message.huge {
@@ -1340,7 +1346,7 @@
             background: rgba(20, 30, 50, 0.8);
             border: 2px solid rgba(100, 200, 255, 0.4);
             border-radius: 8px;
-            box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+            box-shadow: 0 0 15px rgba(100, 181, 246, 0.3);
         }
 
         .location-dropdown select {
@@ -1359,7 +1365,7 @@
 
         .location-dropdown select:hover {
             background: rgba(20, 30, 50, 0.8);
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+            box-shadow: 0 0 10px rgba(100, 181, 246, 0.5);
         }
 
         .location-dropdown select option {
@@ -1740,7 +1746,7 @@
                 position: relative;
                 overflow: visible;
                 box-shadow: 
-                    0 0 30px rgba(0, 255, 0, 0.3),
+                    0 0 30px rgba(100, 181, 246, 0.3),
                     inset 0 0 50px rgba(0, 0, 0, 0.2);
             }
 
@@ -3178,7 +3184,7 @@
                         padding: 30px;
                         max-width: 500px;
                         text-align: center;
-                        box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+                        box-shadow: 0 0 30px rgba(100, 181, 246, 0.5);
                         animation: slideIn 0.5s ease-out;
                     }
                     
@@ -3190,7 +3196,7 @@
                     }
                     
                     .congratulations-body {
-                        color: #00ffff;
+                        color: #64b5f6;
                         font-size: 16px;
                         line-height: 1.6;
                         margin-bottom: 25px;
@@ -4816,7 +4822,7 @@
                     }
                     
                     .banner-content.rare {
-                        border-color: #00ffff;
+                        border-color: #64b5f6;
                         box-shadow: 0 0 40px rgba(0, 255, 255, 0.8);
                     }
                     
@@ -4846,7 +4852,7 @@
                     }
                     
                     .banner-content.rare h2 {
-                        color: #00ffff;
+                        color: #64b5f6;
                     }
                     
                     .banner-content.trophy h2 {
@@ -5227,7 +5233,7 @@
                             Starts in: ${countdown} seconds
                         </div>
                         <div style="margin-top: 10px;">Participants: ${this.tournament.participants.length}</div>
-                        <div style="margin-top: 5px; font-size: 12px; color: #00ffff;">Get ready to fish!</div>
+                        <div style="margin-top: 5px; font-size: 12px; color: #64b5f6;">Get ready to fish!</div>
                     `;
                     
                     const mobileHtml = `
@@ -5278,13 +5284,13 @@
                         </div>
                         <div style="margin-top: 10px;">
                             <div style="font-size: 12px; color: #ffff00;">🐟 Biggest Fish:</div>
-                            <div style="font-size: 11px; color: #00ffff; margin-left: 10px;">
+                            <div style="font-size: 11px; color: #64b5f6; margin-left: 10px;">
                                 ${biggestFishPlayer}: ${biggestFish.toFixed(1)} lbs
                             </div>
                         </div>
                         <div style="margin-top: 8px;">
                             <div style="font-size: 12px; color: #ffff00;">👥 Participants:</div>
-                            <div style="font-size: 11px; color: #00ffff; margin-left: 10px;">
+                            <div style="font-size: 11px; color: #64b5f6; margin-left: 10px;">
                                 ${this.tournament.participants.length} players | ${totalFish} fish caught
                             </div>
                         </div>
