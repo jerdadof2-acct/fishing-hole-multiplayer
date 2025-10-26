@@ -188,6 +188,37 @@
             box-shadow: 0 0 15px #00ff00;
         }
 
+        .character-selector-small {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            justify-content: center;
+            margin: 5px 0;
+        }
+
+        .char-part-option {
+            font-size: 24px;
+            padding: 5px 8px;
+            border: 2px solid #004400;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #000;
+            font-size: 18px;
+        }
+
+        .char-part-option:hover {
+            border-color: #00ff00;
+            background: #001100;
+            transform: scale(1.1);
+        }
+
+        .char-part-option.selected {
+            border-color: #00ff00;
+            background: #003300;
+            box-shadow: 0 0 10px #00ff00;
+        }
+
         .fishing-area {
             flex: 1;
             position: relative;
@@ -2154,17 +2185,50 @@
             <input type="text" class="login-input" id="player-name-input" placeholder="Enter your username..." value="">
             <br>
             <div style="margin: 15px 0;">
-                <label style="color: #00ff00; display: block; margin-bottom: 8px;">Choose Your Character:</label>
-                <div class="character-selector" id="character-selector">
-                    <div class="character-option" data-emoji="🧑‍🦰">🧑‍🦰</div>
-                    <div class="character-option" data-emoji="🧑">🧑</div>
-                    <div class="character-option" data-emoji="👨">👨</div>
-                    <div class="character-option" data-emoji="👨‍🦱">👨‍🦱</div>
-                    <div class="character-option" data-emoji="👨‍🦳">👨‍🦳</div>
-                    <div class="character-option" data-emoji="🧔">🧔</div>
-                    <div class="character-option" data-emoji="👨‍🦲">👨‍🦲</div>
-                    <div class="character-option" data-emoji="👴">👴</div>
+                <label style="color: #00ff00; display: block; margin-bottom: 8px;">Customize Your Character:</label>
+                
+                <!-- Character Preview -->
+                <div style="text-align: center; margin: 15px 0; font-size: 48px; min-height: 60px; background: #000; border: 2px solid #00ff00; border-radius: 8px; padding: 10px;">
+                    <span id="character-preview">🧑</span>
                 </div>
+                
+                <!-- Base Person -->
+                <div style="margin-bottom: 10px;">
+                    <label style="color: #00ff00; font-size: 12px; display: block; margin-bottom: 5px;">Base:</label>
+                    <div class="character-selector-small">
+                        <div class="char-part-option" data-part="base" data-emoji="🧑">🧑</div>
+                        <div class="char-part-option" data-part="base" data-emoji="👨">👨</div>
+                        <div class="char-part-option" data-part="base" data-emoji="👩">👩</div>
+                        <div class="char-part-option" data-part="base" data-emoji="🧑‍🦰">🧑‍🦰</div>
+                        <div class="char-part-option" data-part="base" data-emoji="👨‍🦰">👨‍🦰</div>
+                        <div class="char-part-option" data-part="base" data-emoji="👩‍🦰">👩‍🦰</div>
+                        <div class="char-part-option" data-part="base" data-emoji="🧑‍🦱">🧑‍🦱</div>
+                        <div class="char-part-option" data-part="base" data-emoji="👨‍🦱">👨‍🦱</div>
+                        <div class="char-part-option" data-part="base" data-emoji="👩‍🦱">👩‍🦱</div>
+                        <div class="char-part-option" data-part="base" data-emoji="👨‍🦳">👨‍🦳</div>
+                        <div class="char-part-option" data-part="base" data-emoji="👩‍🦳">👩‍🦳</div>
+                        <div class="char-part-option" data-part="base" data-emoji="🧔">🧔</div>
+                        <div class="char-part-option" data-part="base" data-emoji="👨‍🦲">👨‍🦲</div>
+                        <div class="char-part-option" data-part="base" data-emoji="👴">👴</div>
+                        <div class="char-part-option" data-part="base" data-emoji="👵">👵</div>
+                    </div>
+                </div>
+                
+                <!-- Accessories -->
+                <div style="margin-bottom: 10px;">
+                    <label style="color: #00ff00; font-size: 12px; display: block; margin-bottom: 5px;">Accessories:</label>
+                    <div class="character-selector-small">
+                        <div class="char-part-option" data-part="accessory" data-emoji="" data-value="">None</div>
+                        <div class="char-part-option" data-part="accessory" data-emoji="👓" data-value="👓">👓</div>
+                        <div class="char-part-option" data-part="accessory" data-emoji="🕶️" data-value="🕶️">🕶️</div>
+                        <div class="char-part-option" data-part="accessory" data-emoji="🎩" data-value="🎩">🎩</div>
+                        <div class="char-part-option" data-part="accessory" data-emoji="🧢" data-value="🧢">🧢</div>
+                        <div class="char-part-option" data-part="accessory" data-emoji="⛑️" data-value="⛑️">⛑️</div>
+                        <div class="char-part-option" data-part="accessory" data-emoji="👒" data-value="👒">👒</div>
+                        <div class="char-part-option" data-part="accessory" data-emoji="🎓" data-value="🎓">🎓</div>
+                    </div>
+                </div>
+                
             </div>
             <button class="login-btn" id="login-btn">ENTER FISHING HOLE</button>
         </div>
@@ -2977,18 +3041,56 @@
                 // Login button
                 document.getElementById('login-btn').addEventListener('click', () => this.login());
 
-                // Character selection
-                document.querySelectorAll('.character-option').forEach(option => {
+                // Character customization
+                let selectedBase = '🧑';
+                let selectedAccessory = '';
+                
+                // Update preview function
+                const updatePreview = () => {
+                    const preview = document.getElementById('character-preview');
+                    if (preview) {
+                        if (selectedAccessory) {
+                            preview.textContent = selectedBase + ' ' + selectedAccessory;
+                        } else {
+                            preview.textContent = selectedBase;
+                        }
+                    }
+                };
+                
+                // Base selection
+                document.querySelectorAll('.char-part-option[data-part="base"]').forEach(option => {
                     option.addEventListener('click', () => {
-                        document.querySelectorAll('.character-option').forEach(opt => opt.classList.remove('selected'));
+                        document.querySelectorAll('.char-part-option[data-part="base"]').forEach(opt => opt.classList.remove('selected'));
                         option.classList.add('selected');
+                        selectedBase = option.dataset.emoji;
+                        updatePreview();
                     });
                 });
                 
-                // Default select first character
-                if (document.querySelector('.character-option')) {
-                    document.querySelector('.character-option').classList.add('selected');
+                // Accessory selection
+                document.querySelectorAll('.char-part-option[data-part="accessory"]').forEach(option => {
+                    option.addEventListener('click', () => {
+                        document.querySelectorAll('.char-part-option[data-part="accessory"]').forEach(opt => opt.classList.remove('selected'));
+                        option.classList.add('selected');
+                        selectedAccessory = option.dataset.value || '';
+                        updatePreview();
+                    });
+                });
+                
+                // Default select first base
+                const firstBase = document.querySelector('.char-part-option[data-part="base"]');
+                if (firstBase) {
+                    firstBase.classList.add('selected');
+                    selectedBase = firstBase.dataset.emoji;
                 }
+                
+                // Default select "None" accessory
+                const noneAccessory = document.querySelector('.char-part-option[data-part="accessory"][data-value=""]');
+                if (noneAccessory) {
+                    noneAccessory.classList.add('selected');
+                }
+                
+                updatePreview();
 
                 // Inventory tab buttons
                 document.querySelectorAll('.inventory-tabs .tab-btn').forEach(btn => {
@@ -3114,10 +3216,12 @@
                     return;
                 }
 
-                // Get selected character
-                const selectedChar = document.querySelector('.character-option.selected');
-                if (selectedChar) {
-                    this.player.character = selectedChar.dataset.emoji;
+                // Get selected character from character builder
+                const preview = document.getElementById('character-preview');
+                if (preview && preview.textContent.trim()) {
+                    this.player.character = preview.textContent.trim();
+                } else {
+                    this.player.character = '🧑';
                 }
 
                 this.player.name = name;
