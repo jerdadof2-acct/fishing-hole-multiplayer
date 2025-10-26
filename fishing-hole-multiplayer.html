@@ -253,17 +253,22 @@
         }
 
         .fisherman-name {
-            font-size: 8px;
+            font-size: 9px;
             margin-top: 5px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 35px;
+            max-width: 50px;
             position: relative;
             z-index: 10;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 1px 3px;
-            border-radius: 2px;
+            background: rgba(0, 0, 0, 0.95);
+            padding: 2px 4px;
+            border-radius: 3px;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.8);
+            box-shadow: 0 0 8px rgba(0, 255, 0, 0.5);
         }
 
         .fisherman.you {
@@ -286,8 +291,18 @@
         }
 
         @keyframes fishingBob {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
+            0%, 100% { 
+                transform: scale(1) translateY(0px);
+            }
+            25% { 
+                transform: scale(1.05) translateY(-2px);
+            }
+            50% { 
+                transform: scale(1.1) translateY(-3px);
+            }
+            75% { 
+                transform: scale(1.05) translateY(-2px);
+            }
         }
 
         .fishing-line {
@@ -305,8 +320,44 @@
         }
 
         @keyframes lineCast {
-            0%, 100% { transform: rotate(-1deg); }
-            50% { transform: rotate(1deg); }
+            0% { 
+                transform: rotate(-3deg);
+                transform-origin: top center;
+            }
+            50% { 
+                transform: rotate(3deg);
+                transform-origin: top center;
+            }
+            100% { 
+                transform: rotate(-3deg);
+                transform-origin: top center;
+            }
+        }
+        
+        @keyframes reelIn {
+            0% {
+                opacity: 1;
+                transform: scaleY(1);
+            }
+            100% {
+                opacity: 0;
+                transform: scaleY(0.3);
+            }
+        }
+        
+        @keyframes fishCaught {
+            0% {
+                transform: scale(0.5) rotate(-10deg);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.2) rotate(5deg);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1) rotate(0deg);
+                opacity: 1;
+            }
         }
 
         .hook {
@@ -2782,22 +2833,33 @@
                 this.isCasting = false;
                 this.playSound('reel'); // Reeling sound
                 
-                // Remove fishing line and splash
+                // Animate reeling in with smooth animation
                 const lake = document.getElementById('fishing-lake');
                 const lines = lake.querySelectorAll('.fishing-line');
                 lines.forEach(line => {
+                    // Add reel animation
+                    line.style.animation = 'reelIn 0.8s ease-out forwards';
+                    
                     // Remove associated splash
                     const splashId = line.dataset.splashId;
                     if (splashId) {
                         const splash = document.getElementById(splashId);
-                        if (splash) splash.remove();
+                        if (splash) {
+                            splash.style.animation = 'reelIn 0.8s ease-out forwards';
+                            setTimeout(() => splash.remove(), 800);
+                        }
                     }
-                    line.remove();
+                    
+                    // Remove line after animation
+                    setTimeout(() => line.remove(), 800);
                 });
                 
                 // Clean up any remaining splashes
                 const splashes = lake.querySelectorAll('.hook-splash');
-                splashes.forEach(splash => splash.remove());
+                splashes.forEach(splash => {
+                    splash.style.animation = 'reelIn 0.8s ease-out forwards';
+                    setTimeout(() => splash.remove(), 800);
+                });
                 
                 const ripples = document.getElementById('ripples');
                 ripples.classList.remove('active');
@@ -2809,11 +2871,14 @@
 
                 const caughtFish = Math.random() < catchChance;
                 
-                if (caughtFish) {
-                    this.catchRandomFish();
-                } else {
-                    this.showMessage('No fish this time!', '#ffff00');
-                }
+                // Delay catch/no-catch message slightly to sync with animation
+                setTimeout(() => {
+                    if (caughtFish) {
+                        this.catchRandomFish();
+                    } else {
+                        this.showMessage('No fish this time!', '#ffff00');
+                    }
+                }, 400);
             }
 
             catchRandomFish() {
@@ -2891,6 +2956,9 @@
 
                 // Update leaderboard
                 this.updateLeaderboard();
+
+                // Show visual catch animation
+                this.showCatchAnimation(fishData.name, weight);
 
                 // Show catch message with rarity color
                 let messageColor = '#00ff00'; // Default green
@@ -4229,6 +4297,36 @@
                 setTimeout(() => {
                     document.getElementById('catch-message').classList.remove('show');
                 }, 3000);
+            }
+
+            showCatchAnimation(fishName, weight) {
+                const fishermanRow = document.getElementById('fisherman-row');
+                const playerFisher = document.getElementById('player-fisher');
+                
+                if (!playerFisher) return;
+                
+                const fishIcon = document.createElement('div');
+                fishIcon.className = 'fish-catch-animation';
+                fishIcon.textContent = '🐟';
+                fishIcon.style.position = 'absolute';
+                fishIcon.style.left = (playerFisher.getBoundingClientRect().left - fishermanRow.getBoundingClientRect().left) + 'px';
+                fishIcon.style.top = (playerFisher.getBoundingClientRect().top - fishermanRow.getBoundingClientRect().top) + 'px';
+                fishIcon.style.fontSize = '24px';
+                fishIcon.style.zIndex = '1000';
+                fishIcon.style.pointerEvents = 'none';
+                
+                fishermanRow.appendChild(fishIcon);
+                
+                // Animate the fish icon
+                setTimeout(() => {
+                    fishIcon.style.transition = 'all 1s ease-out';
+                    fishIcon.style.transform = 'translateY(-50px) scale(1.5)';
+                    fishIcon.style.opacity = '0';
+                    
+                    setTimeout(() => {
+                        fishIcon.remove();
+                    }, 1000);
+                }, 50);
             }
 
             updateDisplay() {
