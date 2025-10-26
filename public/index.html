@@ -25,7 +25,7 @@
     
     <!-- Additional SEO -->
     <link rel="canonical" href="https://fishing-hole-multiplayer-production.up.railway.app/">
-    <meta name="theme-color" content="#00ff00">
+    <meta name="theme-color" content="#2196f3">
     
     <!-- Favicon and PWA -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E🎣%3C/text%3E%3C/svg%3E">
@@ -44,9 +44,9 @@
         }
 
         body {
-            font-family: 'Courier New', monospace;
-            background: #0a0a0a;
-            color: #00ff00;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #0a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #e0e0e0;
             height: 100vh;
             overflow: hidden;
         }
@@ -60,8 +60,11 @@
         .main-area {
             display: flex;
             flex-direction: column;
-            background: #000;
-            border: 2px solid #00ff00;
+            background: rgba(15, 25, 40, 0.95);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(100, 200, 255, 0.2);
         }
 
         .game-layout {
@@ -72,10 +75,12 @@
 
         .left-sidebar, .right-sidebar {
             width: 250px;
-            background: #000;
-            border: 2px solid #00ff00;
-            padding: 10px;
+            background: rgba(20, 30, 50, 0.8);
+            border-radius: 12px;
+            border: 1px solid rgba(100, 200, 255, 0.15);
+            padding: 15px;
             overflow-y: auto;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
         }
 
         .center-area {
@@ -85,22 +90,28 @@
         }
 
         .chat-section {
-            background: #000;
-            border-top: 2px solid #00ff00;
-            padding: 10px;
+            background: rgba(20, 30, 50, 0.8);
+            border-top: 1px solid rgba(100, 200, 255, 0.2);
+            border-radius: 0 0 12px 12px;
+            padding: 15px;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.2);
         }
 
         .header {
-            background: #001100;
-            padding: 10px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            padding: 15px;
             text-align: center;
-            border-bottom: 2px solid #00ff00;
+            border-bottom: 2px solid rgba(100, 200, 255, 0.3);
+            border-radius: 12px 12px 0 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
         .header h1 {
-            color: #00ff00;
+            color: #ffffff;
             font-size: 1.8rem;
-            text-shadow: 0 0 10px #00ff00;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+            font-weight: 700;
+            letter-spacing: 1px;
         }
 
         .login-screen {
@@ -117,46 +128,71 @@
         }
 
         .login-box {
-            background: #001100;
-            border: 2px solid #00ff00;
-            padding: 30px;
+            background: linear-gradient(135deg, rgba(30, 60, 114, 0.95) 0%, rgba(42, 82, 152, 0.95) 100%);
+            border: 2px solid rgba(100, 200, 255, 0.4);
+            border-radius: 20px;
+            padding: 40px;
             text-align: center;
-            box-shadow: 0 0 20px #00ff00;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(100, 200, 255, 0.2);
+            backdrop-filter: blur(10px);
         }
 
         .login-box h2 {
-            color: #00ff00;
-            margin-bottom: 20px;
+            color: #ffffff;
+            margin-bottom: 25px;
+            font-weight: 700;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
         }
 
         .login-input {
-            background: #000;
-            border: 1px solid #00ff00;
-            color: #00ff00;
-            padding: 10px;
+            background: rgba(15, 25, 40, 0.9);
+            border: 2px solid rgba(100, 200, 255, 0.3);
+            border-radius: 10px;
+            color: #e0e0e0;
+            padding: 12px 15px;
             margin: 10px;
-            font-family: 'Courier New', monospace;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: 16px;
+            transition: all 0.3s ease;
+            width: 90%;
+            max-width: 300px;
+        }
+
+        .login-input:focus {
+            outline: none;
+            border-color: rgba(100, 200, 255, 0.6);
+            box-shadow: 0 0 15px rgba(100, 200, 255, 0.3);
         }
 
         .login-input::placeholder {
-            color: #004400;
+            color: rgba(200, 200, 200, 0.5);
         }
 
         .login-btn {
-            background: #000;
-            border: 2px solid #00ff00;
-            color: #00ff00;
-            padding: 10px 20px;
-            margin: 10px;
+            background: linear-gradient(135deg, #64b5f6 0%, #42a5f5 100%);
+            border: none;
+            border-radius: 12px;
+            color: #ffffff;
+            padding: 14px 30px;
+            margin: 15px 10px;
             cursor: pointer;
-            font-family: 'Courier New', monospace;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: 16px;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(100, 181, 246, 0.4);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .login-btn:hover {
-            background: #00ff00;
-            color: #000;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(100, 181, 246, 0.6);
+            background: linear-gradient(135deg, #90caf9 0%, #64b5f6 100%);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
         }
 
         .character-selector {
@@ -170,23 +206,23 @@
         .character-option {
             font-size: 40px;
             padding: 10px;
-            border: 2px solid #004400;
+            border: 2px solid rgba(100, 200, 255, 0.3);
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s ease;
-            background: #000;
+            background: rgba(15, 25, 40, 0.9);
         }
 
         .character-option:hover {
-            border-color: #00ff00;
-            background: #001100;
+            border-color: rgba(100, 200, 255, 0.5);
+            background: rgba(20, 30, 50, 0.8);
             transform: scale(1.1);
         }
 
         .character-option.selected {
-            border-color: #00ff00;
-            background: #003300;
-            box-shadow: 0 0 15px #00ff00;
+            border-color: rgba(100, 200, 255, 0.5);
+            background: rgba(42, 82, 152, 0.6);
+            box-shadow: 0 0 20px rgba(100, 200, 255, 0.5);
         }
 
         .character-selector-small {
@@ -200,60 +236,61 @@
         .char-part-option {
             font-size: 24px;
             padding: 5px 8px;
-            border: 2px solid #004400;
+            border: 2px solid rgba(100, 200, 255, 0.3);
             border-radius: 5px;
             cursor: pointer;
             transition: all 0.2s ease;
-            background: #000;
+            background: rgba(15, 25, 40, 0.9);
             font-size: 18px;
         }
 
         .char-part-option:hover {
-            border-color: #00ff00;
-            background: #001100;
+            border-color: rgba(100, 200, 255, 0.5);
+            background: rgba(20, 30, 50, 0.8);
             transform: scale(1.1);
         }
 
         .char-part-option.selected {
-            border-color: #00ff00;
-            background: #003300;
+            border-color: rgba(100, 200, 255, 0.5);
+            background: rgba(42, 82, 152, 0.6);
             box-shadow: 0 0 10px #00ff00;
         }
 
         .char-option-btn {
             padding: 6px 12px;
-            border: 2px solid #004400;
+            border: 2px solid rgba(100, 200, 255, 0.3);
             border-radius: 5px;
             cursor: pointer;
             transition: all 0.2s ease;
-            background: #000;
-            color: #00ff00;
+            background: rgba(15, 25, 40, 0.9);
+            color: #64b5f6;
             font-size: 11px;
             font-weight: bold;
         }
 
         .char-option-btn:hover {
-            border-color: #00ff00;
-            background: #001100;
+            border-color: rgba(100, 200, 255, 0.5);
+            background: rgba(20, 30, 50, 0.8);
             transform: scale(1.05);
         }
 
         .char-option-btn[data-selected="true"] {
-            border-color: #00ff00;
-            background: #003300;
-            box-shadow: 0 0 8px #00ff00;
+            border-color: rgba(100, 200, 255, 0.5);
+            background: rgba(42, 82, 152, 0.6);
+            box-shadow: 0 0 12px rgba(100, 200, 255, 0.4);
         }
 
         .fishing-area {
             flex: 1;
             position: relative;
-            background: linear-gradient(180deg, #001122 0%, #002244 50%, #003366 100%);
+            background: linear-gradient(135deg, #0a1a2e 0%, #16213e 30%, #0f3460 70%, #1a1a2e 100%);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 20px;
-            min-height: 0; /* Allow flex shrinking */
+            padding: 30px;
+            min-height: 0;
+            box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.5);
         }
 
         .fisherman-row {
@@ -269,40 +306,44 @@
 
         .fishing-lake {
             width: calc(100% - 40px);
-            max-width: calc(100vw - 600px); /* Account for sidebars + padding */
-            height: calc(100vh - 300px); /* Account for header, controls, chat */
+            max-width: calc(100vw - 600px);
+            height: calc(100vh - 300px);
             min-height: 400px;
             max-height: 600px;
             background: 
-                /* Deep water gradient with depth */
-                radial-gradient(ellipse at center, #0055aa 0%, #003366 40%, #001122 100%),
-                /* Surface reflection */
+                /* Deep beautiful water - vibrant blues */
+                radial-gradient(ellipse at center, #1e88e5 0%, #1565c0 30%, #0d47a1 60%, #01579b 100%),
+                /* Surface sparkle and light */
                 linear-gradient(
                     180deg,
-                    rgba(135, 206, 250, 0.3) 0%,
-                    rgba(70, 130, 180, 0.2) 10%,
-                    rgba(0, 100, 200, 0.1) 30%,
-                    transparent 70%
+                    rgba(144, 202, 249, 0.4) 0%,
+                    rgba(100, 181, 246, 0.3) 8%,
+                    rgba(66, 165, 245, 0.2) 15%,
+                    rgba(33, 150, 243, 0.15) 25%,
+                    transparent 50%
                 ),
-                /* Wave pattern - more realistic */
+                /* Animated wave pattern */
                 repeating-linear-gradient(
                     0deg,
-                    rgba(100, 180, 255, 0.2) 0px,
-                    rgba(100, 180, 255, 0.2) 6px,
-                    rgba(0, 100, 200, 0.15) 6px,
-                    rgba(0, 100, 200, 0.15) 12px
+                    rgba(144, 202, 249, 0.25) 0px,
+                    rgba(144, 202, 249, 0.25) 8px,
+                    rgba(66, 165, 245, 0.2) 8px,
+                    rgba(66, 165, 245, 0.2) 16px
                 ),
-                /* Depth highlights */
-                radial-gradient(ellipse at 30% 40%, rgba(0, 150, 220, 0.2) 0%, transparent 50%),
-                radial-gradient(ellipse at 70% 60%, rgba(0, 150, 220, 0.15) 0%, transparent 50%);
-            border: 3px solid #00ff00;
+                /* Depth highlights and light rays */
+                radial-gradient(ellipse at 25% 35%, rgba(100, 181, 246, 0.3) 0%, transparent 40%),
+                radial-gradient(ellipse at 75% 65%, rgba(66, 165, 245, 0.25) 0%, transparent 45%),
+                radial-gradient(ellipse at 50% 80%, rgba(33, 150, 243, 0.2) 0%, transparent 50%);
+            border: 3px solid rgba(100, 181, 246, 0.6);
+            border-radius: 20px;
             position: relative;
             overflow: visible;
             box-shadow: 
-                0 0 20px rgba(0, 255, 0, 0.3), 
-                inset 0 0 80px rgba(0, 100, 200, 0.6),
-                inset 0 10px 120px rgba(0, 200, 255, 0.4),
-                0 0 30px rgba(0, 150, 220, 0.3);
+                0 8px 32px rgba(0, 0, 0, 0.4),
+                0 0 60px rgba(33, 150, 243, 0.5),
+                inset 0 0 100px rgba(0, 100, 200, 0.7),
+                inset 0 15px 150px rgba(100, 181, 246, 0.5),
+                0 0 40px rgba(66, 165, 245, 0.4);
             animation: waterShimmer 4s ease-in-out infinite;
         }
 
@@ -319,7 +360,7 @@
             width: 60px;
             height: 80px;
             border-radius: 50%;
-            border: 2px solid #00ff00;
+            border: 2px solid rgba(100, 200, 255, 0.4);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -327,12 +368,12 @@
             font-size: 40px;
             font-weight: bold;
             background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
-            color: #00ff00;
+            color: #64b5f6;
             position: relative;
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 
-                0 0 15px rgba(0, 255, 0, 0.4),
+                0 0 15px rgba(100, 181, 246, 0.4),
                 inset 0 0 10px rgba(0, 0, 0, 0.5);
             overflow: visible;
         }
@@ -359,26 +400,26 @@
             background: rgba(0, 0, 0, 0.95);
             padding: 2px 4px;
             border-radius: 3px;
-            border: 1px solid #00ff00;
-            color: #00ff00;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            color: #64b5f6;
             font-weight: bold;
-            text-shadow: 0 0 5px rgba(0, 255, 0, 0.8);
-            box-shadow: 0 0 8px rgba(0, 255, 0, 0.5);
+            text-shadow: 0 0 5px rgba(100, 181, 246, 0.8);
+            box-shadow: 0 0 8px rgba(100, 181, 246, 0.5);
         }
 
         .fisherman.you {
-            background: linear-gradient(135deg, #00aa00 0%, #00ff00 50%, #00aa00 100%);
+            background: linear-gradient(135deg, #64b5f6 0%, #42a5f5 50%, #2196f3 100%);
             color: #000;
-            border-color: #00ff00;
+            border-color: rgba(100, 200, 255, 0.5);
             box-shadow: 
-                0 0 20px rgba(0, 255, 0, 0.6),
+                0 0 20px rgba(100, 181, 246, 0.6),
                 inset 0 0 10px rgba(0, 0, 0, 0.3);
         }
 
         .fisherman.other {
             background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
-            color: #00ff00;
-            border-color: #00ff00;
+            color: #64b5f6;
+            border-color: rgba(100, 200, 255, 0.5);
         }
 
         .fisherman.fishing {
@@ -735,28 +776,33 @@
         }
 
         .controls {
-            background: #001100;
+            background: rgba(20, 30, 50, 0.8);
             padding: 15px;
             text-align: center;
-            border-top: 2px solid #00ff00;
+            border-top: 2px solid rgba(100, 200, 255, 0.4);
             flex-shrink: 0; /* Prevent controls from shrinking */
             z-index: 10; /* Ensure controls stay visible */
         }
 
         .btn {
-            background: #000;
-            border: 2px solid #00ff00;
-            color: #00ff00;
-            padding: 8px 16px;
+            background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
+            border: none;
+            border-radius: 8px;
+            color: #ffffff;
+            padding: 10px 20px;
             margin: 5px;
             cursor: pointer;
-            font-family: 'Courier New', monospace;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 3px 10px rgba(33, 150, 243, 0.3);
+            transition: all 0.3s ease;
         }
 
         .btn:hover {
-            background: #00ff00;
-            color: #000;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.5);
+            background: linear-gradient(135deg, #64b5f6 0%, #42a5f5 100%);
         }
 
         .btn:disabled {
@@ -776,24 +822,29 @@
 
         .section {
             margin-bottom: 20px;
-            border: 1px solid #004400;
-            padding: 10px;
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            background: rgba(15, 25, 40, 0.6);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
 
         .section h3 {
-            color: #00ff00;
-            margin-bottom: 10px;
+            color: #ffffff;
+            margin-bottom: 12px;
             text-align: center;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
 
         .player-info {
             font-size: 16px;
-            background: #001100;
-            padding: 15px;
-            border: 3px solid #00ff00;
-            border-radius: 8px;
+            background: linear-gradient(135deg, rgba(30, 60, 114, 0.9) 0%, rgba(42, 82, 152, 0.9) 100%);
+            padding: 18px;
+            border: 2px solid rgba(100, 200, 255, 0.4);
+            border-radius: 12px;
             margin-bottom: 15px;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3), 0 0 20px rgba(100, 200, 255, 0.2);
         }
 
         .stat-line {
@@ -801,7 +852,7 @@
             justify-content: space-between;
             margin: 8px 0;
             padding: 5px 0;
-            border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+            border-bottom: 1px solid rgba(100, 181, 246, 0.2);
             font-weight: bold;
         }
 
@@ -815,12 +866,12 @@
         }
 
         .player-stats {
-            background: #001100;
+            background: rgba(20, 30, 50, 0.8);
             padding: 15px;
-            border: 3px solid #00ff00;
+            border: 2px solid rgba(100, 200, 255, 0.4);
             border-radius: 8px;
             margin-bottom: 15px;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         }
 
         .player-stats .stat-line {
@@ -834,12 +885,12 @@
         }
 
         .achievements {
-            background: #001100;
+            background: rgba(20, 30, 50, 0.8);
             padding: 10px;
-            border: 3px solid #00ff00;
+            border: 2px solid rgba(100, 200, 255, 0.4);
             border-radius: 8px;
             margin-bottom: 15px;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
             max-height: 200px;
             overflow-y: auto;
         }
@@ -847,8 +898,8 @@
         .achievement-item {
             margin: 3px 0;
             padding: 4px;
-            background: #002200;
-            border: 1px solid #00ff00;
+            background: rgba(30, 50, 80, 0.8);
+            border: 1px solid rgba(100, 200, 255, 0.3);
             border-radius: 4px;
             font-size: 11px;
         }
@@ -859,12 +910,12 @@
         }
 
         .leaderboard {
-            background: #001100;
+            background: rgba(20, 30, 50, 0.8);
             padding: 10px;
-            border: 3px solid #00ff00;
+            border: 2px solid rgba(100, 200, 255, 0.4);
             border-radius: 8px;
             margin-bottom: 10px;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         }
 
         .leaderboard-category {
@@ -876,11 +927,11 @@
         }
 
         .leaderboard-category h4 {
-            color: #00ff00;
+            color: #64b5f6;
             margin: 0 0 6px 0;
             font-size: 13px;
             text-align: center;
-            border-bottom: 1px solid #00ff00;
+            border-bottom: 1px solid rgba(100, 200, 255, 0.3);
             padding-bottom: 3px;
         }
 
@@ -893,9 +944,9 @@
         .leaderboard-item {
             margin: 2px 0;
             padding: 4px 6px;
-            border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+            border-bottom: 1px solid rgba(100, 181, 246, 0.2);
             font-size: 11px;
-            background: #002200;
+            background: rgba(30, 50, 80, 0.8);
             border-radius: 3px;
             display: flex;
             justify-content: space-between;
@@ -905,7 +956,7 @@
         .leaderboard-item:first-child {
             color: #ffd700;
             font-weight: bold;
-            background: #003300;
+            background: rgba(42, 82, 152, 0.6);
         }
 
         .leaderboard-item:nth-child(2) {
@@ -917,7 +968,7 @@
         }
 
         .leaderboard-item .rank {
-            background: #00ff00;
+            background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
             color: #000;
             padding: 1px 4px;
             border-radius: 2px;
@@ -937,14 +988,14 @@
         }
 
         .tournament-info {
-            background: #001100;
+            background: rgba(20, 30, 50, 0.8);
             padding: 15px;
-            border: 3px solid #00ff00;
+            border: 2px solid rgba(100, 200, 255, 0.4);
             border-radius: 8px;
             margin-bottom: 10px;
             margin-top: 10px;
             min-height: 80px;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         }
 
         .inventory-tabs {
@@ -955,11 +1006,11 @@
         .inventory-tabs .tab-btn {
             flex: 1;
             padding: 10px;
-            background: #002200;
-            border: 1px solid #00ff00;
-            color: #00ff00;
+            background: rgba(30, 50, 80, 0.8);
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            color: #64b5f6;
             cursor: pointer;
-            font-family: 'Courier New', monospace;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: 14px;
         }
 
@@ -972,13 +1023,13 @@
         }
 
         .inventory-tabs .tab-btn.active {
-            background: #00ff00;
+            background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
             color: #000;
         }
 
         .catch-item {
-            background: #002200;
-            border: 1px solid #00ff00;
+            background: rgba(30, 50, 80, 0.8);
+            border: 1px solid rgba(100, 200, 255, 0.3);
             border-radius: 4px;
             padding: 10px;
             margin: 8px 0;
@@ -1000,7 +1051,7 @@
         }
 
         .fish-details span {
-            color: #00ff00;
+            color: #64b5f6;
         }
 
         .weight {
@@ -1020,7 +1071,7 @@
         }
 
         .rank {
-            background: #00ff00;
+            background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
             color: #000;
             padding: 4px 8px;
             border-radius: 4px;
@@ -1035,15 +1086,15 @@
         }
 
         .stat-item {
-            background: #002200;
-            border: 1px solid #00ff00;
+            background: rgba(30, 50, 80, 0.8);
+            border: 1px solid rgba(100, 200, 255, 0.3);
             border-radius: 4px;
             padding: 15px;
             text-align: center;
         }
 
         .stat-label {
-            color: #00ff00;
+            color: #64b5f6;
             font-size: 12px;
             margin-bottom: 5px;
         }
@@ -1062,18 +1113,18 @@
         }
 
         .game-status {
-            background: #001100;
+            background: rgba(20, 30, 50, 0.8);
             padding: 15px;
-            border: 3px solid #00ff00;
+            border: 2px solid rgba(100, 200, 255, 0.4);
             border-radius: 8px;
             margin-bottom: 15px;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         }
 
         .status-item {
             margin: 6px 0;
             padding: 4px 0;
-            border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+            border-bottom: 1px solid rgba(100, 181, 246, 0.2);
             font-size: 12px;
         }
 
@@ -1090,8 +1141,8 @@
         .player-item {
             padding: 2px 5px;
             margin: 2px 0;
-            background: #001100;
-            border-left: 3px solid #00ff00;
+            background: rgba(20, 30, 50, 0.8);
+            border-left: 3px solid rgba(100, 200, 255, 0.5);
         }
 
         .player-item.fishing {
@@ -1101,7 +1152,7 @@
         .chat-area {
             height: 200px;
             overflow-y: auto;
-            background: #000;
+            background: rgba(15, 25, 40, 0.9);
             border: 1px solid #004400;
             padding: 5px;
             margin-bottom: 10px;
@@ -1121,7 +1172,7 @@
         }
 
         .chat-message.other {
-            color: #00ff00;
+            color: #64b5f6;
         }
 
         .chat-message.legendary {
@@ -1150,16 +1201,16 @@
 
         .chat-input {
             width: 100%;
-            background: #000;
-            border: 1px solid #00ff00;
-            color: #00ff00;
+            background: rgba(15, 25, 40, 0.9);
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            color: #64b5f6;
             padding: 5px;
-            font-family: 'Courier New', monospace;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: 12px;
         }
 
         .tournament-info {
-            background: #001100;
+            background: rgba(20, 30, 50, 0.8);
             border: 1px solid #ffff00;
             padding: 10px;
             margin-bottom: 10px;
@@ -1187,11 +1238,11 @@
             justify-content: space-between;
             padding: 2px 5px;
             margin: 1px 0;
-            background: #001100;
+            background: rgba(20, 30, 50, 0.8);
         }
 
         .leaderboard-item.current {
-            background: #004400;
+            background: rgba(15, 25, 40, 0.6);
         }
 
         .catch-message {
@@ -1199,13 +1250,13 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: #000;
-            border: 2px solid #00ff00;
+            background: rgba(15, 25, 40, 0.9);
+            border: 2px solid rgba(100, 200, 255, 0.4);
             padding: 20px;
             text-align: center;
             z-index: 15;
             display: none;
-            box-shadow: 0 0 20px #00ff00;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
         }
 
         .catch-message.show {
@@ -1230,23 +1281,23 @@
         }
 
         .location-btn {
-            background: #000;
-            border: 1px solid #00ff00;
-            color: #00ff00;
+            background: rgba(15, 25, 40, 0.9);
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            color: #64b5f6;
             padding: 5px 10px;
             margin: 2px;
             cursor: pointer;
-            font-family: 'Courier New', monospace;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: 10px;
         }
 
         .location-btn:hover {
-            background: #00ff00;
+            background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
             color: #000;
         }
 
         .location-btn.active {
-            background: #00ff00;
+            background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
             color: #000;
         }
 
@@ -1259,34 +1310,34 @@
         .location-dropdown {
             margin: 15px 0;
             padding: 10px;
-            background: #001100;
-            border: 3px solid #00ff00;
+            background: rgba(20, 30, 50, 0.8);
+            border: 2px solid rgba(100, 200, 255, 0.4);
             border-radius: 8px;
-            box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         }
 
         .location-dropdown select {
             width: 100%;
             padding: 12px;
-            background: #000;
-            color: #00ff00;
-            border: 2px solid #00ff00;
+            background: rgba(15, 25, 40, 0.9);
+            color: #64b5f6;
+            border: 2px solid rgba(100, 200, 255, 0.4);
             border-radius: 4px;
             font-size: 16px;
             font-weight: bold;
-            font-family: 'Courier New', monospace;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             cursor: pointer;
             text-align: center;
         }
 
         .location-dropdown select:hover {
-            background: #001100;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+            background: rgba(20, 30, 50, 0.8);
+            box-shadow: 0 0 10px rgba(100, 181, 246, 0.5);
         }
 
         .location-dropdown select option {
-            background: #001100;
-            color: #00ff00;
+            background: rgba(20, 30, 50, 0.8);
+            color: #64b5f6;
             padding: 8px;
             font-size: 14px;
         }
@@ -1313,7 +1364,7 @@
             background-color: #001100;
             margin: 5% auto;
             padding: 0;
-            border: 2px solid #00ff00;
+            border: 2px solid rgba(100, 200, 255, 0.4);
             border-radius: 8px;
             width: 80%;
             max-width: 800px;
@@ -1322,9 +1373,9 @@
         }
 
         .modal-header {
-            background: #002200;
+            background: rgba(30, 50, 80, 0.8);
             padding: 15px;
-            border-bottom: 2px solid #00ff00;
+            border-bottom: 2px solid rgba(100, 200, 255, 0.4);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -1332,14 +1383,14 @@
 
         .modal-header h2 {
             margin: 0;
-            color: #00ff00;
-            font-family: 'Courier New', monospace;
+            color: #64b5f6;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
         .close-btn {
             background: none;
             border: none;
-            color: #00ff00;
+            color: #64b5f6;
             font-size: 24px;
             cursor: pointer;
             padding: 0;
@@ -1358,27 +1409,27 @@
         .shop-tabs {
             display: flex;
             margin-bottom: 20px;
-            border-bottom: 2px solid #00ff00;
+            border-bottom: 2px solid rgba(100, 200, 255, 0.4);
         }
 
         .tab-btn {
-            background: #001100;
-            color: #00ff00;
-            border: 2px solid #00ff00;
+            background: rgba(20, 30, 50, 0.8);
+            color: #64b5f6;
+            border: 2px solid rgba(100, 200, 255, 0.4);
             border-bottom: none;
             padding: 10px 20px;
             cursor: pointer;
-            font-family: 'Courier New', monospace;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-weight: bold;
             margin-right: 5px;
         }
 
         .tab-btn:hover {
-            background: #002200;
+            background: rgba(30, 50, 80, 0.8);
         }
 
         .tab-btn.active {
-            background: #00ff00;
+            background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
             color: #000;
         }
 
@@ -1387,8 +1438,8 @@
         }
 
         .tackle-item {
-            background: #001100;
-            border: 2px solid #00ff00;
+            background: rgba(20, 30, 50, 0.8);
+            border: 2px solid rgba(100, 200, 255, 0.4);
             margin: 10px 0;
             padding: 15px;
             border-radius: 4px;
@@ -1399,7 +1450,7 @@
 
         .tackle-item.equipped {
             border-color: #ffff00;
-            background: #002200;
+            background: rgba(30, 50, 80, 0.8);
         }
 
         .tackle-item.locked {
@@ -1414,7 +1465,7 @@
 
         .tackle-name {
             font-weight: bold;
-            color: #00ff00;
+            color: #64b5f6;
             margin-bottom: 5px;
         }
 
@@ -1441,13 +1492,13 @@
         }
 
         .tackle-btn {
-            background: #00ff00;
+            background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
             color: #000;
             border: none;
             padding: 5px 10px;
             border-radius: 3px;
             cursor: pointer;
-            font-family: 'Courier New', monospace;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: 12px;
             font-weight: bold;
         }
@@ -1468,7 +1519,7 @@
         }
 
         .tackle-btn.buy {
-            background: #00ff00;
+            background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
             color: #000;
         }
 
@@ -1553,8 +1604,8 @@
                 justify-content: space-between;
                 align-items: center;
                 padding: 8px;
-                background: #001100;
-                border-bottom: 2px solid #00ff00;
+                background: rgba(20, 30, 50, 0.8);
+                border-bottom: 2px solid rgba(100, 200, 255, 0.4);
                 flex-shrink: 0;
                 position: sticky;
                 top: 72px;
@@ -1578,7 +1629,7 @@
 
             .mobile-header-stats {
                 font-size: 10px;
-                color: #00ff00;
+                color: #64b5f6;
             }
 
             .mobile-header-right {
@@ -1607,7 +1658,7 @@
                 height: 50px;
                 font-size: 28px;
                 border-radius: 50%;
-                border: 2px solid #00ff00;
+                border: 2px solid rgba(100, 200, 255, 0.4);
                 display: flex;
                 flex-direction: column;
                 align-items: center;
@@ -1630,8 +1681,8 @@
                 background: rgba(0, 0, 0, 0.95);
                 padding: 1px 3px;
                 border-radius: 2px;
-                border: 1px solid #00ff00;
-                color: #00ff00;
+                border: 1px solid rgba(100, 200, 255, 0.3);
+                color: #64b5f6;
                 font-weight: bold;
             }
 
@@ -1641,11 +1692,11 @@
                 min-height: 200px;
                 background: linear-gradient(135deg, #1e3a5f 0%, #4a90e2 50%, #1e3a5f 100%);
                 border-radius: 15px;
-                border: 3px solid #00ff00;
+                border: 2px solid rgba(100, 200, 255, 0.4);
                 position: relative;
                 overflow: visible;
                 box-shadow: 
-                    0 0 30px rgba(0, 255, 0, 0.3),
+                    0 0 30px rgba(100, 181, 246, 0.3),
                     inset 0 0 50px rgba(0, 0, 0, 0.2);
             }
 
@@ -1697,9 +1748,9 @@
 
             .mobile-btn {
                 padding: 12px;
-                background: #001100;
-                border: 2px solid #00ff00;
-                color: #00ff00;
+                background: rgba(20, 30, 50, 0.8);
+                border: 2px solid rgba(100, 200, 255, 0.4);
+                color: #64b5f6;
                 font-size: 12px;
                 font-weight: bold;
                 cursor: pointer;
@@ -1708,7 +1759,7 @@
             }
 
             .mobile-btn:active {
-                background: #00ff00;
+                background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
                 color: #000;
             }
 
@@ -1719,8 +1770,8 @@
             }
 
             .mobile-panel {
-                background: #001100;
-                border: 2px solid #00ff00;
+                background: rgba(20, 30, 50, 0.8);
+                border: 2px solid rgba(100, 200, 255, 0.4);
                 border-radius: 8px;
                 padding: 10px;
             }
@@ -1728,8 +1779,8 @@
             .mobile-panel h4 {
                 font-size: 12px;
                 margin-bottom: 8px;
-                color: #00ff00;
-                border-bottom: 1px solid #00ff00;
+                color: #64b5f6;
+                border-bottom: 1px solid rgba(100, 200, 255, 0.3);
                 padding-bottom: 4px;
             }
 
@@ -1746,7 +1797,7 @@
                 left: 0;
                 right: 0;
                 background: rgba(0, 0, 0, 0.95);
-                border-top: 2px solid #00ff00;
+                border-top: 2px solid rgba(100, 200, 255, 0.4);
                 padding: 5px;
                 max-height: 100px;
                 display: flex;
@@ -1761,9 +1812,9 @@
             .mobile-chat-input input {
                 flex: 1;
                 padding: 6px;
-                background: #000;
-                border: 1px solid #00ff00;
-                color: #00ff00;
+                background: rgba(15, 25, 40, 0.9);
+                border: 1px solid rgba(100, 200, 255, 0.3);
+                color: #64b5f6;
                 font-size: 12px;
             }
 
@@ -1773,8 +1824,8 @@
                 left: 0;
                 right: 0;
                 display: flex;
-                background: #001100;
-                border-top: 2px solid #00ff00;
+                background: rgba(20, 30, 50, 0.8);
+                border-top: 2px solid rgba(100, 200, 255, 0.4);
                 padding: 8px;
                 gap: 5px;
                 flex-shrink: 0;
@@ -1784,9 +1835,9 @@
             .mobile-menu-btn {
                 flex: 1;
                 padding: 10px;
-                background: #001100;
-                border: 2px solid #00ff00;
-                color: #00ff00;
+                background: rgba(20, 30, 50, 0.8);
+                border: 2px solid rgba(100, 200, 255, 0.4);
+                color: #64b5f6;
                 font-size: 11px;
                 font-weight: bold;
                 cursor: pointer;
@@ -1794,19 +1845,19 @@
             }
 
             .mobile-menu-btn:active {
-                background: #00ff00;
+                background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
                 color: #000;
             }
 
             /* Mobile Title */
             .mobile-title {
                 padding: 8px;
-                background: #001100;
-                border-bottom: 2px solid #00ff00;
+                background: rgba(20, 30, 50, 0.8);
+                border-bottom: 2px solid rgba(100, 200, 255, 0.4);
                 text-align: center;
                 font-size: 14px;
                 font-weight: bold;
-                color: #00ff00;
+                color: #64b5f6;
                 flex-shrink: 0;
                 position: sticky;
                 top: 0;
@@ -1816,8 +1867,8 @@
             /* Mobile Tabs */
             .mobile-tabs {
                 display: flex;
-                background: #001100;
-                border-bottom: 2px solid #00ff00;
+                background: rgba(20, 30, 50, 0.8);
+                border-bottom: 2px solid rgba(100, 200, 255, 0.4);
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
                 flex-shrink: 0;
@@ -1829,10 +1880,10 @@
             .mobile-tab-btn {
                 flex: 1;
                 padding: 8px 4px;
-                background: #001100;
+                background: rgba(20, 30, 50, 0.8);
                 border: none;
                 border-right: 1px solid #00ff00;
-                color: #00ff00;
+                color: #64b5f6;
                 font-size: 9px;
                 font-weight: bold;
                 cursor: pointer;
@@ -1844,7 +1895,7 @@
             }
 
             .mobile-tab-btn.active {
-                background: #00ff00;
+                background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
                 color: #000;
             }
 
@@ -1890,11 +1941,11 @@
             }
 
             .shop-tabs::-webkit-scrollbar-track {
-                background: #001100;
+                background: rgba(20, 30, 50, 0.8);
             }
 
             .shop-tabs::-webkit-scrollbar-thumb {
-                background: #00ff00;
+                background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
                 border-radius: 5px;
             }
 
@@ -3042,12 +3093,12 @@
                 style.textContent = `
                     .congratulations-content {
                         background: linear-gradient(135deg, #001100, #003300);
-                        border: 3px solid #00ff00;
+                        border: 2px solid rgba(100, 200, 255, 0.4);
                         border-radius: 15px;
                         padding: 30px;
                         max-width: 500px;
                         text-align: center;
-                        box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+                        box-shadow: 0 0 30px rgba(100, 181, 246, 0.5);
                         animation: slideIn 0.5s ease-out;
                     }
                     
@@ -3067,7 +3118,7 @@
                     }
                     
                     .congratulations-footer .btn {
-                        background: #00ff00;
+                        background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
                         color: #000;
                         border: none;
                         padding: 12px 30px;
