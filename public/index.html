@@ -2128,6 +2128,12 @@
                     </div>
                 </div>
 
+                <!-- Tournament Timer Banner (shown during active tournaments) -->
+                <div id="mobile-tournament-banner" style="display: none; background: rgba(0,255,0,0.2); border: 2px solid #00ff00; border-radius: 8px; padding: 10px; margin: 10px; text-align: center;">
+                    <div style="color: #00ff00; font-weight: bold; font-size: 14px;">🎣 TOURNAMENT ACTIVE</div>
+                    <div id="mobile-tournament-timer" style="font-size: 18px; font-weight: bold; color: #ffff00; margin-top: 5px;">0:00</div>
+                </div>
+
                 <div class="mobile-controls">
                     <button class="mobile-btn" id="mobile-cast-btn">CAST LINE</button>
                     <button class="mobile-btn" id="mobile-shop-btn">SHOP</button>
@@ -4957,6 +4963,12 @@
                     `;
                     if (container) container.innerHTML = `<h4>No Active Tournament</h4><div class="tournament-timer">Join a tournament to compete!</div>`;
                     if (mobileContainer) mobileContainer.innerHTML = message;
+                    
+                    // Hide mobile tournament banner
+                    const mobileBanner = document.getElementById('mobile-tournament-banner');
+                    if (mobileBanner) {
+                        mobileBanner.style.display = 'none';
+                    }
                     return;
                 }
 
@@ -4976,12 +4988,21 @@
                     `;
                     
                     const mobileHtml = `
-                        <div style="color: #ffff00; font-weight: bold;">🎣 STARTING IN ${countdown}s</div>
-                        <div style="font-size: 9px; color: #888; margin-top: 5px;">${this.tournament.participants.length} participants</div>
+                        <div style="color: #ffff00; font-weight: bold; font-size: 12px;">🎣 TOURNAMENT STARTING</div>
+                        <div style="font-size: 16px; font-weight: bold; color: #ffff00; margin-top: 8px; padding: 8px; background: rgba(255,255,0,0.15); border-radius: 4px; text-align: center;">
+                            ⏱️ STARTS IN ${countdown}s
+                        </div>
+                        <div style="font-size: 10px; color: #aaa; margin-top: 8px;">👥 ${this.tournament.participants.length} participants ready</div>
                     `;
                     
                     if (container) container.innerHTML = desktopHtml;
                     if (mobileContainer) mobileContainer.innerHTML = mobileHtml;
+                    
+                    // Hide mobile tournament banner during countdown (show when active)
+                    const mobileBanner = document.getElementById('mobile-tournament-banner');
+                    if (mobileBanner) {
+                        mobileBanner.style.display = 'none';
+                    }
                     return;
                 }
 
@@ -5027,15 +5048,24 @@
                     `;
                     
                     const mobileHtml = `
-                        <div style="color: #00ff00; font-weight: bold;">🎣 ACTIVE</div>
-                        <div style="font-size: 9px; color: #888; margin-top: 5px;">Time: ${minutes}:${seconds.toString().padStart(2, '0')}</div>
-                        <div style="font-size: 9px; color: #888; margin-top: 3px;">🐟 ${biggestFishPlayer}: ${biggestFish.toFixed(1)} lbs</div>
-                        <div style="font-size: 9px; color: #888; margin-top: 3px;">👥 ${this.tournament.participants.length} players</div>
-                        <div style="font-size: 9px; color: #888; margin-top: 3px;">${totalFish} fish caught</div>
+                        <div style="color: #00ff00; font-weight: bold; font-size: 12px;">🎣 TOURNAMENT ACTIVE</div>
+                        <div style="font-size: 14px; font-weight: bold; color: #ffff00; margin-top: 8px; padding: 5px; background: rgba(0,255,0,0.1); border-radius: 4px; text-align: center;">
+                            ⏱️ ${minutes}:${seconds.toString().padStart(2, '0')} LEFT
+                        </div>
+                        <div style="font-size: 10px; color: #aaa; margin-top: 8px;">🐟 Biggest: ${biggestFishPlayer} (${biggestFish.toFixed(1)} lbs)</div>
+                        <div style="font-size: 10px; color: #aaa; margin-top: 3px;">👥 ${this.tournament.participants.length} players | ${totalFish} fish</div>
                     `;
                     
                     if (container) container.innerHTML = desktopHtml;
                     if (mobileContainer) mobileContainer.innerHTML = mobileHtml;
+                    
+                    // Show and update mobile tournament banner
+                    const mobileBanner = document.getElementById('mobile-tournament-banner');
+                    const mobileTimer = document.getElementById('mobile-tournament-timer');
+                    if (mobileBanner && mobileTimer) {
+                        mobileBanner.style.display = 'block';
+                        mobileTimer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    }
                     
                     // Update every second during active phase
                     if (this.tournament.updateInterval) {
