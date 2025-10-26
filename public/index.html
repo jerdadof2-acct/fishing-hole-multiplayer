@@ -5047,17 +5047,37 @@
                 selectedFishIndex = Math.max(0, Math.min(selectedFishIndex, maxFishIndex));
                 if (selectedFishIndex < 0 || selectedFishIndex >= availableFish.length) {
                     console.error('Invalid fish index:', selectedFishIndex, 'Available fish:', availableFish.length);
+                    if (availableFish.length === 0) {
+                        console.error('No available fish!');
+                        return; // Cannot catch fish without any available
+                    }
                     selectedFishIndex = 0; // Use first fish as fallback
                 }
                 
                 const randomFishType = availableFish[selectedFishIndex];
+                
+                // Safety check: ensure we have a valid fish type index
+                if (randomFishType === undefined || randomFishType >= this.fishTypes.length) {
+                    console.error('Invalid fish type index:', randomFishType, 'Available:', availableFish, 'Total fish types:', this.fishTypes.length);
+                    if (availableFish.length > 0) {
+                        const fallbackFish = availableFish[0];
+                        if (fallbackFish !== undefined && fallbackFish < this.fishTypes.length) {
+                            const fishData = this.fishTypes[fallbackFish];
+                        } else {
+                            console.error('Fallback fish also invalid:', fallbackFish);
+                            return; // Cannot proceed without valid fish data
+                        }
+                    }
+                    return;
+                }
+                
                 const fishData = this.fishTypes[randomFishType];
                 
                 // Safety check: if fishData is undefined, use a default fish
-                if (!fishData || !randomFishType) {
-                    console.error('Invalid fish type selected:', randomFishType, 'Available:', availableFish);
+                if (!fishData) {
+                    console.error('Invalid fish data for type:', randomFishType);
                     // Use first available fish as fallback
-                    const fallbackFish = availableFish[0];
+                    const fallbackFish = availableFish.length > 0 ? availableFish[0] : 0;
                     const fallbackData = this.fishTypes[fallbackFish];
                     if (!fallbackData) {
                         console.error('No valid fish data found!');
@@ -6177,14 +6197,55 @@
                 
                 // BROADCAST TOP 3 ON MAIN SCREEN
                 if (top3Players.length > 0) {
-                    let podiumText = '🏆 TOURNAMENT RESULTS 🏆<br>';
+                    let podiumText = '<div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">🏆 TOURNAMENT RESULTS 🏆</div>';
                     top3Players.forEach((player, index) => {
                         const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
-                        podiumText += `${medal} ${player.name}: ${player.totalWeight.toFixed(2)} lbs<br>`;
+                        podiumText += `<div style="font-size: 16px; margin: 5px 0;">${medal} ${player.name}: ${player.totalWeight.toFixed(2)} lbs</div>`;
                     });
                     
                     // Show as global announcement for 5 seconds
-                    this.showGlobalAnnouncement(podiumText, '#ffd700');
+                    const announcement = document.createElement('div');
+                    announcement.className = 'global-announcement';
+                    announcement.innerHTML = `
+                        <div class="announcement-content" style="color: #ffd700; border-color: #ffd700; box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); padding: 20px; text-align: center;">
+                            ${podiumText}
+                        </div>
+                    `;
+                    
+                    const style = document.createElement('style');
+                    style.textContent = `
+                        .global-announcement {
+                            position: fixed;
+                            bottom: 120px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            z-index: 10000;
+                            animation: announcementSlideUp 0.6s ease-out;
+                        }
+                        
+                        @keyframes announcementSlideUp {
+                            from {
+                                opacity: 0;
+                                transform: translate(-50%, 20px);
+                            }
+                            to {
+                                opacity: 1;
+                                transform: translate(-50%, 0);
+                            }
+                        }
+                    `;
+                    
+                    if (!document.getElementById('announcement-style')) {
+                        style.id = 'announcement-style';
+                        document.head.appendChild(style);
+                    }
+                    
+                    document.body.appendChild(announcement);
+                    
+                    // Remove after 5 seconds
+                    setTimeout(() => {
+                        announcement.remove();
+                    }, 5000);
                     
                     // Also show in chat
                     this.addChatMessage('system', `🏆 Tournament Results:`);
@@ -6204,8 +6265,7 @@
                     .sort((a, b) => b.biggestFish - a.biggestFish)
                     .slice(0, 3);
 
-                // Show results
-                this.showGlobalAnnouncement('🏆 TOURNAMENT RESULTS 🏆', '#ff00ff');
+                // Show detailed results in chat
                 this.addChatMessage('system', '==================== TOURNAMENT RESULTS ====================');
                 
                 // Biggest Bags (Top 10 Total Weight)
