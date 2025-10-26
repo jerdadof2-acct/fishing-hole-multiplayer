@@ -92,23 +92,80 @@
         .chat-section {
             background: rgba(20, 30, 50, 0.95);
             border-top: 2px solid rgba(100, 200, 255, 0.4);
-            padding: 8px 15px;
             box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.3);
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
             z-index: 100;
+            transition: height 0.3s ease;
+            overflow: hidden;
+        }
+
+        .chat-section.collapsed {
+            height: 40px;
+        }
+
+        .chat-section.expanded {
             height: 180px;
             display: flex;
             flex-direction: column;
             gap: 6px;
-            overflow: visible;
+            padding: 8px 15px;
+        }
+
+        .chat-toggle {
+            width: 100%;
+            height: 40px;
+            background: rgba(20, 30, 50, 0.95);
+            border: none;
+            border-top: 2px solid rgba(100, 200, 255, 0.4);
+            color: rgba(100, 200, 255, 0.9);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            padding: 0 15px;
+        }
+
+        .chat-toggle:hover {
+            background: rgba(30, 40, 60, 0.95);
+            color: rgba(100, 200, 255, 1);
+        }
+
+        .chat-toggle-icon {
+            font-size: 18px;
+            transition: transform 0.3s ease;
+        }
+
+        .chat-section.expanded .chat-toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .chat-content {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            gap: 6px;
+            overflow: hidden;
+        }
+
+        .chat-section.expanded .chat-content {
+            display: flex;
         }
 
         @media (min-width: 769px) {
             .game-layout {
-                padding-bottom: 180px; /* Space for fixed chat section */
+                padding-bottom: 40px; /* Space for collapsed chat toggle */
+            }
+
+            .chat-section.expanded ~ .game-layout,
+            .chat-section.expanded ~ * {
+                /* No padding adjustment needed - chat overlays content */
             }
         }
 
@@ -1204,7 +1261,7 @@
         }
 
         .chat-area {
-            height: 120px;
+            height: 100px;
             overflow-y: auto;
             background: rgba(15, 25, 40, 0.8);
             border: 1px solid rgba(100, 200, 255, 0.3);
@@ -2345,12 +2402,18 @@
             </div>
 
             <!-- Chat Section -->
-            <div class="chat-section">
-                <div class="chat-area" id="chat-area">
-                    <div class="chat-message system">Welcome to Kitty Creek Fishing Club! 🐱🎣</div>
-                </div>
-                <div class="chat-input-container">
-                    <input type="text" id="chat-input" placeholder="Type a message...">
+            <div class="chat-section collapsed" id="chat-section">
+                <button class="chat-toggle" id="chat-toggle">
+                    <span class="chat-toggle-icon">💬</span>
+                    <span>Chat</span>
+                </button>
+                <div class="chat-content">
+                    <div class="chat-area" id="chat-area">
+                        <div class="chat-message system">Welcome to Kitty Creek Fishing Club! 🐱🎣</div>
+                    </div>
+                    <div class="chat-input-container">
+                        <input type="text" id="chat-input" placeholder="Type a message...">
+                    </div>
                 </div>
             </div>
 
@@ -2929,6 +2992,7 @@
                 this.updateLeaderboard();
                 this.createAnimatedRipples();
                 this.startAutoSave(); // Start auto-save
+                this.loadChatState(); // Load chat collapsed/expanded state
                 this.initMockAds(); // Initialize rotating mock ads
             }
 
@@ -3622,6 +3686,9 @@
                 document.getElementById('help-btn').addEventListener('click', () => this.openHelp());
                 document.getElementById('close-help').addEventListener('click', () => this.closeHelp());
                 document.getElementById('sound-btn').addEventListener('click', () => this.toggleSound());
+                
+                // Chat toggle
+                document.getElementById('chat-toggle').addEventListener('click', () => this.toggleChat());
 
                 // Login button
                 document.getElementById('login-btn').addEventListener('click', () => this.login());
