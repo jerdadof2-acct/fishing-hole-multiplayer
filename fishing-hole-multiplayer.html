@@ -3692,39 +3692,44 @@
                 
                 if (!activeLake) return;
                 
+                // Only remove lines for the current player (playerIndex 0)
                 const lines = activeLake.querySelectorAll('.fishing-line');
                 lines.forEach(line => {
-                    // Store original height for animation
-                    const originalHeight = line.offsetHeight;
-                    line.style.setProperty('--original-height', originalHeight + 'px');
-                    
-                    // Ensure height is set for animation
-                    line.style.height = originalHeight + 'px';
-                    
-                    // Add reel animation that shrinks height upward (transform-origin top)
-                    line.style.animation = 'reelIn 0.8s ease-out forwards';
-                    line.style.transformOrigin = 'top center';
-                    
-                    // Remove associated splash
-                    const splashId = line.dataset.splashId;
-                    if (splashId) {
-                        const splash = document.getElementById(splashId);
-                        if (splash) {
-                            splash.style.animation = 'reelIn 0.8s ease-out forwards';
-                            setTimeout(() => splash.remove(), 800);
+                    // Only process lines that belong to the current player (playerIndex 0)
+                    if (line.dataset.playerIndex === '0') {
+                        // Store original height for animation
+                        const originalHeight = line.offsetHeight;
+                        line.style.setProperty('--original-height', originalHeight + 'px');
+                        
+                        // Ensure height is set for animation
+                        line.style.height = originalHeight + 'px';
+                        
+                        // Add reel animation that shrinks height upward (transform-origin top)
+                        line.style.animation = 'reelIn 0.8s ease-out forwards';
+                        line.style.transformOrigin = 'top center';
+                        
+                        // Remove associated splash
+                        const splashId = line.dataset.splashId;
+                        if (splashId) {
+                            const splash = document.getElementById(splashId);
+                            if (splash) {
+                                splash.style.animation = 'reelIn 0.8s ease-out forwards';
+                                setTimeout(() => splash.remove(), 800);
+                            }
                         }
+                        
+                        // Remove line after animation
+                        setTimeout(() => line.remove(), 800);
                     }
-                    
-                    // Remove line after animation
-                    setTimeout(() => line.remove(), 800);
                 });
                 
-                // Clean up any remaining splashes
-                const splashes = activeLake.querySelectorAll('.hook-splash');
-                splashes.forEach(splash => {
-                    splash.style.animation = 'reelIn 0.8s ease-out forwards';
-                    setTimeout(() => splash.remove(), 800);
-                });
+                // Clean up splashes associated with current player's line
+                // Splashes are removed by their associated line above, but clean up any orphaned ones
+                const currentPlayerSplash = activeLake.querySelector(`#splash-0, [data-splash-for="0"]`);
+                if (currentPlayerSplash) {
+                    currentPlayerSplash.style.animation = 'reelIn 0.8s ease-out forwards';
+                    setTimeout(() => currentPlayerSplash.remove(), 800);
+                }
                 
                 const ripples = document.getElementById('ripples');
                 const mobileRipples = document.getElementById('mobile-ripples');
