@@ -2387,7 +2387,7 @@
 
             <!-- Chat Tab -->
             <div class="mobile-tab-panel" id="mobile-tab-chat">
-                <div class="chat-area" id="mobile-chat-area" style="font-size: 11px; max-height: calc(100vh - 280px); overflow-y: auto; padding: 10px; margin-bottom: 10px;"></div>
+                <div class="chat-area" id="mobile-chat-area" style="font-size: 11px; max-height: calc(100vh - 230px); overflow-y: auto; padding: 10px; margin-bottom: 10px;"></div>
                 <div class="mobile-chat-input" style="display: flex; gap: 8px; padding: 8px; background: rgba(20, 30, 50, 0.8); border-radius: 8px; margin-bottom: 10px;">
                     <input type="text" id="mobile-chat-input" placeholder="Type a message..." style="flex: 1; padding: 10px; background: rgba(15, 25, 40, 0.9); color: #64b5f6; border: 2px solid rgba(100, 200, 255, 0.4); border-radius: 6px; font-size: 12px;">
                     <button class="mobile-btn" id="mobile-send-btn" style="padding: 10px 16px; font-size: 12px;">Send</button>
@@ -2912,35 +2912,40 @@
                         this.addChatMessage('other', `${data.name} left the game`);
                         this.updateOnlinePlayers();
                         
-                        // Remove fishing lines for the player who left
+                        // Remove fishing lines for the player who left - use player name to avoid index issues
                         const lake = document.getElementById('fishing-lake');
                         const mobileLake = document.getElementById('mobile-fishing-lake');
                         
                         if (lake) {
-                            // Find and remove fishing lines by matching player position
-                            const fishermen = document.querySelectorAll('#fisherman-row .fisherman');
-                            const leavingPlayerIndex = Array.from(fishermen).findIndex(f => f.textContent.includes(data.name));
-                            
-                            if (leavingPlayerIndex >= 0) {
-                                lake.querySelectorAll('.fishing-line').forEach(line => {
-                                    if (line.dataset.playerIndex === leavingPlayerIndex.toString()) {
-                                        line.remove();
-                                    }
-                                });
-                            }
+                            // Remove lines by player name (more reliable than index)
+                            lake.querySelectorAll('.fishing-line').forEach(line => {
+                                if (line.dataset.playerName && line.dataset.playerName.includes(data.name)) {
+                                    line.remove();
+                                }
+                            });
+                            // Also remove any orphaned hooks
+                            lake.querySelectorAll('.hook').forEach(hook => {
+                                const parentLine = hook.closest('.fishing-line');
+                                if (!parentLine || (parentLine.dataset.playerName && parentLine.dataset.playerName.includes(data.name))) {
+                                    hook.remove();
+                                }
+                            });
                         }
                         
                         if (mobileLake) {
-                            const mobileFishermen = document.querySelectorAll('#mobile-fisherman-row .mobile-fisherman');
-                            const leavingPlayerIndex = Array.from(mobileFishermen).findIndex(f => f.textContent.includes(data.name));
-                            
-                            if (leavingPlayerIndex >= 0) {
-                                mobileLake.querySelectorAll('.fishing-line').forEach(line => {
-                                    if (line.dataset.playerIndex === leavingPlayerIndex.toString()) {
-                                        line.remove();
-                                    }
-                                });
-                            }
+                            // Remove lines by player name
+                            mobileLake.querySelectorAll('.fishing-line').forEach(line => {
+                                if (line.dataset.playerName && line.dataset.playerName.includes(data.name)) {
+                                    line.remove();
+                                }
+                            });
+                            // Also remove any orphaned hooks
+                            mobileLake.querySelectorAll('.hook').forEach(hook => {
+                                const parentLine = hook.closest('.fishing-line');
+                                if (!parentLine || (parentLine.dataset.playerName && parentLine.dataset.playerName.includes(data.name))) {
+                                    hook.remove();
+                                }
+                            });
                         }
                         
                         // Reposition players to clean up empty spots
@@ -3798,16 +3803,22 @@
                 const mobileFishermanRow = document.getElementById('mobile-fisherman-row');
                 const mobileLake = document.getElementById('mobile-fishing-lake');
                 
-                // Clear existing fishermen and lines (including hooks)
+                // Clear existing fishermen and lines (including hooks) - comprehensive cleanup
                 if (fishermanRow) fishermanRow.innerHTML = '';
                 if (lake) {
+                    // Remove all fishing lines and hooks
                     lake.querySelectorAll('.fishing-line').forEach(l => l.remove());
                     lake.querySelectorAll('.hook').forEach(h => h.remove());
+                    // Also remove any orphaned splashes
+                    lake.querySelectorAll('.hook-splash, .hook-landing-splash').forEach(s => s.remove());
                 }
                 if (mobileFishermanRow) mobileFishermanRow.innerHTML = '';
                 if (mobileLake) {
+                    // Remove all fishing lines and hooks
                     mobileLake.querySelectorAll('.fishing-line').forEach(l => l.remove());
                     mobileLake.querySelectorAll('.hook').forEach(h => h.remove());
+                    // Also remove any orphaned splashes
+                    mobileLake.querySelectorAll('.hook-splash, .hook-landing-splash').forEach(s => s.remove());
                 }
                 
                 // Add current player
@@ -4097,6 +4108,9 @@
                 const line = document.createElement('div');
                 line.className = 'fishing-line';
                 line.dataset.playerIndex = playerIndex.toString();
+                // Store player name for better cleanup tracking
+                const playerName = fisherman.textContent.trim().split('\n')[0];
+                line.dataset.playerName = playerName;
                 if (isCasting) line.classList.add('casting');
                 
                 // Position line from fisherman to lake
