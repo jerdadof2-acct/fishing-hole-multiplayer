@@ -178,21 +178,36 @@
             min-height: 400px;
             max-height: 600px;
             background: 
-                radial-gradient(ellipse at center, #004488 0%, #002244 70%, #001122 100%),
+                /* Deep water gradient with depth */
+                radial-gradient(ellipse at center, #0055aa 0%, #003366 40%, #001122 100%),
+                /* Surface reflection */
+                linear-gradient(
+                    180deg,
+                    rgba(135, 206, 250, 0.3) 0%,
+                    rgba(70, 130, 180, 0.2) 10%,
+                    rgba(0, 100, 200, 0.1) 30%,
+                    transparent 70%
+                ),
+                /* Wave pattern - more realistic */
                 repeating-linear-gradient(
                     0deg,
-                    rgba(0, 100, 200, 0.1) 0px,
-                    rgba(0, 150, 255, 0.2) 2px,
-                    rgba(0, 100, 200, 0.1) 4px
-                );
+                    rgba(100, 180, 255, 0.2) 0px,
+                    rgba(100, 180, 255, 0.2) 6px,
+                    rgba(0, 100, 200, 0.15) 6px,
+                    rgba(0, 100, 200, 0.15) 12px
+                ),
+                /* Depth highlights */
+                radial-gradient(ellipse at 30% 40%, rgba(0, 150, 220, 0.2) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 60%, rgba(0, 150, 220, 0.15) 0%, transparent 50%);
             border: 3px solid #00ff00;
             position: relative;
             overflow: visible;
             box-shadow: 
                 0 0 20px rgba(0, 255, 0, 0.3), 
-                inset 0 0 50px rgba(0, 100, 200, 0.5),
-                inset 0 10px 100px rgba(0, 200, 255, 0.3);
-            animation: waterShimmer 3s ease-in-out infinite;
+                inset 0 0 80px rgba(0, 100, 200, 0.6),
+                inset 0 10px 120px rgba(0, 200, 255, 0.4),
+                0 0 30px rgba(0, 150, 220, 0.3);
+            animation: waterShimmer 4s ease-in-out infinite;
         }
 
         @keyframes waterShimmer {
@@ -215,11 +230,24 @@
             justify-content: center;
             font-size: 12px;
             font-weight: bold;
-            background: rgba(0, 0, 0, 0.8);
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
             color: #00ff00;
             position: relative;
             cursor: pointer;
             transition: all 0.3s ease;
+            box-shadow: 
+                0 0 15px rgba(0, 255, 0, 0.4),
+                inset 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .fisherman::before {
+            content: '🎣';
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 20px;
+            z-index: 1;
         }
 
         .fisherman-initial {
@@ -1740,6 +1768,7 @@
 
                     this.socket.on('player-joined', (data) => {
                         this.addChatMessage('other', `${data.name} joined the game!`);
+                        this.showGlobalAnnouncement(`👋 ${data.name} joined Fishing Hole!`, '#00ffff');
                         this.updateOnlinePlayers();
                     });
 
@@ -3015,6 +3044,83 @@
                         description: 'Catch 100 fish',
                         condition: () => this.player.totalCaught >= 100,
                         unlocked: this.player.achievements.includes('fish_master')
+                    },
+                    {
+                        id: 'tournament_champ',
+                        name: '🏆 Tournament Champion',
+                        description: 'Win a tournament',
+                        condition: () => this.player.tournamentStats && this.player.tournamentStats.wins > 0,
+                        unlocked: this.player.achievements.includes('tournament_champ')
+                    },
+                    {
+                        id: 'gear_collector',
+                        name: '🎒 Gear Collector',
+                        description: 'Own 10 pieces of tackle',
+                        condition: () => {
+                            let count = 0;
+                            Object.values(this.player.tackleUnlocks).forEach(arr => count += arr.length);
+                            return count >= 10;
+                        },
+                        unlocked: this.player.achievements.includes('gear_collector')
+                    },
+                    {
+                        id: 'location_explorer',
+                        name: '🗺️ Location Explorer',
+                        description: 'Unlock all locations',
+                        condition: () => this.player.locationUnlocks.length >= this.locations.length,
+                        unlocked: this.player.achievements.includes('location_explorer')
+                    },
+                    {
+                        id: 'level_20',
+                        name: '⭐ Master Angler',
+                        description: 'Reach level 20',
+                        condition: () => this.player.level >= 20,
+                        unlocked: this.player.achievements.includes('level_20')
+                    },
+                    {
+                        id: 'rare_catcher',
+                        name: '💎 Rare Fish Collector',
+                        description: 'Catch 20 rare fish',
+                        condition: () => {
+                            const rareFish = this.player.recentCatches.filter(c => 
+                                c.fish.rarity === 'Rare' || c.fish.rarity === 'Epic' || c.fish.rarity === 'Legendary'
+                            ).length;
+                            return rareFish >= 20;
+                        },
+                        unlocked: this.player.achievements.includes('rare_catcher')
+                    },
+                    {
+                        id: 'biggest_bag',
+                        name: '🎣 Biggest Bag',
+                        description: 'Have a top 10 bag over 50 lbs',
+                        condition: () => {
+                            const top10Total = this.player.top10BiggestFish.reduce((sum, c) => sum + c.weight, 0);
+                            return top10Total >= 50;
+                        },
+                        unlocked: this.player.achievements.includes('biggest_bag')
+                    },
+                    {
+                        id: 'legendary_catch',
+                        name: '✨ Legendary Hunter',
+                        description: 'Catch a legendary fish',
+                        condition: () => {
+                            return this.player.recentCatches.some(c => c.fish.rarity === 'Legendary');
+                        },
+                        unlocked: this.player.achievements.includes('legendary_catch')
+                    },
+                    {
+                        id: 'tournament_legend',
+                        name: '👑 Tournament Legend',
+                        description: 'Win 5 tournaments',
+                        condition: () => this.player.tournamentStats && this.player.tournamentStats.wins >= 5,
+                        unlocked: this.player.achievements.includes('tournament_legend')
+                    },
+                    {
+                        id: 'wealthy_angler',
+                        name: '💵 Wealthy Angler',
+                        description: 'Earn $5000',
+                        condition: () => this.player.money >= 5000,
+                        unlocked: this.player.achievements.includes('wealthy_angler')
                     }
                 ];
 
@@ -3036,7 +3142,16 @@
                     { id: 'level_5', name: '⭐ Rising Star', description: 'Reach level 5' },
                     { id: 'level_10', name: '🌟 Expert Angler', description: 'Reach level 10' },
                     { id: 'money_maker', name: '💰 Money Maker', description: 'Earn $1000' },
-                    { id: 'fish_master', name: '🐠 Fish Master', description: 'Catch 100 fish' }
+                    { id: 'fish_master', name: '🐠 Fish Master', description: 'Catch 100 fish' },
+                    { id: 'tournament_champ', name: '🏆 Tournament Champion', description: 'Win a tournament' },
+                    { id: 'gear_collector', name: '🎒 Gear Collector', description: 'Own 10 pieces of tackle' },
+                    { id: 'location_explorer', name: '🗺️ Location Explorer', description: 'Unlock all locations' },
+                    { id: 'level_20', name: '⭐ Master Angler', description: 'Reach level 20' },
+                    { id: 'rare_catcher', name: '💎 Rare Fish Collector', description: 'Catch 20 rare fish' },
+                    { id: 'biggest_bag', name: '🎣 Biggest Bag', description: 'Have a top 10 bag over 50 lbs' },
+                    { id: 'legendary_catch', name: '✨ Legendary Hunter', description: 'Catch a legendary fish' },
+                    { id: 'tournament_legend', name: '👑 Tournament Legend', description: 'Win 5 tournaments' },
+                    { id: 'wealthy_angler', name: '💵 Wealthy Angler', description: 'Earn $5000' }
                 ];
 
                 achievementsContainer.innerHTML = achievements.map(achievement => {

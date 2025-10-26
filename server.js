@@ -94,6 +94,17 @@ async function initDatabase() {
             )
         `);
 
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS player_tracking (
+                id SERIAL PRIMARY KEY,
+                player_name VARCHAR(255) NOT NULL,
+                first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                total_sessions INTEGER DEFAULT 1,
+                CONSTRAINT unique_player UNIQUE(player_name)
+            )
+        `);
+
         console.log('Database initialized successfully');
     } catch (error) {
         console.error('Database initialization error:', error);
@@ -134,6 +145,16 @@ io.on('connection', (socket) => {
                     JSON.stringify(playerData.stats || {})
                 ]);
             }
+
+            // Track player activity
+            await pool.query(`
+                INSERT INTO player_tracking (player_name, first_seen, last_seen, total_sessions)
+                VALUES ($1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
+                ON CONFLICT (player_name) 
+                DO UPDATE SET 
+                    last_seen = CURRENT_TIMESTAMP,
+                    total_sessions = player_tracking.total_sessions + 1
+            `, [name]);
 
             // Store active player with full data
             activePlayers.set(socket.id, { 
@@ -352,6 +373,23 @@ app.get('/api/leaderboard', async (req, res) => {
         res.json(players.rows);
     } catch (error) {
         console.error('Leaderboard error:', error);
+        res.json([]);
+    }
+});
+
+// Get player tracking data
+app.get('/api/player-tracking', async (req, res) => {
+    try {
+        const tracking = await pool.query(`
+            SELECT player_name, first_seen, last_seen, total_sessions
+            FROM player_tracking
+            ORDER BY last_seen DESC
+            LIMIT 100
+        `);
+        
+        res.json(tracking.rows);
+    } catch (error) {
+        console.error('Player tracking error:', error);
         res.json([]);
     }
 });
