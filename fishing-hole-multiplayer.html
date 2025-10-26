@@ -3113,29 +3113,13 @@
                         'sunglasses': 'Sunglasses'
                     };
                     
-                    // Use UI Avatars API - simpler and more reliable
-                    // It uses name-based avatars with customization options
-                    const params = new URLSearchParams();
+                    // Use RoboHash API - generates visual avatars with customization
+                    // Create a consistent seed based on options
+                    const seedString = `${avatarSeed}-${options.style}-${options.hairColor}-${options.facialHair}-${options.accessories}`;
                     
-                    // Use the seed as the name
-                    params.set('name', avatarSeed);
-                    
-                    // Set background color based on hair color selection
-                    const bgColors = {
-                        'Brown': '8B4513',  // Saddle brown
-                        'Black': '000000',   // Black
-                        'Blonde': 'FFD700',  // Gold
-                        'Gray': '808080'     // Gray
-                    };
-                    params.set('background', bgColors[options.hairColor] || '8B4513');
-                    
-                    // Style based on gender
-                    params.set('bold', options.style === 'male' ? 'true' : 'false');
-                    
-                    // Use the default circular style
-                    params.set('rounded', 'true');
-                    
-                    return `https://ui-avatars.com/api/?${params.toString()}`;
+                    // RoboHash generates avatar-like images based on seed
+                    // Add size parameter for consistent sizing
+                    return `https://robohash.org/${encodeURIComponent(seedString)}?set=set4&size=200x200`;
                 };
                 
                 // Update preview function
@@ -3372,28 +3356,13 @@
                     'sunglasses': 'Sunglasses'
                 };
                 
-                // Use UI Avatars API - simpler and more reliable
-                const params = new URLSearchParams();
+                // Use RoboHash API - generates visual avatars with customization
+                // Create a consistent seed based on player name and options
+                const seedString = `${playerName}-${options.style}-${options.hairColor}-${options.facialHair}-${options.accessories}`;
                 
-                // Use player name
-                params.set('name', playerName);
-                
-                // Set background color based on hair color selection
-                const bgColors = {
-                    'Brown': '8B4513',  // Saddle brown
-                    'Black': '000000',   // Black
-                    'Blonde': 'FFD700',  // Gold
-                    'Gray': '808080'     // Gray
-                };
-                params.set('background', bgColors[options.hairColor] || '8B4513');
-                
-                // Style based on gender
-                params.set('bold', options.style === 'male' ? 'true' : 'false');
-                
-                // Use the default circular style
-                params.set('rounded', 'true');
-                
-                return `https://ui-avatars.com/api/?${params.toString()}`;
+                // RoboHash generates avatar-like images based on seed
+                // Use set4 for more character-like avatars
+                return `https://robohash.org/${encodeURIComponent(seedString)}?set=set4&size=200x200`;
             }
 
             positionPlayers() {
