@@ -1660,15 +1660,17 @@
             }
 
             .mobile-menu-bar {
-                position: sticky;
+                position: fixed;
                 bottom: 0;
+                left: 0;
+                right: 0;
                 display: flex;
                 background: #001100;
                 border-top: 2px solid #00ff00;
                 padding: 8px;
                 gap: 5px;
                 flex-shrink: 0;
-                z-index: 100;
+                z-index: 1000;
             }
 
             .mobile-menu-btn {
@@ -1733,7 +1735,8 @@
                 overflow-x: hidden;
                 padding: 10px;
                 min-height: 0;
-                padding-bottom: 70px; /* Add space for menu bar */
+                padding-bottom: 80px; /* Add space for fixed menu bar */
+                margin-bottom: 0;
             }
 
             .mobile-tab-panel {
@@ -3178,9 +3181,19 @@
 
                 this.isCasting = true;
                 const castBtn = document.getElementById('cast-btn');
-                castBtn.textContent = 'REELING...';
-                castBtn.classList.add('casting');
-                castBtn.disabled = true;
+                const mobileCastBtn = document.getElementById('mobile-cast-btn');
+                
+                if (castBtn) {
+                    castBtn.textContent = 'REELING...';
+                    castBtn.classList.add('casting');
+                    castBtn.disabled = true;
+                }
+                
+                if (mobileCastBtn) {
+                    mobileCastBtn.textContent = 'REELING...';
+                    mobileCastBtn.classList.add('casting');
+                    mobileCastBtn.disabled = true;
+                }
 
                 // Add fishing line for current player
                 this.addFishingLine(0, true);
@@ -3374,7 +3387,12 @@
                 
                 // Animate reeling in with smooth animation
                 const lake = document.getElementById('fishing-lake');
-                const lines = lake.querySelectorAll('.fishing-line');
+                const mobileLake = document.getElementById('mobile-fishing-lake');
+                const activeLake = lake || mobileLake;
+                
+                if (!activeLake) return;
+                
+                const lines = activeLake.querySelectorAll('.fishing-line');
                 lines.forEach(line => {
                     // Store original height for animation
                     const originalHeight = line.offsetHeight;
@@ -3402,19 +3420,31 @@
                 });
                 
                 // Clean up any remaining splashes
-                const splashes = lake.querySelectorAll('.hook-splash');
+                const splashes = activeLake.querySelectorAll('.hook-splash');
                 splashes.forEach(splash => {
                     splash.style.animation = 'reelIn 0.8s ease-out forwards';
                     setTimeout(() => splash.remove(), 800);
                 });
                 
                 const ripples = document.getElementById('ripples');
-                ripples.classList.remove('active');
+                const mobileRipples = document.getElementById('mobile-ripples');
+                if (ripples) ripples.classList.remove('active');
+                if (mobileRipples) mobileRipples.classList.remove('active');
                 
                 const castBtn = document.getElementById('cast-btn');
-                castBtn.textContent = 'CAST LINE';
-                castBtn.classList.remove('casting');
-                castBtn.disabled = false;
+                const mobileCastBtn = document.getElementById('mobile-cast-btn');
+                
+                if (castBtn) {
+                    castBtn.textContent = 'CAST LINE';
+                    castBtn.classList.remove('casting');
+                    castBtn.disabled = false;
+                }
+                
+                if (mobileCastBtn) {
+                    mobileCastBtn.textContent = 'CAST LINE';
+                    mobileCastBtn.classList.remove('casting');
+                    mobileCastBtn.disabled = false;
+                }
 
                 const caughtFish = Math.random() < catchChance;
                 
