@@ -2693,7 +2693,10 @@
                     });
 
                     this.socket.on('fish-caught', (data) => {
-                        this.addChatMessage('other', `${data.player} caught a ${data.fish.name} (${data.weight.toFixed(1)} lbs)!`);
+                        // Only show chat message if not marked as silent (tournament catches are silent)
+                        if (!data.silent) {
+                            this.addChatMessage('other', `${data.player} caught a ${data.fish.name} (${data.weight.toFixed(1)} lbs)!`);
+                        }
                         
                         // Update tournament scores if this is a tournament catch
                         if (data.tournamentId && this.tournament && this.tournament.tournamentId === data.tournamentId) {
@@ -4751,9 +4754,11 @@
             broadcastCatch(fishData, weight, value, isRare = false, isHuge = false, isLegendary = false, isTrophy = false) {
                 const fishName = fishData.name;
                 const rarity = fishData.rarity;
+                const isNotable = isRare || isHuge || isLegendary || isTrophy;
                 
-                // Send catch to server for multiplayer
-                if (this.socket && this.connected) {
+                // Only broadcast notable catches (rare, huge, legendary, trophy) or tournament catches
+                // Regular catches outside tournaments are kept private to reduce chat spam
+                if (this.socket && this.connected && (isNotable || (this.tournament && this.tournament.active))) {
                     this.socket.emit('catch-fish', {
                         fish: fishData,
                         weight: weight,
@@ -4766,6 +4771,7 @@
                     });
                 }
                 
+                // Always show personal notification for your own catches
                 // Create special announcement for rare fish
                 if (isLegendary || isTrophy) {
                     this.addChatMessage('legendary', `🏆 LEGENDARY CATCH! ${this.player.name} caught a ${fishName}! ${weight.toFixed(1)}lbs, +$${value} 🏆`);
@@ -4777,6 +4783,7 @@
                     this.addChatMessage('huge', `🐟 HUGE FISH! ${this.player.name} caught a massive ${fishName}! ${weight.toFixed(1)}lbs, +$${value} 🐟`);
                     this.showGlobalAnnouncement(`🐟 HUGE FISH! ${this.player.name} caught a massive ${fishName}! ${weight.toFixed(1)}lbs 🐟`, '#ffff00');
                 } else {
+                    // Regular catch - only show personal message, not broadcast to others
                     this.addChatMessage('own', `You caught a ${fishName}! ${weight.toFixed(1)}lbs, +$${value}`);
                 }
             }
