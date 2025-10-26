@@ -31,6 +31,7 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E🎣%3C/text%3E%3C/svg%3E">
     <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E🎣%3C/text%3E%3C/svg%3E">
     <link rel="manifest" href="/manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Fishing Hole">
@@ -3096,39 +3097,40 @@
                         'Gray': 'SilverGray'
                     };
                     
-                    // Map facial hair
+                    // Map facial hair (DiceBear v7 format)
                     const facialHairMap = {
-                        'none': 'Blank',
-                        'beard': 'BeardMedium',
-                        'mustache': 'MoustacheFancy'
+                        'none': '',
+                        'beard': 'beardMedium',
+                        'mustache': 'moustacheFancy'
                     };
                     
-                    // Map accessories
+                    // Map accessories (DiceBear v7 format)
                     const accessoriesMap = {
-                        'none': 'Blank',
-                        'glasses': 'Prescription01',
-                        'sunglasses': 'Sunglasses'
+                        'none': '',
+                        'glasses': 'prescription01',
+                        'sunglasses': 'sunglasses'
                     };
                     
-                    // Build URL for DiceBear avataaars style
-                    let url = `https://api.dicebear.com/7.x/avataaars/svg?seed=${avatarSeed}`;
-                    url += `&hairColor=${hairColorMap[options.hairColor] || 'Auburn'}`;
+                    // Build URL for DiceBear avataaars style (correct v7 format)
+                    const params = new URLSearchParams();
+                    params.set('seed', avatarSeed);
+                    params.set('hairColor', (hairColorMap[options.hairColor] || 'Auburn').toLowerCase());
                     
                     if (options.style === 'male') {
-                        url += `&hair=ShortHairShortWaved,ShortHairDreads01,ShortHairShortRound`;
-                        if (options.facialHair !== 'none') {
-                            url += `&facialHairType=${facialHairMap[options.facialHair]}`;
-                            url += `&facialHairColor=${hairColorMap[options.hairColor] || 'Auburn'}`;
+                        params.set('hair', 'shortHairShortWaved,shortHairDreads01,shortHairShortRound');
+                        if (options.facialHair && options.facialHair !== 'none') {
+                            params.set('facialHairType', facialHairMap[options.facialHair]);
+                            params.set('facialHairColor', (hairColorMap[options.hairColor] || 'Auburn').toLowerCase());
                         }
                     } else {
-                        url += `&hair=LongHairStraight,LongHairCurly,LongHairBun`;
+                        params.set('hair', 'longHairStraight,longHairCurly,longHairBun');
                     }
                     
-                    if (options.accessories !== 'none') {
-                        url += `&accessoriesType=${accessoriesMap[options.accessories]}`;
+                    if (options.accessories && options.accessories !== 'none') {
+                        params.set('accessoriesType', accessoriesMap[options.accessories]);
                     }
                     
-                    return url;
+                    return `https://api.dicebear.com/7.x/avataaars/svg?${params.toString()}`;
                 };
                 
                 // Update preview function
@@ -3343,39 +3345,40 @@
                     'Gray': 'SilverGray'
                 };
                 
-                // Map facial hair
+                // Map facial hair (DiceBear v7 format)
                 const facialHairMap = {
-                    'none': 'Blank',
-                    'beard': 'BeardMedium',
-                    'mustache': 'MoustacheFancy'
+                    'none': '',
+                    'beard': 'beardMedium',
+                    'mustache': 'moustacheFancy'
                 };
                 
-                // Map accessories
+                // Map accessories (DiceBear v7 format)
                 const accessoriesMap = {
-                    'none': 'Blank',
-                    'glasses': 'Prescription01',
-                    'sunglasses': 'Sunglasses'
+                    'none': '',
+                    'glasses': 'prescription01',
+                    'sunglasses': 'sunglasses'
                 };
                 
-                // Build URL for DiceBear avataaars style
-                let url = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(playerName)}`;
-                url += `&hairColor=${hairColorMap[options.hairColor] || 'Auburn'}`;
+                // Build URL for DiceBear avataaars style (correct v7 format)
+                const params = new URLSearchParams();
+                params.set('seed', playerName);
+                params.set('hairColor', (hairColorMap[options.hairColor] || 'Auburn').toLowerCase());
                 
                 if (options.style === 'male') {
-                    url += `&hair=ShortHairShortWaved,ShortHairDreads01,ShortHairShortRound`;
-                    if (options.facialHair !== 'none') {
-                        url += `&facialHairType=${facialHairMap[options.facialHair]}`;
-                        url += `&facialHairColor=${hairColorMap[options.hairColor] || 'Auburn'}`;
+                    params.set('hair', 'shortHairShortWaved,shortHairDreads01,shortHairShortRound');
+                    if (options.facialHair && options.facialHair !== 'none') {
+                        params.set('facialHairType', facialHairMap[options.facialHair]);
+                        params.set('facialHairColor', (hairColorMap[options.hairColor] || 'Auburn').toLowerCase());
                     }
                 } else {
-                    url += `&hair=LongHairStraight,LongHairCurly,LongHairBun`;
+                    params.set('hair', 'longHairStraight,longHairCurly,longHairBun');
                 }
                 
-                if (options.accessories !== 'none') {
-                    url += `&accessoriesType=${accessoriesMap[options.accessories]}`;
+                if (options.accessories && options.accessories !== 'none') {
+                    params.set('accessoriesType', accessoriesMap[options.accessories]);
                 }
                 
-                return url;
+                return `https://api.dicebear.com/7.x/avataaars/svg?${params.toString()}`;
             }
 
             positionPlayers() {
