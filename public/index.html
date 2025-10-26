@@ -5849,7 +5849,9 @@
 
             openInventory() {
                 document.getElementById('inventory-modal').style.display = 'block';
-                this.switchInventoryTab('recent');
+                // Refresh gear display to ensure current values are shown
+                const currentTab = document.querySelector('.inventory-tabs .tab-btn.active')?.dataset.tab || 'recent';
+                this.switchInventoryTab(currentTab);
             }
 
             closeInventory() {
@@ -5992,11 +5994,15 @@
             }
 
             renderEquippedGear(container) {
-                const rod = this.player.gear.rod || 'None';
-                const reel = this.player.gear.reel || 'None';
-                const line = this.player.gear.line || 'None';
-                const hook = this.player.gear.hook || 'None';
-                const bait = this.player.gear.bait || 'None';
+                // Debug: Log actual gear values
+                console.log('Current equipped gear:', this.player.gear);
+                
+                // Get actual equipped gear - ensure we're reading the current values
+                const rod = this.player.gear?.rod || 'None';
+                const reel = this.player.gear?.reel || 'None';
+                const line = this.player.gear?.line || 'None';
+                const hook = this.player.gear?.hook || 'None';
+                const bait = this.player.gear?.bait || 'None';
                 
                 const html = `
                     <div style="padding: 20px;">
