@@ -1438,8 +1438,8 @@
             .mobile-game-layout {
                 display: flex;
                 flex-direction: column;
-                height: calc(100vh - 50px);
-                overflow-y: auto;
+                height: 100vh;
+                overflow: hidden;
             }
 
             .mobile-header {
@@ -1449,6 +1449,7 @@
                 padding: 8px;
                 background: #001100;
                 border-bottom: 2px solid #00ff00;
+                flex-shrink: 0;
             }
 
             .mobile-header-left {
@@ -1615,15 +1616,15 @@
             }
 
             .mobile-menu-bar {
-                position: fixed;
+                position: sticky;
                 bottom: 0;
-                left: 0;
-                right: 0;
                 display: flex;
                 background: #001100;
                 border-top: 2px solid #00ff00;
                 padding: 8px;
                 gap: 5px;
+                flex-shrink: 0;
+                z-index: 100;
             }
 
             .mobile-menu-btn {
@@ -1650,6 +1651,10 @@
                 border-bottom: 2px solid #00ff00;
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
+                flex-shrink: 0;
+                position: sticky;
+                top: 0;
+                z-index: 100;
             }
 
             .mobile-tab-btn {
@@ -1681,7 +1686,9 @@
             .mobile-tab-content {
                 flex: 1;
                 overflow-y: auto;
+                overflow-x: hidden;
                 padding: 10px;
+                min-height: 0;
             }
 
             .mobile-tab-panel {
@@ -1880,6 +1887,15 @@
 
         <!-- Mobile Layout (hidden by default, shown on mobile via CSS) -->
         <div class="mobile-game-layout" id="mobile-game-layout" style="display: none;">
+        <!-- Mobile Tab Navigation - At the very top -->
+        <div class="mobile-tabs">
+            <button class="mobile-tab-btn active" data-tab="gameplay">🎣 FISH</button>
+            <button class="mobile-tab-btn" data-tab="chat">💬 CHAT</button>
+            <button class="mobile-tab-btn" data-tab="stats">📊 STATS</button>
+            <button class="mobile-tab-btn" data-tab="inventory">🎒 INV</button>
+            <button class="mobile-tab-btn" data-tab="leaderboard">🏆 LEADER</button>
+        </div>
+
         <div class="mobile-header">
             <div class="mobile-header-left">
                 <div class="mobile-header-name" id="mobile-player-name">Guest</div>
@@ -1889,15 +1905,6 @@
                 <div>Exp: <span id="mobile-player-exp">0</span>/<span id="mobile-next-exp">100</span></div>
                 <div><span id="mobile-fish-count">0</span> fish | <span id="mobile-total-weight">0</span> lbs</div>
             </div>
-        </div>
-
-        <!-- Mobile Tab Navigation -->
-        <div class="mobile-tabs">
-            <button class="mobile-tab-btn active" data-tab="gameplay">🎣 FISH</button>
-            <button class="mobile-tab-btn" data-tab="chat">💬 CHAT</button>
-            <button class="mobile-tab-btn" data-tab="stats">📊 STATS</button>
-            <button class="mobile-tab-btn" data-tab="inventory">🎒 INV</button>
-            <button class="mobile-tab-btn" data-tab="leaderboard">🏆 LEADER</button>
         </div>
 
         <!-- Mobile Tab Content -->
