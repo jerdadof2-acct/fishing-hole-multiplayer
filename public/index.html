@@ -1823,76 +1823,161 @@
             }
         }
 
-        /* Tablet Layout (768px - 1024px) */
+        /* Tablet Layout (768px - 1024px) - Complete Responsive Redesign */
         @media (min-width: 769px) and (max-width: 1024px) {
-            /* Responsive font scaling */
+            /* Calculate space needed:
+               Header: ~50px
+               Sidebars (collapsed): ~120px total
+               Controls: ~60px
+               Ad: ~90px
+               Chat (collapsed): 40px, (expanded): 180px
+               Total fixed: ~360px (collapsed) or ~500px (expanded)
+               Available for lake: 1024px - 360px = 664px (collapsed) or 524px (expanded)
+            */
+            
+            body {
+                overflow-y: auto;
+            }
+            
+            .game-container {
+                height: auto;
+                min-height: 100vh;
+            }
+            
+            .main-area {
+                flex: 1;
+                min-height: 100vh;
+            }
+            
+            /* Compact header */
+            .header {
+                padding: 8px 15px;
+            }
+            
             .header h1 {
-                font-size: 20px;
-                padding: 10px;
+                font-size: 18px;
+                padding: 0;
             }
             
-            .section h3 {
-                font-size: 13px;
-            }
-            
-            .stat-line {
-                font-size: 11px;
-            }
-            
-            .control-btn {
-                font-size: 11px;
-                padding: 8px 12px;
-                min-width: 100px;
-            }
-            
+            /* Make sidebars very compact and horizontally scrollable */
             .game-layout {
                 flex-direction: column;
-                padding-bottom: 50px; /* Space for collapsed chat */
+                padding-bottom: 0;
             }
             
             .left-sidebar, .right-sidebar {
                 width: 100%;
-                max-height: 150px;
+                max-height: 120px;
                 overflow-y: auto;
+                overflow-x: hidden;
+                padding: 6px;
+                display: flex;
+                flex-direction: row;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+            
+            .left-sidebar .section,
+            .right-sidebar .section {
+                flex: 1;
+                min-width: 150px;
+                max-width: 300px;
+                padding: 6px;
+                margin-bottom: 0;
+            }
+            
+            .section h3 {
+                font-size: 11px;
+                margin-bottom: 4px;
+            }
+            
+            .stat-line {
+                font-size: 10px;
+                margin: 3px 0;
+                padding: 2px 0;
+            }
+            
+            .player-info {
                 padding: 8px;
+                font-size: 11px;
             }
             
-            /* Reduce lake size significantly to show ads and chat */
+            /* Calculate lake size precisely */
+            .fishing-area {
+                min-height: 300px;
+                max-height: calc(100vh - 400px);
+                flex-shrink: 0;
+            }
+            
             .fishing-lake {
-                max-width: 100%;
                 width: calc(100% - 40px);
-                height: calc(100vh - 650px); /* Much smaller to fit chat and ads */
-                min-height: 250px;
-                max-height: 400px;
+                height: calc(100vh - 420px); /* Header (50) + Sidebars (120) + Controls (60) + Ad (90) + Chat collapsed (40) + margins (60) */
+                min-height: 280px;
+                max-height: 450px;
             }
             
-            /* Ensure controls are compact */
+            /* Compact controls */
             .controls {
                 flex-wrap: wrap;
                 gap: 6px;
-                padding: 10px;
+                padding: 8px;
+                flex-shrink: 0;
             }
             
-            /* Make chat section visible */
+            .control-btn {
+                font-size: 10px;
+                padding: 6px 10px;
+                min-width: 90px;
+            }
+            
+            /* Ensure chat is always visible */
+            .chat-section {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                z-index: 150;
+            }
+            
             .chat-section.expanded {
-                height: 180px;
+                height: 160px;
             }
             
             .chat-section.collapsed {
                 height: 40px;
             }
             
-            /* Ensure ads are visible and properly sized */
+            /* Make ads visible */
             .ad-container-desktop {
                 max-width: 100%;
-                margin: 8px auto;
+                margin: 6px auto;
                 min-height: 80px;
+                flex-shrink: 0;
             }
             
-            /* Compact sections */
+            /* Reduce all spacing */
             .section {
-                padding: 8px;
-                margin-bottom: 8px;
+                padding: 6px;
+                margin-bottom: 4px;
+            }
+            
+            .achievements {
+                max-height: 80px;
+                padding: 6px;
+            }
+            
+            .achievement-item {
+                font-size: 9px;
+                padding: 2px 4px;
+            }
+            
+            .leaderboard-list {
+                max-height: 100px;
+            }
+            
+            .leaderboard-item {
+                font-size: 9px;
+                padding: 4px 6px;
             }
         }
 
