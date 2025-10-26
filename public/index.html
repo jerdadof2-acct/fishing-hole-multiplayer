@@ -169,6 +169,22 @@
             }
         }
 
+        /* Tablet: Adjust layout when chat is expanded */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .chat-section.expanded {
+                height: 180px;
+            }
+            
+            .chat-section.expanded ~ .game-layout {
+                padding-bottom: 190px; /* Extra space for expanded chat on tablet */
+            }
+            
+            /* Ensure chat doesn't cover critical elements */
+            .chat-section {
+                z-index: 150; /* Above most content but below modals */
+            }
+        }
+
         .header {
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             padding: 15px;
@@ -1804,6 +1820,50 @@
             
             .fishing-lake {
                 max-width: calc(100vw - 450px);
+            }
+        }
+
+        /* Tablet Layout (768px - 1024px) */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .game-layout {
+                flex-direction: column;
+                padding-bottom: 50px; /* Space for collapsed chat */
+            }
+            
+            .left-sidebar, .right-sidebar {
+                width: 100%;
+                max-height: 180px;
+                overflow-y: auto;
+            }
+            
+            .fishing-lake {
+                max-width: 100%;
+                width: calc(100% - 40px);
+                height: calc(100vh - 500px);
+                min-height: 300px;
+            }
+            
+            /* Make chat section taller on tablet */
+            .chat-section.expanded {
+                height: 200px;
+            }
+            
+            /* Ensure ads are visible */
+            .ad-container-desktop {
+                max-width: 100%;
+                margin: 8px auto;
+            }
+            
+            /* Stack controls vertically if needed */
+            .controls {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            
+            .control-btn {
+                min-width: 120px;
+                font-size: 12px;
+                padding: 8px 12px;
             }
         }
 
