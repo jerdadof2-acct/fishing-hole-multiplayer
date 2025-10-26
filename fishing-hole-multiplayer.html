@@ -219,6 +219,30 @@
             box-shadow: 0 0 10px #00ff00;
         }
 
+        .char-option-btn {
+            padding: 6px 12px;
+            border: 2px solid #004400;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #000;
+            color: #00ff00;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .char-option-btn:hover {
+            border-color: #00ff00;
+            background: #001100;
+            transform: scale(1.05);
+        }
+
+        .char-option-btn[data-selected="true"] {
+            border-color: #00ff00;
+            background: #003300;
+            box-shadow: 0 0 8px #00ff00;
+        }
+
         .fishing-area {
             flex: 1;
             position: relative;
@@ -2188,29 +2212,51 @@
                 <label style="color: #00ff00; display: block; margin-bottom: 8px;">Customize Your Character:</label>
                 
                 <!-- Character Preview -->
-                <div style="text-align: center; margin: 15px 0; font-size: 48px; min-height: 60px; background: #000; border: 2px solid #00ff00; border-radius: 8px; padding: 10px;">
-                    <span id="character-preview-base">👨</span>
+                <div style="text-align: center; margin: 15px 0; min-height: 120px; background: #000; border: 2px solid #00ff00; border-radius: 8px; padding: 10px; display: flex; align-items: center; justify-content: center;">
+                    <img id="character-preview-avatar" src="" alt="Avatar Preview" style="width: 100px; height: 100px; border-radius: 50%; border: 2px solid #00ff00;">
                 </div>
                 
-                <!-- Base Person - 4 Male, 4 Female Options -->
+                <!-- Avatar Customization -->
                 <div style="margin-bottom: 10px;">
-                    <label style="color: #00ff00; font-size: 12px; display: block; margin-bottom: 5px;">Choose Your Character:</label>
-                    <div style="margin-bottom: 10px;">
-                        <div style="color: #00ff00; font-size: 11px; margin-bottom: 5px;">Male:</div>
+                    <label style="color: #00ff00; font-size: 12px; display: block; margin-bottom: 5px;">Customize Your Character:</label>
+                    
+                    <!-- Gender -->
+                    <div style="margin-bottom: 8px;">
+                        <div style="color: #00ff00; font-size: 11px; margin-bottom: 3px;">Gender:</div>
                         <div class="character-selector-small">
-                            <div class="char-part-option" data-part="base" data-emoji="👨" title="Brown/Black Hair">👨</div>
-                            <div class="char-part-option" data-part="base" data-emoji="👨‍🦱" title="Curly Hair">👨‍🦱</div>
-                            <div class="char-part-option" data-part="base" data-emoji="👨‍🦳" title="Gray Hair">👨‍🦳</div>
-                            <div class="char-part-option" data-part="base" data-emoji="👨‍🦰" title="Blonde Hair">👨‍🦰</div>
+                            <div class="char-option-btn" data-option="style" data-value="male" data-selected="true">Male</div>
+                            <div class="char-option-btn" data-option="style" data-value="female">Female</div>
                         </div>
                     </div>
-                    <div>
-                        <div style="color: #00ff00; font-size: 11px; margin-bottom: 5px;">Female:</div>
+                    
+                    <!-- Hair Color -->
+                    <div style="margin-bottom: 8px;">
+                        <div style="color: #00ff00; font-size: 11px; margin-bottom: 3px;">Hair Color:</div>
                         <div class="character-selector-small">
-                            <div class="char-part-option" data-part="base" data-emoji="👩" title="Brown/Black Hair">👩</div>
-                            <div class="char-part-option" data-part="base" data-emoji="👩‍🦱" title="Curly Hair">👩‍🦱</div>
-                            <div class="char-part-option" data-part="base" data-emoji="👩‍🦳" title="Gray Hair">👩‍🦳</div>
-                            <div class="char-part-option" data-part="base" data-emoji="👩‍🦰" title="Blonde Hair">👩‍🦰</div>
+                            <div class="char-option-btn" data-option="hairColor" data-value="Brown" data-selected="true">Brown</div>
+                            <div class="char-option-btn" data-option="hairColor" data-value="Black">Black</div>
+                            <div class="char-option-btn" data-option="hairColor" data-value="Blonde">Blonde</div>
+                            <div class="char-option-btn" data-option="hairColor" data-value="Gray">Gray</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Facial Hair (Male only) -->
+                    <div style="margin-bottom: 8px;" id="facial-hair-section">
+                        <div style="color: #00ff00; font-size: 11px; margin-bottom: 3px;">Facial Hair:</div>
+                        <div class="character-selector-small">
+                            <div class="char-option-btn" data-option="facialHair" data-value="none" data-selected="true">None</div>
+                            <div class="char-option-btn" data-option="facialHair" data-value="beard">Beard</div>
+                            <div class="char-option-btn" data-option="facialHair" data-value="mustache">Mustache</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Accessories -->
+                    <div style="margin-bottom: 8px;">
+                        <div style="color: #00ff00; font-size: 11px; margin-bottom: 3px;">Accessories:</div>
+                        <div class="character-selector-small">
+                            <div class="char-option-btn" data-option="accessories" data-value="none" data-selected="true">None</div>
+                            <div class="char-option-btn" data-option="accessories" data-value="glasses">Glasses</div>
+                            <div class="char-option-btn" data-option="accessories" data-value="sunglasses">Sunglasses</div>
                         </div>
                     </div>
                 </div>
@@ -2232,7 +2278,8 @@
                 this.connected = false;
                 this.player = {
                     name: 'Guest',
-                    character: '👨', // Default character emoji
+                    character: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default', // Default avatar URL
+                    avatarOptions: { style: 'male', hairColor: 'Brown', facialHair: 'none', accessories: 'none' }, // Avatar customization options
                     level: 1,
                     money: 100,
                     experience: 0,
@@ -3027,34 +3074,101 @@
                 // Login button
                 document.getElementById('login-btn').addEventListener('click', () => this.login());
 
-                // Character customization
-                let selectedBase = '👨';
+                // Character customization with DiceBear API
+                let avatarOptions = {
+                    style: 'male',
+                    hairColor: 'Brown',
+                    facialHair: 'none',
+                    accessories: 'none'
+                };
+                
+                // Generate DiceBear avatar URL
+                const generateAvatarUrl = (options, seed = null) => {
+                    const params = new URLSearchParams();
+                    // Use provided seed or generate random one
+                    const avatarSeed = seed || Math.random().toString(36).substring(7);
+                    
+                    // Map hair colors to DiceBear format
+                    const hairColorMap = {
+                        'Brown': 'Auburn',
+                        'Black': 'Black',
+                        'Blonde': 'Blonde',
+                        'Gray': 'SilverGray'
+                    };
+                    
+                    // Map facial hair
+                    const facialHairMap = {
+                        'none': 'Blank',
+                        'beard': 'BeardMedium',
+                        'mustache': 'MoustacheFancy'
+                    };
+                    
+                    // Map accessories
+                    const accessoriesMap = {
+                        'none': 'Blank',
+                        'glasses': 'Prescription01',
+                        'sunglasses': 'Sunglasses'
+                    };
+                    
+                    // Build URL for DiceBear avataaars style
+                    let url = `https://api.dicebear.com/7.x/avataaars/svg?seed=${avatarSeed}`;
+                    url += `&hairColor=${hairColorMap[options.hairColor] || 'Auburn'}`;
+                    
+                    if (options.style === 'male') {
+                        url += `&hair=ShortHairShortWaved,ShortHairDreads01,ShortHairShortRound`;
+                        if (options.facialHair !== 'none') {
+                            url += `&facialHairType=${facialHairMap[options.facialHair]}`;
+                            url += `&facialHairColor=${hairColorMap[options.hairColor] || 'Auburn'}`;
+                        }
+                    } else {
+                        url += `&hair=LongHairStraight,LongHairCurly,LongHairBun`;
+                    }
+                    
+                    if (options.accessories !== 'none') {
+                        url += `&accessoriesType=${accessoriesMap[options.accessories]}`;
+                    }
+                    
+                    return url;
+                };
                 
                 // Update preview function
                 const updatePreview = () => {
-                    const previewBase = document.getElementById('character-preview-base');
-                    if (previewBase) {
-                        previewBase.textContent = selectedBase;
+                    const previewImg = document.getElementById('character-preview-avatar');
+                    if (previewImg) {
+                        const avatarUrl = generateAvatarUrl(avatarOptions);
+                        previewImg.src = avatarUrl;
+                    }
+                    
+                    // Hide/show facial hair section based on gender
+                    const facialHairSection = document.getElementById('facial-hair-section');
+                    if (facialHairSection) {
+                        facialHairSection.style.display = avatarOptions.style === 'male' ? 'block' : 'none';
                     }
                 };
                 
-                // Base selection
-                document.querySelectorAll('.char-part-option[data-part="base"]').forEach(option => {
-                    option.addEventListener('click', () => {
-                        document.querySelectorAll('.char-part-option[data-part="base"]').forEach(opt => opt.classList.remove('selected'));
-                        option.classList.add('selected');
-                        selectedBase = option.dataset.emoji;
+                // Handle option button clicks
+                document.querySelectorAll('.char-option-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const option = btn.dataset.option;
+                        const value = btn.dataset.value;
+                        
+                        // Remove selected from other buttons in same group
+                        document.querySelectorAll(`.char-option-btn[data-option="${option}"]`).forEach(b => {
+                            b.removeAttribute('data-selected');
+                        });
+                        
+                        // Mark this button as selected
+                        btn.setAttribute('data-selected', 'true');
+                        
+                        // Update avatar options
+                        avatarOptions[option] = value;
+                        
+                        // Update preview
                         updatePreview();
                     });
                 });
                 
-                // Default select first base
-                const firstBase = document.querySelector('.char-part-option[data-part="base"]');
-                if (firstBase) {
-                    firstBase.classList.add('selected');
-                    selectedBase = firstBase.dataset.emoji;
-                }
-                
+                // Initialize preview
                 updatePreview();
 
                 // Inventory tab buttons
@@ -3181,15 +3295,21 @@
                     return;
                 }
 
-                // Get selected character from character builder
-                const previewBase = document.getElementById('character-preview-base');
-                if (previewBase) {
-                    this.player.character = previewBase.textContent.trim() || '👨';
-                } else {
-                    this.player.character = '👨';
-                }
-
                 this.player.name = name;
+                
+                // Get selected avatar from character builder
+                const previewImg = document.getElementById('character-preview-avatar');
+                if (previewImg && previewImg.src) {
+                    // Store avatar options and regenerate URL with player name as seed for consistency
+                    this.player.avatarOptions = { ...avatarOptions };
+                    // Regenerate avatar URL with player name as seed (make generateAvatarUrl accessible)
+                    const avatarUrl = this.generateAvatarUrlForPlayer(name, avatarOptions);
+                    this.player.character = avatarUrl;
+                } else {
+                    // Fallback to default avatar
+                    this.player.character = this.generateAvatarUrlForPlayer(name, { style: 'male', hairColor: 'Brown', facialHair: 'none', accessories: 'none' });
+                    this.player.avatarOptions = { style: 'male', hairColor: 'Brown', facialHair: 'none', accessories: 'none' };
+                }
                 document.getElementById('login-screen').classList.add('hidden');
                 this.addChatMessage('system', `${name} entered the fishing hole!`);
                 this.positionPlayers(); // Reposition players with new name
@@ -3198,6 +3318,50 @@
                 this.joinGame();
                 this.updateDisplay();
                 this.saveGameData(); // Save character selection
+            }
+
+            generateAvatarUrlForPlayer(playerName, options) {
+                // Map hair colors to DiceBear format
+                const hairColorMap = {
+                    'Brown': 'Auburn',
+                    'Black': 'Black',
+                    'Blonde': 'Blonde',
+                    'Gray': 'SilverGray'
+                };
+                
+                // Map facial hair
+                const facialHairMap = {
+                    'none': 'Blank',
+                    'beard': 'BeardMedium',
+                    'mustache': 'MoustacheFancy'
+                };
+                
+                // Map accessories
+                const accessoriesMap = {
+                    'none': 'Blank',
+                    'glasses': 'Prescription01',
+                    'sunglasses': 'Sunglasses'
+                };
+                
+                // Build URL for DiceBear avataaars style
+                let url = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(playerName)}`;
+                url += `&hairColor=${hairColorMap[options.hairColor] || 'Auburn'}`;
+                
+                if (options.style === 'male') {
+                    url += `&hair=ShortHairShortWaved,ShortHairDreads01,ShortHairShortRound`;
+                    if (options.facialHair !== 'none') {
+                        url += `&facialHairType=${facialHairMap[options.facialHair]}`;
+                        url += `&facialHairColor=${hairColorMap[options.hairColor] || 'Auburn'}`;
+                    }
+                } else {
+                    url += `&hair=LongHairStraight,LongHairCurly,LongHairBun`;
+                }
+                
+                if (options.accessories !== 'none') {
+                    url += `&accessoriesType=${accessoriesMap[options.accessories]}`;
+                }
+                
+                return url;
             }
 
             positionPlayers() {
@@ -3216,20 +3380,39 @@
                 const playerFisher = document.createElement('div');
                 playerFisher.className = 'fisherman you';
                 playerFisher.id = 'player-fisher';
-                playerFisher.innerHTML = `
-                    <div class="fisherman-character">${this.player.character || '🧑‍🦰'}</div>
-                    <div class="fisherman-name">${this.player.name}</div>
-                `;
+                
+                // Check if character is an image URL or emoji
+                const isImageUrl = this.player.character && (this.player.character.startsWith('http') || this.player.character.startsWith('data:'));
+                
+                if (isImageUrl) {
+                    playerFisher.innerHTML = `
+                        <img src="${this.player.character}" alt="${this.player.name}" class="fisherman-avatar" style="width: 40px; height: 40px; border-radius: 50%;">
+                        <div class="fisherman-name">${this.player.name}</div>
+                    `;
+                } else {
+                    playerFisher.innerHTML = `
+                        <div class="fisherman-character">${this.player.character || '👨'}</div>
+                        <div class="fisherman-name">${this.player.name}</div>
+                    `;
+                }
                 if (fishermanRow) fishermanRow.appendChild(playerFisher);
 
                 // Add mobile player
                 const mobilePlayerFisher = document.createElement('div');
                 mobilePlayerFisher.className = 'mobile-fisherman';
                 mobilePlayerFisher.id = 'mobile-player-fisher';
-                mobilePlayerFisher.innerHTML = `
-                    <div class="mobile-fisherman-character">${this.player.character || '🧑‍🦰'}</div>
-                    <div class="mobile-fisherman-name">${this.player.name}</div>
-                `;
+                
+                if (isImageUrl) {
+                    mobilePlayerFisher.innerHTML = `
+                        <img src="${this.player.character}" alt="${this.player.name}" class="mobile-fisherman-avatar" style="width: 30px; height: 30px; border-radius: 50%;">
+                        <div class="mobile-fisherman-name">${this.player.name}</div>
+                    `;
+                } else {
+                    mobilePlayerFisher.innerHTML = `
+                        <div class="mobile-fisherman-character">${this.player.character || '👨'}</div>
+                        <div class="mobile-fisherman-name">${this.player.name}</div>
+                    `;
+                }
                 if (mobileFishermanRow) mobileFishermanRow.appendChild(mobilePlayerFisher);
                 
                 // Add other players
