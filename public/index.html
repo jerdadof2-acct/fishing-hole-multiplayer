@@ -1535,10 +1535,49 @@
                 border-radius: 15px;
                 border: 3px solid #00ff00;
                 position: relative;
-                overflow: hidden;
+                overflow: visible;
                 box-shadow: 
                     0 0 30px rgba(0, 255, 0, 0.3),
                     inset 0 0 50px rgba(0, 0, 0, 0.2);
+            }
+
+            .mobile-fishing-lake .fishing-line {
+                position: absolute;
+                width: 2px;
+                background: #ffffff;
+                z-index: 5;
+            }
+
+            .mobile-fishing-lake .hook {
+                position: absolute;
+                bottom: -12px;
+                left: 50%;
+                width: 16px;
+                height: 20px;
+                background: repeating-linear-gradient(
+                    45deg,
+                    #ff0000 0px,
+                    #ff0000 3px,
+                    #ffffff 3px,
+                    #ffffff 6px
+                );
+                border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+                border: 1px solid #cc0000;
+                box-shadow: 
+                    0 0 5px rgba(0, 0, 0, 0.3),
+                    inset 0 2px 5px rgba(255, 255, 255, 0.3);
+                transform: translateX(-50%);
+            }
+
+            .mobile-fishing-lake .hook::before {
+                content: '';
+                position: absolute;
+                top: 3px;
+                left: 30%;
+                width: 40%;
+                height: 30%;
+                background: rgba(255, 255, 255, 0.6);
+                border-radius: 50%;
             }
 
             .mobile-controls {
@@ -1694,6 +1733,7 @@
                 overflow-x: hidden;
                 padding: 10px;
                 min-height: 0;
+                padding-bottom: 70px; /* Add space for menu bar */
             }
 
             .mobile-tab-panel {
@@ -3573,6 +3613,12 @@
                 // Notify other players with special announcement for rare fish
                 this.broadcastCatch(fishData, weight, value, isRare, isHuge, isLegendary, isTrophy);
 
+                // Update mobile inventory
+                const mobileRecentCatches = document.getElementById('mobile-recent-catches');
+                if (mobileRecentCatches) {
+                    this.renderRecentCatches(mobileRecentCatches);
+                }
+
                 this.updateDisplay();
                 this.saveGameData(); // Auto-save after catching fish
             }
@@ -3774,6 +3820,7 @@
 
             updateAchievementsDisplay() {
                 const achievementsContainer = document.getElementById('achievements');
+                const mobileAchievementsContainer = document.getElementById('mobile-achievements');
                 const achievements = [
                     { id: 'first_catch', name: '🎣 Novice Angler', description: 'Catch your first fish' },
                     { id: 'big_fish', name: '🐟 Big Fish Hunter', description: 'Catch a fish over 10 lbs' },
@@ -3792,10 +3839,13 @@
                     { id: 'wealthy_angler', name: '💵 Wealthy Angler', description: 'Earn $5000' }
                 ];
 
-                achievementsContainer.innerHTML = achievements.map(achievement => {
+                const achievementHTML = achievements.map(achievement => {
                     const unlocked = this.player.achievements.includes(achievement.id);
                     return `<div class="achievement-item ${unlocked ? '' : 'locked'}" title="${achievement.description}">${achievement.name}</div>`;
                 }).join('');
+
+                if (achievementsContainer) achievementsContainer.innerHTML = achievementHTML;
+                if (mobileAchievementsContainer) mobileAchievementsContainer.innerHTML = achievementHTML;
             }
 
             checkLocationUnlocks() {
@@ -5107,10 +5157,11 @@
 
                 // Update display
                 const container = document.getElementById('biggest-fish-leaderboard');
-                if (biggestFishLeaders.length === 0) {
-                    container.innerHTML = '<div class="leaderboard-item">No fish caught yet</div>';
-                } else {
-                    container.innerHTML = biggestFishLeaders.map((player, index) => {
+                const mobileContainer = document.getElementById('mobile-biggest-fish-leaderboard');
+                
+                const leaderboardHTML = biggestFishLeaders.length === 0 
+                    ? '<div class="leaderboard-item">No fish caught yet</div>'
+                    : biggestFishLeaders.map((player, index) => {
                         const weight = Number(player.biggestFish) || 0;
                         return `
                         <div class="leaderboard-item">
@@ -5120,7 +5171,9 @@
                         </div>
                     `;
                     }).join('');
-                }
+
+                if (container) container.innerHTML = leaderboardHTML;
+                if (mobileContainer) mobileContainer.innerHTML = leaderboardHTML;
             }
 
             updateTop10BiggestFish(catchData) {
@@ -5183,17 +5236,20 @@
 
                 // Update display
                 const container = document.getElementById('biggest-bags-leaderboard');
-                if (biggestBagsLeaders.length === 0) {
-                    container.innerHTML = '<div class="leaderboard-item">No fish caught yet</div>';
-                } else {
-                    container.innerHTML = biggestBagsLeaders.map((player, index) => `
+                const mobileContainer = document.getElementById('mobile-biggest-bags-leaderboard');
+                
+                const leaderboardHTML = biggestBagsLeaders.length === 0
+                    ? '<div class="leaderboard-item">No fish caught yet</div>'
+                    : biggestBagsLeaders.map((player, index) => `
                         <div class="leaderboard-item">
                             <span class="rank">#${index + 1}</span>
                             <span class="player-name">${player.name}</span>
                             <span class="weight">${player.bagWeight.toFixed(1)} lbs</span>
                         </div>
                     `).join('');
-                }
+
+                if (container) container.innerHTML = leaderboardHTML;
+                if (mobileContainer) mobileContainer.innerHTML = leaderboardHTML;
             }
 
             // Auto-save every 30 seconds
