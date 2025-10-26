@@ -2189,41 +2189,29 @@
                 
                 <!-- Character Preview -->
                 <div style="text-align: center; margin: 15px 0; font-size: 48px; min-height: 60px; background: #000; border: 2px solid #00ff00; border-radius: 8px; padding: 10px;">
-                    <span id="character-preview-base">🧑</span>
+                    <span id="character-preview-base">👨</span>
                 </div>
                 
-                <!-- Base Person - Organized by Hair Color/Style -->
+                <!-- Base Person - 4 Male, 4 Female Options -->
                 <div style="margin-bottom: 10px;">
                     <label style="color: #00ff00; font-size: 12px; display: block; margin-bottom: 5px;">Choose Your Character:</label>
-                    <div class="character-selector-small">
-                        <!-- Red Hair -->
-                        <div class="char-part-option" data-part="base" data-emoji="🧑‍🦰" title="Red Hair">🧑‍🦰</div>
-                        <div class="char-part-option" data-part="base" data-emoji="👨‍🦰" title="Man Red Hair">👨‍🦰</div>
-                        <div class="char-part-option" data-part="base" data-emoji="👩‍🦰" title="Woman Red Hair">👩‍🦰</div>
-                        
-                        <!-- Curly Hair -->
-                        <div class="char-part-option" data-part="base" data-emoji="🧑‍🦱" title="Curly Hair">🧑‍🦱</div>
-                        <div class="char-part-option" data-part="base" data-emoji="👨‍🦱" title="Man Curly Hair">👨‍🦱</div>
-                        <div class="char-part-option" data-part="base" data-emoji="👩‍🦱" title="Woman Curly Hair">👩‍🦱</div>
-                        
-                        <!-- White/Gray Hair -->
-                        <div class="char-part-option" data-part="base" data-emoji="👨‍🦳" title="White Hair">👨‍🦳</div>
-                        <div class="char-part-option" data-part="base" data-emoji="👩‍🦳" title="Woman White Hair">👩‍🦳</div>
-                        <div class="char-part-option" data-part="base" data-emoji="👴" title="Old Man">👴</div>
-                        <div class="char-part-option" data-part="base" data-emoji="👵" title="Old Woman">👵</div>
-                        
-                        <!-- Bald/Beard -->
-                        <div class="char-part-option" data-part="base" data-emoji="👨‍🦲" title="Bald">👨‍🦲</div>
-                        <div class="char-part-option" data-part="base" data-emoji="🧔" title="Beard">🧔</div>
-                        
-                        <!-- Default/Neutral -->
-                        <div class="char-part-option" data-part="base" data-emoji="🧑" title="Person">🧑</div>
-                        <div class="char-part-option" data-part="base" data-emoji="👨" title="Man">👨</div>
-                        <div class="char-part-option" data-part="base" data-emoji="👩" title="Woman">👩</div>
-                        
-                        <!-- With Glasses (built-in) -->
-                        <div class="char-part-option" data-part="base" data-emoji="👓" title="Glasses (standalone)">👓</div>
-                        <div class="char-part-option" data-part="base" data-emoji="🧓" title="Elderly Person">🧓</div>
+                    <div style="margin-bottom: 10px;">
+                        <div style="color: #00ff00; font-size: 11px; margin-bottom: 5px;">Male:</div>
+                        <div class="character-selector-small">
+                            <div class="char-part-option" data-part="base" data-emoji="👨" title="Man - Brown/Black Hair">👨</div>
+                            <div class="char-part-option" data-part="base" data-emoji="👨‍🦱" title="Man - Curly Hair">👨‍🦱</div>
+                            <div class="char-part-option" data-part="base" data-emoji="👨‍🦳" title="Man - Gray Hair">👨‍🦳</div>
+                            <div class="char-part-option" data-part="base" data-emoji="🧔" title="Man - Beard">🧔</div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="color: #00ff00; font-size: 11px; margin-bottom: 5px;">Female:</div>
+                        <div class="character-selector-small">
+                            <div class="char-part-option" data-part="base" data-emoji="👩" title="Woman - Brown/Black Hair">👩</div>
+                            <div class="char-part-option" data-part="base" data-emoji="👩‍🦱" title="Woman - Curly Hair">👩‍🦱</div>
+                            <div class="char-part-option" data-part="base" data-emoji="👩‍🦳" title="Woman - Gray Hair">👩‍🦳</div>
+                            <div class="char-part-option" data-part="base" data-emoji="👩‍🦰" title="Woman - Blonde Hair">👩‍🦰</div>
+                        </div>
                     </div>
                 </div>
                 
@@ -2244,7 +2232,7 @@
                 this.connected = false;
                 this.player = {
                     name: 'Guest',
-                    character: '🧑‍🦰', // Default character emoji
+                    character: '👨', // Default character emoji
                     level: 1,
                     money: 100,
                     experience: 0,
@@ -3040,7 +3028,7 @@
                 document.getElementById('login-btn').addEventListener('click', () => this.login());
 
                 // Character customization
-                let selectedBase = '🧑';
+                let selectedBase = '👨';
                 
                 // Update preview function
                 const updatePreview = () => {
@@ -3196,9 +3184,9 @@
                 // Get selected character from character builder
                 const previewBase = document.getElementById('character-preview-base');
                 if (previewBase) {
-                    this.player.character = previewBase.textContent.trim() || '🧑';
+                    this.player.character = previewBase.textContent.trim() || '👨';
                 } else {
-                    this.player.character = '🧑';
+                    this.player.character = '👨';
                 }
 
                 this.player.name = name;
@@ -5625,7 +5613,7 @@
                                 ...this.player,
                                 ...gameData.player,
                                 // Ensure character is preserved
-                                character: gameData.player.character || '🧑‍🦰',
+                                character: gameData.player.character || '👨',
                                 // Ensure new features have defaults if not in saved data
                                 stats: {
                                     accuracy: 50,
