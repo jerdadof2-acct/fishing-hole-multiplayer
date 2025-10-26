@@ -1922,7 +1922,7 @@
 
             .mobile-controls {
                 display: grid;
-                grid-template-columns: 1fr 1fr;
+                grid-template-columns: 1fr 1fr 1fr 1fr;
                 gap: 8px;
                 margin-bottom: 15px;
             }
@@ -2005,6 +2005,9 @@
                 left: 0;
                 right: 0;
                 display: flex;
+                background: rgba(15, 25, 40, 0.95);
+                border-top: 1px solid rgba(100, 200, 255, 0.3);
+                z-index: 999;
                 background: rgba(20, 30, 50, 0.8);
                 border-top: 2px solid rgba(100, 200, 255, 0.4);
                 padding: 8px;
@@ -2430,12 +2433,6 @@
         <div class="mobile-tab-content">
             <!-- Gameplay Tab -->
             <div class="mobile-tab-panel active" id="mobile-tab-gameplay">
-                <!-- Mobile Ad - Top -->
-                <div class="ad-container ad-container-mobile" id="mobile-ad-top">
-                    <!-- Ad will be loaded here -->
-                    <div>Advertisement</div>
-                </div>
-                
                 <div class="mobile-fishing-area">
                     <div class="mobile-fisherman-row" id="mobile-fisherman-row">
                         <!-- Fishermen will be added here -->
@@ -2460,6 +2457,7 @@
                     <button class="mobile-btn" id="mobile-cast-btn">CAST LINE</button>
                     <button class="mobile-btn" id="mobile-shop-btn">SHOP</button>
                     <button class="mobile-btn" id="mobile-tournament-btn">TOURNAMENT</button>
+                    <button class="mobile-btn" id="mobile-sound-btn">🔊 SOUND</button>
                 </div>
             </div>
 
@@ -2503,12 +2501,6 @@
 
             <!-- Inventory Tab -->
             <div class="mobile-tab-panel" id="mobile-tab-inventory">
-                <!-- Mobile Ad -->
-                <div class="ad-container ad-container-mobile" id="mobile-ad-inventory">
-                    <!-- Ad will be loaded here -->
-                    <div>Advertisement</div>
-                </div>
-                
                 <div class="mobile-panel">
                     <h4>RECENT CATCHES</h4>
                     <div id="mobile-recent-catches" style="font-size: 10px;"></div>
@@ -2517,12 +2509,6 @@
 
             <!-- Leaderboard Tab -->
             <div class="mobile-tab-panel" id="mobile-tab-leaderboard">
-                <!-- Mobile Ad -->
-                <div class="ad-container ad-container-mobile" id="mobile-ad-leaderboard">
-                    <!-- Ad will be loaded here -->
-                    <div>Advertisement</div>
-                </div>
-                
                 <div class="mobile-panel">
                     <h4>BIGGEST FISH</h4>
                     <div id="mobile-biggest-fish-leaderboard" style="font-size: 10px;"></div>
@@ -2538,8 +2524,12 @@
             </div>
         </div>
 
-        <div class="mobile-menu-bar">
-            <button class="mobile-menu-btn" id="mobile-sound-btn">🔊 SOUND</button>
+        <!-- Mobile Ad Bar (replaces old menu bar) -->
+        <div class="mobile-menu-bar" style="padding: 8px;">
+            <div class="ad-container ad-container-mobile" id="mobile-ad-bottom" style="margin: 0; height: 50px;">
+                <!-- Ad will be loaded here -->
+                <div>Advertisement</div>
+            </div>
         </div>
         </div>
 
