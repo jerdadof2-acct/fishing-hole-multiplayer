@@ -3088,9 +3088,9 @@
                     // Use provided seed or generate random one
                     const avatarSeed = seed || Math.random().toString(36).substring(7);
                     
-                    // Map hair colors to DiceBear format
+                    // Map hair colors to DiceBear format (correct capitalization)
                     const hairColorMap = {
-                        'Brown': 'Auburn',
+                        'Brown': 'Brown',
                         'Black': 'Black',
                         'Blonde': 'Blonde',
                         'Gray': 'SilverGray'
@@ -3099,36 +3099,36 @@
                     // Map facial hair (DiceBear v7 format)
                     const facialHairMap = {
                         'none': '',
-                        'beard': 'beardMedium',
-                        'mustache': 'moustacheFancy'
+                        'beard': 'BeardMedium',
+                        'mustache': 'MoustacheFancy'
                     };
                     
                     // Map accessories (DiceBear v7 format)
                     const accessoriesMap = {
                         'none': '',
-                        'glasses': 'prescription01',
-                        'sunglasses': 'sunglasses'
+                        'glasses': 'Prescription01',
+                        'sunglasses': 'Sunglasses'
                     };
                     
-                    // Build URL for DiceBear avataaars style (simplified v7 format)
+                    // Build URL for DiceBear avataaars style (correct v7 format)
                     const params = new URLSearchParams();
                     params.set('seed', avatarSeed);
                     
-                    // Set hair color (optional parameter)
-                    const hairColor = (hairColorMap[options.hairColor] || 'Auburn').toLowerCase();
+                    // Set hair color (correct capitalization)
+                    const hairColor = hairColorMap[options.hairColor] || 'Brown';
                     params.set('hairColor', hairColor);
                     
-                    // Set hair style based on gender
+                    // Set hair style based on gender (use 'top' parameter, not 'hair')
                     if (options.style === 'male') {
-                        // Male hair options - use single value, not comma-separated
-                        params.set('hair', 'shortHairShortWaved');
+                        // Male hair options - correct parameter name is 'top'
+                        params.set('top', 'ShortHairShortWaved');
                         if (options.facialHair && options.facialHair !== 'none') {
                             params.set('facialHairType', facialHairMap[options.facialHair]);
                             params.set('facialHairColor', hairColor);
                         }
                     } else {
                         // Female hair options
-                        params.set('hair', 'longHairStraight');
+                        params.set('top', 'LongHairStraight');
                     }
                     
                     // Set accessories if selected
@@ -3343,9 +3343,9 @@
             }
 
             generateAvatarUrlForPlayer(playerName, options) {
-                // Map hair colors to DiceBear format
+                // Map hair colors to DiceBear format (correct capitalization)
                 const hairColorMap = {
-                    'Brown': 'Auburn',
+                    'Brown': 'Brown',
                     'Black': 'Black',
                     'Blonde': 'Blonde',
                     'Gray': 'SilverGray'
@@ -3354,36 +3354,36 @@
                 // Map facial hair (DiceBear v7 format)
                 const facialHairMap = {
                     'none': '',
-                    'beard': 'beardMedium',
-                    'mustache': 'moustacheFancy'
+                    'beard': 'BeardMedium',
+                    'mustache': 'MoustacheFancy'
                 };
                 
                 // Map accessories (DiceBear v7 format)
                 const accessoriesMap = {
                     'none': '',
-                    'glasses': 'prescription01',
-                    'sunglasses': 'sunglasses'
+                    'glasses': 'Prescription01',
+                    'sunglasses': 'Sunglasses'
                 };
                 
-                // Build URL for DiceBear avataaars style (simplified v7 format)
+                // Build URL for DiceBear avataaars style (correct v7 format)
                 const params = new URLSearchParams();
                 params.set('seed', playerName);
                 
-                // Set hair color (optional parameter)
-                const hairColor = (hairColorMap[options.hairColor] || 'Auburn').toLowerCase();
+                // Set hair color (correct capitalization)
+                const hairColor = hairColorMap[options.hairColor] || 'Brown';
                 params.set('hairColor', hairColor);
                 
-                // Set hair style based on gender
+                // Set hair style based on gender (use 'top' parameter, not 'hair')
                 if (options.style === 'male') {
-                    // Male hair options - use single value, not comma-separated
-                    params.set('hair', 'shortHairShortWaved');
+                    // Male hair options - correct parameter name is 'top'
+                    params.set('top', 'ShortHairShortWaved');
                     if (options.facialHair && options.facialHair !== 'none') {
                         params.set('facialHairType', facialHairMap[options.facialHair]);
                         params.set('facialHairColor', hairColor);
                     }
                 } else {
                     // Female hair options
-                    params.set('hair', 'longHairStraight');
+                    params.set('top', 'LongHairStraight');
                 }
                 
                 // Set accessories if selected
