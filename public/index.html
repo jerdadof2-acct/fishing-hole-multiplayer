@@ -5340,11 +5340,11 @@
                 style.textContent = `
                     .global-announcement {
                         position: fixed;
-                        top: 20px;
+                        bottom: 120px;
                         left: 50%;
                         transform: translateX(-50%);
                         z-index: 10000;
-                        animation: announcementSlideDown 0.6s ease-out;
+                        animation: announcementSlideUp 0.6s ease-out;
                     }
                     
                     .announcement-content {
@@ -5362,16 +5362,20 @@
                     }
                     
                     @media (max-width: 768px) {
+                        .global-announcement {
+                            bottom: 160px; /* Above mobile controls */
+                        }
                         .announcement-content {
-                            font-size: 14px;
-                            padding: 12px 20px;
+                            font-size: 12px;
+                            padding: 10px 16px;
                             white-space: normal;
                             line-height: 1.4;
+                            max-width: 90vw;
                         }
                     }
                     
-                    @keyframes announcementSlideDown {
-                        from { transform: translateX(-50%) translateY(-100px); opacity: 0; }
+                    @keyframes announcementSlideUp {
+                        from { transform: translateX(-50%) translateY(100px); opacity: 0; }
                         to { transform: translateX(-50%) translateY(0); opacity: 1; }
                     }
                 `;
@@ -5382,7 +5386,7 @@
                 // Auto-remove after 4 seconds
                 setTimeout(() => {
                     if (announcement.parentElement) {
-                        announcement.style.animation = 'announcementSlideDown 0.4s ease-in reverse';
+                        announcement.style.animation = 'announcementSlideUp 0.4s ease-in reverse';
                         setTimeout(() => {
                             announcement.remove();
                             style.remove();
