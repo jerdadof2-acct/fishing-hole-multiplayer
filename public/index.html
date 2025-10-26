@@ -1298,7 +1298,7 @@
         }
 
         .catch-message.show {
-            display: block;
+            display: block !important;
             animation: flash 0.5s ease-out;
         }
 
@@ -1647,6 +1647,11 @@
                 padding: 15px;
                 max-width: 90%;
                 border-radius: 10px;
+                display: none !important;
+            }
+            
+            .catch-message.show {
+                display: block !important;
             }
 
             /* Mobile-specific simplified layout */
@@ -5605,13 +5610,25 @@
             }
 
             showMessage(text, color) {
-                const message = document.getElementById('catch-text');
-                message.textContent = text;
-                message.style.color = color;
-                document.getElementById('catch-message').classList.add('show');
-
+                const messageEl = document.getElementById('catch-text');
+                const messageContainer = document.getElementById('catch-message');
+                
+                if (!messageEl || !messageContainer) {
+                    console.error('Catch message elements not found!', { messageEl, messageContainer });
+                    return;
+                }
+                
+                messageEl.textContent = text;
+                messageEl.style.color = color;
+                
+                // Force visibility
+                messageContainer.style.display = 'block';
+                messageContainer.classList.add('show');
+                
+                // Remove the show class after 3 seconds
                 setTimeout(() => {
-                    document.getElementById('catch-message').classList.remove('show');
+                    messageContainer.classList.remove('show');
+                    messageContainer.style.display = 'none';
                 }, 3000);
             }
 
