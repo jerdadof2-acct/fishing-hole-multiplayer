@@ -2474,10 +2474,11 @@
                         const realPlayerData = players.filter(p => p.name !== this.player.name);
                         const simulatedPlayers = this.otherPlayers.filter(p => p.isSimulated);
                         
-                        // Map real players with their actual levels
+                        // Map real players with their actual levels and characters
                         const realPlayers = realPlayerData.map(playerData => ({
                             name: playerData.name,
                             level: playerData.level || 1,
+                            character: playerData.character || `https://robohash.org/cat-${playerData.name}?set=set4&size=200x200`, // Use received character
                             fishing: false,
                             catches: 0,
                             isCasting: false,
@@ -2681,7 +2682,8 @@
                         locationUnlocks: this.player.locationUnlocks,
                         tackleUnlocks: this.player.tackleUnlocks,
                         gear: this.player.gear,
-                        stats: this.player.stats
+                        stats: this.player.stats,
+                        character: this.player.character // Send selected avatar
                     });
                 }
             }

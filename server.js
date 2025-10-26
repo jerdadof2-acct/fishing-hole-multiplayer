@@ -156,22 +156,27 @@ io.on('connection', (socket) => {
                     total_sessions = player_tracking.total_sessions + 1
             `, [name]);
 
-            // Store active player with full data
+            // Store active player with full data including character avatar
             activePlayers.set(socket.id, { 
                 name, 
                 socket,
                 level: playerData.level || 1,
                 money: playerData.money || 100,
-                experience: playerData.experience || 0
+                experience: playerData.experience || 0,
+                character: playerData.character || `https://robohash.org/cat-${name}?set=set4&size=200x200` // Default cat avatar
             });
             
-            // Broadcast player joined
-            socket.broadcast.emit('player-joined', { name });
+            // Broadcast player joined with character
+            socket.broadcast.emit('player-joined', { 
+                name,
+                character: playerData.character || `https://robohash.org/cat-${name}?set=set4&size=200x200`
+            });
             
-            // Send list of active players with their data
+            // Send list of active players with their data including character
             const playerList = Array.from(activePlayers.values()).map(p => ({
                 name: p.name,
-                level: p.level || 1
+                level: p.level || 1,
+                character: p.character || `https://robohash.org/cat-${p.name}?set=set4&size=200x200`
             }));
             io.emit('player-list', playerList);
             
@@ -342,7 +347,11 @@ io.on('connection', (socket) => {
             activePlayers.delete(socket.id);
             socket.broadcast.emit('player-left', { name: player.name });
             
-            const playerList = Array.from(activePlayers.values()).map(p => p.name);
+            const playerList = Array.from(activePlayers.values()).map(p => ({
+                name: p.name,
+                level: p.level || 1,
+                character: p.character || `https://robohash.org/cat-${p.name}?set=set4&size=200x200`
+            }));
             io.emit('player-list', playerList);
         }
         console.log('Client disconnected:', socket.id);
