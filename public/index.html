@@ -5995,7 +5995,8 @@
 
             renderEquippedGear(container) {
                 // Debug: Log actual gear values
-                console.log('Current equipped gear:', this.player.gear);
+                console.log('Rendering equipped gear. Current this.player.gear:', this.player.gear);
+                console.log('Full player object gear property:', JSON.stringify(this.player.gear, null, 2));
                 
                 // Get actual equipped gear - ensure we're reading the current values
                 const rod = this.player.gear?.rod || 'None';
@@ -6003,6 +6004,8 @@
                 const line = this.player.gear?.line || 'None';
                 const hook = this.player.gear?.hook || 'None';
                 const bait = this.player.gear?.bait || 'None';
+                
+                console.log('Extracted values - Rod:', rod, 'Reel:', reel, 'Line:', line, 'Hook:', hook, 'Bait:', bait);
                 
                 const html = `
                     <div style="padding: 20px;">
@@ -6521,6 +6524,15 @@
                                 ...gameData.player,
                                 // Ensure character is preserved
                                 character: gameData.player.character || '👨',
+                                // CRITICAL: Preserve gear from saved data
+                                gear: {
+                                    rod: 'Basic Rod',
+                                    reel: 'Basic Reel',
+                                    line: 'Monofilament',
+                                    hook: 'Basic Hook',
+                                    bait: 'Basic Bait',
+                                    ...gameData.player.gear // Saved gear takes precedence
+                                },
                                 // Ensure new features have defaults if not in saved data
                                 stats: {
                                     accuracy: 50,
@@ -6549,6 +6561,9 @@
                                     ...gameData.player.tournamentStats
                                 }
                             };
+                            
+                            // Debug: Log loaded gear
+                            console.log('Loaded gear from save:', this.player.gear);
                         }
                         
                         // Load current location
