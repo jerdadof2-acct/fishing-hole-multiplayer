@@ -90,11 +90,23 @@
         }
 
         .chat-section {
-            background: rgba(20, 30, 50, 0.8);
-            border-top: 1px solid rgba(100, 200, 255, 0.2);
-            border-radius: 0 0 12px 12px;
+            background: rgba(20, 30, 50, 0.95);
+            border-top: 2px solid rgba(100, 200, 255, 0.4);
             padding: 15px;
-            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.3);
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        @media (min-width: 769px) {
+            .game-layout {
+                padding-bottom: 250px; /* Space for fixed chat section */
+            }
         }
 
         .header {
