@@ -2911,6 +2911,40 @@
                     this.socket.on('player-left', (data) => {
                         this.addChatMessage('other', `${data.name} left the game`);
                         this.updateOnlinePlayers();
+                        
+                        // Remove fishing lines for the player who left
+                        const lake = document.getElementById('fishing-lake');
+                        const mobileLake = document.getElementById('mobile-fishing-lake');
+                        
+                        if (lake) {
+                            // Find and remove fishing lines by matching player position
+                            const fishermen = document.querySelectorAll('#fisherman-row .fisherman');
+                            const leavingPlayerIndex = Array.from(fishermen).findIndex(f => f.textContent.includes(data.name));
+                            
+                            if (leavingPlayerIndex >= 0) {
+                                lake.querySelectorAll('.fishing-line').forEach(line => {
+                                    if (line.dataset.playerIndex === leavingPlayerIndex.toString()) {
+                                        line.remove();
+                                    }
+                                });
+                            }
+                        }
+                        
+                        if (mobileLake) {
+                            const mobileFishermen = document.querySelectorAll('#mobile-fisherman-row .mobile-fisherman');
+                            const leavingPlayerIndex = Array.from(mobileFishermen).findIndex(f => f.textContent.includes(data.name));
+                            
+                            if (leavingPlayerIndex >= 0) {
+                                mobileLake.querySelectorAll('.fishing-line').forEach(line => {
+                                    if (line.dataset.playerIndex === leavingPlayerIndex.toString()) {
+                                        line.remove();
+                                    }
+                                });
+                            }
+                        }
+                        
+                        // Reposition players to clean up empty spots
+                        this.positionPlayers();
                     });
 
                     this.socket.on('player-list', (players) => {
@@ -3764,11 +3798,17 @@
                 const mobileFishermanRow = document.getElementById('mobile-fisherman-row');
                 const mobileLake = document.getElementById('mobile-fishing-lake');
                 
-                // Clear existing fishermen and lines
+                // Clear existing fishermen and lines (including hooks)
                 if (fishermanRow) fishermanRow.innerHTML = '';
-                if (lake) lake.querySelectorAll('.fishing-line').forEach(l => l.remove());
+                if (lake) {
+                    lake.querySelectorAll('.fishing-line').forEach(l => l.remove());
+                    lake.querySelectorAll('.hook').forEach(h => h.remove());
+                }
                 if (mobileFishermanRow) mobileFishermanRow.innerHTML = '';
-                if (mobileLake) mobileLake.querySelectorAll('.fishing-line').forEach(l => l.remove());
+                if (mobileLake) {
+                    mobileLake.querySelectorAll('.fishing-line').forEach(l => l.remove());
+                    mobileLake.querySelectorAll('.hook').forEach(h => h.remove());
+                }
                 
                 // Add current player
                 const playerFisher = document.createElement('div');
