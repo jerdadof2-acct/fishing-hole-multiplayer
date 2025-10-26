@@ -3717,6 +3717,11 @@
                         btn.classList.add('active');
                         const panel = document.getElementById(`mobile-tab-${tabName}`);
                         if (panel) panel.classList.add('active');
+                        
+                        // Update inventory display when switching to inventory tab
+                        if (tabName === 'inventory') {
+                            this.updateMobileInventory();
+                        }
                     });
                 });
 
@@ -6083,10 +6088,21 @@
                     mobileCharacterDisplayImg.style.display = 'block';
                 }
                 
+                // Update mobile inventory
+                this.updateMobileInventory();
+
+                // Update location dropdown (both desktop and mobile)
+                this.updateLocationButtons();
+
+                this.updateOnlinePlayers();
+                this.updateTournamentDisplay();
+            }
+
+            updateMobileInventory() {
                 // Update mobile equipped gear
                 const mobileEquippedGear = document.getElementById('mobile-equipped-gear');
                 if (mobileEquippedGear) {
-                    // Get actual equipped gear names
+                    // Get actual equipped gear names directly from player.gear
                     const rod = this.player.gear.rod || 'None';
                     const reel = this.player.gear.reel || 'None';
                     const line = this.player.gear.line || 'None';
@@ -6119,12 +6135,6 @@
                         `).join('');
                     }
                 }
-
-                // Update location dropdown (both desktop and mobile)
-                this.updateLocationButtons();
-
-                this.updateOnlinePlayers();
-                this.updateTournamentDisplay();
             }
 
             updateLocationButtons() {
