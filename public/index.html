@@ -2189,43 +2189,41 @@
                 
                 <!-- Character Preview -->
                 <div style="text-align: center; margin: 15px 0; font-size: 48px; min-height: 60px; background: #000; border: 2px solid #00ff00; border-radius: 8px; padding: 10px;">
-                    <span id="character-preview">🧑</span>
+                    <span id="character-preview-base">🧑</span>
                 </div>
                 
-                <!-- Base Person -->
+                <!-- Base Person - Organized by Hair Color/Style -->
                 <div style="margin-bottom: 10px;">
-                    <label style="color: #00ff00; font-size: 12px; display: block; margin-bottom: 5px;">Base:</label>
+                    <label style="color: #00ff00; font-size: 12px; display: block; margin-bottom: 5px;">Choose Your Character:</label>
                     <div class="character-selector-small">
-                        <div class="char-part-option" data-part="base" data-emoji="🧑">🧑</div>
-                        <div class="char-part-option" data-part="base" data-emoji="👨">👨</div>
-                        <div class="char-part-option" data-part="base" data-emoji="👩">👩</div>
-                        <div class="char-part-option" data-part="base" data-emoji="🧑‍🦰">🧑‍🦰</div>
-                        <div class="char-part-option" data-part="base" data-emoji="👨‍🦰">👨‍🦰</div>
-                        <div class="char-part-option" data-part="base" data-emoji="👩‍🦰">👩‍🦰</div>
-                        <div class="char-part-option" data-part="base" data-emoji="🧑‍🦱">🧑‍🦱</div>
-                        <div class="char-part-option" data-part="base" data-emoji="👨‍🦱">👨‍🦱</div>
-                        <div class="char-part-option" data-part="base" data-emoji="👩‍🦱">👩‍🦱</div>
-                        <div class="char-part-option" data-part="base" data-emoji="👨‍🦳">👨‍🦳</div>
-                        <div class="char-part-option" data-part="base" data-emoji="👩‍🦳">👩‍🦳</div>
-                        <div class="char-part-option" data-part="base" data-emoji="🧔">🧔</div>
-                        <div class="char-part-option" data-part="base" data-emoji="👨‍🦲">👨‍🦲</div>
-                        <div class="char-part-option" data-part="base" data-emoji="👴">👴</div>
-                        <div class="char-part-option" data-part="base" data-emoji="👵">👵</div>
-                    </div>
-                </div>
-                
-                <!-- Accessories -->
-                <div style="margin-bottom: 10px;">
-                    <label style="color: #00ff00; font-size: 12px; display: block; margin-bottom: 5px;">Accessories:</label>
-                    <div class="character-selector-small">
-                        <div class="char-part-option" data-part="accessory" data-emoji="" data-value="">None</div>
-                        <div class="char-part-option" data-part="accessory" data-emoji="👓" data-value="👓">👓</div>
-                        <div class="char-part-option" data-part="accessory" data-emoji="🕶️" data-value="🕶️">🕶️</div>
-                        <div class="char-part-option" data-part="accessory" data-emoji="🎩" data-value="🎩">🎩</div>
-                        <div class="char-part-option" data-part="accessory" data-emoji="🧢" data-value="🧢">🧢</div>
-                        <div class="char-part-option" data-part="accessory" data-emoji="⛑️" data-value="⛑️">⛑️</div>
-                        <div class="char-part-option" data-part="accessory" data-emoji="👒" data-value="👒">👒</div>
-                        <div class="char-part-option" data-part="accessory" data-emoji="🎓" data-value="🎓">🎓</div>
+                        <!-- Red Hair -->
+                        <div class="char-part-option" data-part="base" data-emoji="🧑‍🦰" title="Red Hair">🧑‍🦰</div>
+                        <div class="char-part-option" data-part="base" data-emoji="👨‍🦰" title="Man Red Hair">👨‍🦰</div>
+                        <div class="char-part-option" data-part="base" data-emoji="👩‍🦰" title="Woman Red Hair">👩‍🦰</div>
+                        
+                        <!-- Curly Hair -->
+                        <div class="char-part-option" data-part="base" data-emoji="🧑‍🦱" title="Curly Hair">🧑‍🦱</div>
+                        <div class="char-part-option" data-part="base" data-emoji="👨‍🦱" title="Man Curly Hair">👨‍🦱</div>
+                        <div class="char-part-option" data-part="base" data-emoji="👩‍🦱" title="Woman Curly Hair">👩‍🦱</div>
+                        
+                        <!-- White/Gray Hair -->
+                        <div class="char-part-option" data-part="base" data-emoji="👨‍🦳" title="White Hair">👨‍🦳</div>
+                        <div class="char-part-option" data-part="base" data-emoji="👩‍🦳" title="Woman White Hair">👩‍🦳</div>
+                        <div class="char-part-option" data-part="base" data-emoji="👴" title="Old Man">👴</div>
+                        <div class="char-part-option" data-part="base" data-emoji="👵" title="Old Woman">👵</div>
+                        
+                        <!-- Bald/Beard -->
+                        <div class="char-part-option" data-part="base" data-emoji="👨‍🦲" title="Bald">👨‍🦲</div>
+                        <div class="char-part-option" data-part="base" data-emoji="🧔" title="Beard">🧔</div>
+                        
+                        <!-- Default/Neutral -->
+                        <div class="char-part-option" data-part="base" data-emoji="🧑" title="Person">🧑</div>
+                        <div class="char-part-option" data-part="base" data-emoji="👨" title="Man">👨</div>
+                        <div class="char-part-option" data-part="base" data-emoji="👩" title="Woman">👩</div>
+                        
+                        <!-- With Glasses (built-in) -->
+                        <div class="char-part-option" data-part="base" data-emoji="👓" title="Glasses (standalone)">👓</div>
+                        <div class="char-part-option" data-part="base" data-emoji="🧓" title="Elderly Person">🧓</div>
                     </div>
                 </div>
                 
@@ -3043,17 +3041,12 @@
 
                 // Character customization
                 let selectedBase = '🧑';
-                let selectedAccessory = '';
                 
                 // Update preview function
                 const updatePreview = () => {
-                    const preview = document.getElementById('character-preview');
-                    if (preview) {
-                        if (selectedAccessory) {
-                            preview.textContent = selectedBase + ' ' + selectedAccessory;
-                        } else {
-                            preview.textContent = selectedBase;
-                        }
+                    const previewBase = document.getElementById('character-preview-base');
+                    if (previewBase) {
+                        previewBase.textContent = selectedBase;
                     }
                 };
                 
@@ -3067,27 +3060,11 @@
                     });
                 });
                 
-                // Accessory selection
-                document.querySelectorAll('.char-part-option[data-part="accessory"]').forEach(option => {
-                    option.addEventListener('click', () => {
-                        document.querySelectorAll('.char-part-option[data-part="accessory"]').forEach(opt => opt.classList.remove('selected'));
-                        option.classList.add('selected');
-                        selectedAccessory = option.dataset.value || '';
-                        updatePreview();
-                    });
-                });
-                
                 // Default select first base
                 const firstBase = document.querySelector('.char-part-option[data-part="base"]');
                 if (firstBase) {
                     firstBase.classList.add('selected');
                     selectedBase = firstBase.dataset.emoji;
-                }
-                
-                // Default select "None" accessory
-                const noneAccessory = document.querySelector('.char-part-option[data-part="accessory"][data-value=""]');
-                if (noneAccessory) {
-                    noneAccessory.classList.add('selected');
                 }
                 
                 updatePreview();
@@ -3217,9 +3194,9 @@
                 }
 
                 // Get selected character from character builder
-                const preview = document.getElementById('character-preview');
-                if (preview && preview.textContent.trim()) {
-                    this.player.character = preview.textContent.trim();
+                const previewBase = document.getElementById('character-preview-base');
+                if (previewBase) {
+                    this.player.character = previewBase.textContent.trim() || '🧑';
                 } else {
                     this.player.character = '🧑';
                 }
