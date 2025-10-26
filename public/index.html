@@ -2093,6 +2093,10 @@
                     <h4>BIGGEST BAGS</h4>
                     <div id="mobile-biggest-bags-leaderboard" style="font-size: 10px;"></div>
                 </div>
+                <div class="mobile-panel">
+                    <h4>TOURNAMENT STATS</h4>
+                    <div id="mobile-tournament-stats" style="font-size: 10px;"></div>
+                </div>
             </div>
         </div>
 
@@ -4672,12 +4676,15 @@
 
             updateTournamentDisplay() {
                 const container = document.getElementById('tournament-info');
+                const mobileContainer = document.getElementById('mobile-tournament-stats');
                 
                 if (!this.tournament) {
-                    container.innerHTML = `
-                        <h4>No Active Tournament</h4>
-                        <div class="tournament-timer">Join a tournament to compete!</div>
+                    const message = `
+                        <div style="color: #888;">No Active Tournament</div>
+                        <div style="font-size: 9px; color: #666; margin-top: 5px;">Join a tournament to compete!</div>
                     `;
+                    if (container) container.innerHTML = `<h4>No Active Tournament</h4><div class="tournament-timer">Join a tournament to compete!</div>`;
+                    if (mobileContainer) mobileContainer.innerHTML = message;
                     return;
                 }
 
@@ -4687,7 +4694,7 @@
                     const countdownElapsed = Date.now() - countdownStart;
                     const countdown = Math.max(0, 60 - Math.floor(countdownElapsed / 1000));
                     
-                    container.innerHTML = `
+                    const desktopHtml = `
                         <h4>🎣 TOURNAMENT STARTING</h4>
                         <div class="tournament-timer" style="font-size: 18px; font-weight: bold; color: #ffff00;">
                             Starts in: ${countdown} seconds
@@ -4695,6 +4702,14 @@
                         <div style="margin-top: 10px;">Participants: ${this.tournament.participants.length}</div>
                         <div style="margin-top: 5px; font-size: 12px; color: #00ffff;">Get ready to fish!</div>
                     `;
+                    
+                    const mobileHtml = `
+                        <div style="color: #ffff00; font-weight: bold;">🎣 STARTING IN ${countdown}s</div>
+                        <div style="font-size: 9px; color: #888; margin-top: 5px;">${this.tournament.participants.length} participants</div>
+                    `;
+                    
+                    if (container) container.innerHTML = desktopHtml;
+                    if (mobileContainer) mobileContainer.innerHTML = mobileHtml;
                     return;
                 }
 
@@ -4720,7 +4735,7 @@
                         totalFish += score.fishCount;
                     });
 
-                    container.innerHTML = `
+                    const desktopHtml = `
                         <h4>🎣 TOURNAMENT ACTIVE</h4>
                         <div class="tournament-timer" style="font-size: 16px; font-weight: bold; color: #00ff00;">
                             Time: ${minutes}:${seconds.toString().padStart(2, '0')}
@@ -4738,6 +4753,17 @@
                             </div>
                         </div>
                     `;
+                    
+                    const mobileHtml = `
+                        <div style="color: #00ff00; font-weight: bold;">🎣 ACTIVE</div>
+                        <div style="font-size: 9px; color: #888; margin-top: 5px;">Time: ${minutes}:${seconds.toString().padStart(2, '0')}</div>
+                        <div style="font-size: 9px; color: #888; margin-top: 3px;">🐟 ${biggestFishPlayer}: ${biggestFish.toFixed(1)} lbs</div>
+                        <div style="font-size: 9px; color: #888; margin-top: 3px;">👥 ${this.tournament.participants.length} players</div>
+                        <div style="font-size: 9px; color: #888; margin-top: 3px;">${totalFish} fish caught</div>
+                    `;
+                    
+                    if (container) container.innerHTML = desktopHtml;
+                    if (mobileContainer) mobileContainer.innerHTML = mobileHtml;
                     
                     // Update every second during active phase
                     if (this.tournament.updateInterval) {
