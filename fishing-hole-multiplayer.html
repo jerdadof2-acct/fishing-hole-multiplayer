@@ -868,6 +868,10 @@
             color: #ffffff;
             font-weight: 700;
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 50%;
         }
 
         .player-stats {
@@ -962,6 +966,24 @@
             justify-content: space-between;
             align-items: center;
             transition: all 0.2s ease;
+            overflow: hidden;
+            min-width: 0;
+        }
+        
+        .leaderboard-item .player-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .leaderboard-item .weight {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex-shrink: 0;
+            margin-left: 5px;
         }
 
         .leaderboard-item:hover {
@@ -1179,6 +1201,10 @@
 
         .chat-message {
             margin: 6px 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            word-wrap: break-word;
+            max-width: 100%;
             padding: 8px 10px;
             font-size: 12px;
             border-radius: 8px;
@@ -1576,6 +1602,92 @@
         .tackle-btn.buy {
             background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
             color: #000;
+        }
+
+        /* Banner Ad Containers */
+        .ad-container {
+            background: rgba(20, 30, 50, 0.6);
+            border: 1px dashed rgba(100, 200, 255, 0.3);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            color: rgba(200, 200, 200, 0.5);
+            font-size: 12px;
+            min-height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px 0;
+        }
+        
+        .ad-container-desktop {
+            width: 100%;
+            max-width: 728px;
+            margin: 10px auto;
+        }
+        
+        .ad-container-mobile {
+            width: 100%;
+            height: 50px;
+            margin: 8px 0;
+        }
+
+        /* Help Modal */
+        .help-content {
+            padding: 20px;
+            line-height: 1.6;
+            color: #e0e0e0;
+        }
+        
+        .help-content h3 {
+            color: #64b5f6;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        .help-content h4 {
+            color: #90caf9;
+            margin-top: 15px;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .help-content ul, .help-content ol {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .help-content li {
+            margin: 5px 0;
+        }
+        
+        .help-content code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #90caf9;
+        }
+        
+        .help-shortcuts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .shortcut-item {
+            background: rgba(15, 25, 40, 0.6);
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 3px solid rgba(100, 200, 255, 0.5);
+        }
+        
+        .shortcut-key {
+            font-weight: bold;
+            color: #90caf9;
+            font-family: 'Courier New', monospace;
         }
 
         /* Responsive Design */
@@ -2086,16 +2198,29 @@
                         </div>
                     </div>
 
+                    <!-- Banner Ad - Desktop -->
+                    <div class="ad-container ad-container-desktop" id="desktop-ad-top">
+                        <!-- Ad will be loaded here -->
+                        <div>Advertisement</div>
+                    </div>
+
                     <div class="controls">
                         <button class="btn" id="cast-btn">CAST LINE</button>
                         <button class="btn" id="shop-btn">TACKLE SHOP</button>
                         <button class="btn" id="tournament-btn">TOURNAMENT</button>
                         <button class="btn" id="inventory-btn">INVENTORY</button>
+                        <button class="btn" id="help-btn">❓ HELP</button>
                         <button class="btn" id="save-btn">SAVE GAME</button>
                         <button class="btn" id="export-btn">EXPORT SAVE</button>
                         <input type="file" id="import-input" accept=".json" style="display: none;">
                         <button class="btn" id="import-btn">IMPORT SAVE</button>
                         <button class="btn" id="sound-btn">🔊 SOUND ON</button>
+                    </div>
+                    
+                    <!-- Banner Ad - Desktop Bottom -->
+                    <div class="ad-container ad-container-desktop" id="desktop-ad-bottom">
+                        <!-- Ad will be loaded here -->
+                        <div>Advertisement</div>
                     </div>
                 </div>
 
@@ -2193,6 +2318,83 @@
                         </div>
                         <div class="shop-content" id="shop-content">
                             <!-- Content will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Help Modal -->
+            <div class="modal" id="help-modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>❓ HELP & GUIDE</h2>
+                        <button class="close-btn" id="close-help">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="help-content">
+                            <h3>🐱 Welcome to Kitty Creek Fishing Club!</h3>
+                            <p>Compete with other fisher-cats in real-time tournaments, catch legendary fish, and become the purrfect angler!</p>
+                            
+                            <h3>🎮 How to Play</h3>
+                            <ol>
+                                <li><strong>Cast Your Line:</strong> Click "CAST LINE" or press <code>Space</code> to start fishing</li>
+                                <li><strong>Wait for a Bite:</strong> Watch for ripples in the water - fish will bite!</li>
+                                <li><strong>Catch Fish:</strong> When you see "CAUGHT!", you've got one!</li>
+                                <li><strong>Level Up:</strong> Gain experience to unlock new locations and tackle</li>
+                                <li><strong>Join Tournaments:</strong> Compete with other players for prizes!</li>
+                            </ol>
+                            
+                            <h3>⌨️ Keyboard Shortcuts</h3>
+                            <div class="help-shortcuts">
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">Space</span> - Cast line / Reel in
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">S</span> - Open Tackle Shop
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">T</span> - Join Tournament
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">I</span> - View Inventory
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">H</span> - Open Help
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">Ctrl+S</span> - Save Game
+                                </div>
+                            </div>
+                            
+                            <h3>💡 Tips & Hints</h3>
+                            <ul>
+                                <li><strong>Better Gear = Better Fish:</strong> Upgrade your rod, reel, and tackle to catch rare fish</li>
+                                <li><strong>Location Matters:</strong> Different locations have different fish types and rarities</li>
+                                <li><strong>Tournament Strategy:</strong> Fish as fast as possible during tournaments - biggest total weight wins!</li>
+                                <li><strong>Save Often:</strong> Use Ctrl+S or the Save button to keep your progress</li>
+                                <li><strong>Big Catches:</strong> Rare, Huge, Legendary, and Trophy fish broadcast to all players!</li>
+                                <li><strong>Level Benefits:</strong> Higher levels unlock better locations and equipment</li>
+                            </ul>
+                            
+                            <h3>🏆 Tournament Rules</h3>
+                            <ul>
+                                <li>Tournaments run for 5 minutes</li>
+                                <li>The player with the highest total weight wins</li>
+                                <li>Prize money is split based on players participating</li>
+                                <li>All catches count toward your tournament score</li>
+                            </ul>
+                            
+                            <h3>🎣 Fish Rarities</h3>
+                            <ul>
+                                <li><strong>Common:</strong> Regular fish from any location</li>
+                                <li><strong>Rare:</strong> Special fish with increased value</li>
+                                <li><strong>Huge:</strong> Massive versions of regular fish</li>
+                                <li><strong>Legendary:</strong> Extremely rare and valuable</li>
+                                <li><strong>Trophy:</strong> The ultimate catch!</li>
+                            </ul>
+                            
+                            <h3>💬 Chat</h3>
+                            <p>Only notable catches (rare, huge, legendary, trophy) and level-ups are shown in chat to keep things clean!</p>
                         </div>
                     </div>
                 </div>
@@ -3271,6 +3473,8 @@
                 document.getElementById('shop-btn').addEventListener('click', () => this.openShop());
                 document.getElementById('tournament-btn').addEventListener('click', () => this.toggleTournament());
                 document.getElementById('inventory-btn').addEventListener('click', () => this.openInventory());
+                document.getElementById('help-btn').addEventListener('click', () => this.openHelp());
+                document.getElementById('close-help').addEventListener('click', () => this.closeHelp());
                 document.getElementById('save-btn').addEventListener('click', () => this.manualSave());
                 document.getElementById('export-btn').addEventListener('click', () => this.exportGameData());
                 document.getElementById('import-btn').addEventListener('click', () => document.getElementById('import-input').click());
@@ -3446,6 +3650,39 @@
                     if (e.key === 'Enter' && e.target.value.trim()) {
                         this.sendMessage(e.target.value);
                         e.target.value = '';
+                    }
+                });
+                
+                // Help modal events
+                document.getElementById('help-modal').addEventListener('click', (e) => {
+                    if (e.target.id === 'help-modal') {
+                        this.closeHelp();
+                    }
+                });
+                
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    // Don't trigger shortcuts when typing in inputs
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                    
+                    if (e.key === ' ' || e.key === 'Spacebar') {
+                        e.preventDefault();
+                        this.castLine();
+                    } else if (e.key === 's' || e.key === 'S') {
+                        e.preventDefault();
+                        this.openShop();
+                    } else if (e.key === 't' || e.key === 'T') {
+                        e.preventDefault();
+                        this.toggleTournament();
+                    } else if (e.key === 'i' || e.key === 'I') {
+                        e.preventDefault();
+                        this.openInventory();
+                    } else if (e.key === 'h' || e.key === 'H') {
+                        e.preventDefault();
+                        this.openHelp();
+                    } else if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+                        e.preventDefault();
+                        this.manualSave();
                     }
                 });
             }
@@ -4072,26 +4309,31 @@
                     // Player catches one of the better fish from this location
                     const topTierRange = Math.ceil(availableFish.length * 0.3); // Top 30% of fish
                     const startIndex = Math.max(0, maxFishIndex - topTierRange);
-                    selectedFishIndex = startIndex + Math.floor(Math.random() * (maxFishIndex - startIndex + 1));
+                    const rangeSize = maxFishIndex - startIndex + 1;
+                    selectedFishIndex = startIndex + Math.floor(Math.random() * rangeSize);
                 } else {
                     // Standard fish selection with slight weighting toward better fish
                     const roll = Math.random();
                     if (roll < 0.5) {
                         // 50% chance for bottom 40% of fish
-                        selectedFishIndex = Math.floor(Math.random() * Math.ceil(availableFish.length * 0.4));
+                        const bottomEnd = Math.max(1, Math.ceil(availableFish.length * 0.4));
+                        selectedFishIndex = Math.floor(Math.random() * bottomEnd);
                     } else if (roll < 0.85) {
                         // 35% chance for middle 40% of fish
                         const midStart = Math.ceil(availableFish.length * 0.4);
-                        const midEnd = Math.ceil(availableFish.length * 0.8);
-                        selectedFishIndex = midStart + Math.floor(Math.random() * (midEnd - midStart));
+                        const midEnd = Math.min(availableFish.length, Math.ceil(availableFish.length * 0.8));
+                        const rangeSize = Math.max(1, midEnd - midStart);
+                        selectedFishIndex = midStart + Math.floor(Math.random() * rangeSize);
                     } else {
                         // 15% chance for top 20% of fish
-                        const topStart = Math.ceil(availableFish.length * 0.8);
-                        selectedFishIndex = topStart + Math.floor(Math.random() * (maxFishIndex - topStart + 1));
+                        const topStart = Math.min(maxFishIndex, Math.ceil(availableFish.length * 0.8));
+                        const rangeSize = maxFishIndex - topStart + 1;
+                        selectedFishIndex = topStart + Math.floor(Math.random() * rangeSize);
                     }
                 }
                 
                 // Ensure selectedFishIndex is within bounds
+                selectedFishIndex = Math.max(0, Math.min(selectedFishIndex, maxFishIndex));
                 if (selectedFishIndex < 0 || selectedFishIndex >= availableFish.length) {
                     console.error('Invalid fish index:', selectedFishIndex, 'Available fish:', availableFish.length);
                     selectedFishIndex = 0; // Use first fish as fallback
@@ -5362,6 +5604,16 @@
                         <div class="tournament-timer">Check results below!</div>
                     `;
                 }
+            }
+
+            openHelp() {
+                const modal = document.getElementById('help-modal');
+                if (modal) modal.style.display = 'block';
+            }
+
+            closeHelp() {
+                const modal = document.getElementById('help-modal');
+                if (modal) modal.style.display = 'none';
             }
 
             openShop() {
