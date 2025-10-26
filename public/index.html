@@ -6086,12 +6086,19 @@
                 // Update mobile equipped gear
                 const mobileEquippedGear = document.getElementById('mobile-equipped-gear');
                 if (mobileEquippedGear) {
+                    // Get actual equipped gear names
+                    const rod = this.player.gear.rod || 'None';
+                    const reel = this.player.gear.reel || 'None';
+                    const line = this.player.gear.line || 'None';
+                    const hook = this.player.gear.hook || 'None';
+                    const bait = this.player.gear.bait || 'None';
+                    
                     mobileEquippedGear.innerHTML = `
-                        <div style="margin-bottom: 8px;"><strong>🎣 Rod:</strong> ${this.player.gear.rod || 'None'}</div>
-                        <div style="margin-bottom: 8px;"><strong>🎣 Reel:</strong> ${this.player.gear.reel || 'None'}</div>
-                        <div style="margin-bottom: 8px;"><strong>🪝 Line:</strong> ${this.player.gear.line || 'None'}</div>
-                        <div style="margin-bottom: 8px;"><strong>🪝 Hook:</strong> ${this.player.gear.hook || 'None'}</div>
-                        <div><strong>🐛 Bait:</strong> ${this.player.gear.bait || 'None'}</div>
+                        <div style="margin-bottom: 8px;"><strong>🎣 Rod:</strong> ${rod}</div>
+                        <div style="margin-bottom: 8px;"><strong>🎣 Reel:</strong> ${reel}</div>
+                        <div style="margin-bottom: 8px;"><strong>🪝 Line:</strong> ${line}</div>
+                        <div style="margin-bottom: 8px;"><strong>🪝 Hook:</strong> ${hook}</div>
+                        <div><strong>🐛 Bait:</strong> ${bait}</div>
                     `;
                 }
                 
