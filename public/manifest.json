@@ -1,0 +1,25 @@
+{
+  "name": "Fishing Hole Tournament",
+  "short_name": "Fishing Hole",
+  "description": "Multiplayer fishing tournament game with tournaments, leaderboards, and achievements",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#001100",
+  "theme_color": "#00ff00",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
+
