@@ -3075,48 +3075,36 @@
                 // Login button
                 document.getElementById('login-btn').addEventListener('click', () => this.login());
 
-                // Character customization with emoji-based system
+                // Character customization with DiceBear API
                 window.avatarOptions = {
                     style: 'male',
                     hairColor: 'Brown',
                     facialHair: 'none',
-                    accessories: 'none',
-                    emoji: '👨' // Default emoji
+                    accessories: 'none'
                 };
                 
-                // Emoji mapping based on selections
-                const getEmojiForOptions = (options) => {
-                    // Base emoji based on gender
-                    let emoji = options.style === 'male' ? '👨' : '👩';
+                // Store a consistent seed for preview
+                window.avatarPreviewSeed = 'character-preview-12345';
+                
+                // Generate DiceBear avatar URL - simpler approach
+                const generateAvatarUrl = (options, seed = null) => {
+                    const avatarSeed = seed || window.avatarPreviewSeed;
                     
-                    // Adjust based on hair color (using different emoji variants)
-                    if (options.hairColor === 'Brown') {
-                        emoji = options.style === 'male' ? '👨' : '👩';
-                    } else if (options.hairColor === 'Black') {
-                        emoji = options.style === 'male' ? '👨‍🦲' : '👩‍🦲';
-                    } else if (options.hairColor === 'Blonde') {
-                        emoji = options.style === 'male' ? '👨‍🦰' : '👩‍🦰';
-                    } else if (options.hairColor === 'Gray') {
-                        emoji = options.style === 'male' ? '👨‍🦳' : '👩‍🦳';
-                    }
-                    
-                    // Facial hair for males
-                    if (options.style === 'male' && options.facialHair === 'beard') {
-                        emoji = '🧔';
-                    } else if (options.style === 'male' && options.facialHair === 'mustache') {
-                        emoji = '👨';
-                    }
-                    
-                    return emoji;
+                    // Start with just seed - DiceBear will generate based on seed
+                    // Each seed produces a consistent unique avatar
+                    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(avatarSeed)}`;
                 };
                 
                 // Update preview function
                 const updatePreview = () => {
                     const previewDiv = document.getElementById('character-preview-avatar');
                     if (previewDiv) {
-                        const emoji = getEmojiForOptions(window.avatarOptions);
-                        window.avatarOptions.emoji = emoji;
-                        previewDiv.textContent = emoji;
+                        // Generate a unique seed based on all options combined
+                        const optionSeed = `${window.avatarPreviewSeed}-${window.avatarOptions.style}-${window.avatarOptions.hairColor}-${window.avatarOptions.facialHair}-${window.avatarOptions.accessories}`;
+                        const avatarUrl = generateAvatarUrl(window.avatarOptions, optionSeed);
+                        
+                        // Use img tag instead of div
+                        previewDiv.innerHTML = `<img src="${avatarUrl}" alt="Avatar Preview" style="width: 100px; height: 100px; border-radius: 50%;" onerror="this.style.display='none'; this.outerHTML='<div style=\\'font-size: 80px;\\'>👤</div>';" />`;
                         previewDiv.style.display = 'flex';
                     }
                     
@@ -3278,13 +3266,16 @@
 
                 this.player.name = name;
                 
-                // Get selected emoji from character builder
+                // Get selected avatar from character builder
                 const previewDiv = document.getElementById('character-preview-avatar');
-                const currentOptions = window.avatarOptions || { style: 'male', hairColor: 'Brown', facialHair: 'none', accessories: 'none', emoji: '👨' };
+                const currentOptions = window.avatarOptions || { style: 'male', hairColor: 'Brown', facialHair: 'none', accessories: 'none' };
                 
-                // Store avatar options and emoji
+                // Store avatar options
                 this.player.avatarOptions = { ...currentOptions };
-                this.player.character = currentOptions.emoji || '👨';
+                
+                // Generate DiceBear avatar URL using player name + options as seed
+                const avatarSeed = `${name}-${currentOptions.style}-${currentOptions.hairColor}-${currentOptions.facialHair}-${currentOptions.accessories}`;
+                this.player.character = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(avatarSeed)}`;
                 document.getElementById('login-screen').classList.add('hidden');
                 this.addChatMessage('system', `${name} entered the fishing hole!`);
                 this.positionPlayers(); // Reposition players with new name
