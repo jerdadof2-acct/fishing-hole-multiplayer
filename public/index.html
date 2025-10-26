@@ -4397,10 +4397,18 @@
                         font-size: 18px;
                         font-weight: bold;
                         text-shadow: 0 0 10px;
-                        white-space: nowrap;
                         max-width: 90vw;
-                        overflow: hidden;
-                        text-overflow: ellipsis;
+                        word-wrap: break-word;
+                        overflow-wrap: break-word;
+                    }
+                    
+                    @media (max-width: 768px) {
+                        .announcement-content {
+                            font-size: 14px;
+                            padding: 12px 20px;
+                            white-space: normal;
+                            line-height: 1.4;
+                        }
                     }
                     
                     @keyframes announcementSlideDown {
