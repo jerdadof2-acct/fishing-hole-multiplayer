@@ -4434,7 +4434,7 @@
 
             simulateMultiplayer() {
                 // Simulate other players with unique AI names
-                const aiNames = ['Bot_Alpha', 'Bot_Beta', 'Bot_Gamma', 'Bot_Delta', 'Bot_Epsilon', 'Bot_Zeta', 'Bot_Eta', 'Bot_Theta'];
+                const aiNames = ['Tommy the Stray', 'Sly Sylvester', 'Felix the Feline', 'Whiskers McFluff', 'Captain Claw', 'Mittens the Master', 'Purr-fect Pete', 'Tabby the Tank'];
                 
                 // Add 3-6 random AI players (all cats!)
                 const numPlayers = Math.floor(Math.random() * 4) + 3;
@@ -4479,7 +4479,10 @@
                         const randomFish = fishTypes[Math.floor(Math.random() * fishTypes.length)];
                         const fishData = this.fishTypes[randomFish];
                         
-                        this.addChatMessage('other', `${randomPlayer.name} caught a ${fishData.name}!`);
+                        // Add humor based on the cat's personality
+                        const exclamations = ['🐱 Meow!', '🎣 Purrfect!', '😸 Nice one!', '🐟 Fishy!', '💪 Get it!'];
+                        const exclamation = exclamations[Math.floor(Math.random() * exclamations.length)];
+                        this.addChatMessage('other', `${randomPlayer.name} caught a ${fishData.name}! ${exclamation}`);
                     }
                 }, 5000 + Math.random() * 10000);
 
@@ -4560,7 +4563,10 @@
                         
                         // Only show chat message for simulated (AI) players, not real players
                         if (player.isSimulated) {
-                            this.addChatMessage('other', `${player.name} caught a ${fishData.name} (${weight.toFixed(1)} lbs)!`);
+                            // Add funny reactions for bot cats
+                            const reactions = ['🐱 Meow!', '🎣 Purrfect catch!', '😸 Look at that!', '🐟 Fishy business!', '💪 Pawsome!'];
+                            const reaction = reactions[Math.floor(Math.random() * reactions.length)];
+                            this.addChatMessage('other', `${player.name} caught a ${fishData.name} (${weight.toFixed(1)} lbs)! ${reaction}`);
                         }
                     }
                 }, 2000 + Math.random() * 3000);
