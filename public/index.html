@@ -2945,10 +2945,14 @@
             positionPlayers() {
                 const fishermanRow = document.getElementById('fisherman-row');
                 const lake = document.getElementById('fishing-lake');
+                const mobileFishermanRow = document.getElementById('mobile-fisherman-row');
+                const mobileLake = document.getElementById('mobile-fishing-lake');
                 
                 // Clear existing fishermen and lines
-                fishermanRow.innerHTML = '';
-                lake.querySelectorAll('.fishing-line').forEach(l => l.remove());
+                if (fishermanRow) fishermanRow.innerHTML = '';
+                if (lake) lake.querySelectorAll('.fishing-line').forEach(l => l.remove());
+                if (mobileFishermanRow) mobileFishermanRow.innerHTML = '';
+                if (mobileLake) mobileLake.querySelectorAll('.fishing-line').forEach(l => l.remove());
                 
                 // Add current player
                 const playerFisher = document.createElement('div');
@@ -2958,7 +2962,17 @@
                     <div class="fisherman-character">🧑‍🦰</div>
                     <div class="fisherman-name">${this.player.name}</div>
                 `;
-                fishermanRow.appendChild(playerFisher);
+                if (fishermanRow) fishermanRow.appendChild(playerFisher);
+
+                // Add mobile player
+                const mobilePlayerFisher = document.createElement('div');
+                mobilePlayerFisher.className = 'mobile-fisherman';
+                mobilePlayerFisher.id = 'mobile-player-fisher';
+                mobilePlayerFisher.innerHTML = `
+                    <div class="mobile-fisherman-character">🧑‍🦰</div>
+                    <div class="mobile-fisherman-name">${this.player.name}</div>
+                `;
+                if (mobileFishermanRow) mobileFishermanRow.appendChild(mobilePlayerFisher);
                 
                 // Add other players
                 const characterEmojis = ['🧑', '👨', '👨‍🦱', '👨‍🦳', '🧔', '👨‍🦰', '👨‍🦲', '👴'];
@@ -2971,7 +2985,16 @@
                         <div class="fisherman-name">${player.name}</div>
                     `;
                     fisher.title = `${player.name} - Level ${player.level}`;
-                    fishermanRow.appendChild(fisher);
+                    if (fishermanRow) fishermanRow.appendChild(fisher);
+
+                    // Add mobile other players
+                    const mobileFisher = document.createElement('div');
+                    mobileFisher.className = 'mobile-fisherman';
+                    mobileFisher.innerHTML = `
+                        <div class="mobile-fisherman-character">${emoji}</div>
+                        <div class="mobile-fisherman-name">${player.name}</div>
+                    `;
+                    if (mobileFishermanRow) mobileFishermanRow.appendChild(mobileFisher);
                 });
             }
 
@@ -4872,7 +4895,32 @@
                 document.getElementById('stat-patience').textContent = this.player.stats.patience;
                 document.getElementById('stat-strength').textContent = this.player.stats.strength;
 
-                // Update location dropdown
+                // Update mobile layout elements
+                const mobilePlayerName = document.getElementById('mobile-player-name');
+                const mobilePlayerLevel = document.getElementById('mobile-player-level');
+                const mobilePlayerMoney = document.getElementById('mobile-player-money');
+                const mobilePlayerExp = document.getElementById('mobile-player-exp');
+                const mobileNextExp = document.getElementById('mobile-next-exp');
+                const mobileFishCount = document.getElementById('mobile-fish-count');
+                const mobileTotalWeight = document.getElementById('mobile-total-weight');
+                const mobileStatAccuracy = document.getElementById('mobile-stat-accuracy');
+                const mobileStatLuck = document.getElementById('mobile-stat-luck');
+                const mobileStatPatience = document.getElementById('mobile-stat-patience');
+                const mobileStatStrength = document.getElementById('mobile-stat-strength');
+
+                if (mobilePlayerName) mobilePlayerName.textContent = this.player.name;
+                if (mobilePlayerLevel) mobilePlayerLevel.textContent = this.player.level;
+                if (mobilePlayerMoney) mobilePlayerMoney.textContent = this.player.money;
+                if (mobilePlayerExp) mobilePlayerExp.textContent = this.player.experience;
+                if (mobileNextExp) mobileNextExp.textContent = expNeeded;
+                if (mobileFishCount) mobileFishCount.textContent = this.player.totalCaught;
+                if (mobileTotalWeight) mobileTotalWeight.textContent = this.player.totalWeight.toFixed(1);
+                if (mobileStatAccuracy) mobileStatAccuracy.textContent = this.player.stats.accuracy;
+                if (mobileStatLuck) mobileStatLuck.textContent = this.player.stats.luck;
+                if (mobileStatPatience) mobileStatPatience.textContent = this.player.stats.patience;
+                if (mobileStatStrength) mobileStatStrength.textContent = this.player.stats.strength;
+
+                // Update location dropdown (both desktop and mobile)
                 this.updateLocationButtons();
 
                 this.updateOnlinePlayers();
@@ -4881,26 +4929,54 @@
 
             updateLocationButtons() {
                 const select = document.getElementById('location-select');
-                select.innerHTML = '';
+                const mobileSelect = document.getElementById('mobile-location-select');
                 
-                this.locations.forEach((location, index) => {
-                    const option = document.createElement('option');
-                    option.value = index;
-                    option.textContent = location.name;
+                if (select) {
+                    select.innerHTML = '';
                     
-                    // Check if location is unlocked
-                    if (!this.player.locationUnlocks.includes(index)) {
-                        option.disabled = true;
-                        option.textContent += ` (Locked - Level ${location.unlockLevel})`;
-                    }
+                    this.locations.forEach((location, index) => {
+                        const option = document.createElement('option');
+                        option.value = index;
+                        option.textContent = location.name;
+                        
+                        // Check if location is unlocked
+                        if (!this.player.locationUnlocks.includes(index)) {
+                            option.disabled = true;
+                            option.textContent += ` (Locked - Level ${location.unlockLevel})`;
+                        }
+                        
+                        // Check if it's the current location
+                        if (index === this.currentLocation) {
+                            option.selected = true;
+                        }
+                        
+                        select.appendChild(option);
+                    });
+                }
+
+                // Update mobile location dropdown
+                if (mobileSelect) {
+                    mobileSelect.innerHTML = '';
                     
-                    // Check if it's the current location
-                    if (index === this.currentLocation) {
-                        option.selected = true;
-                    }
-                    
-                    select.appendChild(option);
-                });
+                    this.locations.forEach((location, index) => {
+                        const option = document.createElement('option');
+                        option.value = index;
+                        option.textContent = location.name;
+                        
+                        // Check if location is unlocked
+                        if (!this.player.locationUnlocks.includes(index)) {
+                            option.disabled = true;
+                            option.textContent += ` (Locked - Level ${location.unlockLevel})`;
+                        }
+                        
+                        // Check if it's the current location
+                        if (index === this.currentLocation) {
+                            option.selected = true;
+                        }
+                        
+                        mobileSelect.appendChild(option);
+                    });
+                }
             }
 
             saveGameData() {
