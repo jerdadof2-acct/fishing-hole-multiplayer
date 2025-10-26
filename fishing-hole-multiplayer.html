@@ -166,9 +166,10 @@
             justify-content: space-around;
             width: 100%;
             max-width: 100%;
-            margin-bottom: 10px;
+            margin-bottom: 0;
             padding: 0 20px;
             flex-shrink: 0;
+            align-items: flex-end;
         }
 
         .fishing-lake {
@@ -221,16 +222,25 @@
 
         .fisherman {
             width: 50px;
-            height: 50px;
+            height: 60px;
             border-radius: 50%;
             border: 2px solid #00ff00;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-end;
             font-size: 12px;
             font-weight: bold;
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
+            background: 
+                /* Rod arm */
+                linear-gradient(45deg, transparent 35%, #8b4513 35%, #8b4513 38%, transparent 38%),
+                /* Head */
+                radial-gradient(circle at 50% 20%, #fdbcb4 10%, #d4a574 25%, transparent 30%),
+                /* Hat */
+                linear-gradient(to bottom, #8b0000 0%, #8b0000 15%, transparent 15%),
+                /* Body */
+                linear-gradient(to bottom, transparent 20%, #4169e1 20%, #4169e1 50%, #654321 50%, #654321 100%);
+            background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%;
             color: #00ff00;
             position: relative;
             cursor: pointer;
@@ -238,40 +248,77 @@
             box-shadow: 
                 0 0 15px rgba(0, 255, 0, 0.4),
                 inset 0 0 10px rgba(0, 0, 0, 0.5);
+            overflow: visible;
         }
         
         .fisherman::before {
-            content: '🎣';
+            content: '';
             position: absolute;
-            top: -8px;
+            top: -15px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 20px;
-            z-index: 1;
+            width: 40px;
+            height: 3px;
+            background: linear-gradient(to right, #8b4513 0%, #8b4513 50%, transparent 50%);
+            z-index: 2;
+        }
+        
+        .fisherman::after {
+            content: '';
+            position: absolute;
+            top: -17px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 3px;
+            height: 10px;
+            background: #ffff00;
+            z-index: 3;
         }
 
         .fisherman-initial {
-            font-size: 14px;
-            line-height: 1;
+            display: none; /* Hide initials to show character instead */
         }
 
         .fisherman-name {
             font-size: 8px;
-            margin-top: 2px;
+            margin-top: 5px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             max-width: 35px;
+            position: relative;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 1px 3px;
+            border-radius: 2px;
         }
 
         .fisherman.you {
-            background: #00ff00;
+            background: 
+                /* Rod arm */
+                linear-gradient(45deg, transparent 35%, #8b4513 35%, #8b4513 38%, transparent 38%),
+                /* Head */
+                radial-gradient(circle at 50% 20%, #fdbcb4 10%, #d4a574 25%, transparent 30%),
+                /* Hat */
+                linear-gradient(to bottom, #00ff00 0%, #00ff00 15%, transparent 15%),
+                /* Body */
+                linear-gradient(to bottom, transparent 20%, #00aa00 20%, #00aa00 50%, #006600 50%, #006600 100%);
+            background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%;
             color: #000;
             border-color: #00ff00;
         }
 
         .fisherman.other {
-            background: #004488;
+            background: 
+                /* Rod arm */
+                linear-gradient(45deg, transparent 35%, #8b4513 35%, #8b4513 38%, transparent 38%),
+                /* Head */
+                radial-gradient(circle at 50% 20%, #fdbcb4 10%, #d4a574 25%, transparent 30%),
+                /* Hat */
+                linear-gradient(to bottom, #004488 0%, #004488 15%, transparent 15%),
+                /* Body */
+                linear-gradient(to bottom, transparent 20%, #4169e1 20%, #4169e1 50%, #654321 50%, #654321 100%);
+            background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%;
             color: #00ff00;
             border-color: #00ff00;
         }
