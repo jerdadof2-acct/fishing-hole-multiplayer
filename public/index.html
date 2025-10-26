@@ -1456,7 +1456,7 @@
                 border-bottom: 2px solid #00ff00;
                 flex-shrink: 0;
                 position: sticky;
-                top: 40px;
+                top: 72px;
                 z-index: 99;
             }
 
@@ -1697,6 +1697,21 @@
                 color: #000;
             }
 
+            /* Mobile Title */
+            .mobile-title {
+                padding: 8px;
+                background: #001100;
+                border-bottom: 2px solid #00ff00;
+                text-align: center;
+                font-size: 14px;
+                font-weight: bold;
+                color: #00ff00;
+                flex-shrink: 0;
+                position: sticky;
+                top: 0;
+                z-index: 101;
+            }
+
             /* Mobile Tabs */
             .mobile-tabs {
                 display: flex;
@@ -1706,7 +1721,7 @@
                 -webkit-overflow-scrolling: touch;
                 flex-shrink: 0;
                 position: sticky;
-                top: 0;
+                top: 32px;
                 z-index: 100;
             }
 
@@ -1942,7 +1957,12 @@
 
         <!-- Mobile Layout (hidden by default, shown on mobile via CSS) -->
         <div class="mobile-game-layout" id="mobile-game-layout" style="display: none;">
-        <!-- Mobile Tab Navigation - At the very top -->
+        <!-- Game Title - At the very top -->
+        <div class="mobile-title">
+            🎣 FISHING HOLE TOURNAMENT 🎣
+        </div>
+        
+        <!-- Mobile Tab Navigation -->
         <div class="mobile-tabs">
             <button class="mobile-tab-btn active" data-tab="gameplay">🎣 FISH</button>
             <button class="mobile-tab-btn" data-tab="chat">💬 CHAT</button>
@@ -4986,7 +5006,7 @@
                 debugDiv.id = 'debug-info';
                 debugDiv.style.cssText = `
                     position: fixed;
-                    top: 100px;
+                    top: 140px;
                     left: 10px;
                     right: 10px;
                     background: rgba(0, 0, 0, 0.9);
