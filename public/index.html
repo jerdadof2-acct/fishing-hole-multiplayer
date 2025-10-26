@@ -2176,9 +2176,10 @@
 
             .tab-btn {
                 flex-shrink: 0;
-                padding: 8px 12px;
+                padding: 8px 14px;
                 font-size: 11px;
                 white-space: nowrap;
+                min-width: 18%;
             }
         }
     </style>
@@ -4116,7 +4117,21 @@
                 if (playerIndex >= fishermen.length) return null;
                 
                 const fisherman = fishermen[playerIndex];
+                
+                // CRITICAL: Check if fisherman is actually visible on screen
+                // If fisherman has zero width/height or is not displayed, don't create a line
                 const fishermanRect = fisherman.getBoundingClientRect();
+                if (fishermanRect.width === 0 || fishermanRect.height === 0) {
+                    // Fisherman is not visible, don't create a fishing line
+                    return null;
+                }
+                
+                // Check if fisherman is actually in the viewport (not hidden by CSS)
+                const computedStyle = window.getComputedStyle(fisherman);
+                if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden' || computedStyle.opacity === '0') {
+                    return null;
+                }
+                
                 const lakeRect = activeLake.getBoundingClientRect();
                 
                 const line = document.createElement('div');
