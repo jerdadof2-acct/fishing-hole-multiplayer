@@ -2214,7 +2214,7 @@
                 
                 <!-- Character Preview -->
                 <div style="text-align: center; margin: 15px 0; min-height: 120px; background: #000; border: 2px solid #00ff00; border-radius: 8px; padding: 10px; display: flex; align-items: center; justify-content: center;">
-                    <img id="character-preview-avatar" src="" alt="Avatar Preview" style="width: 100px; height: 100px; border-radius: 50%; border: 2px solid #00ff00;">
+                    <div id="character-preview-avatar" style="font-size: 80px; line-height: 1;">👤</div>
                 </div>
                 
                 <!-- Avatar Customization -->
@@ -3075,79 +3075,49 @@
                 // Login button
                 document.getElementById('login-btn').addEventListener('click', () => this.login());
 
-                // Character customization with DiceBear API
+                // Character customization with emoji-based system
                 window.avatarOptions = {
                     style: 'male',
                     hairColor: 'Brown',
                     facialHair: 'none',
-                    accessories: 'none'
+                    accessories: 'none',
+                    emoji: '👨' // Default emoji
                 };
                 
-                // Store a consistent seed for preview (will be replaced with player name on login)
-                window.avatarPreviewSeed = 'preview';
-                
-                // Generate DiceBear avatar URL
-                const generateAvatarUrl = (options, seed = null) => {
-                    // Use provided seed or the preview seed
-                    const avatarSeed = seed || window.avatarPreviewSeed;
+                // Emoji mapping based on selections
+                const getEmojiForOptions = (options) => {
+                    // Base emoji based on gender
+                    let emoji = options.style === 'male' ? '👨' : '👩';
                     
-                    // Map hair colors to DiceBear format (correct capitalization)
-                    const hairColorMap = {
-                        'Brown': 'Brown',
-                        'Black': 'Black',
-                        'Blonde': 'Blonde',
-                        'Gray': 'SilverGray'
-                    };
+                    // Adjust based on hair color (using different emoji variants)
+                    if (options.hairColor === 'Brown') {
+                        emoji = options.style === 'male' ? '👨' : '👩';
+                    } else if (options.hairColor === 'Black') {
+                        emoji = options.style === 'male' ? '👨‍🦲' : '👩‍🦲';
+                    } else if (options.hairColor === 'Blonde') {
+                        emoji = options.style === 'male' ? '👨‍🦰' : '👩‍🦰';
+                    } else if (options.hairColor === 'Gray') {
+                        emoji = options.style === 'male' ? '👨‍🦳' : '👩‍🦳';
+                    }
                     
-                    // Map facial hair (DiceBear v7 format)
-                    const facialHairMap = {
-                        'none': '',
-                        'beard': 'BeardMedium',
-                        'mustache': 'MoustacheFancy'
-                    };
+                    // Facial hair for males
+                    if (options.style === 'male' && options.facialHair === 'beard') {
+                        emoji = '🧔';
+                    } else if (options.style === 'male' && options.facialHair === 'mustache') {
+                        emoji = '👨';
+                    }
                     
-                    // Map accessories (DiceBear v7 format)
-                    const accessoriesMap = {
-                        'none': '',
-                        'glasses': 'Prescription01',
-                        'sunglasses': 'Sunglasses'
-                    };
-                    
-                    // Use RoboHash API - generates visual avatars with customization
-                    // Create a consistent seed based on options
-                    const seedString = `${avatarSeed}-${options.style}-${options.hairColor}-${options.facialHair}-${options.accessories}`;
-                    
-                    // RoboHash generates avatar-like images based on seed
-                    // Add size parameter for consistent sizing
-                    return `https://robohash.org/${encodeURIComponent(seedString)}?set=set4&size=200x200`;
+                    return emoji;
                 };
                 
                 // Update preview function
                 const updatePreview = () => {
-                    const previewImg = document.getElementById('character-preview-avatar');
-                    if (previewImg) {
-                        const avatarUrl = generateAvatarUrl(window.avatarOptions);
-                        console.log('Generating avatar URL:', avatarUrl);
-                        
-                        // Clear previous error handlers
-                        previewImg.onerror = null;
-                        previewImg.onload = null;
-                        
-                        // Set up new handlers
-                        previewImg.onerror = function() {
-                            console.error('Failed to load avatar:', avatarUrl);
-                            // UI Avatars should work reliably, but if it fails, hide the image
-                            this.style.display = 'none';
-                        };
-                        
-                        previewImg.onload = function() {
-                            console.log('Avatar loaded successfully');
-                            this.style.display = 'block';
-                        };
-                        
-                        previewImg.src = avatarUrl;
-                        previewImg.style.display = 'block';
-                        previewImg.alt = 'Avatar Preview';
+                    const previewDiv = document.getElementById('character-preview-avatar');
+                    if (previewDiv) {
+                        const emoji = getEmojiForOptions(window.avatarOptions);
+                        window.avatarOptions.emoji = emoji;
+                        previewDiv.textContent = emoji;
+                        previewDiv.style.display = 'flex';
                     }
                     
                     // Hide/show facial hair section based on gender
@@ -3308,21 +3278,13 @@
 
                 this.player.name = name;
                 
-                // Get selected avatar from character builder
-                const previewImg = document.getElementById('character-preview-avatar');
-                const currentOptions = window.avatarOptions || { style: 'male', hairColor: 'Brown', facialHair: 'none', accessories: 'none' };
+                // Get selected emoji from character builder
+                const previewDiv = document.getElementById('character-preview-avatar');
+                const currentOptions = window.avatarOptions || { style: 'male', hairColor: 'Brown', facialHair: 'none', accessories: 'none', emoji: '👨' };
                 
-                if (previewImg && previewImg.src) {
-                    // Store avatar options and regenerate URL with player name as seed for consistency
-                    this.player.avatarOptions = { ...currentOptions };
-                    // Regenerate avatar URL with player name as seed
-                    const avatarUrl = this.generateAvatarUrlForPlayer(name, currentOptions);
-                    this.player.character = avatarUrl;
-                } else {
-                    // Fallback to default avatar
-                    this.player.character = this.generateAvatarUrlForPlayer(name, currentOptions);
-                    this.player.avatarOptions = { ...currentOptions };
-                }
+                // Store avatar options and emoji
+                this.player.avatarOptions = { ...currentOptions };
+                this.player.character = currentOptions.emoji || '👨';
                 document.getElementById('login-screen').classList.add('hidden');
                 this.addChatMessage('system', `${name} entered the fishing hole!`);
                 this.positionPlayers(); // Reposition players with new name
@@ -3333,37 +3295,6 @@
                 this.saveGameData(); // Save character selection
             }
 
-            generateAvatarUrlForPlayer(playerName, options) {
-                // Map hair colors to DiceBear format (correct capitalization)
-                const hairColorMap = {
-                    'Brown': 'Brown',
-                    'Black': 'Black',
-                    'Blonde': 'Blonde',
-                    'Gray': 'SilverGray'
-                };
-                
-                // Map facial hair (DiceBear v7 format)
-                const facialHairMap = {
-                    'none': '',
-                    'beard': 'BeardMedium',
-                    'mustache': 'MoustacheFancy'
-                };
-                
-                // Map accessories (DiceBear v7 format)
-                const accessoriesMap = {
-                    'none': '',
-                    'glasses': 'Prescription01',
-                    'sunglasses': 'Sunglasses'
-                };
-                
-                // Use RoboHash API - generates visual avatars with customization
-                // Create a consistent seed based on player name and options
-                const seedString = `${playerName}-${options.style}-${options.hairColor}-${options.facialHair}-${options.accessories}`;
-                
-                // RoboHash generates avatar-like images based on seed
-                // Use set4 for more character-like avatars
-                return `https://robohash.org/${encodeURIComponent(seedString)}?set=set4&size=200x200`;
-            }
 
             positionPlayers() {
                 const fishermanRow = document.getElementById('fisherman-row');
