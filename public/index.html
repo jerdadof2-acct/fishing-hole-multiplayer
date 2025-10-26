@@ -3225,12 +3225,15 @@
                 const mobileFishermanRow = document.getElementById('mobile-fisherman-row');
                 const mobileLake = document.getElementById('mobile-fishing-lake');
                 
-                // Use desktop or mobile elements based on what's visible
-                const activeFishermanRow = fishermanRow || mobileFishermanRow;
-                const activeLake = lake || mobileLake;
+                // Detect if we're on mobile by checking screen width
+                const isMobile = window.innerWidth <= 768;
+                
+                // Use mobile elements if we're on mobile, otherwise use desktop
+                const activeFishermanRow = isMobile ? mobileFishermanRow : fishermanRow;
+                const activeLake = isMobile ? mobileLake : lake;
                 
                 // Visual debug for mobile
-                const debugInfo = { fishermanRow: !!fishermanRow, lake: !!lake, mobileFishermanRow: !!mobileFishermanRow, mobileLake: !!mobileLake, activeFishermanRow: !!activeFishermanRow, activeLake: !!activeLake };
+                const debugInfo = { isMobile, fishermanRow: !!fishermanRow, lake: !!lake, mobileFishermanRow: !!mobileFishermanRow, mobileLake: !!mobileLake, activeFishermanRow: !!activeFishermanRow, activeLake: !!activeLake };
                 this.showDebugMessage('DEBUG: ' + JSON.stringify(debugInfo));
                 
                 if (!activeFishermanRow || !activeLake) {
@@ -3400,7 +3403,10 @@
                 // Animate reeling in with smooth animation
                 const lake = document.getElementById('fishing-lake');
                 const mobileLake = document.getElementById('mobile-fishing-lake');
-                const activeLake = lake || mobileLake;
+                
+                // Detect if we're on mobile by checking screen width
+                const isMobile = window.innerWidth <= 768;
+                const activeLake = isMobile ? mobileLake : lake;
                 
                 if (!activeLake) return;
                 
