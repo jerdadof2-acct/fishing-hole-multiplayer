@@ -3819,8 +3819,41 @@
                     }
                 }
                 
+                // Ensure selectedFishIndex is within bounds
+                if (selectedFishIndex < 0 || selectedFishIndex >= availableFish.length) {
+                    console.error('Invalid fish index:', selectedFishIndex, 'Available fish:', availableFish.length);
+                    selectedFishIndex = 0; // Use first fish as fallback
+                }
+                
                 const randomFishType = availableFish[selectedFishIndex];
                 const fishData = this.fishTypes[randomFishType];
+                
+                // Safety check: if fishData is undefined, use a default fish
+                if (!fishData || !randomFishType) {
+                    console.error('Invalid fish type selected:', randomFishType, 'Available:', availableFish);
+                    // Use first available fish as fallback
+                    const fallbackFish = availableFish[0];
+                    const fallbackData = this.fishTypes[fallbackFish];
+                    if (!fallbackData) {
+                        console.error('No valid fish data found!');
+                        return;
+                    }
+                    // Use fallback fish
+                    const defaultWeight = fallbackData.minWeight + Math.random() * (fallbackData.maxWeight - fallbackData.minWeight);
+                    const defaultValue = Math.floor(fallbackData.value * (1 + defaultWeight / fallbackData.maxWeight));
+                    const defaultExp = Math.floor(fallbackData.experience * (1 + defaultWeight / fallbackData.maxWeight));
+                    
+                    this.addChatMessage('you', `Caught a ${fallbackData.name} (${defaultWeight.toFixed(1)} lbs)!`);
+                    this.player.totalCaught++;
+                    this.player.totalWeight += defaultWeight;
+                    if (defaultWeight > this.player.biggestCatch) {
+                        this.player.biggestCatch = defaultWeight;
+                    }
+                    this.player.money += defaultValue;
+                    this.player.experience += defaultExp;
+                    this.updateDisplay();
+                    return;
+                }
 
                 // During tournaments, fish can be MUCH bigger (up to 3x max weight)
                 let weight;
