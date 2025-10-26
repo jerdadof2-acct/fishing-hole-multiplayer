@@ -205,24 +205,26 @@
 
         .character-option {
             font-size: 40px;
-            padding: 10px;
+            padding: 12px;
             border: 2px solid rgba(100, 200, 255, 0.3);
-            border-radius: 8px;
+            border-radius: 12px;
             cursor: pointer;
             transition: all 0.3s ease;
-            background: rgba(15, 25, 40, 0.9);
+            background: rgba(15, 25, 40, 0.8);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
 
         .character-option:hover {
-            border-color: rgba(100, 200, 255, 0.5);
-            background: rgba(20, 30, 50, 0.8);
-            transform: scale(1.1);
+            border-color: rgba(100, 200, 255, 0.6);
+            background: rgba(30, 50, 80, 0.9);
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(100, 200, 255, 0.4);
         }
 
         .character-option.selected {
-            border-color: rgba(100, 200, 255, 0.5);
+            border-color: rgba(100, 200, 255, 0.8);
             background: rgba(42, 82, 152, 0.6);
-            box-shadow: 0 0 20px rgba(100, 200, 255, 0.5);
+            box-shadow: 0 0 20px rgba(100, 200, 255, 0.6);
         }
 
         .character-selector-small {
@@ -253,7 +255,7 @@
         .char-part-option.selected {
             border-color: rgba(100, 200, 255, 0.5);
             background: rgba(42, 82, 152, 0.6);
-            box-shadow: 0 0 10px #00ff00;
+            box-shadow: 0 0 15px rgba(100, 200, 255, 0.4);
         }
 
         .char-option-btn {
@@ -373,8 +375,9 @@
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 
-                0 0 15px rgba(100, 181, 246, 0.4),
-                inset 0 0 10px rgba(0, 0, 0, 0.5);
+                0 4px 20px rgba(33, 150, 243, 0.5),
+                0 0 30px rgba(100, 181, 246, 0.4),
+                inset 0 0 15px rgba(0, 0, 0, 0.4);
             overflow: visible;
         }
         
@@ -850,10 +853,11 @@
         .stat-line {
             display: flex;
             justify-content: space-between;
-            margin: 8px 0;
-            padding: 5px 0;
-            border-bottom: 1px solid rgba(100, 181, 246, 0.2);
-            font-weight: bold;
+            margin: 10px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(100, 200, 255, 0.2);
+            font-weight: 600;
+            color: #e0e0e0;
         }
 
         .stat-line:last-child {
@@ -861,17 +865,19 @@
         }
 
         .stat-line span {
-            color: #00ffff;
-            font-weight: bold;
+            color: #ffffff;
+            font-weight: 700;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
         }
 
         .player-stats {
-            background: rgba(20, 30, 50, 0.8);
-            padding: 15px;
+            background: linear-gradient(135deg, rgba(30, 60, 114, 0.9) 0%, rgba(42, 82, 152, 0.9) 100%);
+            padding: 18px;
             border: 2px solid rgba(100, 200, 255, 0.4);
-            border-radius: 8px;
-            margin-bottom: 15px;
+            border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            margin-bottom: 15px;
+            box-shadow: 0 0 10px rgba(100, 181, 246, 0.3);
         }
 
         .player-stats .stat-line {
@@ -890,31 +896,34 @@
             border: 2px solid rgba(100, 200, 255, 0.4);
             border-radius: 8px;
             margin-bottom: 15px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 0 10px rgba(100, 181, 246, 0.3);
             max-height: 200px;
             overflow-y: auto;
         }
 
         .achievement-item {
-            margin: 3px 0;
-            padding: 4px;
-            background: rgba(30, 50, 80, 0.8);
+            margin: 5px 0;
+            padding: 10px;
+            background: rgba(30, 60, 114, 0.6);
             border: 1px solid rgba(100, 200, 255, 0.3);
-            border-radius: 4px;
-            font-size: 11px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #e0e0e0;
+            transition: all 0.3s ease;
         }
 
         .achievement-item.locked {
-            opacity: 0.5;
-            color: #666;
+            opacity: 0.4;
+            color: #888;
+            filter: grayscale(50%);
         }
 
         .leaderboard {
             background: rgba(20, 30, 50, 0.8);
-            padding: 10px;
-            border: 2px solid rgba(100, 200, 255, 0.4);
-            border-radius: 8px;
-            margin-bottom: 10px;
+            padding: 15px;
+            border: 2px solid rgba(100, 200, 255, 0.3);
+            border-radius: 12px;
+            margin-bottom: 15px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         }
 
@@ -927,12 +936,13 @@
         }
 
         .leaderboard-category h4 {
-            color: #64b5f6;
-            margin: 0 0 6px 0;
-            font-size: 13px;
+            color: #ffffff;
+            margin: 0 0 10px 0;
+            font-size: 14px;
             text-align: center;
-            border-bottom: 1px solid rgba(100, 200, 255, 0.3);
-            padding-bottom: 3px;
+            border-bottom: 2px solid rgba(100, 200, 255, 0.3);
+            padding-bottom: 8px;
+            font-weight: 700;
         }
 
         .leaderboard-list {
@@ -942,21 +952,28 @@
         }
 
         .leaderboard-item {
-            margin: 2px 0;
-            padding: 4px 6px;
-            border-bottom: 1px solid rgba(100, 181, 246, 0.2);
-            font-size: 11px;
-            background: rgba(30, 50, 80, 0.8);
-            border-radius: 3px;
+            margin: 4px 0;
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(100, 200, 255, 0.15);
+            font-size: 12px;
+            background: rgba(15, 25, 40, 0.6);
+            border-radius: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .leaderboard-item:hover {
+            background: rgba(30, 50, 80, 0.8);
+            transform: translateX(3px);
         }
 
         .leaderboard-item:first-child {
             color: #ffd700;
             font-weight: bold;
-            background: rgba(42, 82, 152, 0.6);
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 193, 7, 0.2) 100%);
+            border: 1px solid rgba(255, 215, 0, 0.4);
         }
 
         .leaderboard-item:nth-child(2) {
@@ -979,7 +996,7 @@
 
         .leaderboard-item .player-name {
             flex: 1;
-            color: #00ffff;
+            color: #64b5f6;
         }
 
         .leaderboard-item .weight {
@@ -995,7 +1012,7 @@
             margin-bottom: 10px;
             margin-top: 10px;
             min-height: 80px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 0 10px rgba(100, 181, 246, 0.3);
         }
 
         .inventory-tabs {
@@ -1010,7 +1027,7 @@
             border: 1px solid rgba(100, 200, 255, 0.3);
             color: #64b5f6;
             cursor: pointer;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Courier New', monospace;
             font-size: 14px;
         }
 
@@ -1040,7 +1057,7 @@
 
         .fish-name {
             font-weight: bold;
-            color: #00ffff;
+            color: #64b5f6;
             font-size: 16px;
         }
 
@@ -1059,7 +1076,7 @@
         }
 
         .value {
-            color: #00ff00 !important;
+            color: #64b5f6 !important;
         }
 
         .location {
@@ -1100,7 +1117,7 @@
         }
 
         .stat-value {
-            color: #00ffff;
+            color: #64b5f6;
             font-size: 18px;
             font-weight: bold;
         }
@@ -1118,7 +1135,7 @@
             border: 2px solid rgba(100, 200, 255, 0.4);
             border-radius: 8px;
             margin-bottom: 15px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 0 10px rgba(100, 181, 246, 0.3);
         }
 
         .status-item {
@@ -1129,7 +1146,7 @@
         }
 
         .status-item span {
-            color: #00ffff;
+            color: #64b5f6;
             font-weight: bold;
         }
 
@@ -1146,33 +1163,41 @@
         }
 
         .player-item.fishing {
-            border-left-color: #00ffff;
+            border-left-color: rgba(100, 181, 246, 0.6);
         }
 
         .chat-area {
             height: 200px;
             overflow-y: auto;
-            background: rgba(15, 25, 40, 0.9);
-            border: 1px solid #004400;
-            padding: 5px;
+            background: rgba(15, 25, 40, 0.8);
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            border-radius: 10px;
+            padding: 12px;
             margin-bottom: 10px;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
         }
 
         .chat-message {
-            margin: 2px 0;
-            font-size: 11px;
+            margin: 6px 0;
+            padding: 8px 10px;
+            font-size: 12px;
+            border-radius: 8px;
+            background: rgba(20, 30, 50, 0.5);
         }
 
         .chat-message.system {
-            color: #ffff00;
+            color: #ffd700;
+            background: rgba(255, 215, 0, 0.1);
         }
 
         .chat-message.own {
-            color: #00ffff;
+            color: #64b5f6;
+            background: rgba(100, 181, 246, 0.15);
         }
 
         .chat-message.other {
-            color: #64b5f6;
+            color: #81c784;
+            background: rgba(129, 199, 132, 0.1);
         }
 
         .chat-message.legendary {
@@ -1183,9 +1208,9 @@
         }
 
         .chat-message.rare {
-            color: #00ffff;
+            color: #64b5f6;
             font-weight: bold;
-            text-shadow: 0 0 5px #00ffff;
+            text-shadow: 0 0 5px rgba(100, 181, 246, 0.8);
         }
 
         .chat-message.huge {
@@ -1202,11 +1227,19 @@
         .chat-input {
             width: 100%;
             background: rgba(15, 25, 40, 0.9);
-            border: 1px solid rgba(100, 200, 255, 0.3);
-            color: #64b5f6;
-            padding: 5px;
+            border: 2px solid rgba(100, 200, 255, 0.3);
+            border-radius: 8px;
+            color: #e0e0e0;
+            padding: 10px;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            font-size: 12px;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: rgba(100, 200, 255, 0.6);
+            box-shadow: 0 0 10px rgba(100, 200, 255, 0.3);
         }
 
         .tournament-info {
@@ -1256,7 +1289,7 @@
             text-align: center;
             z-index: 15;
             display: none;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 0 20px rgba(100, 200, 255, 0.5);
         }
 
         .catch-message.show {
@@ -1287,7 +1320,7 @@
             padding: 5px 10px;
             margin: 2px;
             cursor: pointer;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Courier New', monospace;
             font-size: 10px;
         }
 
@@ -1313,7 +1346,7 @@
             background: rgba(20, 30, 50, 0.8);
             border: 2px solid rgba(100, 200, 255, 0.4);
             border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 0 15px rgba(100, 181, 246, 0.3);
         }
 
         .location-dropdown select {
@@ -1325,7 +1358,7 @@
             border-radius: 4px;
             font-size: 16px;
             font-weight: bold;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Courier New', monospace;
             cursor: pointer;
             text-align: center;
         }
@@ -1361,21 +1394,23 @@
         }
 
         .modal-content {
-            background-color: #001100;
+            background: linear-gradient(135deg, rgba(30, 60, 114, 0.98) 0%, rgba(42, 82, 152, 0.98) 100%);
             margin: 5% auto;
             padding: 0;
             border: 2px solid rgba(100, 200, 255, 0.4);
-            border-radius: 8px;
+            border-radius: 16px;
             width: 80%;
             max-width: 800px;
             max-height: 80vh;
             overflow-y: auto;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
         }
 
         .modal-header {
-            background: rgba(30, 50, 80, 0.8);
-            padding: 15px;
-            border-bottom: 2px solid rgba(100, 200, 255, 0.4);
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            padding: 20px;
+            border-bottom: 2px solid rgba(100, 200, 255, 0.3);
+            border-radius: 16px 16px 0 0;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -1383,23 +1418,31 @@
 
         .modal-header h2 {
             margin: 0;
-            color: #64b5f6;
+            color: #ffffff;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-weight: 700;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
         }
 
         .close-btn {
-            background: none;
-            border: none;
-            color: #64b5f6;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            color: #ffffff;
             font-size: 24px;
             cursor: pointer;
             padding: 0;
-            width: 30px;
-            height: 30px;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
         }
 
         .close-btn:hover {
-            color: #ffff00;
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
         }
 
         .modal-body {
@@ -1409,28 +1452,33 @@
         .shop-tabs {
             display: flex;
             margin-bottom: 20px;
-            border-bottom: 2px solid rgba(100, 200, 255, 0.4);
+            border-bottom: 2px solid rgba(100, 200, 255, 0.3);
         }
 
         .tab-btn {
-            background: rgba(20, 30, 50, 0.8);
-            color: #64b5f6;
-            border: 2px solid rgba(100, 200, 255, 0.4);
+            background: rgba(20, 30, 50, 0.6);
+            color: #e0e0e0;
+            border: 2px solid rgba(100, 200, 255, 0.3);
             border-bottom: none;
-            padding: 10px 20px;
+            border-radius: 8px 8px 0 0;
+            padding: 12px 24px;
             cursor: pointer;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            font-weight: bold;
+            font-weight: 600;
+            transition: all 0.3s ease;
             margin-right: 5px;
         }
 
         .tab-btn:hover {
             background: rgba(30, 50, 80, 0.8);
+            color: #ffffff;
         }
 
         .tab-btn.active {
             background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
-            color: #000;
+            color: #ffffff;
+            border-color: rgba(100, 200, 255, 0.6);
+            box-shadow: 0 2px 8px rgba(33, 150, 243, 0.4);
         }
 
         .shop-content {
@@ -1439,10 +1487,12 @@
 
         .tackle-item {
             background: rgba(20, 30, 50, 0.8);
-            border: 2px solid rgba(100, 200, 255, 0.4);
-            margin: 10px 0;
-            padding: 15px;
-            border-radius: 4px;
+            border: 2px solid rgba(100, 200, 255, 0.3);
+            margin: 12px 0;
+            padding: 18px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -1498,7 +1548,7 @@
             padding: 5px 10px;
             border-radius: 3px;
             cursor: pointer;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Courier New', monospace;
             font-size: 12px;
             font-weight: bold;
         }
@@ -1882,7 +1932,7 @@
                 padding: 8px 4px;
                 background: rgba(20, 30, 50, 0.8);
                 border: none;
-                border-right: 1px solid #00ff00;
+                border-right: 1px solid rgba(100, 200, 255, 0.3);
                 color: #64b5f6;
                 font-size: 9px;
                 font-weight: bold;
@@ -2180,8 +2230,8 @@
                 </div>
 
                 <!-- Tournament Timer Banner (shown during active tournaments) -->
-                <div id="mobile-tournament-banner" style="display: none; background: rgba(0,255,0,0.2); border: 2px solid #00ff00; border-radius: 8px; padding: 10px; margin: 10px; text-align: center;">
-                    <div style="color: #00ff00; font-weight: bold; font-size: 14px;">🎣 TOURNAMENT ACTIVE</div>
+                <div id="mobile-tournament-banner" style="display: none; background: rgba(100,200,255,0.2); border: 2px solid rgba(100,200,255,0.4); border-radius: 12px; padding: 12px; margin: 10px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                    <div style="color: #ffffff; font-weight: bold; font-size: 14px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">🐱 TOURNAMENT ACTIVE</div>
                     <div id="mobile-tournament-timer" style="font-size: 18px; font-weight: bold; color: #ffff00; margin-top: 5px;">0:00</div>
                 </div>
 
@@ -2220,10 +2270,10 @@
                     <h4>CHARACTER INFO</h4>
                     <div style="font-size: 10px; margin: 10px 0;">
                         <div style="text-align: center; margin-bottom: 10px;">
-                            <img id="mobile-character-display-img" src="" alt="Character" style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid #00ff00;">
+                            <img id="mobile-character-display-img" src="" alt="Character" style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid rgba(100,200,255,0.5); box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
                         </div>
                         <div style="display: flex; gap: 5px; flex-direction: column; margin-top: 10px;">
-                            <button class="mobile-btn" onclick="game.changeCharacter()" style="background: #003300; border-color: #00ff00; color: #00ff00; font-size: 10px; padding: 8px;">🐱 CHANGE CHARACTER</button>
+                            <button class="mobile-btn" onclick="game.changeCharacter()" style="background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%); border-color: rgba(100,200,255,0.5); color: #ffffff; font-size: 10px; padding: 8px; border-radius: 8px; box-shadow: 0 2px 8px rgba(33,150,243,0.3);">🐱 CHANGE CHARACTER</button>
                             <button class="mobile-btn" onclick="game.resetCharacter()" style="background: #330000; border-color: #ff0000; color: #ff0000; font-size: 10px; padding: 8px;">RESET CHARACTER</button>
                         </div>
                     </div>
@@ -2270,32 +2320,32 @@
             <input type="text" class="login-input" id="player-name-input" placeholder="Enter your username..." value="">
             <br>
             <div style="margin: 15px 0;">
-                <label style="color: #00ff00; display: block; margin-bottom: 8px;">Customize Your Character:</label>
+                <label style="color: #ffffff; display: block; margin-bottom: 8px; font-weight: 600;">Customize Your Character:</label>
                 
                 <!-- Character Preview -->
-                <div style="text-align: center; margin: 15px 0; min-height: 120px; background: #000; border: 2px solid #00ff00; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                    <img id="character-preview-avatar" src="https://robohash.org/cat-1?set=set4&size=200x200" alt="Cat Avatar" style="width: 100px; height: 100px; border-radius: 50%; border: 2px solid #00ff00;">
-                    <div style="color: #00ff00; font-size: 11px; margin-top: 8px;">Your Fishing Cat 🐱</div>
+                <div style="text-align: center; margin: 15px 0; min-height: 120px; background: rgba(20,30,50,0.8); border: 2px solid rgba(100,200,255,0.4); border-radius: 12px; padding: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                    <img id="character-preview-avatar" src="https://robohash.org/cat-1?set=set4&size=200x200" alt="Cat Avatar" style="width: 100px; height: 100px; border-radius: 50%; border: 2px solid rgba(100,200,255,0.5); box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+                    <div style="color: #ffffff; font-size: 11px; margin-top: 8px; font-weight: 600;">Your Fishing Cat 🐱</div>
                 </div>
                 
                 <!-- Cat Selector -->
                 <div style="margin-bottom: 10px;">
-                    <label style="color: #00ff00; font-size: 12px; display: block; margin-bottom: 8px;">Choose Your Fishing Cat:</label>
+                    <label style="color: #ffffff; font-size: 12px; display: block; margin-bottom: 8px; font-weight: 600;">Choose Your Fishing Cat:</label>
                     <div style="display: flex; gap: 10px; justify-content: center;">
-                        <button id="random-cat-btn" style="background: #00ff00; color: #000; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px;">🎲 Random Cat</button>
+                        <button id="random-cat-btn" style="background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%); color: #ffffff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 3px 10px rgba(33,150,243,0.3); transition: all 0.3s ease;">🎲 Random Cat</button>
                         <button id="prev-cat-btn" style="background: #666; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px; display: none;">◀ Previous</button>
                     </div>
                 </div>
                 
             </div>
-            <button class="login-btn" id="login-btn">ENTER KITTY CREEK</button>
+            <button class="login-btn" id="login-btn">JOIN THE CLUB!</button>
         </div>
     </div>
 
     <!-- Welcome Back Screen -->
     <div class="login-screen" id="welcome-screen" style="display: none;">
         <div class="login-box">
-            <h2 style="color: #00ff00;">🎣 WELCOME BACK! 🎣</h2>
+            <h2 style="color: #00ff00;">🐱 WELCOME BACK TO KITTY CREEK! 🎣</h2>
             <div style="text-align: center; margin: 30px 0;">
                 <img id="welcome-avatar" src="" alt="Your Cat" style="width: 150px; height: 150px; border-radius: 50%; border: 3px solid #00ff00; margin: 20px auto;">
                 <div style="color: #00ff00; font-size: 24px; font-weight: bold; margin-top: 20px;" id="welcome-name">Loading...</div>
@@ -2722,15 +2772,15 @@
                             });
                             
                             this.updateTournamentDisplay();
-                            this.showGlobalAnnouncement('🎣 TOURNAMENT STARTING! 🎣', '#ffff00');
-                            this.addChatMessage('system', '🎣 A tournament is starting! Join by clicking TOURNAMENT button!');
+                            this.showGlobalAnnouncement('🐱 KITTY CREEK TOURNAMENT STARTING! 🎣', '#ffff00');
+                            this.addChatMessage('system', '🐱 A tournament is starting! Join by clicking TOURNAMENT button!');
                         }
                     });
 
                     this.socket.on('tournament-countdown', (data) => {
                         // Show countdown for viewers
                         if (this.tournament && this.tournament.isViewer) {
-                            this.showGlobalAnnouncement(`🏆 TOURNAMENT STARTS IN ${data.seconds} SECONDS! 🏆`, '#ff00ff');
+                            this.showGlobalAnnouncement(`🐱 TOURNAMENT STARTS IN ${data.seconds} SECONDS! 🎣`, '#ff00ff');
                             this.addChatMessage('system', `Tournament starts in ${data.seconds} seconds!`);
                             this.updateTournamentDisplay(); // Update the display
                         }
@@ -2742,8 +2792,8 @@
                             this.tournament.phase = 'active';
                             this.tournament.startTime = Date.now();
                             this.updateTournamentDisplay();
-                            this.showGlobalAnnouncement('🎣 TOURNAMENT FISHING HAS BEGUN! 🎣', '#00ff00');
-                            this.addChatMessage('system', '🎣 TOURNAMENT FISHING HAS BEGUN! Good luck!');
+                            this.showGlobalAnnouncement('🐱 KITTY CREEK TOURNAMENT HAS BEGUN! 🎣', '#00ff00');
+                            this.addChatMessage('system', '🐱 TOURNAMENT FISHING HAS BEGUN! Good luck, furriend!');
                         }
                     });
 
@@ -2871,9 +2921,72 @@
                     oscillator.stop(this.audioContext.currentTime + 0.5);
                 };
 
-                // Fish caught sound - splash and success
+                // Cat meow sound generator
+                this.sounds.catMeow = (pitch = 400, duration = 0.3) => {
+                    const osc1 = this.audioContext.createOscillator();
+                    const osc2 = this.audioContext.createOscillator();
+                    const gain = this.audioContext.createGain();
+                    const filter = this.audioContext.createBiquadFilter();
+                    
+                    osc1.type = 'sine';
+                    osc2.type = 'triangle';
+                    
+                    // Create meow shape: start high, dip down, go back up
+                    osc1.frequency.setValueAtTime(pitch * 1.5, this.audioContext.currentTime);
+                    osc1.frequency.exponentialRampToValueAtTime(pitch * 0.7, this.audioContext.currentTime + duration * 0.4);
+                    osc1.frequency.exponentialRampToValueAtTime(pitch * 1.2, this.audioContext.currentTime + duration);
+                    
+                    osc2.frequency.setValueAtTime(pitch * 1.3, this.audioContext.currentTime);
+                    osc2.frequency.exponentialRampToValueAtTime(pitch * 0.8, this.audioContext.currentTime + duration * 0.4);
+                    osc2.frequency.exponentialRampToValueAtTime(pitch * 1.1, this.audioContext.currentTime + duration);
+                    
+                    filter.type = 'bandpass';
+                    filter.frequency.setValueAtTime(pitch, this.audioContext.currentTime);
+                    filter.Q.setValueAtTime(3, this.audioContext.currentTime);
+                    
+                    osc1.connect(filter);
+                    osc2.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.audioContext.destination);
+                    
+                    gain.gain.setValueAtTime(0.25, this.audioContext.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
+                    
+                    osc1.start();
+                    osc2.start();
+                    osc1.stop(this.audioContext.currentTime + duration);
+                    osc2.stop(this.audioContext.currentTime + duration);
+                };
+
+                // Cat purr sound
+                this.sounds.catPurr = () => {
+                    const osc = this.audioContext.createOscillator();
+                    const gain = this.audioContext.createGain();
+                    const filter = this.audioContext.createBiquadFilter();
+                    
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(120, this.audioContext.currentTime);
+                    osc.frequency.setValueAtTime(115, this.audioContext.currentTime + 0.1);
+                    osc.frequency.setValueAtTime(125, this.audioContext.currentTime + 0.2);
+                    osc.frequency.setValueAtTime(120, this.audioContext.currentTime + 0.3);
+                    
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(300, this.audioContext.currentTime);
+                    
+                    osc.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.audioContext.destination);
+                    
+                    gain.gain.setValueAtTime(0.15, this.audioContext.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.5);
+                    
+                    osc.start();
+                    osc.stop(this.audioContext.currentTime + 0.5);
+                };
+
+                // Fish caught sound - splash and cat meow!
                 this.sounds.catch = () => {
-                    // Splash sound - use sawtooth instead of noise
+                    // Splash sound
                     const splashOsc = this.audioContext.createOscillator();
                     const splashGain = this.audioContext.createGain();
                     const splashFilter = this.audioContext.createBiquadFilter();
@@ -2882,7 +2995,7 @@
                     splashFilter.connect(splashGain);
                     splashGain.connect(this.audioContext.destination);
                     
-                    splashOsc.type = 'sawtooth'; // Changed from 'noise' to 'sawtooth'
+                    splashOsc.type = 'sawtooth';
                     splashFilter.type = 'bandpass';
                     splashFilter.frequency.setValueAtTime(800, this.audioContext.currentTime);
                     splashFilter.Q.setValueAtTime(1, this.audioContext.currentTime);
@@ -2893,27 +3006,13 @@
                     splashOsc.start();
                     splashOsc.stop(this.audioContext.currentTime + 0.2);
                     
-                    // Success chime
+                    // Cat meow for success!
                     setTimeout(() => {
-                        const chimeOsc = this.audioContext.createOscillator();
-                        const chimeGain = this.audioContext.createGain();
-                        
-                        chimeOsc.connect(chimeGain);
-                        chimeGain.connect(this.audioContext.destination);
-                        
-                        chimeOsc.frequency.setValueAtTime(523, this.audioContext.currentTime); // C5
-                        chimeOsc.frequency.setValueAtTime(659, this.audioContext.currentTime + 0.1); // E5
-                        chimeOsc.frequency.setValueAtTime(784, this.audioContext.currentTime + 0.2); // G5
-                        
-                        chimeGain.gain.setValueAtTime(0.2, this.audioContext.currentTime);
-                        chimeGain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
-                        
-                        chimeOsc.start();
-                        chimeOsc.stop(this.audioContext.currentTime + 0.3);
-                    }, 100);
+                        this.sounds.catMeow(450, 0.3);
+                    }, 150);
                 };
 
-                // Big fish caught - deeper splash and fanfare
+                // Big fish caught - deeper splash and excited cat meows!
                 this.sounds.bigCatch = () => {
                     // Big splash
                     const bigSplashOsc = this.audioContext.createOscillator();
@@ -2924,7 +3023,7 @@
                     bigSplashFilter.connect(bigSplashGain);
                     bigSplashGain.connect(this.audioContext.destination);
                     
-                    bigSplashOsc.type = 'sawtooth'; // Changed from 'noise' to 'sawtooth'
+                    bigSplashOsc.type = 'sawtooth';
                     bigSplashFilter.type = 'bandpass';
                     bigSplashFilter.frequency.setValueAtTime(400, this.audioContext.currentTime);
                     bigSplashFilter.Q.setValueAtTime(0.5, this.audioContext.currentTime);
@@ -2935,40 +3034,27 @@
                     bigSplashOsc.start();
                     bigSplashOsc.stop(this.audioContext.currentTime + 0.4);
                     
-                    // Fanfare
+                    // Excited cat meows (higher pitch, more energetic)
                     setTimeout(() => {
-                        this.playFanfare();
-                    }, 200);
+                        this.sounds.catMeow(550, 0.25); // First excited meow
+                        setTimeout(() => {
+                            this.sounds.catMeow(600, 0.3); // Second higher meow
+                        }, 200);
+                    }, 250);
                 };
 
-                // Level up celebration - champagne cork and fireworks
+                // Level up celebration - cat purr and happy meows!
                 this.sounds.levelUp = () => {
-                    // Champagne cork pop
-                    const corkOsc = this.audioContext.createOscillator();
-                    const corkGain = this.audioContext.createGain();
-                    const corkFilter = this.audioContext.createBiquadFilter();
+                    // Cat purr for level up happiness
+                    this.sounds.catPurr();
                     
-                    corkOsc.connect(corkFilter);
-                    corkFilter.connect(corkGain);
-                    corkGain.connect(this.audioContext.destination);
-                    
-                    corkOsc.type = 'sawtooth';
-                    corkOsc.frequency.setValueAtTime(200, this.audioContext.currentTime);
-                    corkOsc.frequency.exponentialRampToValueAtTime(20, this.audioContext.currentTime + 0.1);
-                    
-                    corkFilter.type = 'highpass';
-                    corkFilter.frequency.setValueAtTime(100, this.audioContext.currentTime);
-                    
-                    corkGain.gain.setValueAtTime(0.5, this.audioContext.currentTime);
-                    corkGain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
-                    
-                    corkOsc.start();
-                    corkOsc.stop(this.audioContext.currentTime + 0.1);
-                    
-                    // Fireworks burst
+                    // Happy meows after purr
                     setTimeout(() => {
-                        this.playFireworks();
-                    }, 150);
+                        this.sounds.catMeow(500, 0.35); // Happy meow
+                        setTimeout(() => {
+                            this.sounds.catMeow(550, 0.3); // Excited follow-up
+                        }, 300);
+                    }, 400);
                 };
             }
 
@@ -3110,7 +3196,7 @@
                     }
                     
                     .congratulations-body {
-                        color: #00ffff;
+                        color: #64b5f6;
                         font-size: 16px;
                         line-height: 1.6;
                         margin-bottom: 25px;
@@ -3889,36 +3975,36 @@
                     } else {
                         // Show humorous "no catch" messages
                         const noCatchMessages = [
-                            "The one that got away! 🐟",
-                            "Just a nibble... try again!",
-                            "Fish saw your shadow and swam away!",
-                            "They're having a meeting down there!",
-                            "That fish laughed at your bait! 😂",
-                            "Nothing but seaweed this time!",
-                            "Fish are on lunch break! 🍔",
-                            "A ghost fish stole your bait! 👻",
-                            "Fish are watching Netflix today! 📺",
-                            "They swam away giggling!",
-                            "Your bait was too fancy for them!",
-                            "Fish are playing hide and seek!",
-                            "Maybe try a different spot?",
-                            "That fish said 'maybe next time!'",
-                            "Fish are having a party without you! 🎉",
-                            "Just a friendly turtle saying hi! 🐢",
-                            "The fish are playing tag!",
-                            "Your hook came back empty!",
-                            "Fish saw your cat and got scared! 😸",
-                            "They're doing yoga down there! 🧘",
-                            "Fish are busy playing poker! 🃏",
-                            "Your bait was too spicy! 🌶️",
-                            "Fish are on vacation! 🏖️",
-                            "They're writing their memoirs! 📝",
-                            "Fish are doing karaoke! 🎤",
-                            "Just a crab waving hello! 🦀",
-                            "Fish are practicing social distancing!",
-                            "They're having a business meeting! 💼",
-                            "Fish are doing homework! 📚",
-                            "The one that got away... and took your bait!"
+                            "That fish was too quick for your paws! 🐾",
+                            "The fish saw you coming and said 'NOPE!' 😹",
+                            "Just a nibble... your whiskers need more practice!",
+                            "Fish are gossiping about your casting technique! 😸",
+                            "They're doing cat yoga down there! 🧘‍♀️",
+                            "Fish are on their meow-ning break! ☕",
+                            "A ghost fish stole your bait and laughed! 👻😹",
+                            "Fish are watching cat videos... but not yours! 📺",
+                            "They swam away purring at your attempt!",
+                            "Your bait was too fancy for fish who prefer cat food! 🐟",
+                            "Fish are playing hide and seek... you're 'it'!",
+                            "Maybe try a different spot, furriend?",
+                            "That fish said 'meow-bee next time!' 😸",
+                            "Fish are having a catnip party without you! 🎉🌿",
+                            "Just a friendly turtle saying 'meow-lo!' 🐢",
+                            "The fish are playing tag... and you're still it!",
+                            "Your hook came back empty... like a cat's food bowl at 3am!",
+                            "Fish saw your cat avatar and got jealous! 😼",
+                            "They're busy practicing their fin-ishing moves!",
+                            "Fish are playing poker... and winning! 🃏",
+                            "Your bait was too spicy for their delicate palates! 🌶️",
+                            "Fish are on vacation... to avoid cats! 🏖️",
+                            "They're writing their memoirs... 'My Life as Cat Bait' 📝",
+                            "Fish are doing karaoke... 'Don't Stop Belly-in!' 🎤",
+                            "Just a crab waving hello with claws! 🦀",
+                            "Fish are practicing social distancing... from cats!",
+                            "They're having a business meeting... about avoiding cats! 💼",
+                            "Fish are doing homework... 'How to Avoid Being Caught 101' 📚",
+                            "That fish escaped faster than you run from the vacuum! 🏃",
+                            "Your purr-suasion skills need work! 😸"
                         ];
                         const randomMessage = noCatchMessages[Math.floor(Math.random() * noCatchMessages.length)];
                         this.showMessage(randomMessage, '#ffff00');
@@ -4220,7 +4306,7 @@
                 const achievements = [
                     {
                         id: 'first_catch',
-                        name: '🎣 Novice Angler',
+                        name: '🐱 Purr-novice Angler',
                         description: 'Catch your first fish',
                         condition: () => this.player.totalCaught >= 1,
                         unlocked: this.player.achievements.includes('first_catch')
@@ -4234,42 +4320,42 @@
                     },
                     {
                         id: 'level_5',
-                        name: '⭐ Rising Star',
+                        name: '⭐ Rising Purr-star',
                         description: 'Reach level 5',
                         condition: () => this.player.level >= 5,
                         unlocked: this.player.achievements.includes('level_5')
                     },
                     {
                         id: 'level_10',
-                        name: '🌟 Expert Angler',
+                        name: '🌟 Expert Purr-angler',
                         description: 'Reach level 10',
                         condition: () => this.player.level >= 10,
                         unlocked: this.player.achievements.includes('level_10')
                     },
                     {
                         id: 'money_maker',
-                        name: '💰 Money Maker',
+                        name: '💰 Purr-rize Winner',
                         description: 'Earn $1000',
                         condition: () => this.player.money >= 1000,
                         unlocked: this.player.achievements.includes('money_maker')
                     },
                     {
                         id: 'fish_master',
-                        name: '🐠 Fish Master',
+                        name: '🐠 Fish Meow-ster',
                         description: 'Catch 100 fish',
                         condition: () => this.player.totalCaught >= 100,
                         unlocked: this.player.achievements.includes('fish_master')
                     },
                     {
                         id: 'tournament_champ',
-                        name: '🏆 Tournament Champion',
+                        name: '🏆 Tournament Champ-purr',
                         description: 'Win a tournament',
                         condition: () => this.player.tournamentStats && this.player.tournamentStats.wins > 0,
                         unlocked: this.player.achievements.includes('tournament_champ')
                     },
                     {
                         id: 'gear_collector',
-                        name: '🎒 Gear Collector',
+                        name: '🎒 Tackle Collector',
                         description: 'Own 10 pieces of tackle',
                         condition: () => {
                             let count = 0;
@@ -4280,14 +4366,14 @@
                     },
                     {
                         id: 'location_explorer',
-                        name: '🗺️ Location Explorer',
+                        name: '🗺️ Creek Explorer',
                         description: 'Unlock all locations',
                         condition: () => this.player.locationUnlocks.length >= this.locations.length,
                         unlocked: this.player.achievements.includes('location_explorer')
                     },
                     {
                         id: 'level_20',
-                        name: '⭐ Master Angler',
+                        name: '⭐ Meow-ster Angler',
                         description: 'Reach level 20',
                         condition: () => this.player.level >= 20,
                         unlocked: this.player.achievements.includes('level_20')
@@ -4306,7 +4392,7 @@
                     },
                     {
                         id: 'biggest_bag',
-                        name: '🎣 Biggest Bag',
+                        name: '🎣 Biggest Fish Bag',
                         description: 'Have a top 10 bag over 50 lbs',
                         condition: () => {
                             const top10Total = this.player.top10BiggestFish.reduce((sum, c) => sum + c.weight, 0);
@@ -4316,7 +4402,7 @@
                     },
                     {
                         id: 'legendary_catch',
-                        name: '✨ Legendary Hunter',
+                        name: '✨ Legendary Purr-hunter',
                         description: 'Catch a legendary fish',
                         condition: () => {
                             return this.player.recentCatches.some(c => c.fish.rarity === 'Legendary');
@@ -4736,7 +4822,7 @@
                     }
                     
                     .banner-content.rare {
-                        border-color: #00ffff;
+                        border-color: #64b5f6;
                         box-shadow: 0 0 40px rgba(0, 255, 255, 0.8);
                     }
                     
@@ -4766,7 +4852,7 @@
                     }
                     
                     .banner-content.rare h2 {
-                        color: #00ffff;
+                        color: #64b5f6;
                     }
                     
                     .banner-content.trophy h2 {
@@ -4922,8 +5008,8 @@
                 });
 
                 this.updateTournamentDisplay();
-                this.showGlobalAnnouncement('🎣 TOURNAMENT STARTING! 🎣', '#ffff00');
-                this.addChatMessage('system', '🎣 TOURNAMENT STARTING! 60 seconds to join!');
+                this.showGlobalAnnouncement('🐱 KITTY CREEK TOURNAMENT STARTING! 🎣', '#ffff00');
+                this.addChatMessage('system', '🐱 TOURNAMENT STARTING! 60 seconds to join!');
                 
                 // Broadcast tournament start to all players
                 if (this.socket && this.connected) {
@@ -4948,7 +5034,7 @@
                     
                     if (countdown > 0 && countdown <= 10) {
                         // Show countdown for last 10 seconds
-                        this.showGlobalAnnouncement(`🏆 TOURNAMENT STARTS IN ${countdown} SECONDS! 🏆`, '#ff00ff');
+                        this.showGlobalAnnouncement(`🐱 TOURNAMENT STARTS IN ${countdown} SECONDS! 🎣`, '#ff00ff');
                         this.addChatMessage('system', `Tournament starts in ${countdown} seconds!`);
                         
                         // Broadcast countdown to all players
@@ -5142,16 +5228,16 @@
                     const countdown = Math.max(0, 60 - Math.floor(countdownElapsed / 1000));
                     
                     const desktopHtml = `
-                        <h4>🎣 TOURNAMENT STARTING</h4>
+                        <h4>🐱 TOURNAMENT STARTING</h4>
                         <div class="tournament-timer" style="font-size: 18px; font-weight: bold; color: #ffff00;">
                             Starts in: ${countdown} seconds
                         </div>
                         <div style="margin-top: 10px;">Participants: ${this.tournament.participants.length}</div>
-                        <div style="margin-top: 5px; font-size: 12px; color: #00ffff;">Get ready to fish!</div>
+                        <div style="margin-top: 5px; font-size: 12px; color: #64b5f6;">Get ready to fish!</div>
                     `;
                     
                     const mobileHtml = `
-                        <div style="color: #ffff00; font-weight: bold; font-size: 12px;">🎣 TOURNAMENT STARTING</div>
+                        <div style="color: #ffff00; font-weight: bold; font-size: 12px;">🐱 TOURNAMENT STARTING</div>
                         <div style="font-size: 16px; font-weight: bold; color: #ffff00; margin-top: 8px; padding: 8px; background: rgba(255,255,0,0.15); border-radius: 4px; text-align: center;">
                             ⏱️ STARTS IN ${countdown}s
                         </div>
@@ -5192,26 +5278,26 @@
                     });
 
                     const desktopHtml = `
-                        <h4>🎣 TOURNAMENT ACTIVE</h4>
+                        <h4>🐱 TOURNAMENT ACTIVE</h4>
                         <div class="tournament-timer" style="font-size: 16px; font-weight: bold; color: #00ff00;">
                             Time: ${minutes}:${seconds.toString().padStart(2, '0')}
                         </div>
                         <div style="margin-top: 10px;">
                             <div style="font-size: 12px; color: #ffff00;">🐟 Biggest Fish:</div>
-                            <div style="font-size: 11px; color: #00ffff; margin-left: 10px;">
+                            <div style="font-size: 11px; color: #64b5f6; margin-left: 10px;">
                                 ${biggestFishPlayer}: ${biggestFish.toFixed(1)} lbs
                             </div>
                         </div>
                         <div style="margin-top: 8px;">
                             <div style="font-size: 12px; color: #ffff00;">👥 Participants:</div>
-                            <div style="font-size: 11px; color: #00ffff; margin-left: 10px;">
+                            <div style="font-size: 11px; color: #64b5f6; margin-left: 10px;">
                                 ${this.tournament.participants.length} players | ${totalFish} fish caught
                             </div>
                         </div>
                     `;
                     
                     const mobileHtml = `
-                        <div style="color: #00ff00; font-weight: bold; font-size: 12px;">🎣 TOURNAMENT ACTIVE</div>
+                        <div style="color: #00ff00; font-weight: bold; font-size: 12px;">🐱 TOURNAMENT ACTIVE</div>
                         <div style="font-size: 14px; font-weight: bold; color: #ffff00; margin-top: 8px; padding: 5px; background: rgba(0,255,0,0.1); border-radius: 4px; text-align: center;">
                             ⏱️ ${minutes}:${seconds.toString().padStart(2, '0')} LEFT
                         </div>
