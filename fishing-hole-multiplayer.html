@@ -1455,6 +1455,9 @@
                 background: #001100;
                 border-bottom: 2px solid #00ff00;
                 flex-shrink: 0;
+                position: sticky;
+                top: 40px;
+                z-index: 99;
             }
 
             .mobile-header-left {
@@ -4983,7 +4986,7 @@
                 debugDiv.id = 'debug-info';
                 debugDiv.style.cssText = `
                     position: fixed;
-                    top: 80px;
+                    top: 100px;
                     left: 10px;
                     right: 10px;
                     background: rgba(0, 0, 0, 0.9);
