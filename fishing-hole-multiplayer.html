@@ -279,7 +279,7 @@
         .char-option-btn[data-selected="true"] {
             border-color: rgba(100, 200, 255, 0.5);
             background: rgba(42, 82, 152, 0.6);
-            box-shadow: 0 0 8px #00ff00;
+            box-shadow: 0 0 12px rgba(100, 200, 255, 0.4);
         }
 
         .fishing-area {
@@ -1070,7 +1070,7 @@
         }
 
         .value {
-            color: #00ff00 !important;
+            color: #64b5f6 !important;
         }
 
         .location {
@@ -2224,8 +2224,8 @@
                 </div>
 
                 <!-- Tournament Timer Banner (shown during active tournaments) -->
-                <div id="mobile-tournament-banner" style="display: none; background: rgba(0,255,0,0.2); border: 2px solid #00ff00; border-radius: 8px; padding: 10px; margin: 10px; text-align: center;">
-                    <div style="color: #00ff00; font-weight: bold; font-size: 14px;">🐱 TOURNAMENT ACTIVE</div>
+                <div id="mobile-tournament-banner" style="display: none; background: rgba(100,200,255,0.2); border: 2px solid rgba(100,200,255,0.4); border-radius: 12px; padding: 12px; margin: 10px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                    <div style="color: #ffffff; font-weight: bold; font-size: 14px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">🐱 TOURNAMENT ACTIVE</div>
                     <div id="mobile-tournament-timer" style="font-size: 18px; font-weight: bold; color: #ffff00; margin-top: 5px;">0:00</div>
                 </div>
 
@@ -2264,10 +2264,10 @@
                     <h4>CHARACTER INFO</h4>
                     <div style="font-size: 10px; margin: 10px 0;">
                         <div style="text-align: center; margin-bottom: 10px;">
-                            <img id="mobile-character-display-img" src="" alt="Character" style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid #00ff00;">
+                            <img id="mobile-character-display-img" src="" alt="Character" style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid rgba(100,200,255,0.5); box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
                         </div>
                         <div style="display: flex; gap: 5px; flex-direction: column; margin-top: 10px;">
-                            <button class="mobile-btn" onclick="game.changeCharacter()" style="background: #003300; border-color: #00ff00; color: #00ff00; font-size: 10px; padding: 8px;">🐱 CHANGE CHARACTER</button>
+                            <button class="mobile-btn" onclick="game.changeCharacter()" style="background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%); border-color: rgba(100,200,255,0.5); color: #ffffff; font-size: 10px; padding: 8px; border-radius: 8px; box-shadow: 0 2px 8px rgba(33,150,243,0.3);">🐱 CHANGE CHARACTER</button>
                             <button class="mobile-btn" onclick="game.resetCharacter()" style="background: #330000; border-color: #ff0000; color: #ff0000; font-size: 10px; padding: 8px;">RESET CHARACTER</button>
                         </div>
                     </div>
@@ -2314,12 +2314,12 @@
             <input type="text" class="login-input" id="player-name-input" placeholder="Enter your username..." value="">
             <br>
             <div style="margin: 15px 0;">
-                <label style="color: #00ff00; display: block; margin-bottom: 8px;">Customize Your Character:</label>
+                <label style="color: #ffffff; display: block; margin-bottom: 8px; font-weight: 600;">Customize Your Character:</label>
                 
                 <!-- Character Preview -->
-                <div style="text-align: center; margin: 15px 0; min-height: 120px; background: #000; border: 2px solid #00ff00; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                    <img id="character-preview-avatar" src="https://robohash.org/cat-1?set=set4&size=200x200" alt="Cat Avatar" style="width: 100px; height: 100px; border-radius: 50%; border: 2px solid #00ff00;">
-                    <div style="color: #00ff00; font-size: 11px; margin-top: 8px;">Your Fishing Cat 🐱</div>
+                <div style="text-align: center; margin: 15px 0; min-height: 120px; background: rgba(20,30,50,0.8); border: 2px solid rgba(100,200,255,0.4); border-radius: 12px; padding: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                    <img id="character-preview-avatar" src="https://robohash.org/cat-1?set=set4&size=200x200" alt="Cat Avatar" style="width: 100px; height: 100px; border-radius: 50%; border: 2px solid rgba(100,200,255,0.5); box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+                    <div style="color: #ffffff; font-size: 11px; margin-top: 8px; font-weight: 600;">Your Fishing Cat 🐱</div>
                 </div>
                 
                 <!-- Cat Selector -->
