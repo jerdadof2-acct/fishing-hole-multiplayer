@@ -592,42 +592,49 @@
 
         .hook {
             position: absolute;
-            bottom: -12px;
+            bottom: -18px;
             left: 50%;
-            width: 16px;
-            height: 20px;
+            width: 18px;
+            height: 22px;
             transform: translateX(-50%);
-            /* Classic red and white striped bobber */
+            
+            /* Realistic red and white bobber */
+            border-radius: 50%;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            
+            /* Red top, white bottom with realistic shading */
             background: 
-                repeating-linear-gradient(
-                    to bottom,
-                    #ff0000 0px,
-                    #ff0000 5px,
-                    #ffffff 5px,
-                    #ffffff 10px,
-                    #ff0000 10px,
-                    #ff0000 15px,
-                    #ffffff 15px,
-                    #ffffff 20px
+                radial-gradient(circle at 40% 35%, rgba(255, 255, 255, 0.6) 0%, transparent 50%),
+                linear-gradient(to bottom,
+                    #ff3333 0%,
+                    #ff3333 20%,
+                    #ff0000 25%,
+                    #ff0000 45%,
+                    #ffffff 45%,
+                    #ffffff 55%,
+                    #ff0000 55%,
+                    #ff0000 100%
                 );
-            border-radius: 50% 50% 50% 50% / 70% 70% 50% 50%;
-            border: 1px solid #cc0000;
+            
             box-shadow: 
-                0 0 3px rgba(255, 255, 255, 0.3),
-                inset 0 -5px 5px rgba(0, 0, 0, 0.2);
+                0 3px 8px rgba(0, 0, 0, 0.4),
+                inset 0 3px 6px rgba(255, 255, 255, 0.4),
+                inset 0 -6px 8px rgba(0, 0, 0, 0.2),
+                0 0 8px rgba(255, 0, 0, 0.2);
             position: relative;
         }
         
         .hook::before {
             content: '';
             position: absolute;
-            top: 2px;
+            top: -5px;
             left: 50%;
             transform: translateX(-50%);
-            width: 8px;
-            height: 6px;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.3) 70%);
-            border-radius: 50%;
+            width: 2px;
+            height: 8px;
+            background: linear-gradient(to bottom, #ffffff 0%, #e0e0e0 100%);
+            border-radius: 2px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
         }
 
         .fishing-line {
@@ -2415,23 +2422,48 @@
 
             .mobile-fishing-lake .hook {
                 position: absolute;
-                bottom: -12px;
+                bottom: -18px;
                 left: 50%;
-                width: 16px;
-                height: 20px;
-                background: repeating-linear-gradient(
-                    45deg,
-                    #ff0000 0px,
-                    #ff0000 3px,
-                    #ffffff 3px,
-                    #ffffff 6px
-                );
-                border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-                border: 1px solid #cc0000;
-                box-shadow: 
-                    0 0 5px rgba(0, 0, 0, 0.3),
-                    inset 0 2px 5px rgba(255, 255, 255, 0.3);
+                width: 18px;
+                height: 22px;
                 transform: translateX(-50%);
+                
+                /* Realistic red and white bobber */
+                border-radius: 50%;
+                border: 2px solid rgba(0, 0, 0, 0.1);
+                
+                background: 
+                    radial-gradient(circle at 40% 35%, rgba(255, 255, 255, 0.6) 0%, transparent 50%),
+                    linear-gradient(to bottom,
+                        #ff3333 0%,
+                        #ff3333 20%,
+                        #ff0000 25%,
+                        #ff0000 45%,
+                        #ffffff 45%,
+                        #ffffff 55%,
+                        #ff0000 55%,
+                        #ff0000 100%
+                    );
+                
+                box-shadow: 
+                    0 3px 8px rgba(0, 0, 0, 0.4),
+                    inset 0 3px 6px rgba(255, 255, 255, 0.4),
+                    inset 0 -6px 8px rgba(0, 0, 0, 0.2);
+                position: relative;
+            }
+            
+            .mobile-fishing-lake .hook::before {
+                content: '';
+                position: absolute;
+                top: -5px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 2px;
+                height: 8px;
+                background: linear-gradient(to bottom, #ffffff 0%, #e0e0e0 100%);
+                border-radius: 2px;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            }
             }
 
             .mobile-fishing-lake .hook::before {
