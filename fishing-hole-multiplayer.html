@@ -2210,10 +2210,6 @@
                         <button class="btn" id="tournament-btn">TOURNAMENT</button>
                         <button class="btn" id="inventory-btn">INVENTORY</button>
                         <button class="btn" id="help-btn">❓ HELP</button>
-                        <button class="btn" id="save-btn">SAVE GAME</button>
-                        <button class="btn" id="export-btn">EXPORT SAVE</button>
-                        <input type="file" id="import-input" accept=".json" style="display: none;">
-                        <button class="btn" id="import-btn">IMPORT SAVE</button>
                         <button class="btn" id="sound-btn">🔊 SOUND ON</button>
                     </div>
                     
@@ -2546,8 +2542,6 @@
         </div>
 
         <div class="mobile-menu-bar">
-            <button class="mobile-menu-btn" id="mobile-save-btn">💾 SAVE</button>
-            <button class="mobile-menu-btn" id="mobile-export-btn">📤 EXPORT</button>
             <button class="mobile-menu-btn" id="mobile-sound-btn">🔊 SOUND</button>
         </div>
         </div>
@@ -3493,10 +3487,6 @@
                 document.getElementById('inventory-btn').addEventListener('click', () => this.openInventory());
                 document.getElementById('help-btn').addEventListener('click', () => this.openHelp());
                 document.getElementById('close-help').addEventListener('click', () => this.closeHelp());
-                document.getElementById('save-btn').addEventListener('click', () => this.manualSave());
-                document.getElementById('export-btn').addEventListener('click', () => this.exportGameData());
-                document.getElementById('import-btn').addEventListener('click', () => document.getElementById('import-input').click());
-                document.getElementById('import-input').addEventListener('change', (e) => this.importGameData(e));
                 document.getElementById('sound-btn').addEventListener('click', () => this.toggleSound());
 
                 // Login button
@@ -3698,10 +3688,6 @@
                     } else if (e.key === 'h' || e.key === 'H') {
                         e.preventDefault();
                         this.openHelp();
-                    } else if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
-                        e.preventDefault();
-                        this.manualSave();
-                    }
                 });
             }
 
