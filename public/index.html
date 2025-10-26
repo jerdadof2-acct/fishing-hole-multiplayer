@@ -1073,14 +1073,6 @@
             display: none;
         }
 
-        .fishing-status {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 10px;
-            border: 1px solid #00ff00;
-        }
 
         .location-selector {
             position: absolute;
@@ -1116,29 +1108,44 @@
         }
 
         .location-dropdown {
-            margin: 10px 0;
+            margin: 15px 0;
+            padding: 10px;
+            background: #001100;
+            border: 3px solid #00ff00;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
         }
 
         .location-dropdown select {
             width: 100%;
-            padding: 8px;
-            background: #001100;
+            padding: 12px;
+            background: #000;
             color: #00ff00;
             border: 2px solid #00ff00;
             border-radius: 4px;
-            font-size: 14px;
+            font-size: 16px;
+            font-weight: bold;
             font-family: 'Courier New', monospace;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .location-dropdown select:hover {
+            background: #001100;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
         }
 
         .location-dropdown select option {
             background: #001100;
             color: #00ff00;
-            padding: 5px;
+            padding: 8px;
+            font-size: 14px;
         }
 
         .location-dropdown select option:disabled {
             color: #666;
-            background: #333;
+            background: #222;
+            font-style: italic;
         }
 
         /* Tackle Shop Modal */
@@ -1407,12 +1414,6 @@
                         </div>
                         <div class="fishing-lake" id="fishing-lake">
                             <div class="ripples" id="ripples"></div>
-                        </div>
-
-                        <div class="fishing-status">
-                            <div>Location: <span id="current-location">Lake Shore</span></div>
-                            <div>Difficulty: <span id="location-difficulty">Easy</span></div>
-                            <div>Cost: $<span id="location-cost">0</span></div>
                         </div>
 
                         <div class="location-dropdown">
@@ -4248,12 +4249,7 @@
                 document.getElementById('stat-patience').textContent = this.player.stats.patience;
                 document.getElementById('stat-strength').textContent = this.player.stats.strength;
 
-                const location = this.locations[this.currentLocation];
-                document.getElementById('current-location').textContent = location.name;
-                document.getElementById('location-difficulty').textContent = location.difficulty;
-                document.getElementById('location-cost').textContent = location.cost;
-
-                // Update location buttons
+                // Update location dropdown
                 this.updateLocationButtons();
 
                 this.updateOnlinePlayers();
