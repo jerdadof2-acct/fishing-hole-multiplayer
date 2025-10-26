@@ -3000,17 +3000,20 @@
 
             createAnimatedRipples() {
                 const ripplesContainer = document.getElementById('ripples');
+                const mobileRipplesContainer = document.getElementById('mobile-ripples');
                 
                 // Create multiple ripples at random positions
                 for (let i = 0; i < 8; i++) {
                     setTimeout(() => {
-                        this.createRipple(ripplesContainer);
+                        if (ripplesContainer) this.createRipple(ripplesContainer);
+                        if (mobileRipplesContainer) this.createRipple(mobileRipplesContainer);
                     }, i * 500); // Stagger the creation
                 }
                 
                 // Continue creating ripples periodically
                 setInterval(() => {
-                    this.createRipple(ripplesContainer);
+                    if (ripplesContainer) this.createRipple(ripplesContainer);
+                    if (mobileRipplesContainer) this.createRipple(mobileRipplesContainer);
                 }, 2000);
             }
 
@@ -3162,13 +3165,22 @@
             addFishingLine(playerIndex, isCasting = false) {
                 const fishermanRow = document.getElementById('fisherman-row');
                 const lake = document.getElementById('fishing-lake');
-                const fishermen = fishermanRow.querySelectorAll('.fisherman');
+                const mobileFishermanRow = document.getElementById('mobile-fisherman-row');
+                const mobileLake = document.getElementById('mobile-fishing-lake');
+                
+                // Use desktop or mobile elements based on what's visible
+                const activeFishermanRow = fishermanRow || mobileFishermanRow;
+                const activeLake = lake || mobileLake;
+                
+                if (!activeFishermanRow || !activeLake) return null;
+                
+                const fishermen = activeFishermanRow.querySelectorAll('.fisherman, .mobile-fisherman');
                 
                 if (playerIndex >= fishermen.length) return null;
                 
                 const fisherman = fishermen[playerIndex];
                 const fishermanRect = fisherman.getBoundingClientRect();
-                const lakeRect = lake.getBoundingClientRect();
+                const lakeRect = activeLake.getBoundingClientRect();
                 
                 const line = document.createElement('div');
                 line.className = 'fishing-line';
@@ -3224,17 +3236,17 @@
                 splash.className = 'hook-splash';
                 splash.style.left = line.style.left;
                 splash.style.top = lineLength + 'px'; // Position at bottom of line where hook is
-                lake.appendChild(splash);
+                activeLake.appendChild(splash);
                 
                 // Store splash reference on line for cleanup
                 line.dataset.splashId = splash.id || `splash-${Date.now()}-${Math.random()}`;
                 splash.id = line.dataset.splashId;
                 
-                lake.appendChild(line);
+                activeLake.appendChild(line);
                 
                 // Create landing splash effect when hook hits water (after line extends)
                 setTimeout(() => {
-                    this.createHookLandingSplash(line.style.left, lineLength, lake);
+                    this.createHookLandingSplash(line.style.left, lineLength, activeLake);
                 }, 300); // Small delay to simulate hook reaching water
                 
                 return line;
@@ -4255,11 +4267,20 @@
 
             addChatMessage(type, message) {
                 const chatArea = document.getElementById('chat-area');
+                const mobileChatArea = document.getElementById('mobile-chat-area');
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `chat-message ${type}`;
                 messageDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-                chatArea.appendChild(messageDiv);
-                chatArea.scrollTop = chatArea.scrollHeight;
+                
+                if (chatArea) {
+                    chatArea.appendChild(messageDiv.cloneNode(true));
+                    chatArea.scrollTop = chatArea.scrollHeight;
+                }
+                
+                if (mobileChatArea) {
+                    mobileChatArea.appendChild(messageDiv);
+                    mobileChatArea.scrollTop = mobileChatArea.scrollHeight;
+                }
             }
 
             sendMessage(message) {
