@@ -778,6 +778,42 @@
             }
         }
 
+        .chat-banner {
+            position: fixed;
+            bottom: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 25, 40, 0.95);
+            border: 2px solid rgba(100, 200, 255, 0.5);
+            border-radius: 8px;
+            padding: 8px 16px;
+            color: #64b5f6;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 999;
+            max-width: 90%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .chat-banner.show {
+            opacity: 1;
+        }
+
+        @media (max-width: 768px) {
+            .chat-banner {
+                bottom: 140px; /* Above mobile controls */
+                font-size: 11px;
+                padding: 6px 12px;
+                max-width: 95%;
+            }
+        }
+
         .controls {
             background: rgba(20, 30, 50, 0.8);
             padding: 15px;
@@ -3044,6 +3080,8 @@
 
                     this.socket.on('chat-message', (data) => {
                         this.addChatMessage('other', `${data.player}: ${data.message}`);
+                        // Show message in banner above buttons
+                        this.showChatBanner(`${data.player}: ${data.message}`);
                     });
 
                     this.socket.on('game-saved', () => {
@@ -6108,6 +6146,19 @@
                         messageContainer.style.display = 'none';
                     }, 500); // Small delay to allow fade out
                 }, 3000);
+            }
+
+            showChatBanner(message) {
+                const banner = document.getElementById('chat-banner');
+                if (!banner) return;
+                
+                banner.textContent = message;
+                banner.classList.add('show');
+                
+                // Hide after 5 seconds
+                setTimeout(() => {
+                    banner.classList.remove('show');
+                }, 5000);
             }
 
 
