@@ -2241,6 +2241,18 @@
         </div>
     </div>
 
+    <!-- Welcome Back Screen -->
+    <div class="login-screen" id="welcome-screen" style="display: none;">
+        <div class="login-box">
+            <h2 style="color: #00ff00;">🎣 WELCOME BACK! 🎣</h2>
+            <div style="text-align: center; margin: 30px 0;">
+                <img id="welcome-avatar" src="" alt="Your Cat" style="width: 150px; height: 150px; border-radius: 50%; border: 3px solid #00ff00; margin: 20px auto;">
+                <div style="color: #00ff00; font-size: 24px; font-weight: bold; margin-top: 20px;" id="welcome-name">Loading...</div>
+                <div style="color: #aaa; font-size: 14px; margin-top: 10px;">Loading your fishing hole...</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Socket.io Client Library -->
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
     
@@ -2435,25 +2447,54 @@
                 
                 // Check if player has saved data (has played before)
                 const savedData = localStorage.getItem('fishingHoleGame');
+                const loginScreen = document.getElementById('login-screen');
+                const welcomeScreen = document.getElementById('welcome-screen');
+                
                 if (savedData) {
                     const gameData = JSON.parse(savedData);
-                    // If player has a name and character saved, auto-login
+                    // If player has a name and character saved, show welcome screen then auto-login
                     if (gameData.player && gameData.player.name && gameData.player.name !== 'Guest' && gameData.player.character) {
+                        // Hide login screen (only shown for new players)
+                        if (loginScreen) {
+                            loginScreen.classList.add('hidden');
+                        }
+                        
                         // Set player data from saved game
                         this.player.name = gameData.player.name;
                         this.player.character = gameData.player.character;
                         this.player.avatarOptions = gameData.player.avatarOptions || { type: 'cat', url: gameData.player.character };
                         
-                        // Hide login screen and show game
-                        const loginScreen = document.getElementById('login-screen');
-                        if (loginScreen) {
-                            loginScreen.classList.add('hidden');
+                        // Show welcome screen
+                        if (welcomeScreen) {
+                            welcomeScreen.style.display = 'flex';
+                            const welcomeName = document.getElementById('welcome-name');
+                            const welcomeAvatar = document.getElementById('welcome-avatar');
+                            if (welcomeName) welcomeName.textContent = this.player.name;
+                            if (welcomeAvatar) welcomeAvatar.src = this.player.character;
+                            
+                            // Hide welcome screen after 2 seconds and start game
+                            setTimeout(() => {
+                                if (welcomeScreen) welcomeScreen.style.display = 'none';
+                                this.addChatMessage('system', `${this.player.name} entered the fishing hole!`);
+                                this.positionPlayers();
+                                this.joinGame();
+                            }, 2000);
+                        } else {
+                            // If welcome screen doesn't exist, just start game
+                            this.addChatMessage('system', `${this.player.name} entered the fishing hole!`);
+                            this.positionPlayers();
+                            this.joinGame();
                         }
-                        
-                        // Initialize game
-                        this.addChatMessage('system', `${this.player.name} entered the fishing hole!`);
-                        this.positionPlayers();
-                        this.joinGame();
+                    } else {
+                        // Player has data but no character - show login to create character
+                        if (loginScreen) {
+                            loginScreen.classList.remove('hidden');
+                        }
+                    }
+                } else {
+                    // New player - show login screen to create character
+                    if (loginScreen) {
+                        loginScreen.classList.remove('hidden');
                     }
                 }
                 
