@@ -4242,11 +4242,18 @@
                 }
                 
                 // Add tackle bonuses - BETTER gear significantly improves your chances
-                const rod = this.tackle.rods.find(r => r.name === this.player.gear.rod);
-                const reel = this.tackle.reels.find(r => r.name === this.player.gear.reel);
-                const line = this.tackle.lines.find(l => l.name === this.player.gear.line);
-                const hook = this.tackle.hooks.find(h => h.name === this.player.gear.hook);
-                const bait = this.tackle.baits.find(b => b.name === this.player.gear.bait);
+                // Check both plural and singular keys for compatibility
+                const rodName = this.player.gear?.rods || this.player.gear?.rod;
+                const reelName = this.player.gear?.reels || this.player.gear?.reel;
+                const lineName = this.player.gear?.lines || this.player.gear?.line;
+                const hookName = this.player.gear?.hooks || this.player.gear?.hook;
+                const baitName = this.player.gear?.baits || this.player.gear?.bait;
+                
+                const rod = rodName ? this.tackle.rods.find(r => r.name === rodName) : null;
+                const reel = reelName ? this.tackle.reels.find(r => r.name === reelName) : null;
+                const line = lineName ? this.tackle.lines.find(l => l.name === lineName) : null;
+                const hook = hookName ? this.tackle.hooks.find(h => h.name === hookName) : null;
+                const bait = baitName ? this.tackle.baits.find(b => b.name === baitName) : null;
                 
                 if (rod) chance += rod.catchBonus / 80; // Better rods significantly help
                 if (reel) chance += reel.speedBonus / 150; // Reels help a bit
@@ -5994,18 +6001,12 @@
             }
 
             renderEquippedGear(container) {
-                // Debug: Log actual gear values
-                console.log('Rendering equipped gear. Current this.player.gear:', this.player.gear);
-                console.log('Full player object gear property:', JSON.stringify(this.player.gear, null, 2));
-                
-                // Get actual equipped gear - ensure we're reading the current values
-                const rod = this.player.gear?.rod || 'None';
-                const reel = this.player.gear?.reel || 'None';
-                const line = this.player.gear?.line || 'None';
-                const hook = this.player.gear?.hook || 'None';
-                const bait = this.player.gear?.bait || 'None';
-                
-                console.log('Extracted values - Rod:', rod, 'Reel:', reel, 'Line:', line, 'Hook:', hook, 'Bait:', bait);
+                // Get actual equipped gear - check both singular and plural keys for compatibility
+                const rod = this.player.gear?.rods || this.player.gear?.rod || 'None';
+                const reel = this.player.gear?.reels || this.player.gear?.reel || 'None';
+                const line = this.player.gear?.lines || this.player.gear?.line || 'None';
+                const hook = this.player.gear?.hooks || this.player.gear?.hook || 'None';
+                const bait = this.player.gear?.baits || this.player.gear?.bait || 'None';
                 
                 const html = `
                     <div style="padding: 20px;">
@@ -6159,12 +6160,12 @@
                 // Update mobile equipped gear
                 const mobileEquippedGear = document.getElementById('mobile-equipped-gear');
                 if (mobileEquippedGear) {
-                    // Get actual equipped gear names directly from player.gear
-                    const rod = this.player.gear.rod || 'None';
-                    const reel = this.player.gear.reel || 'None';
-                    const line = this.player.gear.line || 'None';
-                    const hook = this.player.gear.hook || 'None';
-                    const bait = this.player.gear.bait || 'None';
+                    // Get actual equipped gear - check both singular and plural keys for compatibility
+                    const rod = this.player.gear?.rods || this.player.gear?.rod || 'None';
+                    const reel = this.player.gear?.reels || this.player.gear?.reel || 'None';
+                    const line = this.player.gear?.lines || this.player.gear?.line || 'None';
+                    const hook = this.player.gear?.hooks || this.player.gear?.hook || 'None';
+                    const bait = this.player.gear?.baits || this.player.gear?.bait || 'None';
                     
                     mobileEquippedGear.innerHTML = `
                         <div style="margin-bottom: 8px;"><strong>🎣 Rod:</strong> ${rod}</div>
