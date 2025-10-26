@@ -3110,21 +3110,28 @@
                         'sunglasses': 'sunglasses'
                     };
                     
-                    // Build URL for DiceBear avataaars style (correct v7 format)
+                    // Build URL for DiceBear avataaars style (simplified v7 format)
                     const params = new URLSearchParams();
                     params.set('seed', avatarSeed);
-                    params.set('hairColor', (hairColorMap[options.hairColor] || 'Auburn').toLowerCase());
                     
+                    // Set hair color (optional parameter)
+                    const hairColor = (hairColorMap[options.hairColor] || 'Auburn').toLowerCase();
+                    params.set('hairColor', hairColor);
+                    
+                    // Set hair style based on gender
                     if (options.style === 'male') {
-                        params.set('hair', 'shortHairShortWaved,shortHairDreads01,shortHairShortRound');
+                        // Male hair options - use single value, not comma-separated
+                        params.set('hair', 'shortHairShortWaved');
                         if (options.facialHair && options.facialHair !== 'none') {
                             params.set('facialHairType', facialHairMap[options.facialHair]);
-                            params.set('facialHairColor', (hairColorMap[options.hairColor] || 'Auburn').toLowerCase());
+                            params.set('facialHairColor', hairColor);
                         }
                     } else {
-                        params.set('hair', 'longHairStraight,longHairCurly,longHairBun');
+                        // Female hair options
+                        params.set('hair', 'longHairStraight');
                     }
                     
+                    // Set accessories if selected
                     if (options.accessories && options.accessories !== 'none') {
                         params.set('accessoriesType', accessoriesMap[options.accessories]);
                     }
@@ -3358,21 +3365,28 @@
                     'sunglasses': 'sunglasses'
                 };
                 
-                // Build URL for DiceBear avataaars style (correct v7 format)
+                // Build URL for DiceBear avataaars style (simplified v7 format)
                 const params = new URLSearchParams();
                 params.set('seed', playerName);
-                params.set('hairColor', (hairColorMap[options.hairColor] || 'Auburn').toLowerCase());
                 
+                // Set hair color (optional parameter)
+                const hairColor = (hairColorMap[options.hairColor] || 'Auburn').toLowerCase();
+                params.set('hairColor', hairColor);
+                
+                // Set hair style based on gender
                 if (options.style === 'male') {
-                    params.set('hair', 'shortHairShortWaved,shortHairDreads01,shortHairShortRound');
+                    // Male hair options - use single value, not comma-separated
+                    params.set('hair', 'shortHairShortWaved');
                     if (options.facialHair && options.facialHair !== 'none') {
                         params.set('facialHairType', facialHairMap[options.facialHair]);
-                        params.set('facialHairColor', (hairColorMap[options.hairColor] || 'Auburn').toLowerCase());
+                        params.set('facialHairColor', hairColor);
                     }
                 } else {
-                    params.set('hair', 'longHairStraight,longHairCurly,longHairBun');
+                    // Female hair options
+                    params.set('hair', 'longHairStraight');
                 }
                 
+                // Set accessories if selected
                 if (options.accessories && options.accessories !== 'none') {
                     params.set('accessoriesType', accessoriesMap[options.accessories]);
                 }
