@@ -1,11 +1,11 @@
 {
-  "name": "Fishing Hole Tournament",
-  "short_name": "Fishing Hole",
-  "description": "Multiplayer fishing tournament game with tournaments, leaderboards, and achievements",
+  "name": "Kitty Creek Fishing Club",
+  "short_name": "Kitty Creek",
+  "description": "Purrfect multiplayer fishing game with tournaments, leaderboards, achievements, and cat-themed fun!",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#001100",
-  "theme_color": "#00ff00",
+  "background_color": "#0a1628",
+  "theme_color": "#42a5f5",
   "orientation": "any",
   "icons": [
     {
