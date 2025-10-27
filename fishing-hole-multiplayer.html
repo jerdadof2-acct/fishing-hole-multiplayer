@@ -5597,8 +5597,21 @@
                     // Improve stats on level up
                     const statBonuses = this.improveStats();
                     
-                    this.showMessage(`Level Up! Now level ${this.player.level}! ${statBonuses}`, '#ffff00');
-                    this.addChatMessage('system', `${this.player.name} reached level ${this.player.level}!`);
+                    // Random funny level up messages
+                    const levelUpMessages = [
+                        `PURRFECT! You're now level ${this.player.level}! ${statBonuses} 🐱`,
+                        `LEVEL UP! Level ${this.player.level} achieved! You're the cat's pajamas! ${statBonuses} 😸`,
+                        `Pawsome! You leveled up to ${this.player.level}! ${statBonuses} 🎉`,
+                        `Meowza! Level ${this.player.level} unlocked! ${statBonuses} 😹`,
+                        `Fur-real? Level ${this.player.level}? You're going places! ${statBonuses} 🚀`,
+                        `Purr-suasion level: ${this.player.level}! ${statBonuses} 💪`,
+                        `You've clawed your way to level ${this.player.level}! ${statBonuses} 🐾`,
+                        `That's a cat-ch! Level ${this.player.level} achieved! ${statBonuses} 🏆`
+                    ];
+                    const randomLevelUpMsg = levelUpMessages[Math.floor(Math.random() * levelUpMessages.length)];
+                    
+                    this.showMessage(randomLevelUpMsg, '#ffff00');
+                    this.addChatMessage('system', `${this.player.name} reached level ${this.player.level}! 🎊`);
                     this.playSound('levelUp'); // Level up celebration sound
                     
                     // Check for new location unlocks
@@ -6937,8 +6950,20 @@
                 this.player.money -= item.cost;
                 this.player.gear[category.toLowerCase()] = item.name;
                 
-                this.showMessage(`Bought ${item.name}!`, '#00ff00');
-                this.addChatMessage('system', `${this.player.name} bought ${item.name}!`);
+                // Random funny purchase messages
+                const purchaseMessages = [
+                    `Nice! ${item.name} purchased! Fish will fear you now! 🐟`,
+                    `PURCHASED: ${item.name}! You're ready to cat-ch some fish! 🐱`,
+                    `Money well spent! You just got ${item.name}! Time to dominate! 💪`,
+                    `CHA-CHING! ${item.name} is yours! Go get 'em, tiger! 🐅`,
+                    `Meeeow! ${item.name} acquired! The fish don't stand a chance! 🎣`,
+                    `Shut up and take my money! ${item.name} purchased! 💸`,
+                    `That ${item.name} cost you a pretty penny, but it's worth it! 💰`
+                ];
+                const randomPurchaseMsg = purchaseMessages[Math.floor(Math.random() * purchaseMessages.length)];
+                
+                this.showMessage(randomPurchaseMsg, '#00ff00');
+                this.addChatMessage('system', `${this.player.name} bought ${item.name}! 🛒`);
                 
                 this.updateDisplay();
                 this.renderShopContent(category);
