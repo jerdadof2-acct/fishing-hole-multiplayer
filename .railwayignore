@@ -1,0 +1,9 @@
+# Railway ignore file - exclude files that shouldn't be deployed
+*.md
+!README.md
+DEVELOPMENT_PLAN.md
+RAILWAY_DEPLOYMENT.md
+.git
+node_modules
+
+
