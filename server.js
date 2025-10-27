@@ -18,6 +18,7 @@ const io = socketIo(server, {
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+app.use('/images', express.static('images'));
 
 // PostgreSQL connection pool
 const dbUrl = process.env.DATABASE_URL;
