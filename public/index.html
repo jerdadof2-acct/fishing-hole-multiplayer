@@ -83,6 +83,38 @@
             box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
         }
 
+        .desktop-tab-btn {
+            flex: 1;
+            min-width: 70px;
+            padding: 6px 8px;
+            background: rgba(15, 25, 40, 0.9);
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            border-radius: 6px;
+            color: #64b5f6;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .desktop-tab-btn:hover {
+            background: rgba(25, 35, 55, 0.9);
+        }
+
+        .desktop-tab-btn.active {
+            background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
+            color: #000;
+            border-color: #42a5f5;
+        }
+
+        .desktop-tab-content {
+            display: none;
+        }
+
+        .desktop-tab-content.active {
+            display: block;
+        }
+
         .center-area {
             flex: 1;
             display: flex;
@@ -2911,6 +2943,32 @@
                             <div>No active tournament</div>
                         </div>
                     </div>
+
+                    <!-- Desktop Tabs -->
+                    <div class="section" style="margin-top: 20px;">
+                        <div class="desktop-tabs" style="display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap;">
+                            <button class="desktop-tab-btn active" data-tab="collection">🐟 COLLECTION</button>
+                            <button class="desktop-tab-btn" data-tab="stats">📊 STATS</button>
+                            <button class="desktop-tab-btn" data-tab="recent">🎣 RECENT</button>
+                        </div>
+                        
+                        <!-- Collection Tab -->
+                        <div class="desktop-tab-content active" id="desktop-tab-collection">
+                            <div id="desktop-fish-collection" style="max-height: 400px; overflow-y: auto;">
+                                <div style="text-align: center; color: #888; padding: 20px;">Start fishing to build your collection!</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Stats Tab -->
+                        <div class="desktop-tab-content" id="desktop-tab-stats">
+                            <div id="desktop-stats-display"></div>
+                        </div>
+                        
+                        <!-- Recent Catches Tab -->
+                        <div class="desktop-tab-content" id="desktop-tab-recent">
+                            <div id="desktop-recent-display" style="max-height: 400px; overflow-y: auto;"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -4441,6 +4499,33 @@
                 if (mobileSoundBtn) mobileSoundBtn.addEventListener('click', () => this.toggleSound());
                 if (mobileHelpBtn) mobileHelpBtn.addEventListener('click', () => this.openHelp());
                 
+                // Desktop tab switching
+                document.querySelectorAll('.desktop-tab-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const tabName = btn.dataset.tab;
+                        
+                        // Remove active class from all tabs and content
+                        document.querySelectorAll('.desktop-tab-btn').forEach(b => b.classList.remove('active'));
+                        document.querySelectorAll('.desktop-tab-content').forEach(c => c.classList.remove('active'));
+                        
+                        // Add active class to clicked tab and corresponding content
+                        btn.classList.add('active');
+                        const content = document.getElementById(`desktop-tab-${tabName}`);
+                        if (content) {
+                            content.classList.add('active');
+                            
+                            // Render content based on tab
+                            if (tabName === 'collection') {
+                                this.renderDesktopCollection();
+                            } else if (tabName === 'stats') {
+                                this.renderDesktopStats();
+                            } else if (tabName === 'recent') {
+                                this.renderDesktopRecent();
+                            }
+                        }
+                    });
+                });
+
                 // Mobile tab switching
                 document.querySelectorAll('.mobile-tab-btn').forEach(btn => {
                     btn.addEventListener('click', () => {
@@ -7242,6 +7327,66 @@
                 }
                 
                 collectionGrid.innerHTML = html;
+            }
+
+            renderDesktopCollection() {
+                const container = document.getElementById('desktop-fish-collection');
+                if (!container) return;
+                
+                // Reuse the renderFishCollection logic but with different styling
+                const fishByRarity = {
+                    'Common': [], 'Uncommon': [], 'Rare': [], 'Huge': [], 'Legendary': [], 'Trophy': []
+                };
+                
+                this.fishTypes.forEach((fish, index) => {
+                    const rarity = fish.rarity || 'Common';
+                    if (fishByRarity[rarity]) {
+                        fishByRarity[rarity].push({ ...fish, index });
+                    }
+                });
+                
+                let html = '';
+                Object.entries(fishByRarity).forEach(([rarity, fishList]) => {
+                    if (fishList.length === 0) return;
+                    html += `<div style="font-weight: bold; color: #64b5f6; margin: 10px 0 5px 0; font-size: 12px;">${rarity}</div>`;
+                    html += `<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px;">`;
+                    fishList.forEach(fish => {
+                        const isCaught = this.player.caughtFish && this.player.caughtFish[fish.name];
+                        html += `
+                            <div style="text-align: center; padding: 6px; background: rgba(15, 25, 40, 0.5); border-radius: 6px; opacity: ${isCaught ? '1' : '0.3'};">
+                                <img src="images/${fish.name}.png" alt="${fish.name}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 100\\'%3E%3Ctext y=\\'.9em\\' font-size=\\'60\\'%3E🐟%3C/text%3E%3C/svg%3E';" style="width: 100%; aspect-ratio: 1; object-fit: contain;">
+                                <div style="font-size: 8px; color: #64b5f6; margin-top: 2px;">${fish.name}</div>
+                            </div>
+                        `;
+                    });
+                    html += `</div>`;
+                });
+                
+                container.innerHTML = html || '<div style="text-align: center; color: #888; padding: 20px;">Start fishing!</div>';
+            }
+
+            renderDesktopStats() {
+                const container = document.getElementById('desktop-stats-display');
+                if (!container) return;
+                container.innerHTML = `
+                    <div style="color: #64b5f6; font-size: 11px;">
+                        <div style="margin: 5px 0;">Accuracy: <span style="color: #fff;">${this.player.stats.accuracy}/100</span></div>
+                        <div style="margin: 5px 0;">Luck: <span style="color: #fff;">${this.player.stats.luck}/100</span></div>
+                        <div style="margin: 5px 0;">Patience: <span style="color: #fff;">${this.player.stats.patience}/100</span></div>
+                        <div style="margin: 5px 0;">Strength: <span style="color: #fff;">${this.player.stats.strength}/100</span></div>
+                    </div>
+                `;
+            }
+
+            renderDesktopRecent() {
+                const container = document.getElementById('desktop-recent-display');
+                if (!container) return;
+                const html = this.player.recentCatches.slice(-10).reverse().map(c => `
+                    <div style="font-size: 10px; color: #64b5f6; margin: 5px 0; padding: 5px; background: rgba(15, 25, 40, 0.5); border-radius: 4px;">
+                        ${c.fish.name} - ${c.weight.toFixed(1)}lbs - $${c.value}
+                    </div>
+                `).join('');
+                container.innerHTML = html || '<div style="color: #888; padding: 10px;">No recent catches</div>';
             }
 
             showMessage(text, color) {
