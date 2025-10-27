@@ -2608,6 +2608,93 @@
                 padding-bottom: 4px;
             }
 
+            .fish-slot {
+                aspect-ratio: 1;
+                border: 2px solid rgba(100, 200, 255, 0.3);
+                border-radius: 6px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: rgba(15, 25, 40, 0.6);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .fish-slot.locked {
+                filter: grayscale(100%) brightness(0.3);
+            }
+
+            .fish-slot img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                padding: 5px;
+            }
+
+            .fish-slot-label {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: rgba(0, 0, 0, 0.8);
+                color: #64b5f6;
+                font-size: 8px;
+                text-align: center;
+                padding: 2px;
+                font-weight: bold;
+            }
+
+            .new-fish-banner {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                z-index: 10001;
+                animation: bannerSlideIn 0.8s ease-out;
+            }
+
+            .new-fish-content {
+                background: linear-gradient(135deg, #003300, #004400);
+                border: 4px solid #00ff00;
+                border-radius: 20px;
+                padding: 30px 50px;
+                text-align: center;
+                box-shadow: 0 0 40px rgba(0, 255, 0, 0.8);
+                min-width: 400px;
+            }
+
+            .new-fish-image-container {
+                width: 150px;
+                height: 150px;
+                margin: 20px auto;
+                background: rgba(0, 0, 0, 0.3);
+                border: 3px solid #00ff00;
+                border-radius: 15px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+            }
+
+            .new-fish-image-container img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+            }
+
+            .new-fish-content h2 {
+                color: #00ff00;
+                font-size: 28px;
+                margin-bottom: 10px;
+                text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+            }
+
+            .new-fish-content p {
+                color: #64b5f6;
+                font-size: 18px;
+                margin: 5px 0;
+            }
+
             .mobile-stats-grid {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
@@ -2955,6 +3042,7 @@
             <button class="mobile-tab-btn" data-tab="chat">💬 CHAT</button>
             <button class="mobile-tab-btn" data-tab="stats">📊 STATS</button>
             <button class="mobile-tab-btn" data-tab="inventory">🎒 INV</button>
+            <button class="mobile-tab-btn" data-tab="collection">🐟 COLLECT</button>
             <button class="mobile-tab-btn" data-tab="leaderboard">🏆 LEADER</button>
         </div>
 
@@ -3055,6 +3143,14 @@
                 <div class="mobile-panel" style="margin-top: 15px;">
                     <h4>RECENT CATCHES</h4>
                     <div id="mobile-recent-catches" style="font-size: 10px;"></div>
+                </div>
+            </div>
+
+            <!-- Collection Tab -->
+            <div class="mobile-tab-panel" id="mobile-tab-collection">
+                <div class="mobile-panel">
+                    <h4>FISH COLLECTION</h4>
+                    <div id="fish-collection-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 8px; padding: 10px;"></div>
                 </div>
             </div>
 
@@ -3297,6 +3393,7 @@
                     achievements: [],
                     recentCatches: [],
                     top10BiggestFish: [], // Always keep track of top 10 biggest fish ever caught
+                    caughtFish: {}, // Track which fish have been caught (name: true)
                     seasonalCatches: {
                         spring: { caught: 0, biggest: 0 },
                         summer: { caught: 0, biggest: 0 },
@@ -4447,6 +4544,11 @@
                         if (tabName === 'inventory') {
                             this.updateMobileInventory();
                         }
+                        
+                        // Update collection display when switching to collection tab
+                        if (tabName === 'collection') {
+                            this.renderFishCollection();
+                        }
                     });
                 });
 
@@ -5451,6 +5553,14 @@
                     timestamp: Date.now()
                 };
                 
+                // Track if this is a new fish for the collection
+                const isNewFish = !this.player.caughtFish[fishData.name];
+                if (isNewFish) {
+                    this.player.caughtFish[fishData.name] = true;
+                    // Show new fish banner
+                    this.showNewFishBanner(fishData);
+                }
+                
                 this.player.recentCatches.push(catchData);
                 
                 // Keep only last 50 catches to prevent memory issues
@@ -5522,10 +5632,7 @@
                 
                 this.showMessage(messageText, messageColor);
                 
-                // Show special banner for rare/legendary fish
-                if (isRare || isHuge) {
-                    this.showRareFishBanner(fishData, weight, value, isLegendary, isTrophy);
-                }
+                // Note: showNewFishBanner is now called when fish is first caught (above)
                 
                 // Update tournament scores if in tournament
                 if (this.tournament && this.tournament.phase === 'active') {
@@ -6209,117 +6316,23 @@
                 }
             }
 
-            showRareFishBanner(fishData, weight, value, isLegendary, isTrophy) {
+            showNewFishBanner(fishData) {
                 const banner = document.createElement('div');
-                banner.className = 'rare-fish-banner';
+                banner.className = 'new-fish-banner';
                 
-                let bannerClass = 'rare';
-                let icon = '💎';
-                let title = 'RARE CATCH!';
-                
-                if (isLegendary) {
-                    bannerClass = 'legendary';
-                    icon = '🏆';
-                    title = 'LEGENDARY CATCH!';
-                } else if (isTrophy) {
-                    bannerClass = 'trophy';
-                    icon = '🏅';
-                    title = 'TROPHY CATCH!';
-                }
+                const fishImage = `images/${fishData.name}.png`;
                 
                 banner.innerHTML = `
-                    <div class="banner-content ${bannerClass}">
-                        <div class="banner-icon">${icon}</div>
-                        <div class="banner-text">
-                            <h2>${title}</h2>
-                            <p>${fishData.name} - ${weight.toFixed(1)}lbs</p>
-                            <p>+$${value} | ${fishData.rarity}</p>
+                    <div class="new-fish-content">
+                        <h2>🎉 NEW FISH!</h2>
+                        <div class="new-fish-image-container">
+                            <img src="${fishImage}" alt="${fishData.name}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 100\\'%3E%3Ctext y=\\'.9em\\' font-size=\\'60\\'%3E🐟%3C/text%3E%3C/svg%3E';">
                         </div>
-                        <div class="banner-icon">${icon}</div>
+                        <p><strong>${fishData.name}</strong></p>
+                        <p>${fishData.rarity}</p>
                     </div>
                 `;
                 
-                // Add CSS for the banner
-                const style = document.createElement('style');
-                style.textContent = `
-                    .rare-fish-banner {
-                        position: fixed;
-                        top: 50%;
-                        left: 50%;
-                        transform: translate(-50%, -50%);
-                        z-index: 10001;
-                        animation: bannerSlideIn 0.8s ease-out;
-                    }
-                    
-                    .banner-content {
-                        background: linear-gradient(135deg, #001100, #003300);
-                        border: 4px solid;
-                        border-radius: 20px;
-                        padding: 30px 50px;
-                        text-align: center;
-                        box-shadow: 0 0 40px;
-                        display: flex;
-                        align-items: center;
-                        gap: 20px;
-                        min-width: 400px;
-                    }
-                    
-                    .banner-content.legendary {
-                        border-color: #ff00ff;
-                        box-shadow: 0 0 40px rgba(255, 0, 255, 0.8);
-                    }
-                    
-                    .banner-content.rare {
-                        border-color: #64b5f6;
-                        box-shadow: 0 0 40px rgba(0, 255, 255, 0.8);
-                    }
-                    
-                    .banner-content.trophy {
-                        border-color: #ffff00;
-                        box-shadow: 0 0 40px rgba(255, 255, 0, 0.8);
-                    }
-                    
-                    .banner-icon {
-                        font-size: 48px;
-                        animation: bounce 1s infinite;
-                    }
-                    
-                    .banner-text h2 {
-                        margin: 0 0 10px 0;
-                        font-size: 28px;
-                        text-shadow: 0 0 10px;
-                    }
-                    
-                    .banner-text p {
-                        margin: 5px 0;
-                        font-size: 18px;
-                    }
-                    
-                    .banner-content.legendary h2 {
-                        color: #ff00ff;
-                    }
-                    
-                    .banner-content.rare h2 {
-                        color: #64b5f6;
-                    }
-                    
-                    .banner-content.trophy h2 {
-                        color: #ffff00;
-                    }
-                    
-                    @keyframes bannerSlideIn {
-                        from { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-                        to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-                    }
-                    
-                    @keyframes bounce {
-                        0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-                        40% { transform: translateY(-10px); }
-                        60% { transform: translateY(-5px); }
-                    }
-                `;
-                
-                document.head.appendChild(style);
                 document.body.appendChild(banner);
                 
                 // Auto-remove after 5 seconds
@@ -6328,7 +6341,6 @@
                         banner.style.animation = 'bannerSlideIn 0.5s ease-in reverse';
                         setTimeout(() => {
                             banner.remove();
-                            style.remove();
                         }, 500);
                     }
                 }, 5000);
@@ -7491,6 +7503,49 @@
                 }
             }
 
+            renderFishCollection() {
+                const collectionGrid = document.getElementById('fish-collection-grid');
+                if (!collectionGrid) return;
+                
+                // Group fish by rarity
+                const fishByRarity = {
+                    'Common': [],
+                    'Uncommon': [],
+                    'Rare': [],
+                    'Epic': [],
+                    'Legendary': [],
+                    'Trophy': []
+                };
+                
+                this.fishTypes.forEach(fish => {
+                    fishByRarity[fish.rarity].push(fish);
+                });
+                
+                let html = '';
+                
+                // Render each rarity group
+                const rarities = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Trophy'];
+                rarities.forEach(rarity => {
+                    const fishInRarity = fishByRarity[rarity];
+                    fishInRarity.forEach(fish => {
+                        const isUnlocked = this.player.caughtFish[fish.name];
+                        const fishImage = `images/${fish.name}.png`;
+                        
+                        html += `
+                            <div class="fish-slot ${isUnlocked ? 'unlocked' : 'locked'}">
+                                ${isUnlocked 
+                                    ? `<img src="${fishImage}" alt="${fish.name}" onerror="this.style.display='none';">`
+                                    : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #666; font-size: 30px;">❓</div>`
+                                }
+                                <div class="fish-slot-label">${fish.name}</div>
+                            </div>
+                        `;
+                    });
+                });
+                
+                collectionGrid.innerHTML = html;
+            }
+
             updateLocationButtons() {
                 const select = document.getElementById('location-select');
                 const mobileSelect = document.getElementById('mobile-location-select');
@@ -7839,6 +7894,7 @@
                                 achievements: gameData.player.achievements || [],
                                 recentCatches: gameData.player.recentCatches || [],
                                 top10BiggestFish: gameData.player.top10BiggestFish || [],
+                                caughtFish: gameData.player.caughtFish || {},
                                 seasonalCatches: {
                                     spring: { caught: 0, biggest: 0 },
                                     summer: { caught: 0, biggest: 0 },
