@@ -5611,11 +5611,6 @@
                 
                 this.showMessage(messageText, messageColor);
                 
-                // Show special banner for rare/legendary fish
-                if (isRare || isHuge) {
-                    this.showRareFishBanner(fishData, weight, value, isLegendary, isTrophy);
-                }
-                
                 // Update tournament scores if in tournament
                 if (this.tournament && this.tournament.phase === 'active') {
                     if (this.tournament.scores[this.player.name]) {
