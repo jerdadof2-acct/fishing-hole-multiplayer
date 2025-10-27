@@ -481,6 +481,7 @@
             border-radius: 50%;
             pointer-events: none;
             opacity: 0.4;
+            transform-origin: center;
         }
 
         .fish-shadow::before {
@@ -493,25 +494,6 @@
             background: rgba(0, 0, 0, 0.2);
             border-radius: 50%;
             transform: translate(-50%, -50%);
-        }
-
-        .fish-shadow.swimming {
-            animation: fishSwim 8s ease-in-out infinite;
-        }
-
-        @keyframes fishSwim {
-            0% {
-                transform: translateX(0) scaleX(1);
-            }
-            50% {
-                transform: translateX(calc(100vw - 100px)) scaleX(1);
-            }
-            51% {
-                transform: translateX(calc(100vw - 100px)) scaleX(-1);
-            }
-            100% {
-                transform: translateX(0) scaleX(-1);
-            }
         }
 
         .fisherman {
@@ -4686,45 +4668,68 @@
                 const lake = document.getElementById('fishing-lake');
                 const mobileLake = document.getElementById('mobile-fishing-lake');
                 
-                // Create traveling wave ripples
-                for (let i = 0; i < 3; i++) {
-                    if (lake) {
-                        const wave = document.createElement('div');
-                        wave.className = 'wave-ripple';
-                        wave.style.top = (20 + i * 30) + '%';
-                        wave.style.animationDelay = (i * 1) + 's';
-                        wave.style.animationDuration = (3 + i * 0.5) + 's';
-                        lake.appendChild(wave);
-                    }
-                    
-                    if (mobileLake) {
-                        const mobileWave = document.createElement('div');
-                        mobileWave.className = 'wave-ripple';
-                        mobileWave.style.top = (20 + i * 30) + '%';
-                        mobileWave.style.animationDelay = (i * 1) + 's';
-                        mobileWave.style.animationDuration = (3 + i * 0.5) + 's';
-                        mobileLake.appendChild(mobileWave);
-                    }
-                }
-                
-                // Create fish shadows swimming
+                // Create fish shadows swimming randomly
                 for (let i = 0; i < 4; i++) {
                     if (lake) {
                         const fish = document.createElement('div');
-                        fish.className = 'fish-shadow swimming';
+                        fish.className = 'fish-shadow';
                         fish.style.top = (15 + i * 20) + '%';
-                        fish.style.animationDelay = (i * 2) + 's';
+                        fish.style.left = Math.random() * 80 + 10 + '%';
                         lake.appendChild(fish);
+                        this.startRandomFishSwim(fish);
                     }
                     
                     if (mobileLake) {
                         const mobileFish = document.createElement('div');
-                        mobileFish.className = 'fish-shadow swimming';
+                        mobileFish.className = 'fish-shadow';
                         mobileFish.style.top = (15 + i * 20) + '%';
-                        mobileFish.style.animationDelay = (i * 2) + 's';
+                        mobileFish.style.left = Math.random() * 80 + 10 + '%';
                         mobileLake.appendChild(mobileFish);
+                        this.startRandomFishSwim(mobileFish);
                     }
                 }
+            }
+
+            startRandomFishSwim(fishElement) {
+                const moveRandomly = () => {
+                    const lake = fishElement.parentElement;
+                    if (!lake) return;
+                    
+                    const rect = lake.getBoundingClientRect();
+                    const fishRect = fishElement.getBoundingClientRect();
+                    
+                    // Get current position in pixels
+                    const currentLeft = fishRect.left - rect.left;
+                    const currentTop = fishRect.top - rect.top;
+                    
+                    // Pick a random new position anywhere in the lake
+                    const newLeft = Math.random() * (rect.width - 40);
+                    const newTop = Math.random() * (rect.height - 20);
+                    
+                    // Calculate distance and duration
+                    const distance = Math.sqrt(
+                        Math.pow(newLeft - currentLeft, 2) + Math.pow(newTop - currentTop, 2)
+                    );
+                    const duration = (distance / 50) * 1000; // Adjust speed
+                    
+                    // Move to new position
+                    fishElement.style.transition = `all ${duration}ms ease-in-out`;
+                    fishElement.style.left = newLeft + 'px';
+                    fishElement.style.top = newTop + 'px';
+                    
+                    // Flip fish direction
+                    if (newLeft > currentLeft) {
+                        fishElement.style.transform = 'scaleX(1)';
+                    } else {
+                        fishElement.style.transform = 'scaleX(-1)';
+                    }
+                    
+                    // Schedule next random movement
+                    setTimeout(moveRandomly, duration + 2000 + Math.random() * 3000);
+                };
+                
+                // Start first movement
+                setTimeout(moveRandomly, Math.random() * 2000);
             }
 
             createRipple(container) {
