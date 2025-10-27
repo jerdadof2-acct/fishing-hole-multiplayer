@@ -4649,9 +4649,35 @@
                 // Calculate catch chance
                 const catchChance = this.calculateCatchChance();
                 
+                // Progressive bite timing based on level
+                // Levels 1-5: Quick paced (0.5 to 2 seconds)
+                // Levels 6+: Progressively slower (2 to 6+ seconds)
+                let minBiteTime = 500; // 0.5 seconds
+                let maxBiteTime = 2000; // 2 seconds
+                
+                if (this.player.level >= 6) {
+                    // Levels 6-10: 2 to 4 seconds
+                    minBiteTime = 2000;
+                    maxBiteTime = 4000;
+                    
+                    if (this.player.level >= 11) {
+                        // Levels 11-15: 3 to 5.5 seconds
+                        minBiteTime = 3000;
+                        maxBiteTime = 5500;
+                        
+                        if (this.player.level >= 16) {
+                            // Levels 16+: 4 to 7 seconds
+                            minBiteTime = 4000;
+                            maxBiteTime = 7000;
+                        }
+                    }
+                }
+                
+                const biteTime = minBiteTime + Math.random() * (maxBiteTime - minBiteTime);
+                
                 setTimeout(() => {
                     this.reelIn(catchChance);
-                }, 2000 + Math.random() * 3000);
+                }, biteTime);
             }
 
             addFishingLine(playerIndex, isCasting = false) {
@@ -5220,7 +5246,41 @@
             }
 
             checkLevelUp() {
-                const expNeeded = this.player.level * 100;
+                // Progressive experience requirements - MUCH higher for higher levels
+                let expNeeded;
+                if (this.player.level === 1) {
+                    expNeeded = 100;
+                } else if (this.player.level === 2) {
+                    expNeeded = 150;
+                } else if (this.player.level === 3) {
+                    expNeeded = 225;
+                } else if (this.player.level === 4) {
+                    expNeeded = 350;
+                } else if (this.player.level === 5) {
+                    expNeeded = 500;
+                } else if (this.player.level === 6) {
+                    expNeeded = 750;
+                } else if (this.player.level === 7) {
+                    expNeeded = 1100;
+                } else if (this.player.level === 8) {
+                    expNeeded = 1600;
+                } else if (this.player.level === 9) {
+                    expNeeded = 2400;
+                } else if (this.player.level === 10) {
+                    expNeeded = 3500;
+                } else if (this.player.level === 11) {
+                    expNeeded = 5000;
+                } else if (this.player.level === 12) {
+                    expNeeded = 7000;
+                } else if (this.player.level === 13) {
+                    expNeeded = 10000;
+                } else if (this.player.level === 14) {
+                    expNeeded = 15000;
+                } else {
+                    // Level 15+: exponential increase
+                    expNeeded = Math.floor(20000 * Math.pow(1.5, this.player.level - 15));
+                }
+                
                 if (this.player.experience >= expNeeded) {
                     this.player.level++;
                     this.player.experience -= expNeeded;
@@ -5240,6 +5300,42 @@
                     
                     // Check for achievements
                     this.checkAchievements();
+                }
+            }
+
+            calculateExpForLevel(level) {
+                // Progressive experience requirements - MUCH higher for higher levels
+                if (level === 1) {
+                    return 100;
+                } else if (level === 2) {
+                    return 150;
+                } else if (level === 3) {
+                    return 225;
+                } else if (level === 4) {
+                    return 350;
+                } else if (level === 5) {
+                    return 500;
+                } else if (level === 6) {
+                    return 750;
+                } else if (level === 7) {
+                    return 1100;
+                } else if (level === 8) {
+                    return 1600;
+                } else if (level === 9) {
+                    return 2400;
+                } else if (level === 10) {
+                    return 3500;
+                } else if (level === 11) {
+                    return 5000;
+                } else if (level === 12) {
+                    return 7000;
+                } else if (level === 13) {
+                    return 10000;
+                } else if (level === 14) {
+                    return 15000;
+                } else {
+                    // Level 15+: exponential increase
+                    return Math.floor(20000 * Math.pow(1.5, level - 15));
                 }
             }
 
@@ -6945,7 +7041,8 @@
                 document.getElementById('total-weight').textContent = this.player.totalWeight.toFixed(1);
 
                 // Update experience display
-                const expNeeded = this.player.level * 100;
+                // Calculate expNeeded based on current level (same logic as checkLevelUp)
+                const expNeeded = this.calculateExpForLevel(this.player.level);
                 document.getElementById('player-exp').textContent = this.player.experience;
                 document.getElementById('next-level-exp').textContent = expNeeded;
 
