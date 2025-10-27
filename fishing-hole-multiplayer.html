@@ -439,10 +439,78 @@
 
         @keyframes waterShimmer {
             0%, 100% {
-                background-position: 0% 0%, 0 0;
+                background-position: 0% 0%, 0 0, 0 0;
             }
             50% {
-                background-position: 0% 0%, 0 20px;
+                background-position: 0% 0%, 0 20px, 20px 10px;
+            }
+        }
+
+        /* Traveling wave ripples */
+        .wave-ripple {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent 0%, rgba(144, 202, 249, 0.3) 40%, rgba(144, 202, 249, 0.3) 60%, transparent 100%);
+            animation: waveTravel 3s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes waveTravel {
+            0% {
+                left: -100%;
+                opacity: 0;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                left: 100%;
+                opacity: 0;
+            }
+        }
+
+        /* Fish shadows swimming under water */
+        .fish-shadow {
+            position: absolute;
+            width: 40px;
+            height: 20px;
+            background: radial-gradient(ellipse, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.1) 50%, transparent 100%);
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0.4;
+        }
+
+        .fish-shadow::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 75%;
+            width: 8px;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .fish-shadow.swimming {
+            animation: fishSwim 8s ease-in-out infinite;
+        }
+
+        @keyframes fishSwim {
+            0% {
+                transform: translateX(0) scaleX(1);
+            }
+            50% {
+                transform: translateX(calc(100vw - 100px)) scaleX(1);
+            }
+            51% {
+                transform: translateX(calc(100vw - 100px)) scaleX(-1);
+            }
+            100% {
+                transform: translateX(0) scaleX(-1);
             }
         }
 
@@ -4609,6 +4677,54 @@
                     if (ripplesContainer) this.createRipple(ripplesContainer);
                     if (mobileRipplesContainer) this.createRipple(mobileRipplesContainer);
                 }, 2000);
+                
+                // Create wave ripples and fish shadows
+                this.createWaterEffects();
+            }
+
+            createWaterEffects() {
+                const lake = document.getElementById('fishing-lake');
+                const mobileLake = document.getElementById('mobile-fishing-lake');
+                
+                // Create traveling wave ripples
+                for (let i = 0; i < 3; i++) {
+                    if (lake) {
+                        const wave = document.createElement('div');
+                        wave.className = 'wave-ripple';
+                        wave.style.top = (20 + i * 30) + '%';
+                        wave.style.animationDelay = (i * 1) + 's';
+                        wave.style.animationDuration = (3 + i * 0.5) + 's';
+                        lake.appendChild(wave);
+                    }
+                    
+                    if (mobileLake) {
+                        const mobileWave = document.createElement('div');
+                        mobileWave.className = 'wave-ripple';
+                        mobileWave.style.top = (20 + i * 30) + '%';
+                        mobileWave.style.animationDelay = (i * 1) + 's';
+                        mobileWave.style.animationDuration = (3 + i * 0.5) + 's';
+                        mobileLake.appendChild(mobileWave);
+                    }
+                }
+                
+                // Create fish shadows swimming
+                for (let i = 0; i < 4; i++) {
+                    if (lake) {
+                        const fish = document.createElement('div');
+                        fish.className = 'fish-shadow swimming';
+                        fish.style.top = (15 + i * 20) + '%';
+                        fish.style.animationDelay = (i * 2) + 's';
+                        lake.appendChild(fish);
+                    }
+                    
+                    if (mobileLake) {
+                        const mobileFish = document.createElement('div');
+                        mobileFish.className = 'fish-shadow swimming';
+                        mobileFish.style.top = (15 + i * 20) + '%';
+                        mobileFish.style.animationDelay = (i * 2) + 's';
+                        mobileLake.appendChild(mobileFish);
+                    }
+                }
             }
 
             createRipple(container) {
