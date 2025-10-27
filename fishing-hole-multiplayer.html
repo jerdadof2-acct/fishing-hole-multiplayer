@@ -5062,9 +5062,19 @@
                 }
                 
                 // Normal fishing uses player equipment and stats
+                // Progressive difficulty: catch rate DECREASES at higher levels
                 let chance = 0.8; // 80% base chance for easier progression
                 
                 const location = this.locations[this.currentLocation];
+                
+                // Make higher levels harder (not easier!) - fish get smarter
+                if (this.player.level >= 16) {
+                    chance -= 0.40; // Very hard at high levels - 40% penalty
+                } else if (this.player.level >= 11) {
+                    chance -= 0.30; // Hard at high levels - 30% penalty
+                } else if (this.player.level >= 6) {
+                    chance -= 0.20; // Medium-hard at mid-high levels - 20% penalty
+                }
                 
                 // Progressive difficulty based on location difficulty
                 // Harder locations are harder to catch at, but have better fish
@@ -5106,10 +5116,8 @@
                 
                 chance += accuracyBonus + luckBonus + patienceBonus + strengthBonus;
                 
-                // Add level bonus - higher level helps, but equipment matters more
-                chance += (this.player.level - 1) * 0.015;
-                
-                return Math.min(0.92, Math.max(0.15, chance)); // Cap between 15% and 92%
+                // Cap between 15% and 75% max (reduced from 92%)
+                return Math.min(0.75, Math.max(0.15, chance)); 
             }
 
             showFishBite() {
@@ -6161,11 +6169,18 @@
             broadcastCatch(fishData, weight, value, isRare = false, isHuge = false, isLegendary = false, isTrophy = false) {
                 const fishName = fishData.name;
                 const rarity = fishData.rarity;
-                const isNotable = isRare || isHuge || isLegendary || isTrophy;
                 
-                // Only broadcast notable catches (rare, huge, legendary, trophy) or tournament catches
-                // Regular catches outside tournaments are kept private to reduce chat spam
-                if (this.socket && this.connected && (isNotable || (this.tournament && this.tournament.active))) {
+                // MUCH STRICTER: Only broadcast TOP 1-2% catches
+                // - Legendary/Trophy fish (automatic broadcast)
+                // - Fish that are 95%+ of their max weight (truly HUGE)
+                // - RARE/EPIC fish over 90% of max weight
+                const percentOfMax = weight / fishData.maxWeight;
+                const trulyExceptional = isLegendary || isTrophy || 
+                                        (percentOfMax >= 0.95 && isHuge) ||
+                                        (rarity === 'Rare' || rarity === 'Epic') && percentOfMax >= 0.90;
+                
+                // Only broadcast truly exceptional catches or tournament catches
+                if (this.socket && this.connected && (trulyExceptional || (this.tournament && this.tournament.active))) {
                     this.socket.emit('catch-fish', {
                         fish: fishData,
                         weight: weight,
