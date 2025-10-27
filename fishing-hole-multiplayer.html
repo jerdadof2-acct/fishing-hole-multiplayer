@@ -6170,17 +6170,16 @@
                 const fishName = fishData.name;
                 const rarity = fishData.rarity;
                 
-                // MUCH STRICTER: Only broadcast TOP 1-2% catches
-                // - Legendary/Trophy fish (automatic broadcast)
-                // - Fish that are 95%+ of their max weight (truly HUGE)
-                // - RARE/EPIC fish over 90% of max weight
+                // Calculate how big this fish is relative to its species
                 const percentOfMax = weight / fishData.maxWeight;
-                const trulyExceptional = isLegendary || isTrophy || 
-                                        (percentOfMax >= 0.95 && isHuge) ||
-                                        (rarity === 'Rare' || rarity === 'Epic') && percentOfMax >= 0.90;
+                
+                // Only broadcast fish that are HUGE for their specific species (top 15% of that species)
+                // This applies to ALL rarities - even Legendary/Trophy need to be huge for their species
+                // Lower level players can now broadcast too when they catch a huge minnow or bass!
+                const isHugeForSpecies = percentOfMax >= 0.85; // Top 15% of that species' size range
                 
                 // Only broadcast truly exceptional catches or tournament catches
-                if (this.socket && this.connected && (trulyExceptional || (this.tournament && this.tournament.active))) {
+                if (this.socket && this.connected && (isHugeForSpecies || (this.tournament && this.tournament.active))) {
                     this.socket.emit('catch-fish', {
                         fish: fishData,
                         weight: weight,
