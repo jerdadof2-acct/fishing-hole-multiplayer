@@ -4436,8 +4436,6 @@
                 const mobileExportBtn = document.getElementById('mobile-export-btn');
                 const mobileSoundBtn = document.getElementById('mobile-sound-btn');
                 const mobileHelpBtn = document.getElementById('mobile-help-btn');
-                const mobileSendBtn = document.getElementById('mobile-send-btn');
-                const mobileChatInput = document.getElementById('mobile-chat-input');
 
                 if (mobileCastBtn) mobileCastBtn.addEventListener('click', () => this.castLine());
                 if (mobileShopBtn) mobileShopBtn.addEventListener('click', () => this.openShop());
@@ -4448,24 +4446,6 @@
                 if (mobileSoundBtn) mobileSoundBtn.addEventListener('click', () => this.toggleSound());
                 if (mobileHelpBtn) mobileHelpBtn.addEventListener('click', () => this.openHelp());
                 
-                if (mobileSendBtn) {
-                    mobileSendBtn.addEventListener('click', () => {
-                        if (mobileChatInput && mobileChatInput.value.trim()) {
-                            this.sendMessage(mobileChatInput.value);
-                            mobileChatInput.value = '';
-                        }
-                    });
-                }
-
-                if (mobileChatInput) {
-                    mobileChatInput.addEventListener('keypress', (e) => {
-                        if (e.key === 'Enter' && mobileChatInput.value.trim()) {
-                            this.sendMessage(mobileChatInput.value);
-                            mobileChatInput.value = '';
-                        }
-                    });
-                }
-
                 // Mobile tab switching
                 document.querySelectorAll('.mobile-tab-btn').forEach(btn => {
                     btn.addEventListener('click', () => {
@@ -4483,6 +4463,11 @@
                         // Update inventory display when switching to inventory tab
                         if (tabName === 'inventory') {
                             this.updateMobileInventory();
+                        }
+                        
+                        // Update collection display when switching to collection tab
+                        if (tabName === 'collection') {
+                            this.renderFishCollection();
                         }
                     });
                 });
@@ -6447,7 +6432,6 @@
 
             addChatMessage(type, message) {
                 const chatArea = document.getElementById('chat-area');
-                const mobileChatArea = document.getElementById('mobile-chat-area');
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `chat-message ${type}`;
                 messageDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
@@ -6455,11 +6439,6 @@
                 if (chatArea) {
                     chatArea.appendChild(messageDiv.cloneNode(true));
                     chatArea.scrollTop = chatArea.scrollHeight;
-                }
-                
-                if (mobileChatArea) {
-                    mobileChatArea.appendChild(messageDiv);
-                    mobileChatArea.scrollTop = mobileChatArea.scrollHeight;
                 }
             }
 
