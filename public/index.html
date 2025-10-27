@@ -6287,6 +6287,10 @@
             }
 
             showGlobalAnnouncement(message, color) {
+                // Remove any existing announcements to prevent duplicates
+                const existing = document.querySelectorAll('.global-announcement');
+                existing.forEach(el => el.remove());
+                
                 const announcement = document.createElement('div');
                 announcement.className = 'global-announcement';
                 announcement.innerHTML = `
