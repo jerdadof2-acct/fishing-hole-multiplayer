@@ -3039,7 +3039,6 @@
         <!-- Mobile Tab Navigation -->
         <div class="mobile-tabs">
             <button class="mobile-tab-btn active" data-tab="gameplay">🎣 FISH</button>
-            <button class="mobile-tab-btn" data-tab="chat">💬 CHAT</button>
             <button class="mobile-tab-btn" data-tab="stats">📊 STATS</button>
             <button class="mobile-tab-btn" data-tab="inventory">🎒 INV</button>
             <button class="mobile-tab-btn" data-tab="collection">🐟 COLLECT</button>
@@ -3090,18 +3089,6 @@
                     <button class="mobile-btn" id="mobile-cast-btn">CAST</button>
                     <button class="mobile-btn" id="mobile-shop-btn">SHOP</button>
                     <button class="mobile-btn" id="mobile-tournament-btn">TOURNY</button>
-                </div>
-            </div>
-
-            <!-- Chat Tab -->
-            <div class="mobile-tab-panel" id="mobile-tab-chat">
-                <div class="chat-area" id="mobile-chat-area" style="font-size: 11px; max-height: calc(100vh - 230px); overflow-y: auto; padding: 10px; margin-bottom: 10px;"></div>
-                <div class="mobile-chat-input" style="display: flex; gap: 8px; padding: 8px; background: rgba(20, 30, 50, 0.8); border-radius: 8px; margin-bottom: 10px;">
-                    <input type="text" id="mobile-chat-input" placeholder="Type a message..." style="flex: 1; padding: 10px; background: rgba(15, 25, 40, 0.9); color: #64b5f6; border: 2px solid rgba(100, 200, 255, 0.4); border-radius: 6px; font-size: 12px;">
-                    <button class="mobile-btn" id="mobile-send-btn" style="padding: 10px 16px; font-size: 12px;">Send</button>
-                </div>
-                <div class="mobile-panel" style="margin-top: 0;">
-                    <button class="mobile-btn" id="mobile-help-btn" style="width: 100%; padding: 12px; font-size: 14px;">❓ HELP & GUIDE</button>
                 </div>
             </div>
 
@@ -3167,6 +3154,47 @@
                 <div class="mobile-panel">
                     <h4>TOURNAMENT STATS</h4>
                     <div id="mobile-tournament-stats" style="font-size: 10px;"></div>
+                </div>
+                <div class="mobile-panel" style="margin-top: 10px;">
+                    <h4>❓ HELP & GUIDE</h4>
+                    <div style="font-size: 11px; max-height: 400px; overflow-y: auto; padding: 8px; background: rgba(15, 25, 40, 0.5); border-radius: 8px;">
+                        <p><strong>🐱 Welcome to Kitty Creek Fishing Club!</strong></p>
+                        <p>Compete with other fisher-cats in real-time tournaments, catch legendary fish, and become the purrfect angler!</p>
+                        
+                        <p style="margin-top: 8px;"><strong>🎮 How to Play:</strong></p>
+                        <ol style="margin: 5px 0; padding-left: 20px;">
+                            <li>Click CAST to throw your line</li>
+                            <li>Watch for water ripples</li>
+                            <li>Reel in quickly to catch fish</li>
+                            <li>Buy better gear in the Shop</li>
+                            <li>Join tournaments to compete!</li>
+                        </ol>
+                        
+                        <p style="margin-top: 8px;"><strong>⌨️ Keyboard Shortcuts:</strong></p>
+                        <div style="margin: 5px 0;">
+                            <div>Space - Cast/Reel</div>
+                            <div>S - Open Shop</div>
+                            <div>T - Join Tournament</div>
+                            <div>I - View Inventory</div>
+                        </div>
+                        
+                        <p style="margin-top: 8px;"><strong>💡 Tips:</strong></p>
+                        <ul style="margin: 5px 0; padding-left: 20px;">
+                            <li>Better gear = Better fish</li>
+                            <li>Location affects fish types</li>
+                            <li>Fish fast during tournaments</li>
+                            <li>Auto-save every 30 seconds</li>
+                        </ul>
+                        
+                        <p style="margin-top: 8px;"><strong>🐟 Fish Rarities:</strong></p>
+                        <div style="margin: 5px 0;">
+                            <div>Common - Easy catches</div>
+                            <div>Rare - Special fish</div>
+                            <div>Huge - Large fish</div>
+                            <div>Legendary - Extremely rare!</div>
+                            <div>Trophy - Ultimate prize!</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -4496,8 +4524,6 @@
                 const mobileExportBtn = document.getElementById('mobile-export-btn');
                 const mobileSoundBtn = document.getElementById('mobile-sound-btn');
                 const mobileHelpBtn = document.getElementById('mobile-help-btn');
-                const mobileSendBtn = document.getElementById('mobile-send-btn');
-                const mobileChatInput = document.getElementById('mobile-chat-input');
 
                 if (mobileCastBtn) mobileCastBtn.addEventListener('click', () => this.castLine());
                 if (mobileShopBtn) mobileShopBtn.addEventListener('click', () => this.openShop());
@@ -4508,24 +4534,6 @@
                 if (mobileSoundBtn) mobileSoundBtn.addEventListener('click', () => this.toggleSound());
                 if (mobileHelpBtn) mobileHelpBtn.addEventListener('click', () => this.openHelp());
                 
-                if (mobileSendBtn) {
-                    mobileSendBtn.addEventListener('click', () => {
-                        if (mobileChatInput && mobileChatInput.value.trim()) {
-                            this.sendMessage(mobileChatInput.value);
-                            mobileChatInput.value = '';
-                        }
-                    });
-                }
-
-                if (mobileChatInput) {
-                    mobileChatInput.addEventListener('keypress', (e) => {
-                        if (e.key === 'Enter' && mobileChatInput.value.trim()) {
-                            this.sendMessage(mobileChatInput.value);
-                            mobileChatInput.value = '';
-                        }
-                    });
-                }
-
                 // Mobile tab switching
                 document.querySelectorAll('.mobile-tab-btn').forEach(btn => {
                     btn.addEventListener('click', () => {
@@ -6398,6 +6406,42 @@
                         }
                     }
                     
+                    /* Mobile-specific styles for new-fish-banner */
+                    @media (max-width: 768px) {
+                        .new-fish-banner {
+                            position: fixed;
+                            top: 50%;
+                            left: 50%;
+                            transform: translate(-50%, -50%);
+                            z-index: 10002;
+                            width: 90vw;
+                            max-width: 350px;
+                        }
+                        
+                        .new-fish-content {
+                            min-width: auto;
+                            padding: 20px 15px;
+                            border: 3px solid #00ff00;
+                            border-radius: 15px;
+                        }
+                        
+                        .new-fish-image-container {
+                            width: 80px;
+                            height: 80px;
+                            margin: 10px auto;
+                        }
+                        
+                        .new-fish-content h2 {
+                            font-size: 18px;
+                            margin-bottom: 5px;
+                        }
+                        
+                        .new-fish-content p {
+                            font-size: 12px;
+                            margin: 3px 0;
+                        }
+                    }
+                    
                     @keyframes announcementSlideUp {
                         from { transform: translateX(-50%) translateY(100px); opacity: 0; }
                         to { transform: translateX(-50%) translateY(0); opacity: 1; }
@@ -6421,7 +6465,6 @@
 
             addChatMessage(type, message) {
                 const chatArea = document.getElementById('chat-area');
-                const mobileChatArea = document.getElementById('mobile-chat-area');
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `chat-message ${type}`;
                 messageDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
@@ -6429,11 +6472,6 @@
                 if (chatArea) {
                     chatArea.appendChild(messageDiv.cloneNode(true));
                     chatArea.scrollTop = chatArea.scrollHeight;
-                }
-                
-                if (mobileChatArea) {
-                    mobileChatArea.appendChild(messageDiv);
-                    mobileChatArea.scrollTop = mobileChatArea.scrollHeight;
                 }
             }
 
