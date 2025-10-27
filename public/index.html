@@ -7190,6 +7190,60 @@
                 container.innerHTML = html;
             }
 
+            renderFishCollection() {
+                const collectionGrid = document.getElementById('fish-collection-grid');
+                if (!collectionGrid) return;
+                
+                // Group fish by rarity
+                const fishByRarity = {
+                    'Common': [],
+                    'Uncommon': [],
+                    'Rare': [],
+                    'Huge': [],
+                    'Legendary': [],
+                    'Trophy': []
+                };
+                
+                // Group all fish by rarity
+                this.fishTypes.forEach((fish, index) => {
+                    const rarity = fish.rarity || 'Common';
+                    if (fishByRarity[rarity]) {
+                        fishByRarity[rarity].push({ ...fish, index });
+                    }
+                });
+                
+                let html = '';
+                
+                // Render each rarity group
+                Object.entries(fishByRarity).forEach(([rarity, fishList]) => {
+                    if (fishList.length === 0) return;
+                    
+                    html += `<div style="grid-column: 1 / -1; margin-top: 10px; margin-bottom: 5px; color: #64b5f6; font-weight: bold; font-size: 12px;">${rarity}</div>`;
+                    
+                    fishList.forEach(fish => {
+                        const isCaught = this.player.caughtFish && this.player.caughtFish[fish.name];
+                        const opacity = isCaught ? '1' : '0.3';
+                        
+                        html += `
+                            <div style="text-align: center; padding: 8px; background: rgba(15, 25, 40, 0.5); border-radius: 8px; opacity: ${opacity};">
+                                <img src="images/${fish.name}.png" 
+                                     alt="${fish.name}" 
+                                     onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 100\\'%3E%3Ctext y=\\'.9em\\' font-size=\\'60\\'%3E🐟%3C/text%3E%3C/svg%3E';"
+                                     style="width: 100%; aspect-ratio: 1; object-fit: contain;">
+                                <div style="font-size: 9px; color: #64b5f6; margin-top: 4px; word-break: break-word;">${fish.name}</div>
+                                ${!isCaught ? '<div style="font-size: 8px; color: #888;">???</div>' : ''}
+                            </div>
+                        `;
+                    });
+                });
+                
+                if (html === '') {
+                    html = '<div style="grid-column: 1 / -1; text-align: center; color: #888; padding: 20px;">Start fishing to build your collection!</div>';
+                }
+                
+                collectionGrid.innerHTML = html;
+            }
+
             showMessage(text, color) {
                 const messageEl = document.getElementById('catch-text');
                 const messageContainer = document.getElementById('catch-message');
