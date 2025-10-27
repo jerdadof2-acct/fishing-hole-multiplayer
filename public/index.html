@@ -3361,6 +3361,7 @@
                     achievements: [],
                     recentCatches: [],
                     top10BiggestFish: [], // Always keep track of top 10 biggest fish ever caught
+                    caughtFish: {}, // Track which fish have been caught (name: true)
                     seasonalCatches: {
                         spring: { caught: 0, biggest: 0 },
                         summer: { caught: 0, biggest: 0 },
@@ -8143,6 +8144,7 @@
                                 achievements: gameData.player.achievements || [],
                                 recentCatches: gameData.player.recentCatches || [],
                                 top10BiggestFish: gameData.player.top10BiggestFish || [],
+                                caughtFish: gameData.player.caughtFish || {},
                                 seasonalCatches: {
                                     spring: { caught: 0, biggest: 0 },
                                     summer: { caught: 0, biggest: 0 },
