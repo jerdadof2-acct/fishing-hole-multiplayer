@@ -3708,6 +3708,33 @@
                 }
             }
 
+            initAudioOnInteraction() {
+                // Auto-resume audio context on first user interaction
+                if (!this.audioContext) {
+                    const resumeAudio = () => {
+                        if (!this.audioContext) {
+                            this.initAudio();
+                        }
+                        if (this.audioContext && this.audioContext.state === 'suspended') {
+                            this.audioContext.resume().then(() => {
+                                console.log('Audio context resumed successfully');
+                            }).catch(error => {
+                                console.log('Error resuming audio context:', error);
+                            });
+                        }
+                        // Remove listeners after first interaction
+                        document.removeEventListener('click', resumeAudio);
+                        document.removeEventListener('touchstart', resumeAudio);
+                        document.removeEventListener('keydown', resumeAudio);
+                    };
+                    
+                    // Listen for any user interaction to resume audio
+                    document.addEventListener('click', resumeAudio, { once: true });
+                    document.addEventListener('touchstart', resumeAudio, { once: true });
+                    document.addEventListener('keydown', resumeAudio, { once: true });
+                }
+            }
+
             createSounds() {
                 if (!this.audioContext) return;
 
@@ -3943,9 +3970,14 @@
                 if (this.soundEnabled && this.audioContext && this.sounds[soundName]) {
                     // Resume audio context if suspended (required by some browsers)
                     if (this.audioContext.state === 'suspended') {
-                        this.audioContext.resume();
+                        this.audioContext.resume().then(() => {
+                            this.sounds[soundName]();
+                        }).catch(error => {
+                            console.log('Error resuming audio context:', error);
+                        });
+                    } else {
+                        this.sounds[soundName]();
                     }
-                    this.sounds[soundName]();
                 }
             }
 
@@ -4126,6 +4158,23 @@
                 document.getElementById('help-btn').addEventListener('click', () => this.openHelp());
                 document.getElementById('close-help').addEventListener('click', () => this.closeHelp());
                 document.getElementById('sound-btn').addEventListener('click', () => this.toggleSound());
+                
+                // Load saved sound preference
+                const savedSoundEnabled = localStorage.getItem('fishingGameSoundEnabled');
+                if (savedSoundEnabled !== null) {
+                    this.soundEnabled = savedSoundEnabled === 'true';
+                    const soundBtn = document.getElementById('sound-btn');
+                    const mobileSoundBtn = document.getElementById('mobile-sound-btn');
+                    if (soundBtn) {
+                        soundBtn.textContent = this.soundEnabled ? '🔊 SOUND ON' : '🔇 SOUND OFF';
+                    }
+                    if (mobileSoundBtn) {
+                        mobileSoundBtn.textContent = this.soundEnabled ? '🔊' : '🔇';
+                    }
+                }
+                
+                // Initialize audio context on first user interaction
+                this.initAudioOnInteraction();
                 
                 // Chat toggle
                 document.getElementById('chat-toggle').addEventListener('click', () => this.toggleChat());
