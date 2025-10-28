@@ -6191,6 +6191,7 @@
                 // Show chat bubble with funny fishing sayings (only 30% of the time)
                 if (player.isSimulated && Math.random() < 0.3) {
                     const fishingSayings = [
+                        // Fishing comments
                         '🎣 Just purrfected my cast!', '😸 This spot looks fishy... in a good way!', 
                         '🐱 Meowvelous fishing spot!', '🎣 I got this one... I think?', 
                         '😺 Patience is a fishy virtue!', '🐟 Come to pappa!', '🎣 Wish I had opposable thumbs!',
@@ -6201,7 +6202,33 @@
                         '😸 Just got schooled in fishing!', '🐱 I can see the bottom... is that normal?', '🎣 Defying all stereotypes right now!',
                         '😺 Sushi-grade expectations here!', '🐟 Fish are just underwater cats!', '🎣 My favorite TV show in real life!',
                         '😸 Predator mode: engaged!', '🐱 All fish are trophies to me!', '🎣 Retirement plan: fishing!',
-                        '😺 Channeling my bobcat energy!', '🐟 This is my happy place!', '🎣 Zen and the art of fishing!'
+                        '😺 Channeling my bobcat energy!', '🐟 This is my happy place!', '🎣 Zen and the art of fishing!',
+                        // One-liner jokes
+                        '🐟 Why don\'t fish wear ties? They\'re always too close to the water!', 
+                        '🎣 I tried to catch a fish with my bare paws... it was a cat-astrophe!',
+                        '😸 Fish are just swimming gym memberships for cats!',
+                        '🐱 My rod broke... should I paws and think about this?',
+                        '🎣 I threw my rod away, but it came back... I guess it\'s a boomerang!',
+                        '😺 Why did the catfish cross the river? To get to the other tide!',
+                        '🐟 What do you call a fish wearing a tie? SophisTICated!',
+                        '🎣 I asked a fish for directions... it just went... ><((((o>',
+                        '😸 My fishing spot is purretty good... or is it just okay?',
+                        '🐱 Two fish are in a tank... one says "How do you drive this thing?"',
+                        '🎣 I\'m fishing for compliments here, but I\'ll take fish!',
+                        '😺 What\'s a fish\'s favorite TV show? The O-CAT-an!',
+                        '🐟 I told a fish joke, but it was too deep!',
+                        '🎣 Why do fish live in salt water? Because pepper makes them sneeze!',
+                        '😸 This fishing line is purrfect... or is it claw-ful?',
+                        '🐱 How do you know if a fish is bad? It smells fishy!',
+                        '🎣 My fishing philosophy: Go with the floe!',
+                        '😺 What do you call a fish that wears sandals? Afin-flipper!',
+                        '🐟 Why are fish so good at math? They live in schools!',
+                        '🎣 My fish got away... guess it had fins-er places to be!',
+                        '😸 What do fish use to make phone calls? A shell phone!',
+                        '🐱 This lake is purrfect... or is it purr-fectly awful?',
+                        '🎣 Why did the fish go to college? To get its cod-ucation!',
+                        '😺 What\'s a fish\'s favorite instrument? A bass guitar!',
+                        '🐟 I caught a fish wearing a bow tie... he was quite dapper!'
                     ];
                     const saying = fishingSayings[Math.floor(Math.random() * fishingSayings.length)];
                     this.showChatBubble(playerIndex + 1, saying);
