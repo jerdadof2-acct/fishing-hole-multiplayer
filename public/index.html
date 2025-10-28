@@ -3642,12 +3642,12 @@
                         { name: 'Titanium Line', cost: 8000, strength: 35, visibility: 2, description: 'Ultimate strength', unlockLevel: 16 }
                     ],
                     hooks: [
-                        { name: 'Basic Hook', cost: 0, catchBonus: 0, size: 8, description: 'Standard hook', unlockLevel: 1 },
-                        { name: 'Barbed Hook', cost: 100, catchBonus: 5, size: 8, description: 'Better fish retention', unlockLevel: 3 },
-                        { name: 'Circle Hook', cost: 300, catchBonus: 3, size: 6, description: 'Fish-friendly design', unlockLevel: 5 },
-                        { name: 'Treble Hook', cost: 800, catchBonus: 8, size: 6, description: 'Triple hook design', unlockLevel: 7 },
-                        { name: 'Jig Hook', cost: 2500, catchBonus: 10, size: 4, description: 'Jig fishing specialist', unlockLevel: 10 },
-                        { name: 'Trophy Hook', cost: 10000, catchBonus: 15, size: 2, description: 'Trophy fish specialist', unlockLevel: 15 }
+                        { name: 'Basic Hook', cost: 0, catchBonus: 0, size: 8, description: 'Standard hook - 600ms timing window', unlockLevel: 1 },
+                        { name: 'Barbed Hook', cost: 100, catchBonus: 5, size: 8, description: 'Better fish retention - 700ms timing window', unlockLevel: 3 },
+                        { name: 'Circle Hook', cost: 300, catchBonus: 3, size: 6, description: 'Fish-friendly design - 800ms timing window', unlockLevel: 5 },
+                        { name: 'Treble Hook', cost: 800, catchBonus: 8, size: 6, description: 'Triple hook design - 900ms timing window', unlockLevel: 7 },
+                        { name: 'Jig Hook', cost: 2500, catchBonus: 10, size: 4, description: 'Jig fishing specialist - 1000ms timing window', unlockLevel: 10 },
+                        { name: 'Trophy Hook', cost: 10000, catchBonus: 15, size: 2, description: 'Trophy fish specialist - 1100ms timing window', unlockLevel: 15 }
                     ],
                     baits: [
                         { name: 'Basic Bait', cost: 0, catchBonus: 0, durability: 10, description: 'Simple worm bait', unlockLevel: 1 },
@@ -5263,14 +5263,45 @@
                 const castBtn = document.getElementById('cast-btn');
                 const mobileCastBtn = document.getElementById('mobile-cast-btn');
                 
+                // Get current hook to determine timing window
+                const hookName = this.player.gear?.hooks || this.player.gear?.hook;
+                const hook = hookName ? this.tackle.hooks.find(h => h.name === hookName) : null;
+                
+                // Determine timing window based on hook quality
+                let maxTimingWindow = 800; // Default timing window
+                if (hook) {
+                    switch (hook.name) {
+                        case 'Basic Hook':
+                            maxTimingWindow = 800; // 200-800ms
+                            break;
+                        case 'Barbed Hook':
+                            maxTimingWindow = 900; // 200-900ms
+                            break;
+                        case 'Circle Hook':
+                            maxTimingWindow = 1000; // 200-1000ms
+                            break;
+                        case 'Treble Hook':
+                            maxTimingWindow = 1100; // 200-1100ms
+                            break;
+                        case 'Jig Hook':
+                            maxTimingWindow = 1200; // 200-1200ms
+                            break;
+                        case 'Trophy Hook':
+                            maxTimingWindow = 1300; // 200-1300ms
+                            break;
+                        default:
+                            maxTimingWindow = 800;
+                    }
+                }
+                
                 // Timing-based success:
                 // Too fast (< 200ms): Miss - "Too eager!"
-                // Perfect timing (200-800ms): Success
-                // Too slow (> 800ms): Miss - "Too slow!"
+                // Perfect timing (200ms to maxTimingWindow): Success
+                // Too slow (> maxTimingWindow): Miss - "Too slow!"
                 
                 if (reactionTime < 200) {
                     this.missFish('Too eager! Fish wasn\'t ready!');
-                } else if (reactionTime <= 800) {
+                } else if (reactionTime <= maxTimingWindow) {
                     // Success! Hook set properly
                     this.hookSetSuccess = true;
                     
