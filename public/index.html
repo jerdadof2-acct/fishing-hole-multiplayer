@@ -6188,6 +6188,25 @@
                     fishermen[playerIndex + 1].classList.add('fishing');
                 }
                 
+                // Show chat bubble with funny fishing sayings
+                if (player.isSimulated) {
+                    const fishingSayings = [
+                        '🎣 Just purrfected my cast!', '😸 This spot looks fishy... in a good way!', 
+                        '🐱 Meowvelous fishing spot!', '🎣 I got this one... I think?', 
+                        '😺 Patience is a fishy virtue!', '🐟 Come to pappa!', '🎣 Wish I had opposable thumbs!',
+                        '😸 This is totally relaxing!', '🐱 Working for those sardines...', '🎣 Maybe I should stick to catnip?',
+                        '😺 Did anyone see my tackle?', '🐟 Fish fingers? No thanks!', '🎣 Channeling my inner fisherman!',
+                        '😸 Laser focus mode activated!', '🐱 This is purretty serious business!', '🎣 Reeling in the big one... maybe!',
+                        '😺 Budget brand cat food awaits!', '🐟 Water? Gross, but fish are worth it!', '🎣 My ancestors were lions... this is fine.',
+                        '😸 Just got schooled in fishing!', '🐱 I can see the bottom... is that normal?', '🎣 Defying all stereotypes right now!',
+                        '😺 Sushi-grade expectations here!', '🐟 Fish are just underwater cats!', '🎣 My favorite TV show in real life!',
+                        '😸 Predator mode: engaged!', '🐱 All fish are trophies to me!', '🎣 Retirement plan: fishing!',
+                        '😺 Channeling my bobcat energy!', '🐟 This is my happy place!', '🎣 Zen and the art of fishing!'
+                    ];
+                    const saying = fishingSayings[Math.floor(Math.random() * fishingSayings.length)];
+                    this.showChatBubble(playerIndex + 1, saying);
+                }
+                
                 // Simulate fishing duration - randomized between 2-5 seconds
                 const fishingDuration = 2000 + Math.random() * 3000;
                 setTimeout(() => {
@@ -7849,6 +7868,89 @@
             showChatBanner(message) {
                 // Use the same announcement system as big fish catches
                 this.showGlobalAnnouncement(message, '#64b5f6');
+            }
+
+            showChatBubble(playerIndex, message) {
+                // Remove existing bubble for this player
+                const existing = document.querySelectorAll(`.bot-chat-bubble[data-player-index="${playerIndex}"]`);
+                existing.forEach(el => el.remove());
+                
+                const fishermen = document.querySelectorAll('.fisherman');
+                if (!fishermen[playerIndex]) return;
+                
+                const fisher = fishermen[playerIndex];
+                const fisherRect = fisher.getBoundingClientRect();
+                
+                const bubble = document.createElement('div');
+                bubble.className = 'bot-chat-bubble';
+                bubble.setAttribute('data-player-index', playerIndex);
+                bubble.textContent = message;
+                
+                // Position above the fisherman
+                bubble.style.position = 'fixed';
+                bubble.style.left = (fisherRect.left + fisherRect.width / 2) + 'px';
+                bubble.style.bottom = (window.innerHeight - fisherRect.top + 10) + 'px';
+                bubble.style.transform = 'translateX(-50%)';
+                bubble.style.zIndex = '1000';
+                
+                document.body.appendChild(bubble);
+                
+                // Remove after 3 seconds
+                setTimeout(() => {
+                    if (bubble.parentElement) {
+                        bubble.style.opacity = '0';
+                        bubble.style.transform = 'translateX(-50%) translateY(-10px)';
+                        setTimeout(() => bubble.remove(), 300);
+                    }
+                }, 3000);
+                
+                // Add CSS if not already added
+                if (!document.getElementById('bot-chat-bubble-styles')) {
+                    const style = document.createElement('style');
+                    style.id = 'bot-chat-bubble-styles';
+                    style.textContent = `
+                        .bot-chat-bubble {
+                            background: rgba(15, 25, 40, 0.95);
+                            border: 2px solid #00ffff;
+                            border-radius: 15px;
+                            padding: 8px 15px;
+                            color: #ffffff;
+                            font-size: 12px;
+                            max-width: 200px;
+                            word-wrap: break-word;
+                            text-align: center;
+                            box-shadow: 0 2px 10px rgba(0, 255, 255, 0.3);
+                            animation: chatBubbleSlideUp 0.3s ease-out;
+                        }
+                        
+                        @keyframes chatBubbleSlideUp {
+                            from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+                            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+                        }
+                        
+                        .bot-chat-bubble::before {
+                            content: '';
+                            position: absolute;
+                            bottom: -8px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            width: 0;
+                            height: 0;
+                            border-left: 8px solid transparent;
+                            border-right: 8px solid transparent;
+                            border-top: 8px solid #00ffff;
+                        }
+                        
+                        @media (max-width: 768px) {
+                            .bot-chat-bubble {
+                                font-size: 10px;
+                                padding: 6px 12px;
+                                max-width: 150px;
+                            }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
             }
 
             handleAdClick(location) {
