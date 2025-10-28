@@ -501,6 +501,14 @@
             transform: translate3d(0,0,0);
         }
 
+        /* Splash canvas overlay */
+        #splash-canvas, #mobile-splash-canvas {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 7; /* above water surface & ripples; below HUD if needed */
+        }
+
         /* Generic ripple elements */
         .water-ripple, .water-ripple-invert {
             position: absolute;
@@ -3065,6 +3073,8 @@
                         <div class="fishing-lake" id="fishing-lake">
                             <div class="ripples" id="ripples"></div>
                             <div id="caustics-layer" aria-hidden="true"></div>
+                            <!-- Realistic splash canvas (drawn above water surface) -->
+                            <canvas id="splash-canvas" aria-hidden="true"></canvas>
                         </div>
 
                         <div class="location-dropdown">
@@ -3201,6 +3211,8 @@
                     <div class="mobile-fishing-lake" id="mobile-fishing-lake">
                         <div class="ripples" id="mobile-ripples"></div>
                         <div id="mobile-caustics-layer" aria-hidden="true"></div>
+                        <!-- Realistic splash canvas (drawn above water surface) -->
+                        <canvas id="mobile-splash-canvas" aria-hidden="true"></canvas>
                     </div>
                     <div class="location-dropdown" style="background: rgba(20, 30, 50, 0.95); border: 2px solid rgba(100, 200, 255, 0.4); border-radius: 8px; padding: 8px; margin-top: 8px;">
                         <select id="mobile-location-select" onchange="game.changeLocation(this.value)" style="width: 100%; padding: 10px; background: rgba(15, 25, 40, 0.9); color: #64b5f6; border: 2px solid rgba(100, 200, 255, 0.4); border-radius: 6px; font-size: 12px;">
@@ -5090,6 +5102,9 @@
                 
                 // Install ripple effects
                 this.installRippleEffects();
+                
+                // Initialize splash system
+                this.initializeSplashSystem();
             }
 
             startWaterNoiseAnimation() {
@@ -5177,6 +5192,212 @@
 
                 installPointerRipples(lake);
                 installPointerRipples(mobileLake);
+            }
+
+            // Realistic Splash System with Canvas and Particles
+            initializeSplashSystem() {
+                const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+                class SplashSystem {
+                    constructor(lakeEl, canvas) {
+                        this.lake = lakeEl;
+                        this.canvas = canvas;
+                        this.ctx = canvas.getContext('2d');
+                        this.particles = [];
+                        this.rings = [];
+                        this.last = performance.now();
+                        this.running = false;
+                        this.resize();
+                        window.addEventListener('resize', () => this.resize());
+                        if (!RM) this.start();
+                    }
+                    
+                    resize() {
+                        const r = this.lake.getBoundingClientRect();
+                        this.canvas.width = r.width * devicePixelRatio;
+                        this.canvas.height = r.height * devicePixelRatio;
+                        this.ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+                    }
+                    
+                    start() {
+                        if (this.running) return;
+                        this.running = true;
+                        const loop = (t) => {
+                            if (!this.running) return;
+                            const dt = Math.min(0.033, (t - this.last) / 1000); // clamp
+                            this.last = t;
+                            this.update(dt);
+                            this.draw();
+                            requestAnimationFrame(loop);
+                        };
+                        requestAnimationFrame(loop);
+                    }
+                    
+                    stop() { this.running = false; }
+
+                    // world coords from lake-relative pixel x,y
+                    emitSplash(x, y, power = 1, kind = 'impact') {
+                        if (RM) return;
+
+                        // Crown jets (the upward droplets)
+                        const jets = Math.floor(12 + power * 10);
+                        for (let i = 0; i < jets; i++) {
+                            const a = (i / jets) * Math.PI * 2 + (Math.random() - 0.5) * 0.35;
+                            const spd = 120 + Math.random() * 140 * power;
+                            const vx = Math.cos(a) * spd * (0.25 + Math.random() * 0.75);
+                            const vy = -(180 + Math.random() * 220 * power); // upward impulse
+                            this.particles.push(this.makeDrop(x, y, vx, vy, power));
+                        }
+
+                        // Mist (small, short-lived, glints)
+                        const mistN = Math.floor(30 + power * 40);
+                        for (let i = 0; i < mistN; i++) {
+                            const vx = (Math.random() - 0.5) * 180 * power;
+                            const vy = -Math.random() * 120 * power;
+                            const p = this.makeDrop(x, y, vx, vy, power * 0.5);
+                            p.size *= 0.5; p.life *= 0.6; p.alpha = 0.6;
+                            this.particles.push(p);
+                        }
+
+                        // Surface ring
+                        this.rings.push({
+                            x, y, r: 4, w: 2, alpha: 0.75, growth: 110 + 80 * power, fade: 0.85
+                        });
+
+                        // Brief caustics kick if you added that layer (optional)
+                        const c = document.getElementById('caustics-layer');
+                        const mobileC = document.getElementById('mobile-caustics-layer');
+                        if (c) { 
+                            c.style.transition = 'opacity .18s ease'; 
+                            c.style.opacity = '0.3';
+                            setTimeout(() => c.style.opacity = '0.22', 200); 
+                        }
+                        if (mobileC) { 
+                            mobileC.style.transition = 'opacity .18s ease'; 
+                            mobileC.style.opacity = '0.3';
+                            setTimeout(() => mobileC.style.opacity = '0.22', 200); 
+                        }
+                    }
+
+                    // suction ring for fish bite (reverse feel)
+                    emitSuction(x, y, power = 1) {
+                        if (RM) return;
+                        this.rings.push({ x, y, r: 2, w: 2, alpha: 0.7, growth: 90, fade: 0.9, invert: true });
+                        // a few downward glugs
+                        for (let i = 0; i < 6; i++) {
+                            const vx = (Math.random() - 0.5) * 40;
+                            const vy = 30 + Math.random() * 60; // down
+                            const p = this.makeDrop(x, y, vx, vy, 0.6);
+                            p.alpha = 0.5; p.gravity = 250; p.drag = 0.96;
+                            this.particles.push(p);
+                        }
+                        if (navigator.vibrate) navigator.vibrate(12);
+                    }
+
+                    // soft wake while reeling/fighting
+                    emitWake(x, y) {
+                        if (RM) return;
+                        // tiny ring + a couple of small droplets
+                        this.rings.push({ x, y, r: 1.5, w: 1.5, alpha: 0.45, growth: 60, fade: 0.92 });
+                        for (let i = 0; i < 2; i++) {
+                            const vx = (Math.random() - 0.5) * 60;
+                            const vy = -(10 + Math.random() * 30);
+                            const p = this.makeDrop(x, y, vx, vy, 0.3);
+                            p.size *= 0.6; p.alpha = 0.5;
+                            this.particles.push(p);
+                        }
+                    }
+
+                    makeDrop(x, y, vx, vy, scale) {
+                        return {
+                            x, y,
+                            vx, vy,
+                            size: 2.5 * (0.8 + Math.random() * 0.8) * (0.7 + 0.6 * scale),
+                            life: 0.7 + Math.random() * 0.6,
+                            age: 0,
+                            alpha: 0.9,
+                            gravity: 420, // px/s^2
+                            drag: 0.985,
+                            bounce: 0.35
+                        };
+                    }
+
+                    update(dt) {
+                        // particles
+                        for (let i = this.particles.length - 1; i >= 0; i--) {
+                            const p = this.particles[i];
+                            p.vx *= p.drag;
+                            p.vy = p.vy * p.drag + p.gravity * dt;
+                            p.x += p.vx * dt;
+                            p.y += p.vy * dt;
+                            p.age += dt;
+                            // hit water surface (y ~ baseline): make a micro ring and dampen
+                            const H = this.canvas.height / devicePixelRatio;
+                            if (p.y > H - 2) { // surface/bottom clamp depending on composition
+                                p.y = H - 2;
+                                p.vy *= -p.bounce;
+                                p.vx *= 0.7;
+                                this.rings.push({ x: p.x, y: p.y, r: 1.5, w: 1, alpha: 0.35, growth: 80, fade: 0.9 });
+                                // convert to foam/mist quickly
+                                p.life *= 0.6;
+                            }
+                            if (p.age > p.life) { this.particles.splice(i, 1); }
+                        }
+                        // rings
+                        for (let i = this.rings.length - 1; i >= 0; i--) {
+                            const r = this.rings[i];
+                            r.r += r.growth * dt;
+                            r.alpha *= r.fade;
+                            r.w *= 0.995;
+                            if (r.alpha < 0.04) this.rings.splice(i, 1);
+                        }
+                    }
+
+                    draw() {
+                        const ctx = this.ctx;
+                        ctx.clearRect(0, 0, this.canvas.width / devicePixelRatio, this.canvas.height / devicePixelRatio);
+
+                        // rings
+                        for (const r of this.rings) {
+                            ctx.beginPath();
+                            ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
+                            ctx.strokeStyle = `rgba(200,230,255,${r.alpha})`;
+                            ctx.lineWidth = r.w;
+                            ctx.globalCompositeOperation = r.invert ? 'destination-out' : 'lighter';
+                            ctx.stroke();
+                        }
+                        ctx.globalCompositeOperation = 'source-over';
+
+                        // droplets (simple highlights)
+                        for (const p of this.particles) {
+                            const a = Math.max(0, 1 - p.age / p.life) * p.alpha;
+                            ctx.beginPath();
+                            ctx.ellipse(p.x, p.y, p.size, p.size * 0.85, 0, 0, Math.PI * 2);
+                            ctx.fillStyle = `rgba(220,240,255,${a})`;
+                            ctx.shadowColor = 'rgba(180,220,255,0.6)';
+                            ctx.shadowBlur = 6;
+                            ctx.fill();
+                            ctx.shadowBlur = 0;
+                        }
+                    }
+                }
+
+                // Initialize splash systems for both desktop and mobile
+                const desktopLake = document.getElementById('fishing-lake');
+                const desktopCanvas = document.getElementById('splash-canvas');
+                const mobileLake = document.getElementById('mobile-fishing-lake');
+                const mobileCanvas = document.getElementById('mobile-splash-canvas');
+
+                if (desktopLake && desktopCanvas) {
+                    this.desktopSplashSystem = new SplashSystem(desktopLake, desktopCanvas);
+                }
+                if (mobileLake && mobileCanvas) {
+                    this.mobileSplashSystem = new SplashSystem(mobileLake, mobileCanvas);
+                }
+
+                // Keep splash systems accessible globally
+                window.splashFX = this.desktopSplashSystem;
+                window.mobileSplashFX = this.mobileSplashSystem;
             }
 
             setupWaterInteractions() {
@@ -5437,6 +5658,17 @@
                                     ripple.parentNode.removeChild(ripple);
                                 }
                             }, 1200);
+                            
+                            // Add realistic suction splash effect for fish bite
+                            const lakeRect = activeLake.getBoundingClientRect();
+                            const bobberRect = bobber.getBoundingClientRect();
+                            const bobberX = bobberRect.left - lakeRect.left;
+                            const bobberY = bobberRect.top - lakeRect.top;
+                            
+                            const splashSystem = isMobile ? window.mobileSplashFX : window.splashFX;
+                            if (splashSystem) {
+                                splashSystem.emitSuction(bobberX, bobberY, 0.9);
+                            }
                         }
                     }
                 });
@@ -5697,6 +5929,19 @@
                 line.dataset.splashId = splash.id || `splash-${Date.now()}-${Math.random()}`;
                 splash.id = line.dataset.splashId;
                 
+                // Add realistic splash effect when hook hits water
+                setTimeout(() => {
+                    const lakeRect = activeLake.getBoundingClientRect();
+                    const hookX = fishermanCenterX - lakeRect.left;
+                    const hookY = castDistance;
+                    
+                    // Emit splash effect at hook impact point
+                    const splashSystem = isMobile ? window.mobileSplashFX : window.splashFX;
+                    if (splashSystem) {
+                        splashSystem.emitSplash(hookX, hookY, 1.0, 'impact');
+                    }
+                }, 100); // Small delay to ensure hook is positioned
+                
                 activeLake.appendChild(line);
                 
                 // Create landing splash effect when hook hits water (after line extends)
@@ -5953,10 +6198,28 @@
                                 // Initial position update
                                 updateSplashPosition();
                                 
+                                // Add wake effects during reeling
+                                let lastWakeTime = 0;
+                                const wakeInterval = 90; // ms between wake effects
+                                
                                 const updateInterval = setInterval(() => {
                                     const elapsed = Date.now() - startTime;
                                     if (elapsed < duration) {
                                         updateSplashPosition();
+                                        
+                                        // Add wake effects at regular intervals
+                                        if (elapsed - lastWakeTime > wakeInterval) {
+                                            const lakeRect = activeLake.getBoundingClientRect();
+                                            const lineRect = line.getBoundingClientRect();
+                                            const wakeX = lineRect.left - lakeRect.left;
+                                            const wakeY = lineRect.height;
+                                            
+                                            const splashSystem = isMobile ? window.mobileSplashFX : window.splashFX;
+                                            if (splashSystem) {
+                                                splashSystem.emitWake(wakeX, wakeY);
+                                            }
+                                            lastWakeTime = elapsed;
+                                        }
                                     } else {
                                         clearInterval(updateInterval);
                                         if (splash) {
