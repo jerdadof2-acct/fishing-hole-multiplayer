@@ -724,15 +724,15 @@
 
         @keyframes lineCast {
             0% { 
-                transform: rotate(-3deg);
+                transform: translateX(-50%) rotate(-0.5deg);
                 transform-origin: top center;
             }
             50% { 
-                transform: rotate(3deg);
+                transform: translateX(-50%) rotate(0.5deg);
                 transform-origin: top center;
             }
             100% { 
-                transform: rotate(-3deg);
+                transform: translateX(-50%) rotate(-0.5deg);
                 transform-origin: top center;
             }
         }
@@ -853,11 +853,11 @@
 
         @keyframes lineTensionSubtle {
             0%, 100% { 
-                transform: translateX(-50%) rotate(-0.5deg);
+                transform: translateX(-50%) rotate(-0.2deg);
                 opacity: 1;
             }
             50% { 
-                transform: translateX(-50%) rotate(0.5deg);
+                transform: translateX(-50%) rotate(0.2deg);
                 opacity: 0.95;
             }
         }
@@ -1013,8 +1013,8 @@
         }
 
         @keyframes lineBob {
-            0%, 100% { transform: translateX(-50%) rotate(-1deg); }
-            50% { transform: translateX(-50%) rotate(1deg); }
+            0%, 100% { transform: translateX(-50%) rotate(-0.3deg); }
+            50% { transform: translateX(-50%) rotate(0.3deg); }
         }
 
         /* Hook styling is defined in mobile section and first hook definition */
