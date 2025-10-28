@@ -5724,6 +5724,10 @@
                         if (splashId) {
                             const splash = document.getElementById(splashId);
                             if (splash && bobber) {
+                                // Define timing variables first
+                                const startTime = Date.now();
+                                const duration = 1200; // Match reel-in animation duration
+                                
                                 // Make splash follow bobber by updating its position during animation
                                 const updateSplashPosition = () => {
                                     if (splash && bobber && line.parentNode) {
@@ -5738,12 +5742,25 @@
                                         splash.style.position = 'absolute';
                                         splash.style.zIndex = '10'; // Ensure it's visible
                                         splash.style.opacity = '1'; // Ensure it's visible
+                                        
+                                        // Make splash bigger and add animation
+                                        splash.style.width = '40px'; // Increased from default
+                                        splash.style.height = '40px'; // Increased from default
+                                        splash.style.borderRadius = '50%';
+                                        splash.style.background = 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.4) 50%, transparent 100%)';
+                                        
+                                        // Add pulsing animation during reel-in
+                                        const elapsed = Date.now() - startTime;
+                                        const progress = elapsed / duration;
+                                        const pulseScale = 1 + Math.sin(progress * Math.PI * 4) * 0.2; // Pulse between 0.8 and 1.2
+                                        
+                                        // Add slight rotation for more dynamic effect
+                                        const rotation = progress * 360; // Full rotation over duration
+                                        splash.style.transform = `translate(-50%, -50%) scale(${pulseScale}) rotate(${rotation}deg)`;
                                     }
                                 };
                                 
                                 // Update splash position throughout the animation
-                                const startTime = Date.now();
-                                const duration = 1200; // Match reel-in animation duration
                                 
                                 // Initial position update
                                 updateSplashPosition();
