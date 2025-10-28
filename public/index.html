@@ -531,6 +531,97 @@
             }
         }
 
+        /* Cat rig sizing inside fisherman frame */
+        .cat-rig { 
+            width: 46px; 
+            height: 46px; 
+            position: relative; 
+        }
+
+        /* SVG fills via CSS variables (we can recolor from JS) */
+        .cat-rig svg { 
+            width: 100%; 
+            height: 100%; 
+            display: block; 
+        }
+
+        /* Micro-animations */
+        @keyframes cat-breathe { 
+            0%,100% { transform: translateY(0) } 
+            50% { transform: translateY(-0.6px) } 
+        }
+        @keyframes cat-blink   { 
+            0%,92%,100% { transform: scaleY(1) } 
+            93% { transform: scaleY(0.05) } 
+            96% { transform: scaleY(1) } 
+        }
+        @keyframes ear-twitch  { 
+            0%,96% { transform: rotate(0deg) } 
+            97% { transform: rotate(-6deg) } 
+            100% { transform: rotate(0deg) } 
+        }
+        @keyframes tail-sway   { 
+            0%,100% { transform: rotate(8deg) } 
+            50% { transform: rotate(-6deg) } 
+        }
+
+        .cat-body { 
+            animation: cat-breathe 2.3s ease-in-out infinite; 
+            transform-origin: 50% 60%; 
+        }
+        .cat-eyes { 
+            transform-origin: 50% 45%; 
+            animation: cat-blink 5.5s infinite; 
+        }
+        .cat-earL { 
+            transform-origin: 32% 22%; 
+            animation: ear-twitch 8s infinite; 
+        }
+        .cat-earR { 
+            transform-origin: 68% 22%; 
+            animation: ear-twitch 9.5s infinite; 
+        }
+        .cat-tail { 
+            transform-origin: 90% 70%; 
+            animation: tail-sway 3.8s ease-in-out infinite; 
+        }
+
+        /* Emote bubble */
+        .cat-emote {
+            position: absolute; 
+            right: -6px; 
+            top: -8px; 
+            padding: 2px 4px;
+            background: rgba(0,0,0,.85); 
+            border: 1px solid rgba(100,200,255,.4);
+            border-radius: 6px; 
+            font-size: 10px; 
+            color: #fff; 
+            pointer-events: none; 
+            opacity: 0;
+            transform: translateY(6px); 
+            transition: opacity .15s ease, transform .15s ease;
+        }
+        .cat-emote.show { 
+            opacity: 1; 
+            transform: translateY(0); 
+        }
+
+        /* Gear slots (hidden if empty) */
+        .cat-gear { 
+            position: absolute; 
+            inset: 0; 
+            pointer-events: none; 
+        }
+        .cat-hat, .cat-glasses, .cat-vest { 
+            position: absolute; 
+            inset: 0; 
+            display: none; 
+        }
+        .cat-hat.show, .cat-glasses.show, .cat-vest.show { 
+            display: block; 
+        }
+
         /* Generic ripple elements */
         .water-ripple, .water-ripple-invert {
             position: absolute;
@@ -4921,10 +5012,27 @@
                 const isImageUrl = this.player.character && (this.player.character.startsWith('http') || this.player.character.startsWith('data:'));
                 
                 if (isImageUrl) {
+                    // Create cat rig container instead of image
+                    const rigHost = document.createElement('div');
+                    rigHost.className = 'cat-rig';
+                    rigHost.dataset.playerId = this.player.name;
+                    
+                    // Use stored avatarOptions if present; fallback colors/gear
+                    const opts = this.player.avatarOptions || {
+                        colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
+                        gear: { hat: false, glasses: false, vest: false }
+                    };
+                    
                     playerFisher.innerHTML = `
-                        <img src="${this.player.character}" alt="${this.player.name}" class="fisherman-avatar" style="width: 40px; height: 40px; border-radius: 50%;">
+                        <div class="cat-rig" data-player-id="${this.player.name}"></div>
                         <div class="fisherman-name">${this.player.name}</div>
                     `;
+                    
+                    // Render the cat rig
+                    const rigContainer = playerFisher.querySelector('.cat-rig');
+                    if (window.renderCatRig) {
+                        window.renderCatRig(rigContainer, opts);
+                    }
                 } else {
                     playerFisher.innerHTML = `
                         <div class="fisherman-character">${this.player.character || '👨'}</div>
@@ -4939,10 +5047,23 @@
                 mobilePlayerFisher.id = 'mobile-player-fisher';
                 
                 if (isImageUrl) {
+                    // Create cat rig container for mobile instead of image
                     mobilePlayerFisher.innerHTML = `
-                        <img src="${this.player.character}" alt="${this.player.name}" class="mobile-fisherman-avatar" style="width: 30px; height: 30px; border-radius: 50%;">
+                        <div class="cat-rig" data-player-id="${this.player.name}"></div>
                         <div class="mobile-fisherman-name">${this.player.name}</div>
                     `;
+                    
+                    // Use stored avatarOptions if present; fallback colors/gear
+                    const opts = this.player.avatarOptions || {
+                        colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
+                        gear: { hat: false, glasses: false, vest: false }
+                    };
+                    
+                    // Render the cat rig
+                    const rigContainer = mobilePlayerFisher.querySelector('.cat-rig');
+                    if (window.renderCatRig) {
+                        window.renderCatRig(rigContainer, opts);
+                    }
                 } else {
                     mobilePlayerFisher.innerHTML = `
                         <div class="mobile-fisherman-character">${this.player.character || '👨'}</div>
@@ -5128,6 +5249,9 @@
                 
                 // Initialize splash system
                 this.initializeSplashSystem();
+                
+                // Initialize cat rig system
+                this.initializeCatRigSystem();
             }
 
             startWaterNoiseAnimation() {
@@ -5435,6 +5559,127 @@
                 }, 100);
             }
 
+            // Animated Cat Rig System
+            initializeCatRigSystem() {
+                // Build one animated SVG cat
+                function buildCatSVG(opts) {
+                    const {
+                        fur = '#f2a65a', pattern = '#d77f3f', ear = '#c76b2a',
+                        eye = '#1e2a3a', belly = '#f8d7b1', whisker = '#2b2b2b'
+                    } = opts || {};
+                    const wrap = document.createElement('div');
+                    wrap.className = 'cat-rig';
+                    wrap.innerHTML = `
+                        <div class="cat-gear">
+                            <div class="cat-hat"></div>
+                            <div class="cat-glasses"></div>
+                            <div class="cat-vest"></div>
+                        </div>
+                        <div class="cat-emote" aria-hidden="true"></div>
+                        <svg viewBox="0 0 100 100" aria-hidden="true">
+                            <!-- Tail -->
+                            <g class="cat-tail">
+                                <path d="M78,70 q16,8 10,18 q-10,2 -18,-8" fill="${fur}" opacity=".95"/>
+                            </g>
+
+                            <!-- Body + belly -->
+                            <g class="cat-body">
+                                <ellipse cx="52" cy="66" rx="26" ry="22" fill="${fur}"/>
+                                <ellipse cx="50" cy="72" rx="16" ry="12" fill="${belly}" opacity=".9"/>
+                                <!-- stripes/spots (pattern) -->
+                                <path d="M38,58 l-6,3 M44,54 l-5,3 M60,55 l6,3 M66,59 l5,3"
+                                      stroke="${pattern}" stroke-width="3" stroke-linecap="round"/>
+                            </g>
+
+                            <!-- Ears -->
+                            <g class="cat-earL"><path d="M30,30 l-10,-6 l6,14 z" fill="${fur}"/>
+                                                <path d="M28,31 l-6,-4 l4,9 z" fill="${ear}"/></g>
+                            <g class="cat-earR"><path d="M70,30 l10,-6 l-6,14 z" fill="${fur}"/>
+                                                <path d="M72,31 l6,-4 l-4,9 z" fill="${ear}"/></g>
+
+                            <!-- Head -->
+                            <g class="cat-head">
+                                <ellipse cx="50" cy="44" rx="20" ry="16" fill="${fur}"/>
+                                <!-- Eyes -->
+                                <g class="cat-eyes">
+                                    <ellipse cx="43" cy="44" rx="3.6" ry="4.6" fill="${eye}"/>
+                                    <ellipse cx="57" cy="44" rx="3.6" ry="4.6" fill="${eye}"/>
+                                </g>
+                                <!-- Nose & mouth -->
+                                <ellipse cx="50" cy="50" rx="2.6" ry="2.1" fill="#ff8fa3"/>
+                                <path d="M50,52 q-3,3 -6,0 M50,52 q3,3 6,0" stroke="#3b2b2b" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                                <!-- Whiskers -->
+                                <path d="M34,49 h10 M34,52 h10 M56,49 h10 M56,52 h10" stroke="${whisker}" stroke-width="1.2" stroke-linecap="round" opacity=".85"/>
+                            </g>
+                        </svg>`;
+                    return wrap;
+                }
+
+                // Apply gear art (simple inline SVGs or PNGs)
+                function applyGear(container, gear) {
+                    const hat = container.querySelector('.cat-hat');
+                    const gls = container.querySelector('.cat-glasses');
+                    const vest = container.querySelector('.cat-vest');
+
+                    if (gear?.hat) {
+                        hat.classList.add('show');
+                        // example hat SVG
+                        hat.innerHTML = `<svg viewBox="0 0 100 100"><path d="M28,34 h44 a8,8 0 0 1 8,8 v2 H20 v-2 a8,8 0 0 1 8,-8z" fill="#2e3a4a"/></svg>`;
+                    } else { 
+                        hat.classList.remove('show'); 
+                        hat.innerHTML = ''; 
+                    }
+
+                    if (gear?.glasses) {
+                        gls.classList.add('show');
+                        gls.innerHTML = `<svg viewBox="0 0 100 100"><g fill="none" stroke="#111" stroke-width="2">
+                            <circle cx="42" cy="45" r="8"/><circle cx="58" cy="45" r="8"/><path d="M50,45 h2"/></g></svg>`;
+                    } else { 
+                        gls.classList.remove('show'); 
+                        gls.innerHTML = ''; 
+                    }
+
+                    if (gear?.vest) {
+                        vest.classList.add('show');
+                        vest.innerHTML = `<svg viewBox="0 0 100 100"><path d="M34,56 h32 v18 q-16,8 -32,0 z" fill="#1f6aa5" opacity=".85"/></svg>`;
+                    } else { 
+                        vest.classList.remove('show'); 
+                        vest.innerHTML = ''; 
+                    }
+                }
+
+                // Emotes
+                function showEmote(container, text, ms = 900) {
+                    const b = container.querySelector('.cat-emote');
+                    if (!b) return;
+                    b.textContent = text;
+                    b.classList.add('show');
+                    setTimeout(() => b.classList.remove('show'), ms);
+                }
+
+                /* PUBLIC: create/refresh a rig for a given fisherman node */
+                window.renderCatRig = function mountCatRig(targetEl, options) {
+                    // options: { colors:{fur,pattern,ear,eye,belly,whisker}, gear:{hat,glasses,vest} }
+                    targetEl.innerHTML = '';
+                    const rig = buildCatSVG(options?.colors);
+                    targetEl.appendChild(rig.firstElementChild); // cat-gear
+                    targetEl.appendChild(rig.querySelector('.cat-emote'));
+                    targetEl.appendChild(rig.querySelector('svg'));
+                    applyGear(targetEl, options?.gear);
+                    return targetEl;
+                };
+
+                // Quick reactions during gameplay
+                window.catRigPlay = {
+                    cheer: (targetEl) => showEmote(targetEl, '😺'),
+                    sad: (targetEl) => showEmote(targetEl, '🙀'),
+                    wow: (targetEl) => showEmote(targetEl, '🤩'),
+                    talk: (targetEl, msg) => showEmote(targetEl, msg, 1200)
+                };
+
+                console.log('Cat rig system initialized');
+            }
+
             setupWaterInteractions() {
                 const lake = document.getElementById('fishing-lake');
                 let isDragging = false;
@@ -5708,6 +5953,14 @@
                                 console.log('Suction effect emitted successfully');
                             } else {
                                 console.log('No splash system available for suction!');
+                            }
+                            
+                            // Add cat wow emote for fish strike
+                            const playerFisher = document.getElementById('player-fisher');
+                            const mobilePlayerFisher = document.getElementById('mobile-player-fisher');
+                            const rigContainer = playerFisher?.querySelector('.cat-rig') || mobilePlayerFisher?.querySelector('.cat-rig');
+                            if (rigContainer && window.catRigPlay) {
+                                window.catRigPlay.wow(rigContainer);
                             }
                         }
                     }
@@ -6344,6 +6597,14 @@
                 setTimeout(() => {
                     if (caughtFish) {
                         this.catchRandomFish();
+                        
+                        // Add cat cheer emote
+                        const playerFisher = document.getElementById('player-fisher');
+                        const mobilePlayerFisher = document.getElementById('mobile-player-fisher');
+                        const rigContainer = playerFisher?.querySelector('.cat-rig') || mobilePlayerFisher?.querySelector('.cat-rig');
+                        if (rigContainer && window.catRigPlay) {
+                            window.catRigPlay.cheer(rigContainer);
+                        }
                     } else {
                         // Show humorous "no catch" messages
                         const noCatchMessages = [
@@ -6401,6 +6662,14 @@
                         ];
                         const randomMessage = noCatchMessages[Math.floor(Math.random() * noCatchMessages.length)];
                         this.showMessage(randomMessage, '#ffff00');
+                        
+                        // Add cat sad emote
+                        const playerFisher = document.getElementById('player-fisher');
+                        const mobilePlayerFisher = document.getElementById('mobile-player-fisher');
+                        const rigContainer = playerFisher?.querySelector('.cat-rig') || mobilePlayerFisher?.querySelector('.cat-rig');
+                        if (rigContainer && window.catRigPlay) {
+                            window.catRigPlay.sad(rigContainer);
+                        }
                     }
                 }, 400);
             }
