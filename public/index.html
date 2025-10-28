@@ -5086,6 +5086,7 @@
                 this.isCasting = true;
                 this.fishStrikeTime = null; // Reset fish strike timing
                 this.hookSetSuccess = false; // Reset hook set success
+                this.autoFailTimer = null; // Reset auto-fail timer
                 
                 const castBtn = document.getElementById('cast-btn');
                 const mobileCastBtn = document.getElementById('mobile-cast-btn');
@@ -5158,10 +5159,10 @@
                         mobileCastBtn.onclick = () => this.setHook();
                     }
                     
-                    // Auto-fail if player doesn't react in time (3-5 seconds)
+                    // Auto-fail if player doesn't react in time (3-5 seconds AFTER fish strikes)
                     const reactionTime = 3000 + Math.random() * 2000; // 3-5 seconds
-                    setTimeout(() => {
-                        if (!this.hookSetSuccess && this.isCasting) {
+                    this.autoFailTimer = setTimeout(() => {
+                        if (!this.hookSetSuccess && this.isCasting && this.fishStrikeTime) {
                             this.missFish('Too slow! Fish got away!');
                         }
                     }, reactionTime);
@@ -5273,6 +5274,12 @@
                     // Success! Hook set properly
                     this.hookSetSuccess = true;
                     
+                    // Clear auto-fail timer since we succeeded
+                    if (this.autoFailTimer) {
+                        clearTimeout(this.autoFailTimer);
+                        this.autoFailTimer = null;
+                    }
+                    
                     // Stop bobber strike animations
                     this.stopBobberAnimations();
                     
@@ -5303,6 +5310,12 @@
                 this.isCasting = false;
                 this.hookSetSuccess = false;
                 this.fishStrikeTime = null;
+                
+                // Clear auto-fail timer
+                if (this.autoFailTimer) {
+                    clearTimeout(this.autoFailTimer);
+                    this.autoFailTimer = null;
+                }
                 
                 // Stop bobber strike animations
                 this.stopBobberAnimations();
