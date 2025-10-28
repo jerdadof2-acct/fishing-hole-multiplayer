@@ -3603,16 +3603,16 @@
                 
                 <!-- Character Preview -->
                 <div style="text-align: center; margin: 15px 0; min-height: 120px; background: rgba(20,30,50,0.8); border: 2px solid rgba(100,200,255,0.4); border-radius: 12px; padding: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
-                    <img id="character-preview-avatar" src="https://robohash.org/cat-1?set=set4&size=200x200" alt="Cat Avatar" style="width: 100px; height: 100px; border-radius: 50%; border: 2px solid rgba(100,200,255,0.5); box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
-                    <div style="color: #ffffff; font-size: 11px; margin-top: 8px; font-weight: 600;">Your Fishing Cat 🐱</div>
+                    <div id="character-preview-container" style="display: flex; justify-content: center; margin-bottom: 8px;">
+                        <div id="character-preview-avatar" class="cat-rig" style="width: 80px; height: 80px;"></div>
+                    </div>
+                    <div style="color: #ffffff; font-size: 11px; font-weight: 600;">Your Fishing Cat 🐱</div>
                 </div>
                 
-                <!-- Cat Selector -->
+                <!-- Quick Actions -->
                 <div style="margin-bottom: 10px;">
-                    <label style="color: #ffffff; font-size: 12px; display: block; margin-bottom: 8px; font-weight: 600;">Choose Your Fishing Cat:</label>
                     <div style="display: flex; gap: 10px; justify-content: center;">
-                        <button id="random-cat-btn" style="background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%); color: #ffffff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 3px 10px rgba(33,150,243,0.3); transition: all 0.3s ease;">🎲 Random Cat</button>
-                        <button id="prev-cat-btn" style="background: #666; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px; display: none;">◀ Previous</button>
+                        <button id="randomize-cat-btn" style="background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%); color: #ffffff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 3px 10px rgba(33,150,243,0.3); transition: all 0.3s ease;">🎲 Randomize Cat</button>
                     </div>
                 </div>
 
@@ -4783,65 +4783,15 @@
                 // Login button
                 document.getElementById('login-btn').addEventListener('click', () => this.login());
 
-                // Cat avatar selection system
-                window.selectedCat = null;
-                window.previousCat = null;
-                window.catSeedCounter = 1;
-                
-                // Generate cat avatar URL using RoboHash set4 (cats)
-                const generateCatUrl = (seed) => {
-                    return `https://robohash.org/${seed}?set=set4&size=200x200`;
-                };
-                
-                // Get random cat
-                const getRandomCat = () => {
-                    const seed = `cat-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-                    return generateCatUrl(seed);
-                };
-                
-                // Update preview with cat
-                const updateCatPreview = (catUrl) => {
-                    const previewImg = document.getElementById('character-preview-avatar');
-                    if (previewImg) {
-                        previewImg.src = catUrl;
-                        window.selectedCat = catUrl;
-                        
-                        // Show previous button if we have a previous cat
-                        const prevBtn = document.getElementById('prev-cat-btn');
-                        if (prevBtn && window.previousCat) {
-                            prevBtn.style.display = 'block';
-                        }
-                    }
-                };
-                
-                // Random cat button
-                document.getElementById('random-cat-btn').addEventListener('click', () => {
-                    // Save current as previous before generating new one
-                    if (window.selectedCat) {
-                        window.previousCat = window.selectedCat;
-                    }
-                    const newCat = getRandomCat();
-                    updateCatPreview(newCat);
-                });
-                
-                // Previous cat button
-                document.getElementById('prev-cat-btn').addEventListener('click', () => {
-                    if (window.previousCat) {
-                        const temp = window.selectedCat;
-                        updateCatPreview(window.previousCat);
-                        window.previousCat = temp;
-                    }
-                });
-
-                // Character Editor Functionality
-                function initializeCharacterEditor() {
+                // Character System - New Integrated Approach
+                function initializeCharacterSystem() {
                     // Load saved avatar options or use defaults
                     const savedOptions = this.player.avatarOptions || {
                         colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
                         gear: { hat: false, glasses: false, vest: false }
                     };
 
-                    // Set initial values
+                    // Set initial values in editor
                     document.getElementById('furColor').value = savedOptions.colors.fur;
                     document.getElementById('patColor').value = savedOptions.colors.pattern;
                     document.getElementById('eyeColor').value = savedOptions.colors.eye;
@@ -4850,8 +4800,14 @@
                     document.getElementById('gearGl').checked = savedOptions.gear.glasses;
                     document.getElementById('gearVest').checked = savedOptions.gear.vest;
 
-                    // Create initial preview
+                    // Update both previews
+                    updateCharacterPreview();
                     updateLivePreview();
+
+                    // Randomize button
+                    document.getElementById('randomize-cat-btn').addEventListener('click', () => {
+                        randomizeCatAppearance();
+                    });
 
                     // Preview button
                     document.getElementById('preview-cat-btn').addEventListener('click', () => {
@@ -4866,19 +4822,64 @@
                     // Auto-update preview on color/gear changes
                     ['furColor', 'patColor', 'eyeColor', 'belColor', 'gearHat', 'gearGl', 'gearVest'].forEach(id => {
                         document.getElementById(id).addEventListener('change', () => {
+                            updateCharacterPreview();
                             updateLivePreview();
                         });
                     });
+                }
+
+                function randomizeCatAppearance() {
+                    const furColors = ['#f2a65a', '#8b4513', '#2f4f4f', '#ff69b4', '#32cd32', '#ff4500', '#9370db', '#20b2aa'];
+                    const patternColors = ['#d77f3f', '#654321', '#1f3f3f', '#ff1493', '#228b22', '#ff6347', '#8a2be2', '#008b8b'];
+                    const eyeColors = ['#1e2a3a', '#8b0000', '#006400', '#4b0082', '#ff8c00', '#dc143c', '#000080', '#2e8b57'];
+                    const bellyColors = ['#f8d7b1', '#f5deb3', '#ffe4e1', '#f0f8ff', '#f0fff0', '#fff8dc', '#f5f5dc', '#ffe4b5'];
+
+                    // Randomize colors
+                    document.getElementById('furColor').value = furColors[Math.floor(Math.random() * furColors.length)];
+                    document.getElementById('patColor').value = patternColors[Math.floor(Math.random() * patternColors.length)];
+                    document.getElementById('eyeColor').value = eyeColors[Math.floor(Math.random() * eyeColors.length)];
+                    document.getElementById('belColor').value = bellyColors[Math.floor(Math.random() * bellyColors.length)];
+
+                    // Randomize gear (30% chance for each)
+                    document.getElementById('gearHat').checked = Math.random() < 0.3;
+                    document.getElementById('gearGl').checked = Math.random() < 0.3;
+                    document.getElementById('gearVest').checked = Math.random() < 0.3;
+
+                    // Update previews
+                    updateCharacterPreview();
+                    updateLivePreview();
+                }
+
+                function updateCharacterPreview() {
+                    const colors = {
+                        fur: document.getElementById('furColor').value,
+                        pattern: document.getElementById('patColor').value,
+                        ear: '#c76b2a',
+                        eye: document.getElementById('eyeColor').value,
+                        belly: document.getElementById('belColor').value,
+                        whisker: '#2b2b2b'
+                    };
+
+                    const gear = {
+                        hat: document.getElementById('gearHat').checked,
+                        glasses: document.getElementById('gearGl').checked,
+                        vest: document.getElementById('gearVest').checked
+                    };
+
+                    const previewContainer = document.getElementById('character-preview-avatar');
+                    if (window.renderCatRig && previewContainer) {
+                        window.renderCatRig(previewContainer, { colors, gear });
+                    }
                 }
 
                 function updateLivePreview() {
                     const colors = {
                         fur: document.getElementById('furColor').value,
                         pattern: document.getElementById('patColor').value,
-                        ear: '#c76b2a', // Keep ear color consistent
+                        ear: '#c76b2a',
                         eye: document.getElementById('eyeColor').value,
                         belly: document.getElementById('belColor').value,
-                        whisker: '#2b2b2b' // Keep whisker color consistent
+                        whisker: '#2b2b2b'
                     };
 
                     const gear = {
@@ -4927,11 +4928,8 @@
                     console.log('Cat look saved:', this.player.avatarOptions);
                 }
 
-                // Initialize the character editor
-                initializeCharacterEditor.call(this);
-                
-                // Initialize with first cat
-                updateCatPreview(generateCatUrl('cat-initial'));
+                // Initialize the character system
+                initializeCharacterSystem.call(this);
 
                 // Inventory tab buttons
                 document.querySelectorAll('.inventory-tabs .tab-btn').forEach(btn => {
@@ -5113,10 +5111,19 @@
 
                 this.player.name = name;
                 
-                // Get selected cat avatar
-                const selectedCatUrl = window.selectedCat || 'https://robohash.org/cat-default?set=set4&size=200x200';
-                this.player.character = selectedCatUrl;
-                this.player.avatarOptions = { type: 'cat', url: selectedCatUrl };
+                // Use cat rig system instead of robohash
+                this.player.character = 'cat-rig'; // Mark as using cat rig system
+                
+                // Ensure avatarOptions exist
+                if (!this.player.avatarOptions) {
+                    this.player.avatarOptions = {
+                        colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
+                        gear: { hat: false, glasses: false, vest: false },
+                        type: 'cat'
+                    };
+                }
+                
+                this.saveGameData();
                 document.getElementById('login-screen').classList.add('hidden');
                 this.addChatMessage('system', `${name} joined Kitty Creek Fishing Club! 🐱`);
                 this.positionPlayers(); // Reposition players with new name
@@ -5157,14 +5164,15 @@
                 playerFisher.className = 'fisherman you';
                 playerFisher.id = 'player-fisher';
                 
-                // Check if character is an image URL or emoji
-                const isImageUrl = this.player.character && (this.player.character.startsWith('http') || this.player.character.startsWith('data:'));
+                // Check if character is using cat rig system
+                const useCatRig = this.player.character === 'cat-rig' || this.player.avatarOptions?.type === 'cat';
                 
-                if (isImageUrl) {
-                    // Create cat rig container instead of image
-                    const rigHost = document.createElement('div');
-                    rigHost.className = 'cat-rig';
-                    rigHost.dataset.playerId = this.player.name;
+                if (useCatRig) {
+                    // Create cat rig container
+                    playerFisher.innerHTML = `
+                        <div class="cat-rig" data-player-id="${this.player.name}"></div>
+                        <div class="fisherman-name">${this.player.name}</div>
+                    `;
                     
                     // Use stored avatarOptions if present; fallback colors/gear
                     const opts = this.player.avatarOptions || {
@@ -5172,17 +5180,13 @@
                         gear: { hat: false, glasses: false, vest: false }
                     };
                     
-                    playerFisher.innerHTML = `
-                        <div class="cat-rig" data-player-id="${this.player.name}"></div>
-                        <div class="fisherman-name">${this.player.name}</div>
-                    `;
-                    
                     // Render the cat rig
                     const rigContainer = playerFisher.querySelector('.cat-rig');
                     if (window.renderCatRig) {
                         window.renderCatRig(rigContainer, opts);
                     }
                 } else {
+                    // Fallback to emoji character
                     playerFisher.innerHTML = `
                         <div class="fisherman-character">${this.player.character || '👨'}</div>
                         <div class="fisherman-name">${this.player.name}</div>
@@ -5195,8 +5199,8 @@
                 mobilePlayerFisher.className = 'mobile-fisherman';
                 mobilePlayerFisher.id = 'mobile-player-fisher';
                 
-                if (isImageUrl) {
-                    // Create cat rig container for mobile instead of image
+                if (useCatRig) {
+                    // Create cat rig container for mobile
                     mobilePlayerFisher.innerHTML = `
                         <div class="cat-rig" data-player-id="${this.player.name}"></div>
                         <div class="mobile-fisherman-name">${this.player.name}</div>
@@ -5214,6 +5218,7 @@
                         window.renderCatRig(rigContainer, opts);
                     }
                 } else {
+                    // Fallback to emoji character
                     mobilePlayerFisher.innerHTML = `
                         <div class="mobile-fisherman-character">${this.player.character || '👨'}</div>
                         <div class="mobile-fisherman-name">${this.player.name}</div>
