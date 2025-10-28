@@ -5209,14 +5209,25 @@
                         this.running = false;
                         this.resize();
                         window.addEventListener('resize', () => this.resize());
-                        if (!RM) this.start();
+                        
+                        // Always start the splash system (it will respect reduced motion in individual effects)
+                        this.start();
+                        
+                        console.log('Splash system initialized for:', lakeEl.id);
                     }
                     
                     resize() {
                         const r = this.lake.getBoundingClientRect();
+                        if (r.width === 0 || r.height === 0) {
+                            console.log('Lake has zero dimensions, skipping resize');
+                            return;
+                        }
+                        
                         this.canvas.width = r.width * devicePixelRatio;
                         this.canvas.height = r.height * devicePixelRatio;
                         this.ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+                        
+                        console.log('Canvas resized to:', r.width, 'x', r.height, 'devicePixelRatio:', devicePixelRatio);
                     }
                     
                     start() {
@@ -5238,6 +5249,8 @@
                     // world coords from lake-relative pixel x,y
                     emitSplash(x, y, power = 1, kind = 'impact') {
                         if (RM) return;
+
+                        console.log('Emitting splash at:', x, y, 'power:', power, 'kind:', kind);
 
                         // Crown jets (the upward droplets)
                         const jets = Math.floor(12 + power * 10);
@@ -5263,6 +5276,8 @@
                         this.rings.push({
                             x, y, r: 4, w: 2, alpha: 0.75, growth: 110 + 80 * power, fade: 0.85
                         });
+
+                        console.log('Created', jets, 'jets,', mistN, 'mist particles, and 1 ring. Total particles:', this.particles.length);
 
                         // Brief caustics kick if you added that layer (optional)
                         const c = document.getElementById('caustics-layer');
@@ -5357,6 +5372,11 @@
                         const ctx = this.ctx;
                         ctx.clearRect(0, 0, this.canvas.width / devicePixelRatio, this.canvas.height / devicePixelRatio);
 
+                        // Debug: log particle count occasionally
+                        if (this.particles.length > 0 || this.rings.length > 0) {
+                            console.log('Drawing:', this.particles.length, 'particles,', this.rings.length, 'rings');
+                        }
+
                         // rings
                         for (const r of this.rings) {
                             ctx.beginPath();
@@ -5388,16 +5408,23 @@
                 const mobileLake = document.getElementById('mobile-fishing-lake');
                 const mobileCanvas = document.getElementById('mobile-splash-canvas');
 
-                if (desktopLake && desktopCanvas) {
-                    this.desktopSplashSystem = new SplashSystem(desktopLake, desktopCanvas);
-                }
-                if (mobileLake && mobileCanvas) {
-                    this.mobileSplashSystem = new SplashSystem(mobileLake, mobileCanvas);
-                }
+                // Add a small delay to ensure DOM is fully loaded and elements are sized
+                setTimeout(() => {
+                    if (desktopLake && desktopCanvas) {
+                        this.desktopSplashSystem = new SplashSystem(desktopLake, desktopCanvas);
+                        console.log('Desktop splash system created');
+                    }
+                    if (mobileLake && mobileCanvas) {
+                        this.mobileSplashSystem = new SplashSystem(mobileLake, mobileCanvas);
+                        console.log('Mobile splash system created');
+                    }
 
-                // Keep splash systems accessible globally
-                window.splashFX = this.desktopSplashSystem;
-                window.mobileSplashFX = this.mobileSplashSystem;
+                    // Keep splash systems accessible globally
+                    window.splashFX = this.desktopSplashSystem;
+                    window.mobileSplashFX = this.mobileSplashSystem;
+                    
+                    console.log('Splash systems initialized. Desktop:', !!window.splashFX, 'Mobile:', !!window.mobileSplashFX);
+                }, 100);
             }
 
             setupWaterInteractions() {
@@ -5935,10 +5962,17 @@
                     const hookX = fishermanCenterX - lakeRect.left;
                     const hookY = castDistance;
                     
+                    console.log('Hook impact splash - hookX:', hookX, 'hookY:', hookY, 'isMobile:', isMobile);
+                    
                     // Emit splash effect at hook impact point
                     const splashSystem = isMobile ? window.mobileSplashFX : window.splashFX;
+                    console.log('Splash system available:', !!splashSystem);
+                    
                     if (splashSystem) {
                         splashSystem.emitSplash(hookX, hookY, 1.0, 'impact');
+                        console.log('Splash emitted successfully');
+                    } else {
+                        console.log('No splash system available!');
                     }
                 }, 100); // Small delay to ensure hook is positioned
                 
