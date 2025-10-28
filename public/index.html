@@ -5550,29 +5550,30 @@
                 
                 // Normal fishing uses player equipment and stats
                 // Progressive difficulty: catch rate DECREASES at higher levels
-                let chance = 0.8; // 80% base chance for easier progression
+                // Increased base chance due to new interactive fishing mechanics
+                let chance = 0.9; // 90% base chance (increased from 80%)
                 
                 const location = this.locations[this.currentLocation];
                 
-                // Make higher levels harder (not easier!) - fish get smarter
+                // Reduced penalties since players will miss due to timing now
                 if (this.player.level >= 16) {
-                    chance -= 0.40; // Very hard at high levels - 40% penalty
+                    chance -= 0.20; // Reduced from 40% to 20% penalty
                 } else if (this.player.level >= 11) {
-                    chance -= 0.30; // Hard at high levels - 30% penalty
+                    chance -= 0.15; // Reduced from 30% to 15% penalty
                 } else if (this.player.level >= 6) {
-                    chance -= 0.20; // Medium-hard at mid-high levels - 20% penalty
+                    chance -= 0.10; // Reduced from 20% to 10% penalty
                 }
                 
                 // Progressive difficulty based on location difficulty
-                // Harder locations are harder to catch at, but have better fish
+                // Reduced penalties since players will miss due to timing now
                 if (location.difficulty === 'Easy') {
                     chance += 0.05; // Easy locations: +5% catch rate
                 } else if (location.difficulty === 'Medium') {
-                    chance -= 0.05; // Medium locations: -5% catch rate
+                    chance -= 0.02; // Reduced from 5% to 2% penalty
                 } else if (location.difficulty === 'Hard') {
-                    chance -= 0.15; // Hard locations: -15% catch rate
+                    chance -= 0.08; // Reduced from 15% to 8% penalty
                 } else if (location.difficulty === 'Expert') {
-                    chance -= 0.25; // Expert locations: -25% catch rate (makes it challenging!)
+                    chance -= 0.12; // Reduced from 25% to 12% penalty
                 }
                 
                 // Add tackle bonuses - BETTER gear significantly improves your chances
@@ -5603,8 +5604,8 @@
                 
                 chance += accuracyBonus + luckBonus + patienceBonus + strengthBonus;
                 
-                // Cap between 15% and 75% max (reduced from 92%)
-                return Math.min(0.75, Math.max(0.15, chance)); 
+                // Cap between 20% and 85% max (increased due to reduced penalties)
+                return Math.min(0.85, Math.max(0.20, chance)); 
             }
 
             showFishBite() {
