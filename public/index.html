@@ -499,6 +499,14 @@
             background-size: 260px 260px;
             will-change: transform, opacity;
             transform: translate3d(0,0,0);
+            animation: causticsDrift 8s ease-in-out infinite;
+        }
+
+        @keyframes causticsDrift {
+            0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+            25% { transform: translate3d(8px, 6px, 0) rotate(0.6deg); }
+            50% { transform: translate3d(-6px, 8px, 0) rotate(-0.4deg); }
+            75% { transform: translate3d(6px, -4px, 0) rotate(0.3deg); }
         }
 
         /* Splash canvas overlay */
@@ -507,6 +515,20 @@
             inset: 0;
             pointer-events: none;
             z-index: 7; /* above water surface & ripples; below HUD if needed */
+        }
+
+        /* Hide mobile overlays on desktop to avoid double compositing */
+        @media (min-width: 769px) {
+            #mobile-caustics-layer, #mobile-splash-canvas {
+                display: none;
+            }
+        }
+
+        /* Hide desktop overlays on mobile */
+        @media (max-width: 768px) {
+            #caustics-layer, #splash-canvas {
+                display: none;
+            }
         }
 
         /* Generic ripple elements */
@@ -974,18 +996,19 @@
 
         .fishing-line {
             position: absolute;
-            top: 50%;
-            left: 50%;
             width: 2px;
-            height: 0;
             background: #ffffff;
-            transform: translateX(-50%);
-            transition: height 0.5s ease;
             z-index: 10;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
         }
 
         .fishing-line.casting {
-            height: 100px;
+            animation: lineCast 2s ease-in-out infinite;
+        }
+
+        .fishing-line.reeling {
             animation: lineBob 2s ease-in-out infinite;
         }
 
@@ -5130,24 +5153,9 @@
             }
 
             startCausticsAnimation() {
-                const caustics = document.getElementById('caustics-layer');
-                const mobileCaustics = document.getElementById('mobile-caustics-layer');
-                if (!caustics && !mobileCaustics) return;
-                
-                let t = 0;
-                const animate = () => {
-                    t += 0.003;
-                    const transform = `translate(${Math.sin(t)*8}px, ${Math.cos(t*0.8)*6}px) rotate(${Math.sin(t*0.5)*0.6}deg) scale(1.02)`;
-                    
-                    if (caustics) caustics.style.transform = transform;
-                    if (mobileCaustics) mobileCaustics.style.transform = transform;
-                    
-                    requestAnimationFrame(animate);
-                };
-                
-                if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
-                    animate();
-                }
+                // Caustics now use CSS animation instead of JavaScript
+                // The causticsDrift keyframe handles the gentle movement
+                console.log('Caustics animation started via CSS keyframes');
             }
 
             installRippleEffects() {
