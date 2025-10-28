@@ -3520,6 +3520,43 @@
                     { name: 'Trophy King', rarity: 'Trophy', minWeight: 200.0, maxWeight: 500.0, value: 1500, experience: 200, season: 'All' }
                 ];
 
+                // Fish facts database - fun and interesting information
+                this.fishFacts = {
+                    'Minnow': { fact: 'Tiny but mighty! Minnows travel in huge schools of thousands.', fun: 'So small, even cats think they\'re fishnacks!', real: 'They make excellent live bait due to their movement.' },
+                    'Sunfish': { fact: 'Brightly colored and curious little fish.', fun: 'Named for their sunny disposition, not their speed!', real: 'Belongs to the same family as bass.' },
+                    'Bass': { fact: 'Aggressive predators with a taste for action.', fun: 'The original bass drops are underwater!', real: 'Can grow up to 25 pounds in ideal conditions.' },
+                    'Perch': { fact: 'Striped like a prison uniform for fish crimes.', fun: 'Perched on the edge of greatness... and your hook.', real: 'Lives in freshwater lakes and rivers worldwide.' },
+                    'Crappie': { fact: 'Don\'t let the name fool you - delicious eating!', fun: 'Sounds fishy, tastes great!', real: 'Very popular for sport fishing and pan-frying.' },
+                    'Trout': { fact: 'Living fossils, some species date back 50 million years.', fun: 'Prefers cold water and colder comedy.', real: 'Can detect vibrations in water from miles away.' },
+                    'Pike': { fact: 'Razor-sharp teeth and an attitude to match.', fun: 'The needlefish needle... no, the other way around!', real: 'Ambush predators that can strike at 6 mph.' },
+                    'Walleye': { fact: 'Has eyes that glow at night like a cat in the dark.', fun: 'Sees everything, forgives nothing.', real: 'Named for their reflective eyes that help night fishing.' },
+                    'Muskie': { fact: 'The freshwater version of a shark.', fun: 'Fish of 10,000 casts... but we only count the caught ones!', real: 'Can live up to 30 years in the wild.' },
+                    'Carp': { fact: 'Bottom feeders who love muddy waters.', fun: 'King of the murky depths and questionable dietary choices.', real: 'Introduced to North America in the 1800s.' },
+                    'Salmon': { fact: 'Journeys hundreds of miles to spawn in their birthplace.', fun: 'Swims upstream in life like we do on Mondays.', real: 'Changes color dramatically during spawning season.' },
+                    'Catfish': { fact: 'Whiskered bottom dwellers with electrical sensors.', fun: 'Has more whiskers than my uncle at Christmas!', real: 'Some species can grow over 100 pounds.' },
+                    'Sturgeon': { fact: 'Living dinosaurs that can reach 20 feet and 3,000 pounds!', fun: 'Swims like it owns the river... because it probably does.', real: 'Can live over 100 years old.' },
+                    'Marlin': { fact: 'Speed demon of the ocean, reaching 60+ mph.', fun: 'The sports car of the sea with a bill for a bumper.', real: 'One of the fastest fish in the ocean.' },
+                    'Tuna': { fact: 'Warm-blooded fish that never stops swimming.', fun: 'If it stops swimming, we all get sushi!', real: 'Can maintain body heat 10°F warmer than water.' },
+                    'Crystal Bass': { fact: 'Rare variant that shimmers like diamonds.', fun: 'Blindingly beautiful and dangerously expensive!', real: 'Color mutation found in less than 1% of bass.' },
+                    'Golden Trout': { fact: 'Flashy mountain trout from the Sierra Nevadas.', fun: 'More valuable than gold... well, bronze at least.', real: 'Native to alpine streams above 9,000 feet.' },
+                    'Ice Pike': { fact: 'Arctic warrior that thrives in frozen waters.', fun: 'Thinks 32°F is a perfect swimming temperature!', real: 'Produces antifreeze proteins in blood.' },
+                    'Shadow Catfish': { fact: 'Elusive nocturnal hunter of the deep.', fun: 'Wears sunglasses at night... underwater.', real: 'Evolved enhanced senses for dark water hunting.' },
+                    'Abyssal Eel': { fact: 'Deep sea dweller from the darkest depths.', fun: 'Lives where light fears to tread... literally.', real: 'Can survive under crushing ocean pressure.' },
+                    'Ancient Sturgeon': { fact: 'Prehistoric fish that outlived dinosaurs.', fun: 'Older than your ancestors and twice as grumpy!', real: 'Lived through the extinction that killed dinosaurs.' },
+                    'Leviathan': { fact: 'Mythical sea monster of biblical proportions.', fun: 'Size: YES. Attitude: Also YES.', real: 'Inspired by giant prehistoric whales.' },
+                    'Phoenix Fish': { fact: 'Legendary creature that rises from the depths.', fun: 'Dying means a new fishing trip for it!', real: 'Mythical fish symbolizing rebirth and renewal.' },
+                    'Dragon Carp': { fact: 'Legend speaks of its fiery underwater presence.', fun: 'Breathes underwater fire... and smoke signals.', real: 'Ancient Asian legends speak of dragon fish.' },
+                    'Tournament King': { fact: 'Crown jewel of competitive fishing.', fun: 'Wins every beauty contest it enters!', real: 'Prized catch in professional fishing tournaments.' },
+                    'Trophy Bass': { fact: 'Wall-hanger of epic proportions.', fun: 'Big enough to tell fishing lies about!', real: 'World record: 22 lbs 4 oz.' },
+                    'Trophy Pike': { fact: 'Predator that makes other fish nervous.', fun: 'Has a resume of 10,000 minor offenses.', real: 'Can grow over 50 inches long.' },
+                    'Trophy Salmon': { fact: 'Ocean warrior returned to freshwater.', fun: 'Swam an entire marathon just to spawn!', real: 'Can leap 10 feet in waterfalls.' },
+                    'Trophy Marlin': { fact: 'Trophy that dreams are made of.', fun: 'Bill so long it doubles as a sword!', real: 'Can reach speeds over 68 mph.' },
+                    'Trophy Tuna': { fact: 'Ocean giant worth its weight in sashimi.', fun: 'Sushi price tag included!', real: 'Can weigh over 1,000 pounds.' },
+                    'Trophy Sturgeon': { fact: 'Ancient giant of the rivers.', fun: 'Older than your grandpa and twice as wise!', real: 'Some reach over 15 feet long.' },
+                    'Trophy Catfish': { fact: 'Freshwater giant with suction cup mouth.', fun: 'Named "Trophy" because it won first place!', real: 'World record catfish was over 300 lbs.' },
+                    'Trophy King': { fact: 'The ultimate catch - king of all fish!', fun: 'Rules the depths with an iron fin!', real: 'Crown jewel of any angler\'s collection.' }
+                };
+
                 // Complete tackle system
                 this.tackle = {
                     rods: [
@@ -6559,6 +6596,191 @@
                 }, 4000);
             }
 
+            showFishInfo(fishName) {
+                const fishData = this.fishTypes.find(f => f.name === fishName);
+                if (!fishData) return;
+                
+                const facts = this.fishFacts[fishName] || { fact: 'A mysterious fish.', fun: 'Full of surprises!', real: 'Still being studied.' };
+                
+                // Remove any existing fish info modal
+                const existing = document.querySelector('.fish-info-modal');
+                if (existing) existing.remove();
+                
+                const modal = document.createElement('div');
+                modal.className = 'fish-info-modal';
+                modal.innerHTML = `
+                    <div class="fish-info-content">
+                        <div class="fish-info-header">
+                            <button class="fish-info-close" onclick="this.closest('.fish-info-modal').remove()">✕</button>
+                            <h2>${fishData.name}</h2>
+                            <div style="color: #64b5f6; font-size: 12px;">${fishData.rarity}</div>
+                        </div>
+                        <div class="fish-info-image">
+                            <img src="images/${fishData.name}.png" alt="${fishData.name}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 100\\'%3E%3Ctext y=\\'.9em\\' font-size=\\'60\\'%3E🐟%3C/text%3E%3C/svg%3E';">
+                        </div>
+                        <div class="fish-info-stats">
+                            <div class="fish-stat"><strong>Weight:</strong> ${fishData.minWeight.toFixed(1)} - ${fishData.maxWeight.toFixed(1)} lbs</div>
+                            <div class="fish-stat"><strong>Value:</strong> $${fishData.value}</div>
+                            <div class="fish-stat"><strong>Experience:</strong> ${fishData.experience} XP</div>
+                            <div class="fish-stat"><strong>Season:</strong> ${fishData.season}</div>
+                        </div>
+                        <div class="fish-info-facts">
+                            <div class="fish-fact"><strong>🐟 Fish Fact:</strong> ${facts.fact}</div>
+                            <div class="fish-fact"><strong>😸 Fun Fact:</strong> ${facts.fun}</div>
+                            <div class="fish-fact"><strong>📚 Cool Fact:</strong> ${facts.real}</div>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                
+                // Add CSS
+                const style = document.createElement('style');
+                style.textContent = `
+                    .fish-info-modal {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0, 0, 0, 0.8);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 10002;
+                        animation: fadeIn 0.3s ease-out;
+                    }
+                    
+                    .fish-info-content {
+                        background: linear-gradient(135deg, #001122, #003344);
+                        border: 3px solid #00ffff;
+                        border-radius: 20px;
+                        padding: 30px;
+                        max-width: 500px;
+                        width: 90%;
+                        max-height: 90vh;
+                        overflow-y: auto;
+                        box-shadow: 0 0 40px rgba(0, 255, 255, 0.5);
+                        animation: slideIn 0.3s ease-out;
+                    }
+                    
+                    .fish-info-header {
+                        text-align: center;
+                        margin-bottom: 20px;
+                        position: relative;
+                    }
+                    
+                    .fish-info-close {
+                        position: absolute;
+                        top: -5px;
+                        right: -5px;
+                        background: #ff0000;
+                        border: none;
+                        color: white;
+                        width: 30px;
+                        height: 30px;
+                        border-radius: 50%;
+                        cursor: pointer;
+                        font-size: 18px;
+                        font-weight: bold;
+                        transition: transform 0.2s;
+                    }
+                    
+                    .fish-info-close:hover {
+                        transform: scale(1.1);
+                    }
+                    
+                    .fish-info-header h2 {
+                        color: #00ffff;
+                        margin: 10px 0 5px 0;
+                        text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+                    }
+                    
+                    .fish-info-image {
+                        text-align: center;
+                        margin: 20px 0;
+                    }
+                    
+                    .fish-info-image img {
+                        width: 150px;
+                        height: 150px;
+                        object-fit: contain;
+                        border: 3px solid #00ffff;
+                        border-radius: 15px;
+                        background: rgba(0, 0, 0, 0.3);
+                        padding: 10px;
+                    }
+                    
+                    .fish-info-stats {
+                        background: rgba(0, 0, 0, 0.3);
+                        padding: 15px;
+                        border-radius: 10px;
+                        margin: 20px 0;
+                    }
+                    
+                    .fish-stat {
+                        color: #64b5f6;
+                        margin: 8px 0;
+                        font-size: 14px;
+                    }
+                    
+                    .fish-info-facts {
+                        margin-top: 20px;
+                    }
+                    
+                    .fish-fact {
+                        background: rgba(0, 255, 255, 0.1);
+                        padding: 12px;
+                        border-radius: 8px;
+                        margin: 10px 0;
+                        color: #ffffff;
+                        font-size: 13px;
+                        line-height: 1.6;
+                        border-left: 3px solid #00ffff;
+                    }
+                    
+                    @keyframes fadeIn {
+                        from { opacity: 0; }
+                        to { opacity: 1; }
+                    }
+                    
+                    @keyframes slideIn {
+                        from { transform: scale(0.8); opacity: 0; }
+                        to { transform: scale(1); opacity: 1; }
+                    }
+                    
+                    @media (max-width: 768px) {
+                        .fish-info-content {
+                            padding: 20px;
+                            max-width: 95%;
+                        }
+                        
+                        .fish-info-image img {
+                            width: 120px;
+                            height: 120px;
+                        }
+                        
+                        .fish-stat {
+                            font-size: 12px;
+                        }
+                        
+                        .fish-fact {
+                            font-size: 11px;
+                        }
+                    }
+                `;
+                
+                document.head.appendChild(style);
+                
+                // Close on background click
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.remove();
+                        style.remove();
+                    }
+                });
+            }
+
             addChatMessage(type, message) {
                 const chatArea = document.getElementById('chat-area');
                 const messageDiv = document.createElement('div');
@@ -7666,7 +7888,7 @@
                         const fishImage = `images/${fish.name}.png`;
                         
                         html += `
-                            <div class="fish-slot ${isUnlocked ? 'unlocked' : 'locked'}">
+                            <div class="fish-slot ${isUnlocked ? 'unlocked' : 'locked'}" ${isUnlocked ? `onclick="game.showFishInfo('${fish.name}')" style="cursor: pointer;"` : ''}>
                                 ${isUnlocked 
                                     ? `<img src="${fishImage}" alt="${fish.name}" onerror="this.style.display='none';">`
                                     : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #666; font-size: 30px;">❓</div>`
