@@ -5692,9 +5692,14 @@
                             const bobberX = bobberRect.left - lakeRect.left;
                             const bobberY = bobberRect.top - lakeRect.top;
                             
+                            console.log('Fish strike suction - bobberX:', bobberX, 'bobberY:', bobberY, 'isMobile:', isMobile);
+                            
                             const splashSystem = isMobile ? window.mobileSplashFX : window.splashFX;
                             if (splashSystem) {
                                 splashSystem.emitSuction(bobberX, bobberY, 0.9);
+                                console.log('Suction effect emitted successfully');
+                            } else {
+                                console.log('No splash system available for suction!');
                             }
                         }
                     }
@@ -5958,11 +5963,19 @@
                 
                 // Add realistic splash effect when hook hits water
                 setTimeout(() => {
+                    // Get the actual hook position from the DOM after it's been positioned
+                    const hookElement = line.querySelector('.hook');
+                    if (!hookElement) return;
+                    
                     const lakeRect = activeLake.getBoundingClientRect();
-                    const hookX = fishermanCenterX - lakeRect.left;
-                    const hookY = castDistance;
+                    const hookRect = hookElement.getBoundingClientRect();
+                    
+                    // Calculate hook position relative to the lake
+                    const hookX = hookRect.left - lakeRect.left;
+                    const hookY = hookRect.top - lakeRect.top;
                     
                     console.log('Hook impact splash - hookX:', hookX, 'hookY:', hookY, 'isMobile:', isMobile);
+                    console.log('Hook rect:', hookRect.left, hookRect.top, 'Lake rect:', lakeRect.left, lakeRect.top);
                     
                     // Emit splash effect at hook impact point
                     const splashSystem = isMobile ? window.mobileSplashFX : window.splashFX;
@@ -5974,7 +5987,7 @@
                     } else {
                         console.log('No splash system available!');
                     }
-                }, 100); // Small delay to ensure hook is positioned
+                }, 200); // Increased delay to ensure hook is fully positioned
                 
                 activeLake.appendChild(line);
                 
@@ -6243,14 +6256,18 @@
                                         
                                         // Add wake effects at regular intervals
                                         if (elapsed - lastWakeTime > wakeInterval) {
-                                            const lakeRect = activeLake.getBoundingClientRect();
-                                            const lineRect = line.getBoundingClientRect();
-                                            const wakeX = lineRect.left - lakeRect.left;
-                                            const wakeY = lineRect.height;
-                                            
-                                            const splashSystem = isMobile ? window.mobileSplashFX : window.splashFX;
-                                            if (splashSystem) {
-                                                splashSystem.emitWake(wakeX, wakeY);
+                                            // Get actual bobber position instead of calculated position
+                                            const bobberElement = line.querySelector('.hook');
+                                            if (bobberElement) {
+                                                const lakeRect = activeLake.getBoundingClientRect();
+                                                const bobberRect = bobberElement.getBoundingClientRect();
+                                                const wakeX = bobberRect.left - lakeRect.left;
+                                                const wakeY = bobberRect.top - lakeRect.top;
+                                                
+                                                const splashSystem = isMobile ? window.mobileSplashFX : window.splashFX;
+                                                if (splashSystem) {
+                                                    splashSystem.emitWake(wakeX, wakeY);
+                                                }
                                             }
                                             lastWakeTime = elapsed;
                                         }
