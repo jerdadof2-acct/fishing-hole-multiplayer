@@ -6325,6 +6325,10 @@
             }
 
             showNewFishBanner(fishData) {
+                // Remove any existing new fish banners to prevent duplicates
+                const existing = document.querySelectorAll('.new-fish-banner');
+                existing.forEach(el => el.remove());
+                
                 const banner = document.createElement('div');
                 banner.className = 'new-fish-banner';
                 
@@ -6341,6 +6345,97 @@
                     </div>
                 `;
                 
+                // Add CSS for the new fish banner
+                const style = document.createElement('style');
+                style.textContent = `
+                    .new-fish-banner {
+                        position: fixed;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        z-index: 10001;
+                        animation: bannerSlideIn 0.8s ease-out;
+                    }
+                    
+                    .new-fish-content {
+                        background: linear-gradient(135deg, #003300, #004400);
+                        border: 4px solid #00ff00;
+                        border-radius: 20px;
+                        padding: 30px 50px;
+                        text-align: center;
+                        box-shadow: 0 0 40px rgba(0, 255, 0, 0.8);
+                        min-width: 400px;
+                    }
+                    
+                    .new-fish-image-container {
+                        width: 150px;
+                        height: 150px;
+                        margin: 20px auto;
+                        background: rgba(0, 0, 0, 0.3);
+                        border: 3px solid #00ff00;
+                        border-radius: 15px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        overflow: hidden;
+                    }
+                    
+                    .new-fish-image-container img {
+                        width: 100%;
+                        height: 100%;
+                        object-fit: contain;
+                    }
+                    
+                    .new-fish-content h2 {
+                        color: #00ff00;
+                        font-size: 28px;
+                        margin-bottom: 10px;
+                        text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+                    }
+                    
+                    .new-fish-content p {
+                        color: #64b5f6;
+                        font-size: 18px;
+                        margin: 5px 0;
+                    }
+                    
+                    @media (max-width: 768px) {
+                        .new-fish-banner {
+                            width: 90vw;
+                            max-width: 350px;
+                        }
+                        
+                        .new-fish-content {
+                            min-width: auto;
+                            padding: 20px 15px;
+                            border: 3px solid #00ff00;
+                            border-radius: 15px;
+                        }
+                        
+                        .new-fish-image-container {
+                            width: 80px;
+                            height: 80px;
+                            margin: 10px auto;
+                        }
+                        
+                        .new-fish-content h2 {
+                            font-size: 18px;
+                            margin-bottom: 5px;
+                        }
+                        
+                        .new-fish-content p {
+                            font-size: 12px;
+                            margin: 3px 0;
+                        }
+                    }
+                    
+                    @keyframes bannerSlideIn {
+                        from { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+                        to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+                    }
+                `;
+                
+                document.head.appendChild(style);
                 document.body.appendChild(banner);
                 
                 // Auto-remove after 5 seconds
@@ -6349,6 +6444,7 @@
                         banner.style.animation = 'bannerSlideIn 0.5s ease-in reverse';
                         setTimeout(() => {
                             banner.remove();
+                            style.remove();
                         }, 500);
                     }
                 }, 5000);
