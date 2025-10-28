@@ -5728,18 +5728,26 @@
                                 const updateSplashPosition = () => {
                                     if (splash && bobber && line.parentNode) {
                                         const lineRect = line.getBoundingClientRect();
-                                        const lineTop = lineRect.top;
+                                        const lakeRect = activeLake.getBoundingClientRect();
                                         const lineHeight = lineRect.height;
-                                        const splashOffset = lineHeight;
                                         
-                                        // Position splash at the current bottom of the line (where bobber is)
-                                        splash.style.top = lineTop + splashOffset + 'px';
+                                        // Position splash relative to the lake container at the bottom of the line
+                                        const splashTop = lineHeight;
+                                        splash.style.top = splashTop + 'px';
+                                        splash.style.left = line.style.left; // Keep same horizontal position as line
+                                        splash.style.position = 'absolute';
+                                        splash.style.zIndex = '10'; // Ensure it's visible
+                                        splash.style.opacity = '1'; // Ensure it's visible
                                     }
                                 };
                                 
                                 // Update splash position throughout the animation
                                 const startTime = Date.now();
                                 const duration = 1200; // Match reel-in animation duration
+                                
+                                // Initial position update
+                                updateSplashPosition();
+                                
                                 const updateInterval = setInterval(() => {
                                     const elapsed = Date.now() - startTime;
                                     if (elapsed < duration) {
