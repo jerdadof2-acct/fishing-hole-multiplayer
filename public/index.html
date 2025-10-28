@@ -427,6 +427,24 @@
             height: calc(100vh - 300px);
             min-height: 400px;
             max-height: 600px;
+            border: 3px solid rgba(100, 181, 246, 0.6);
+            border-radius: 20px;
+            position: relative;
+            overflow: visible;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.4),
+                0 0 60px rgba(33, 150, 243, 0.5),
+                inset 0 0 100px rgba(0, 100, 200, 0.7),
+                inset 0 15px 150px rgba(100, 181, 246, 0.5),
+                0 0 40px rgba(66, 165, 245, 0.4);
+        }
+
+        /* Water background layer with distortion */
+        .fishing-lake::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: 17px; /* Slightly smaller to account for border */
             background: 
                 /* Deep beautiful water - vibrant blues */
                 radial-gradient(ellipse at center, #1e88e5 0%, #1565c0 30%, #0d47a1 60%, #01579b 100%),
@@ -451,23 +469,14 @@
                 radial-gradient(ellipse at 25% 35%, rgba(100, 181, 246, 0.3) 0%, transparent 40%),
                 radial-gradient(ellipse at 75% 65%, rgba(66, 165, 245, 0.25) 0%, transparent 45%),
                 radial-gradient(ellipse at 50% 80%, rgba(33, 150, 243, 0.2) 0%, transparent 50%);
-            border: 3px solid rgba(100, 181, 246, 0.6);
-            border-radius: 20px;
-            position: relative;
-            overflow: visible;
-            box-shadow: 
-                0 8px 32px rgba(0, 0, 0, 0.4),
-                0 0 60px rgba(33, 150, 243, 0.5),
-                inset 0 0 100px rgba(0, 100, 200, 0.7),
-                inset 0 15px 150px rgba(100, 181, 246, 0.5),
-                0 0 40px rgba(66, 165, 245, 0.4);
             animation: waterShimmer 4s ease-in-out infinite;
             filter: url(#water-distort);
+            z-index: 1;
         }
 
         /* Respect reduced motion */
         @media (prefers-reduced-motion: reduce) {
-            .fishing-lake { filter: none !important; }
+            .fishing-lake::before { filter: none !important; }
         }
 
         @keyframes waterShimmer {
@@ -673,7 +682,7 @@
             position: absolute;
             width: 2px;
             background: #ffffff;
-            z-index: 5;
+            z-index: 10;
             top: 0;
             left: 50%;
             transform: translateX(-50%);
@@ -939,7 +948,7 @@
                 inset 0 3px 6px rgba(255, 255, 255, 0.4),
                 inset 0 -6px 8px rgba(0, 0, 0, 0.2),
                 0 0 8px rgba(255, 0, 0, 0.2);
-            position: relative;
+            z-index: 10;
         }
         
         .hook::before {
@@ -964,7 +973,7 @@
             background: #ffffff;
             transform: translateX(-50%);
             transition: height 0.5s ease;
-            z-index: 5;
+            z-index: 10;
         }
 
         .fishing-line.casting {
@@ -1101,6 +1110,7 @@
             height: 100%;
             pointer-events: none;
             overflow: hidden;
+            z-index: 5;
         }
 
         .ripple {
@@ -2698,7 +2708,7 @@
                 position: absolute;
                 width: 2px;
                 background: #ffffff;
-                z-index: 5;
+                z-index: 10;
             }
 
             .mobile-fishing-lake .hook {
@@ -2730,7 +2740,7 @@
                     0 3px 8px rgba(0, 0, 0, 0.4),
                     inset 0 3px 6px rgba(255, 255, 255, 0.4),
                     inset 0 -6px 8px rgba(0, 0, 0, 0.2);
-                position: relative;
+                z-index: 10;
             }
             
             .mobile-fishing-lake .hook::before {
