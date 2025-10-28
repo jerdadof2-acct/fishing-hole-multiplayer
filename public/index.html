@@ -731,6 +731,83 @@
             }
         }
 
+        @keyframes fishStrikeIntense {
+            0%, 100% { 
+                transform: scale(1.3) translateY(0px) rotate(0deg);
+            }
+            15% { 
+                transform: scale(1.5) translateY(-8px) rotate(-5deg);
+            }
+            30% { 
+                transform: scale(1.4) translateY(-12px) rotate(5deg);
+            }
+            45% { 
+                transform: scale(1.6) translateY(-6px) rotate(-3deg);
+            }
+            60% { 
+                transform: scale(1.3) translateY(-10px) rotate(3deg);
+            }
+            75% { 
+                transform: scale(1.5) translateY(-4px) rotate(-2deg);
+            }
+        }
+
+        @keyframes lineTension {
+            0%, 100% { 
+                transform: translateX(-50%) rotate(-1deg);
+                opacity: 1;
+            }
+            25% { 
+                transform: translateX(-50%) rotate(2deg);
+                opacity: 0.9;
+            }
+            50% { 
+                transform: translateX(-50%) rotate(-2deg);
+                opacity: 0.8;
+            }
+            75% { 
+                transform: translateX(-50%) rotate(1deg);
+                opacity: 0.9;
+            }
+        }
+
+        @keyframes splashExpandIntense {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(0) rotate(0deg);
+            }
+            30% {
+                opacity: 0.9;
+                transform: translate(-50%, -50%) scale(1.2) rotate(180deg);
+            }
+            60% {
+                opacity: 0.6;
+                transform: translate(-50%, -50%) scale(2) rotate(360deg);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(3.5) rotate(540deg);
+            }
+        }
+
+        @keyframes rippleExpand {
+            0% {
+                opacity: 0.8;
+                transform: translate(-50%, -50%) scale(0.5);
+                border-width: 3px;
+            }
+            50% {
+                opacity: 0.4;
+                transform: translate(-50%, -50%) scale(1.5);
+                border-width: 1px;
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(3);
+                border-width: 0px;
+            }
+        }
+
         @keyframes reelIn {
             0% {
                 height: var(--original-height);
@@ -5098,33 +5175,68 @@
                         // Get the bobber (hook element)
                         const bobber = line.querySelector('.hook');
                         if (bobber) {
-                            // Add dramatic strike animation
-                            bobber.style.animation = 'fishStrike 0.3s ease-in-out infinite';
-                            bobber.style.transform = 'scale(1.2)';
+                            // Add dramatic strike animation with more movement
+                            bobber.style.animation = 'fishStrikeIntense 0.4s ease-in-out infinite';
+                            bobber.style.transform = 'scale(1.3)';
+                            bobber.style.filter = 'brightness(1.2) drop-shadow(0 0 8px rgba(255,255,255,0.6))';
                             
-                            // Create splash effect
-                            const splash = document.createElement('div');
-                            splash.className = 'fish-splash';
-                            splash.style.cssText = `
+                            // Animate the fishing line to show tension
+                            line.style.animation = 'lineTension 0.4s ease-in-out infinite';
+                            line.style.filter = 'brightness(1.1)';
+                            
+                            // Create multiple splash effects for more drama
+                            for (let i = 0; i < 3; i++) {
+                                setTimeout(() => {
+                                    const splash = document.createElement('div');
+                                    splash.className = 'fish-splash';
+                                    splash.style.cssText = `
+                                        position: absolute;
+                                        width: ${25 + i * 10}px;
+                                        height: ${25 + i * 10}px;
+                                        background: radial-gradient(circle, rgba(255,255,255,${0.9 - i * 0.2}) 0%, rgba(255,255,255,${0.4 - i * 0.1}) 50%, transparent 100%);
+                                        border-radius: 50%;
+                                        left: 50%;
+                                        top: 50%;
+                                        transform: translate(-50%, -50%) rotate(${i * 120}deg);
+                                        animation: splashExpandIntense 0.8s ease-out forwards;
+                                        pointer-events: none;
+                                        z-index: 10;
+                                    `;
+                                    bobber.appendChild(splash);
+                                    
+                                    // Remove splash after animation
+                                    setTimeout(() => {
+                                        if (splash.parentNode) {
+                                            splash.parentNode.removeChild(splash);
+                                        }
+                                    }, 800);
+                                }, i * 100); // Stagger the splashes
+                            }
+                            
+                            // Add water ripples around the bobber
+                            const ripple = document.createElement('div');
+                            ripple.className = 'strike-ripple';
+                            ripple.style.cssText = `
                                 position: absolute;
-                                width: 30px;
-                                height: 30px;
-                                background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+                                width: 40px;
+                                height: 40px;
+                                border: 2px solid rgba(255,255,255,0.6);
                                 border-radius: 50%;
                                 left: 50%;
                                 top: 50%;
                                 transform: translate(-50%, -50%);
-                                animation: splashExpand 0.6s ease-out forwards;
+                                animation: rippleExpand 1.2s ease-out infinite;
                                 pointer-events: none;
+                                z-index: 5;
                             `;
-                            bobber.appendChild(splash);
+                            bobber.appendChild(ripple);
                             
-                            // Remove splash after animation
+                            // Remove ripple after animation
                             setTimeout(() => {
-                                if (splash.parentNode) {
-                                    splash.parentNode.removeChild(splash);
+                                if (ripple.parentNode) {
+                                    ripple.parentNode.removeChild(ripple);
                                 }
-                            }, 600);
+                            }, 1200);
                         }
                     }
                 });
@@ -5149,6 +5261,9 @@
                 } else if (reactionTime <= 800) {
                     // Success! Hook set properly
                     this.hookSetSuccess = true;
+                    
+                    // Stop bobber strike animations
+                    this.stopBobberAnimations();
                     
                     if (castBtn) {
                         castBtn.textContent = 'REELING...';
@@ -5178,6 +5293,9 @@
                 this.hookSetSuccess = false;
                 this.fishStrikeTime = null;
                 
+                // Stop bobber strike animations
+                this.stopBobberAnimations();
+                
                 const castBtn = document.getElementById('cast-btn');
                 const mobileCastBtn = document.getElementById('mobile-cast-btn');
                 
@@ -5201,6 +5319,39 @@
                 // Show miss message
                 this.showMessage(reason, 'error');
                 this.playSound('miss'); // Miss sound
+            }
+
+            stopBobberAnimations() {
+                const lake = document.getElementById('fishing-lake');
+                const mobileLake = document.getElementById('mobile-fishing-lake');
+                
+                const isMobile = window.innerWidth <= 768;
+                const activeLake = isMobile ? mobileLake : lake;
+                
+                if (!activeLake) return;
+                
+                // Find the fishing line for current player
+                const lines = activeLake.querySelectorAll('.fishing-line');
+                lines.forEach(line => {
+                    if (line.dataset.playerIndex === '0') {
+                        // Get the bobber (hook element)
+                        const bobber = line.querySelector('.hook');
+                        if (bobber) {
+                            // Stop animations and reset styles
+                            bobber.style.animation = 'none';
+                            bobber.style.transform = 'scale(1)';
+                            bobber.style.filter = 'none';
+                            
+                            // Reset line animation
+                            line.style.animation = 'none';
+                            line.style.filter = 'none';
+                            
+                            // Remove any remaining splash effects
+                            const splashes = bobber.querySelectorAll('.fish-splash, .strike-ripple');
+                            splashes.forEach(splash => splash.remove());
+                        }
+                    }
+                });
             }
 
             addFishingLine(playerIndex, isCasting = false) {
