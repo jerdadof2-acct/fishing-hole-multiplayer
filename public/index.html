@@ -5715,21 +5715,61 @@
                         line.style.height = originalHeight + 'px';
                         
                         // Add reel animation that shrinks height upward (transform-origin top)
-                        line.style.animation = 'reelIn 0.8s ease-out forwards';
+                        line.style.animation = 'reelIn 1.2s ease-out forwards';
                         line.style.transformOrigin = 'top center';
                         
-                        // Remove associated splash
+                        // Animate splash to follow the bobber during reel-in
+                        const bobber = line.querySelector('.hook');
                         const splashId = line.dataset.splashId;
                         if (splashId) {
                             const splash = document.getElementById(splashId);
-                            if (splash) {
-                                splash.style.animation = 'reelIn 0.8s ease-out forwards';
-                                setTimeout(() => splash.remove(), 800);
+                            if (splash && bobber) {
+                                // Make splash follow bobber by updating its position during animation
+                                const updateSplashPosition = () => {
+                                    if (splash && bobber && line.parentNode) {
+                                        const lineRect = line.getBoundingClientRect();
+                                        const lineTop = lineRect.top;
+                                        const lineHeight = lineRect.height;
+                                        const splashOffset = lineHeight;
+                                        
+                                        // Position splash at the current bottom of the line (where bobber is)
+                                        splash.style.top = lineTop + splashOffset + 'px';
+                                    }
+                                };
+                                
+                                // Update splash position throughout the animation
+                                const startTime = Date.now();
+                                const duration = 1200; // Match reel-in animation duration
+                                const updateInterval = setInterval(() => {
+                                    const elapsed = Date.now() - startTime;
+                                    if (elapsed < duration) {
+                                        updateSplashPosition();
+                                    } else {
+                                        clearInterval(updateInterval);
+                                        if (splash) {
+                                            splash.remove();
+                                        }
+                                    }
+                                }, 16); // ~60fps updates
+                                
+                                // Clean up after animation completes
+                                setTimeout(() => {
+                                    clearInterval(updateInterval);
+                                    if (splash && splash.parentNode) {
+                                        splash.remove();
+                                    }
+                                }, duration);
+                            } else {
+                                // Fallback: simple animation if positioning fails
+                                if (splash) {
+                                    splash.style.animation = 'reelIn 1.2s ease-out forwards';
+                                    setTimeout(() => splash.remove(), 1200);
+                                }
                             }
                         }
                         
                         // Remove line after animation
-                        setTimeout(() => line.remove(), 800);
+                        setTimeout(() => line.remove(), 1200);
                     }
                 });
                 
@@ -5737,8 +5777,8 @@
                 // Splashes are removed by their associated line above, but clean up any orphaned ones
                 const currentPlayerSplash = activeLake.querySelector(`#splash-0, [data-splash-for="0"]`);
                 if (currentPlayerSplash) {
-                    currentPlayerSplash.style.animation = 'reelIn 0.8s ease-out forwards';
-                    setTimeout(() => currentPlayerSplash.remove(), 800);
+                    currentPlayerSplash.style.animation = 'reelIn 1.2s ease-out forwards';
+                    setTimeout(() => currentPlayerSplash.remove(), 1200);
                 }
                 
                 const ripples = document.getElementById('ripples');
