@@ -701,6 +701,36 @@
             }
         }
 
+        @keyframes fishStrike {
+            0%, 100% { 
+                transform: scale(1.2) translateY(0px);
+            }
+            25% { 
+                transform: scale(1.4) translateY(-3px);
+            }
+            50% { 
+                transform: scale(1.3) translateY(-6px);
+            }
+            75% { 
+                transform: scale(1.4) translateY(-3px);
+            }
+        }
+
+        @keyframes splashExpand {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(0);
+            }
+            50% {
+                opacity: 0.8;
+                transform: translate(-50%, -50%) scale(1.5);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(3);
+            }
+        }
+
         @keyframes reelIn {
             0% {
                 height: var(--original-height);
@@ -4966,17 +4996,20 @@
                 if (this.isCasting) return;
 
                 this.isCasting = true;
+                this.fishStrikeTime = null; // Reset fish strike timing
+                this.hookSetSuccess = false; // Reset hook set success
+                
                 const castBtn = document.getElementById('cast-btn');
                 const mobileCastBtn = document.getElementById('mobile-cast-btn');
                 
                 if (castBtn) {
-                    castBtn.textContent = 'REELING...';
+                    castBtn.textContent = 'WAITING...';
                     castBtn.classList.add('casting');
                     castBtn.disabled = true;
                 }
                 
                 if (mobileCastBtn) {
-                    mobileCastBtn.textContent = 'REELING...';
+                    mobileCastBtn.textContent = 'WAITING...';
                     mobileCastBtn.classList.add('casting');
                     mobileCastBtn.disabled = true;
                 }
@@ -4993,9 +5026,6 @@
                 const ripples = document.getElementById('ripples');
                 ripples.classList.add('active');
 
-                // Calculate catch chance
-                const catchChance = this.calculateCatchChance();
-                
                 // Progressive bite timing based on level
                 // Levels 1-5: Quick paced (0.5 to 2 seconds)
                 // Levels 6+: Progressively slower (2 to 6+ seconds)
@@ -5022,15 +5052,155 @@
                 
                 const biteTime = minBiteTime + Math.random() * (maxBiteTime - minBiteTime);
                 
-                // Phase 1: Wait for bite, then show bite animation (bobber splash)
+                // Phase 1: Wait for bite, then show bobber strike
                 setTimeout(() => {
-                    this.showFishBite(); // Show bobber animation and splash
+                    this.showFishStrike(); // Show bobber strike animation
+                    this.fishStrikeTime = Date.now(); // Record when fish struck
                     
-                    // Phase 2: Wait a moment, then reel in
+                    // Update button to allow hook setting
+                    if (castBtn) {
+                        castBtn.textContent = 'SET HOOK!';
+                        castBtn.disabled = false;
+                        castBtn.onclick = () => this.setHook();
+                    }
+                    
+                    if (mobileCastBtn) {
+                        mobileCastBtn.textContent = 'SET HOOK!';
+                        mobileCastBtn.disabled = false;
+                        mobileCastBtn.onclick = () => this.setHook();
+                    }
+                    
+                    // Auto-fail if player doesn't react in time (3-5 seconds)
+                    const reactionTime = 3000 + Math.random() * 2000; // 3-5 seconds
+                    setTimeout(() => {
+                        if (!this.hookSetSuccess && this.isCasting) {
+                            this.missFish('Too slow! Fish got away!');
+                        }
+                    }, reactionTime);
+                    
+                }, biteTime);
+            }
+
+            showFishStrike() {
+                // Show dramatic bobber strike animation
+                const lake = document.getElementById('fishing-lake');
+                const mobileLake = document.getElementById('mobile-fishing-lake');
+                
+                const isMobile = window.innerWidth <= 768;
+                const activeLake = isMobile ? mobileLake : lake;
+                
+                if (!activeLake) return;
+                
+                // Find the fishing line for current player
+                const lines = activeLake.querySelectorAll('.fishing-line');
+                lines.forEach(line => {
+                    if (line.dataset.playerIndex === '0') {
+                        // Get the bobber (hook element)
+                        const bobber = line.querySelector('.hook');
+                        if (bobber) {
+                            // Add dramatic strike animation
+                            bobber.style.animation = 'fishStrike 0.3s ease-in-out infinite';
+                            bobber.style.transform = 'scale(1.2)';
+                            
+                            // Create splash effect
+                            const splash = document.createElement('div');
+                            splash.className = 'fish-splash';
+                            splash.style.cssText = `
+                                position: absolute;
+                                width: 30px;
+                                height: 30px;
+                                background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+                                border-radius: 50%;
+                                left: 50%;
+                                top: 50%;
+                                transform: translate(-50%, -50%);
+                                animation: splashExpand 0.6s ease-out forwards;
+                                pointer-events: none;
+                            `;
+                            bobber.appendChild(splash);
+                            
+                            // Remove splash after animation
+                            setTimeout(() => {
+                                if (splash.parentNode) {
+                                    splash.parentNode.removeChild(splash);
+                                }
+                            }, 600);
+                        }
+                    }
+                });
+                
+                this.playSound('bite'); // Fish bite sound
+            }
+
+            setHook() {
+                if (!this.fishStrikeTime || this.hookSetSuccess) return;
+                
+                const reactionTime = Date.now() - this.fishStrikeTime;
+                const castBtn = document.getElementById('cast-btn');
+                const mobileCastBtn = document.getElementById('mobile-cast-btn');
+                
+                // Timing-based success:
+                // Too fast (< 200ms): Miss - "Too eager!"
+                // Perfect timing (200-800ms): Success
+                // Too slow (> 800ms): Miss - "Too slow!"
+                
+                if (reactionTime < 200) {
+                    this.missFish('Too eager! Fish wasn\'t ready!');
+                } else if (reactionTime <= 800) {
+                    // Success! Hook set properly
+                    this.hookSetSuccess = true;
+                    
+                    if (castBtn) {
+                        castBtn.textContent = 'REELING...';
+                        castBtn.disabled = true;
+                    }
+                    
+                    if (mobileCastBtn) {
+                        mobileCastBtn.textContent = 'REELING...';
+                        mobileCastBtn.disabled = true;
+                    }
+                    
+                    this.playSound('hookset'); // Hook set sound
+                    
+                    // Calculate catch chance and reel in
+                    const catchChance = this.calculateCatchChance();
                     setTimeout(() => {
                         this.reelIn(catchChance);
-                    }, 800); // Short delay to let player see the bite
-                }, biteTime);
+                    }, 500); // Brief delay to show hook set success
+                    
+                } else {
+                    this.missFish('Too slow! Fish got away!');
+                }
+            }
+
+            missFish(reason) {
+                this.isCasting = false;
+                this.hookSetSuccess = false;
+                this.fishStrikeTime = null;
+                
+                const castBtn = document.getElementById('cast-btn');
+                const mobileCastBtn = document.getElementById('mobile-cast-btn');
+                
+                if (castBtn) {
+                    castBtn.textContent = 'CAST LINE';
+                    castBtn.classList.remove('casting');
+                    castBtn.disabled = false;
+                    castBtn.onclick = () => this.castLine();
+                }
+                
+                if (mobileCastBtn) {
+                    mobileCastBtn.textContent = 'CAST';
+                    mobileCastBtn.classList.remove('casting');
+                    mobileCastBtn.disabled = false;
+                    mobileCastBtn.onclick = () => this.castLine();
+                }
+                
+                // Remove fishing line
+                this.removeFishingLine(0);
+                
+                // Show miss message
+                this.showMessage(reason, 'error');
+                this.playSound('miss'); // Miss sound
             }
 
             addFishingLine(playerIndex, isCasting = false) {
@@ -5166,6 +5336,34 @@
                         landingSplash.remove();
                     }
                 }, 1500);
+            }
+
+            removeFishingLine(playerIndex) {
+                const lake = document.getElementById('fishing-lake');
+                const mobileLake = document.getElementById('mobile-fishing-lake');
+                
+                const isMobile = window.innerWidth <= 768;
+                const activeLake = isMobile ? mobileLake : lake;
+                
+                if (!activeLake) return;
+                
+                // Find and remove fishing lines for the specified player
+                const lines = activeLake.querySelectorAll('.fishing-line');
+                lines.forEach(line => {
+                    if (line.dataset.playerIndex === playerIndex.toString()) {
+                        // Remove associated splash if it exists
+                        const splashId = line.dataset.splashId;
+                        if (splashId) {
+                            const splash = document.getElementById(splashId);
+                            if (splash) {
+                                splash.remove();
+                            }
+                        }
+                        
+                        // Remove the line itself
+                        line.remove();
+                    }
+                });
             }
 
             calculateCatchChance() {
@@ -5348,12 +5546,14 @@
                     castBtn.textContent = 'CAST LINE';
                     castBtn.classList.remove('casting');
                     castBtn.disabled = false;
+                    castBtn.onclick = () => this.castLine();
                 }
                 
                 if (mobileCastBtn) {
-                    mobileCastBtn.textContent = 'CAST LINE';
+                    mobileCastBtn.textContent = 'CAST';
                     mobileCastBtn.classList.remove('casting');
                     mobileCastBtn.disabled = false;
+                    mobileCastBtn.onclick = () => this.castLine();
                 }
 
                 const caughtFish = Math.random() < catchChance;
