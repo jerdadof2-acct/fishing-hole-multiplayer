@@ -6188,8 +6188,8 @@
                     fishermen[playerIndex + 1].classList.add('fishing');
                 }
                 
-                // Show chat bubble with funny fishing sayings
-                if (player.isSimulated) {
+                // Show chat bubble with funny fishing sayings (only 30% of the time)
+                if (player.isSimulated && Math.random() < 0.3) {
                     const fishingSayings = [
                         '🎣 Just purrfected my cast!', '😸 This spot looks fishy... in a good way!', 
                         '🐱 Meowvelous fishing spot!', '🎣 I got this one... I think?', 
