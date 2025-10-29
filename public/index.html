@@ -5384,25 +5384,35 @@
                 if (useCatRig && window.mountPlayerCat3D) {
                     requestAnimationFrame(() => {
                         if (!isMobile && playerFisher?.querySelector('.cat3d')) {
-                            const opts = this.player.avatarOptions || {
-                                colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
-                                gear: { hat: false, glasses: false, vest: false }
-                            };
-                            window.mountPlayerCat3D(this.player.name, {
-                                furColor: opts?.colors?.fur || '#f2a65a',
-                                scale: 0.8,
-                                profile: 'desktop'
-                            });
+                            const cat3dEl = playerFisher.querySelector('.cat3d');
+                            // Only mount if container is visible
+                            const rect = cat3dEl.getBoundingClientRect();
+                            if (rect.width > 0 && rect.height > 0 && cat3dEl.offsetParent !== null) {
+                                const opts = this.player.avatarOptions || {
+                                    colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
+                                    gear: { hat: false, glasses: false, vest: false }
+                                };
+                                window.mountPlayerCat3D(this.player.name, {
+                                    furColor: opts?.colors?.fur || '#f2a65a',
+                                    scale: 0.8,
+                                    profile: 'desktop'
+                                });
+                            }
                         } else if (isMobile && mobilePlayerFisher?.querySelector('.cat3d')) {
-                            const opts = this.player.avatarOptions || {
-                                colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
-                                gear: { hat: false, glasses: false, vest: false }
-                            };
-                            window.mountPlayerCat3D(this.player.name, {
-                                furColor: opts?.colors?.fur || '#f2a65a',
-                                scale: 0.6,
-                                profile: 'mobile'
-                            });
+                            const cat3dEl = mobilePlayerFisher.querySelector('.cat3d');
+                            // Only mount if container is visible (mobile layout must be shown)
+                            const rect = cat3dEl.getBoundingClientRect();
+                            if (rect.width > 0 && rect.height > 0 && cat3dEl.offsetParent !== null) {
+                                const opts = this.player.avatarOptions || {
+                                    colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
+                                    gear: { hat: false, glasses: false, vest: false }
+                                };
+                                window.mountPlayerCat3D(this.player.name, {
+                                    furColor: opts?.colors?.fur || '#f2a65a',
+                                    scale: 0.6,
+                                    profile: 'mobile'
+                                });
+                            }
                         }
                     });
                 }
@@ -5448,11 +5458,18 @@
                         // Mount 3D only for eligible players, deferred to avoid race conditions
                         if (shouldUse3D && fisher.querySelector('.cat3d') && window.mountPlayerCat3D) {
                             requestAnimationFrame(() => {
-                                window.mountPlayerCat3D(p.name, {
-                                    furColor: p?.avatarOptions?.colors?.fur || '#c8a079',
-                                    scale: 0.8,
-                                    profile: 'desktop'
-                                });
+                                const cat3dEl = fisher.querySelector('.cat3d');
+                                // Only mount if container is visible
+                                if (cat3dEl) {
+                                    const rect = cat3dEl.getBoundingClientRect();
+                                    if (rect.width > 0 && rect.height > 0 && cat3dEl.offsetParent !== null) {
+                                        window.mountPlayerCat3D(p.name, {
+                                            furColor: p?.avatarOptions?.colors?.fur || '#c8a079',
+                                            scale: 0.8,
+                                            profile: 'desktop'
+                                        });
+                                    }
+                                }
                             });
                         } else if (!shouldUse3D && fisher.querySelector('.cat-rig')) {
                             // Use 2D for non-eligible players
@@ -5490,14 +5507,21 @@
                             if (nameEl) nameEl.textContent = p.name;
                         }
                         
-                        // Mount 3D only for eligible players, deferred
+                        // Mount 3D only for eligible players, deferred - respect chooser limit
                         if (shouldUse3D && mobileFisher.querySelector('.cat3d') && window.mountPlayerCat3D) {
                             requestAnimationFrame(() => {
-                                window.mountPlayerCat3D(p.name, {
-                                    furColor: p?.avatarOptions?.colors?.fur || '#c8a079',
-                                    scale: 0.6,
-                                    profile: 'mobile'
-                                });
+                                const cat3dEl = mobileFisher.querySelector('.cat3d');
+                                // Only mount if container is visible (mobile layout must be shown)
+                                if (cat3dEl) {
+                                    const rect = cat3dEl.getBoundingClientRect();
+                                    if (rect.width > 0 && rect.height > 0 && cat3dEl.offsetParent !== null) {
+                                        window.mountPlayerCat3D(p.name, {
+                                            furColor: p?.avatarOptions?.colors?.fur || '#c8a079',
+                                            scale: 0.6,
+                                            profile: 'mobile'
+                                        });
+                                    }
+                                }
                             });
                         } else if (!shouldUse3D && mobileFisher.querySelector('.cat-rig')) {
                             const rig = mobileFisher.querySelector('.cat-rig');
@@ -10564,15 +10588,17 @@
         };
 
         // Limit active 3D renderers to prevent context exhaustion
-        window.MAX_3D_RENDERERS = 4;
+        // Reduced to 3 to provide more headroom (player + 2 bots max)
+        window.MAX_3D_RENDERERS = 3;
         window.ACTIVE_3D_PLAYERS = new Set();
 
         window.choose3DPlayers = function(allPlayers, you) {
             const chosen = new Set([window.safeKey(you)]);
             // Add up to MAX_3D_RENDERERS - 1 other players (nearest or most active)
+            // MAX_3D_RENDERERS is 3, so we add 2 others (player + 2 bots = 3 total)
             const others = Array.from(allPlayers)
                 .filter(p => window.safeKey(p.name) !== window.safeKey(you))
-                .slice(0, window.MAX_3D_RENDERERS - 1);
+                .slice(0, Math.max(0, window.MAX_3D_RENDERERS - 1));
             others.forEach(p => chosen.add(window.safeKey(p.name)));
             return chosen;
         };
