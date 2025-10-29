@@ -11511,7 +11511,10 @@
             
             // Update 2D overlay line connecting rod tip to bobber
             #update2DFishingLine(){
-                if (!this.bobber || !this.rodTipBone || !this.container) return;
+                if (!this.bobber || !this.rodTipBone || !this.container) {
+                    if (!this.rodTipBone) console.warn('Cat3D: No rodTipBone found');
+                    return;
+                }
                 if (!this.bobber.visible) {
                     // Hide overlay if bobber is hidden
                     if (this._overlayLine) this._overlayLine.style.display = 'none';
@@ -11526,9 +11529,22 @@
                 const tipScreen = this.#projectToScreen(tipWorld);
                 
                 // Get bobber world position and project to screen
+                this.bobber.updateWorldMatrix(true, false);
                 const bobWorld = new THREE.Vector3();
                 this.bobber.getWorldPosition(bobWorld);
                 const bobScreen = this.#projectToScreen(bobWorld);
+                
+                // Debug first few frames
+                if (!this._debugCount) this._debugCount = 0;
+                if (this._debugCount < 5) {
+                    console.log('Cat3D Overlay Debug:', {
+                        tipWorld, tipScreen,
+                        bobWorld, bobScreen,
+                        rodTipBone: this.rodTipBone.name,
+                        containerRect: this.container.getBoundingClientRect()
+                    });
+                    this._debugCount++;
+                }
                 
                 // Find lake container and clamp bobber to lake bounds if needed
                 const isMobile = window.innerWidth <= 768;
