@@ -11243,8 +11243,21 @@
                                 console.log('Cat3D: Scaled rod by:', rodScale);
                             }
                         },
+                        (progress) => {
+                            // Progress callback - not an error, just log progress
+                            if (progress.total > 0) {
+                                const percent = (progress.loaded / progress.total * 100).toFixed(1);
+                                // Only log every 25% to avoid spam
+                                if (percent % 25 < 1) {
+                                    console.log(`Cat3D: Fishing rod loading: ${percent}%`);
+                                }
+                            }
+                        },
                         (error) => {
-                            console.warn('Cat3D: Failed to load fishing rod, using helper object:', error);
+                            // Only log actual errors (not progress events)
+                            if (error && error.type !== 'progress') {
+                                console.warn('Cat3D: Failed to load fishing rod, using helper object:', error);
+                            }
                             // Fallback: create rod tip helper if no rod loaded
                             if (!this.rodTipBone) {
                                 this.rodTipBone = new THREE.Object3D();
