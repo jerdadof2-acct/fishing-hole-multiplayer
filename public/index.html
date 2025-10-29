@@ -11748,6 +11748,9 @@
                     // Move bobber
                     this.bobber.position.copy(p);
                     
+                    // Force update world matrix for overlay projection
+                    this.bobber.updateWorldMatrix(true, false);
+                    
                     // 2D overlay line will update automatically in #updateFishingLine()
                     
                     if (u < 1) {
