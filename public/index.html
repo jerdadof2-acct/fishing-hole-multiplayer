@@ -6276,23 +6276,24 @@
                     const lakeRect = lake?.getBoundingClientRect();
                     
                     // Define lake bounds (adjust to match your actual lake dimensions)
+                    // Use simple object format instead of THREE types in non-module scope
                     const lakeBounds = {
-                        center: new THREE.Vector3(0, 0, 0), // Adjust to actual lake center
+                        center: { x: 0, y: 0, z: 0 }, // Will be converted to Vector3 in animateCast
                         halfW: 22,  // Half width
                         halfH: 16,  // Half height
                         y: 0,       // Water surface Y
-                        wind: new THREE.Vector2(0, 0) // Optional wind
+                        wind: { x: 0, y: 0 } // Optional wind
                     };
                     
                     // Generate random seed for deterministic casting
                     const rngSeed = Date.now() + Math.floor(Math.random() * 10000);
                     
-                    // Trigger 3D cast animation
+                    // Trigger 3D cast animation (raycaster will be created inside if needed)
                     cat3D.animateCast({
                         rngSeed,
                         lakeBounds,
                         lakeMesh: null, // No mesh yet, using flat plane
-                        raycaster: new THREE.Raycaster(),
+                        raycaster: null, // Will be created in animateCast if needed
                         splashSystem: window.splashFX || window.mobileSplashFX
                     });
                 } else {
@@ -10665,6 +10666,9 @@
         import * as THREE from 'https://esm.sh/three@0.160.0';
         import { GLTFLoader } from 'https://esm.sh/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
         import { RGBELoader } from 'https://esm.sh/three@0.160.0/examples/jsm/loaders/RGBELoader.js';
+        
+        // Make THREE available globally for non-module scripts
+        window.THREE = THREE;
 
         // Utility functions for bulletproof player container matching
         window.safeKey = function(name) {
@@ -11233,19 +11237,29 @@
                 
                 const rng = window.makeRNG ? window.makeRNG(rngSeed || Date.now()) : () => Math.random();
                 
+                // Convert lakeBounds center and wind to Vector3/Vector2 if needed
+                const bounds = {
+                    ...lakeBounds,
+                    center: lakeBounds.center instanceof THREE.Vector3 
+                        ? lakeBounds.center 
+                        : new THREE.Vector3(lakeBounds.center.x || 0, lakeBounds.center.y || 0, lakeBounds.center.z || 0),
+                    wind: lakeBounds.wind instanceof THREE.Vector2
+                        ? lakeBounds.wind
+                        : new THREE.Vector2(lakeBounds.wind?.x || 0, lakeBounds.wind?.y || 0)
+                };
+                
                 // Choose a spot on the lake
                 const target = window.randomLakeTarget ? window.randomLakeTarget({
-                    lakeBounds: lakeBounds,
+                    lakeBounds: bounds,
                     lakeMesh: lakeMesh || null,
                     raycaster: raycaster || new THREE.Raycaster(),
                     rng, padding: 2.0
                 }) : new THREE.Vector3();
                 
                 // Optional wind/skill tweaks
-                const wind = lakeBounds.wind || new THREE.Vector2(0, 0);
                 const skill = 0.7; // Could use this.player.stats.patience or similar
-                target.x += wind.x * (1 - skill) * (0.5 + rng() * 0.5);
-                target.z += wind.y * (1 - skill) * (0.5 + rng() * 0.5);
+                target.x += bounds.wind.x * (1 - skill) * (0.5 + rng() * 0.5);
+                target.z += bounds.wind.y * (1 - skill) * (0.5 + rng() * 0.5);
                 
                 // Face cat toward target
                 if (window.faceModelYawToward && this.model) {
