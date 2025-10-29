@@ -10727,6 +10727,8 @@
                 this.camera = new THREE.PerspectiveCamera(30, container.clientWidth/container.clientHeight || 1, 0.1, 50);
                 container.__camera = this.camera;
                 this.camera.position.set(0.2, 0.9, 2.2);
+                this.camera.lookAt(0, 0, 0); // Ensure camera is looking at origin where model will be
+                console.log('Cat3D: Camera initialized at', this.camera.position, 'looking at origin');
 
                 // lights (work even without HDRI)
                 const hemi = new THREE.HemisphereLight(0xffffff, 0x446688, 0.7);
@@ -10737,6 +10739,7 @@
                 // state
                 this.clock = new THREE.Clock();
                 this.running = true;
+                this._firstRender = true; // Flag to log first render
                 this.mixer = null;
                 this.clips = {};
                 this.blinkMorph = null;
@@ -10796,10 +10799,29 @@
                             );
                         });
                         this.model = gltf.scene;
+                        console.log('Cat3D: GLTF loaded successfully:', this.modelUrl, this.model);
+                        
+                        // Compute bounding box to verify model has geometry
+                        const box = new THREE.Box3().setFromObject(this.model);
+                        const size = box.getSize(new THREE.Vector3());
+                        const center = box.getCenter(new THREE.Vector3());
+                        console.log('Cat3D: Model bounding box - size:', size, 'center:', center);
+                        
                         this.model.scale.setScalar(this.scale);
                         // center roughly
                         this.model.position.set(0, -0.5, 0);
                         this.scene.add(this.model);
+                        
+                        // Ensure model is visible
+                        this.model.visible = true;
+                        this.model.traverse((child) => {
+                            if (child.isMesh) {
+                                child.visible = true;
+                                child.frustumCulled = false; // Ensure it's not culled
+                            }
+                        });
+                        
+                        console.log('Cat3D: Model added to scene at position:', this.model.position, 'scale:', this.scale, 'visible:', this.model.visible);
                     } catch (loadError) {
                         // Error handler already added placeholder, just rethrow to outer catch
                         if (!this.model) {
@@ -10901,6 +10923,12 @@
 
                 // procedural blink if no morphs/clip running
                 this.#updateProcedurals();
+
+                // Log first frame to verify scene has content
+                if (this._firstRender) {
+                    console.log('Cat3D: First render - scene children:', this.scene.children.length, 'model:', !!this.model);
+                    this._firstRender = false;
+                }
 
                 this.renderer.render(this.scene, this.camera);
                 this.raf = requestAnimationFrame(this.#loop);
