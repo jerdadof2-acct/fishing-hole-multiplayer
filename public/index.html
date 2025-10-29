@@ -6275,13 +6275,29 @@
                     const lake = document.getElementById('fishing-lake');
                     const lakeRect = lake?.getBoundingClientRect();
                     
-                    // Define lake bounds (adjust to match your actual lake dimensions)
-                    // Use simple object format instead of THREE types in non-module scope
+                    // Define lake bounds in 3D space that cast toward the lake container
+                    // Calculate lake center in 3D based on screen position
+                    const isMobile = window.innerWidth <= 768;
+                    const lakeEl = document.getElementById(isMobile ? 'mobile-fishing-lake' : 'fishing-lake');
+                    if (!lakeEl) return;
+                    
+                    const lakeRect = lakeEl.getBoundingClientRect();
+                    const catRect = cat3D.container.getBoundingClientRect();
+                    
+                    // Convert lake container center to relative offset from cat
+                    // Cast should go forward (positive Z) and slightly toward lake center
+                    const lakeCenterX = (lakeRect.left + lakeRect.width / 2) - (catRect.left + catRect.width / 2);
+                    const distance = Math.max(catRect.width * 2, 3.0); // Cast distance in 3D units
+                    
+                    // Scale screen pixels to 3D units (rough approximation)
+                    const scaleX = distance / (lakeRect.width || 500); // pixels to 3D units
+                    const targetX3D = lakeCenterX * scaleX * 0.1; // Small horizontal offset
+                    
                     const lakeBounds = {
-                        center: { x: 0, y: 0, z: 0 }, // Will be converted to Vector3 in animateCast
-                        halfW: 22,  // Half width
-                        halfH: 16,  // Half height
-                        y: 0,       // Water surface Y
+                        center: { x: targetX3D, y: 0, z: distance }, // Cast forward toward lake
+                        halfW: Math.min(8, distance * 0.3),  // Smaller spread - more centered
+                        halfH: Math.min(6, distance * 0.25),  // Smaller spread
+                        y: -0.5,       // Water surface Y (below rod tip)
                         wind: { x: 0, y: 0 } // Optional wind
                     };
                     
@@ -11478,8 +11494,22 @@
                 const lakeRect = lake.getBoundingClientRect();
                 
                 // Clamp bobber to lake rect (so it stays visually in the lake)
-                const bobX = Math.min(Math.max(bobScreen.x, lakeRect.left), lakeRect.right);
-                const bobY = Math.min(Math.max(bobScreen.y, lakeRect.top), lakeRect.bottom * 0.98);
+                // But only if the bobber is actually in the lake area
+                let bobX = bobScreen.x;
+                let bobY = bobScreen.y;
+                
+                // Only clamp if bobber is near the lake container
+                if (bobScreen.x >= lakeRect.left - 50 && bobScreen.x <= lakeRect.right + 50 &&
+                    bobScreen.y >= lakeRect.top - 50 && bobScreen.y <= lakeRect.bottom + 50) {
+                    // Bobber is near lake - clamp to lake bounds
+                    bobX = Math.min(Math.max(bobScreen.x, lakeRect.left + 10), lakeRect.right - 10);
+                    bobY = Math.min(Math.max(bobScreen.y, lakeRect.top + lakeRect.height * 0.3), lakeRect.bottom - 20);
+                } else {
+                    // Bobber is far from lake - might be off-screen or casting animation in progress
+                    // Let it be positioned naturally during cast, clamp later when landed
+                    bobX = bobScreen.x;
+                    bobY = bobScreen.y;
+                }
                 
                 // Create or update overlay line
                 if (!this._overlayLine) {
@@ -11512,24 +11542,42 @@
                     document.body.appendChild(this._overlayBobber);
                 }
                 
-                // Draw line from tipScreen -> bobX/bobY
-                const dx = bobX - tipScreen.x;
-                const dy = bobY - tipScreen.y;
-                const distance = Math.hypot(dx, dy);
-                const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
-                
-                // Position and style the line
-                this._overlayLine.style.display = 'block';
-                this._overlayLine.style.left = tipScreen.x + 'px';
-                this._overlayLine.style.top = tipScreen.y + 'px';
-                this._overlayLine.style.width = '2px';
-                this._overlayLine.style.height = distance + 'px';
-                this._overlayLine.style.transform = `rotate(${angleDeg}deg)`;
-                
-                // Position the bobber
-                this._overlayBobber.style.display = 'block';
-                this._overlayBobber.style.left = (bobX - 6) + 'px';
-                this._overlayBobber.style.top = (bobY - 6) + 'px';
+                // Only draw line if both points are valid and visible
+                if (!isNaN(tipScreen.x) && !isNaN(tipScreen.y) && 
+                    !isNaN(bobX) && !isNaN(bobY) &&
+                    tipScreen.x > -1000 && tipScreen.x < 10000 &&
+                    tipScreen.y > -1000 && tipScreen.y < 10000) {
+                    
+                    // Draw line from tipScreen -> bobX/bobY
+                    const dx = bobX - tipScreen.x;
+                    const dy = bobY - tipScreen.y;
+                    const distance = Math.hypot(dx, dy);
+                    
+                    if (distance > 1) { // Only draw if line has meaningful length
+                        const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
+                        
+                        // Position and style the line
+                        this._overlayLine.style.display = 'block';
+                        this._overlayLine.style.left = tipScreen.x + 'px';
+                        this._overlayLine.style.top = tipScreen.y + 'px';
+                        this._overlayLine.style.width = '2px';
+                        this._overlayLine.style.height = distance + 'px';
+                        this._overlayLine.style.transform = `rotate(${angleDeg}deg)`;
+                        
+                        // Position the bobber
+                        this._overlayBobber.style.display = 'block';
+                        this._overlayBobber.style.left = (bobX - 6) + 'px';
+                        this._overlayBobber.style.top = (bobY - 6) + 'px';
+                    } else {
+                        // Line too short or points overlap - hide
+                        if (this._overlayLine) this._overlayLine.style.display = 'none';
+                        if (this._overlayBobber) this._overlayBobber.style.display = 'none';
+                    }
+                } else {
+                    // Invalid coordinates - hide overlay
+                    if (this._overlayLine) this._overlayLine.style.display = 'none';
+                    if (this._overlayBobber) this._overlayBobber.style.display = 'none';
+                }
             }
             
             #updateFishingLine(){
