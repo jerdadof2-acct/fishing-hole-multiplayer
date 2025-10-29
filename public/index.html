@@ -6272,9 +6272,6 @@
                 
                 if (cat3D && cat3D.animateCast) {
                     // Use 3D ballistic casting system
-                    const lake = document.getElementById('fishing-lake');
-                    const lakeRect = lake?.getBoundingClientRect();
-                    
                     // Define lake bounds in 3D space that cast toward the lake container
                     // Calculate lake center in 3D based on screen position
                     const isMobile = window.innerWidth <= 768;
