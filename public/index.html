@@ -11734,7 +11734,17 @@
                 
                 console.log('Cat3D: Bobber visible:', this.bobber.visible, 'Using 2D overlay line');
                 
+                // Debug target and animation params
+                console.log('Cat3D: Animation params:', {
+                    startTip: `${startTip.x.toFixed(3)}, ${startTip.y.toFixed(3)}, ${startTip.z.toFixed(3)}`,
+                    end: `${end.x.toFixed(3)}, ${end.y.toFixed(3)}, ${end.z.toFixed(3)}`,
+                    travel: travel.toFixed(3),
+                    duration: duration.toFixed(3),
+                    hop: hop.toFixed(3)
+                });
+                
                 const t0 = performance.now() / 1000;
+                let frameCount = 0;
                 const step = () => {
                     const t = performance.now() / 1000 - t0;
                     const u = THREE.MathUtils.clamp(t / duration, 0, 1);
@@ -11750,6 +11760,17 @@
                     
                     // Force update world matrix for overlay projection
                     this.bobber.updateWorldMatrix(true, false);
+                    
+                    // Debug first few frames
+                    if (frameCount < 3) {
+                        console.log(`Cat3D: Animation frame ${frameCount}:`, {
+                            t: t.toFixed(3),
+                            u: u.toFixed(3),
+                            ease: ease.toFixed(3),
+                            bobberPos: `${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)}`
+                        });
+                        frameCount++;
+                    }
                     
                     // 2D overlay line will update automatically in #updateFishingLine()
                     
