@@ -10737,11 +10737,11 @@
                 this.scene = new THREE.Scene();
                 container.__scene = this.scene;
                 // AxesHelper removed - cats are now visible and rendering correctly
-                this.camera = new THREE.PerspectiveCamera(45, container.clientWidth/container.clientHeight || 1, 0.1, 50);
+                this.camera = new THREE.PerspectiveCamera(35, container.clientWidth/container.clientHeight || 1, 0.1, 50);
                 container.__camera = this.camera;
-                // Adjust camera to see model better - closer and looking at origin
-                this.camera.position.set(0, 0.5, 2.5);
-                this.camera.lookAt(0, 0, 0); // Ensure camera is looking at origin where model will be
+                // Camera positioned to show full cat model nicely framed
+                this.camera.position.set(0, 0.8, 3.0); // A bit further back and higher for better view
+                this.camera.lookAt(0, 0, 0); // Look at origin where model is centered
                 console.log('Cat3D: Camera initialized at', this.camera.position, 'looking at origin');
 
                 // lights (work even without HDRI)
@@ -10821,12 +10821,12 @@
                         const center = box.getCenter(new THREE.Vector3());
                         console.log('Cat3D: Model bounding box - size:', size, 'center:', center);
                         
-                        // Make model larger and more visible (scale up significantly)
-                        const actualScale = this.scale * 3.0; // Scale up to 3x for better visibility
+                        // Scale model appropriately (not too large, not too small)
+                        const actualScale = this.scale * 2.2; // Good balance - visible but not filling entire view
                         this.model.scale.setScalar(actualScale);
                         
-                        // Position model better - center it and raise it up so camera can see it
-                        this.model.position.set(0, 0, 0); // Center at origin
+                        // Position model centered at origin
+                        this.model.position.set(0, 0, 0);
                         
                         // Ensure all meshes have visible materials
                         this.model.traverse((child) => {
@@ -10977,6 +10977,12 @@
                 // Log first frame to verify scene has content
                 if (this._firstRender) {
                     console.log('Cat3D: First render - scene children:', this.scene.children.length, 'model:', !!this.model);
+                    if (this.model) {
+                        const box = new THREE.Box3().setFromObject(this.model);
+                        const size = box.getSize(new THREE.Vector3());
+                        console.log('Cat3D: Model actual size after scale:', size);
+                        console.log('Cat3D: Camera position:', this.camera.position, 'FOV:', this.camera.fov);
+                    }
                     this._firstRender = false;
                 }
 
