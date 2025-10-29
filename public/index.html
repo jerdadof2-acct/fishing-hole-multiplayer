@@ -10756,6 +10756,8 @@
                 this.clock = new THREE.Clock();
                 this.running = true;
                 this._firstRender = true; // Flag to log first render
+                this._sphereRadius = null; // Store bounding sphere radius for resize
+                this._cameraDistance = null; // Store camera distance for reference
                 this.mixer = null;
                 this.clips = {};
                 this.blinkMorph = null;
@@ -10858,37 +10860,16 @@
                         box.getBoundingSphere(sphere);
                         console.log('Cat3D: Model bounding sphere - radius:', sphere.radius, 'center:', sphere.center);
                         
+                        // Store sphere radius for resize handler
+                        this._sphereRadius = sphere.radius;
+                        
                         // Center model at the origin so camera math is stable
                         this.model.position.sub(sphere.center);
                         
-                        // Compute an aspect-aware distance that fits WIDTH and HEIGHT
-                        const w = this.container.clientWidth || 96;
-                        const h = this.container.clientHeight || 96;
-                        const aspect = w / h;
+                        // Frame camera to host (reusable for resize)
+                        this.#frameCameraToHost();
                         
-                        // FOV in radians
-                        const fov = this.camera.fov * Math.PI / 180;
-                        
-                        // Distance required to fit the sphere's diameter in HEIGHT:
-                        const fitHeightDist = (sphere.radius * 2) / Math.tan(fov / 2);
-                        
-                        // Distance required to fit WIDTH (projecting horizontally):
-                        const fitWidthDist = fitHeightDist / aspect;
-                        
-                        // Pick the larger so we fit both dimensions
-                        let dist = Math.max(fitHeightDist, fitWidthDist);
-                        
-                        // Add generous padding so ears/tail never crop in a 96×96 box
-                        dist *= 1.85; // Bump this up/down if still seeing cropping
-                        
-                        // Position camera slightly above, looking at origin
-                        this.camera.position.set(0, sphere.radius * 0.35, dist);
-                        this.camera.near = Math.max(0.01, dist / 100);
-                        this.camera.far = dist * 100;
-                        this.camera.lookAt(0, 0, 0);
-                        this.camera.updateProjectionMatrix();
-                        
-                        console.log('Cat3D: Camera auto-framed (bounding-sphere) - position:', this.camera.position, 'distance:', dist, 'sphere radius:', sphere.radius, 'aspect:', aspect);
+                        console.log('Cat3D: Camera auto-framed (bounding-sphere) - position:', this.camera.position, 'distance:', this._cameraDistance, 'sphere radius:', sphere.radius);
                     } catch (loadError) {
                         // Error handler already added placeholder, just rethrow to outer catch
                         if (!this.model) {
@@ -11162,6 +11143,47 @@
                 }
             }
 
+            // Frame camera to host based on model bounding sphere (reusable for resize)
+            #frameCameraToHost(){
+                if (!this.container || !this.camera || !this.model) return;
+                
+                const w = this.container.clientWidth || 96;
+                const h = this.container.clientHeight || 96;
+                const aspect = w / h;
+                
+                // Use stored sphere radius or recompute if needed
+                let sphereRadius = this._sphereRadius;
+                if (!sphereRadius && this.model) {
+                    const box = new THREE.Box3().setFromObject(this.model);
+                    const sphere = new THREE.Sphere();
+                    box.getBoundingSphere(sphere);
+                    sphereRadius = sphere.radius;
+                    this._sphereRadius = sphereRadius;
+                }
+                
+                if (!sphereRadius) return;
+                
+                // FOV in radians (vertical FOV)
+                const halfFov = (this.camera.fov * Math.PI / 180) * 0.5;
+                
+                // Distance to fit HEIGHT uses **radius** (not diameter):
+                const fitHeightDist = sphereRadius / Math.tan(halfFov);
+                
+                // Distance to fit WIDTH accounts for aspect:
+                const fitWidthDist = sphereRadius / (Math.tan(halfFov) * aspect);
+                
+                // Pick the larger, then add moderate padding (tune 1.15–1.35)
+                const dist = Math.max(fitHeightDist, fitWidthDist) * 1.25;
+                this._cameraDistance = dist;
+                
+                // Slightly above center so the face isn't dead-center
+                this.camera.position.set(0, sphereRadius * 0.35, dist);
+                this.camera.near = Math.max(0.01, dist / 100);
+                this.camera.far = dist * 100;
+                this.camera.lookAt(0, 0, 0);
+                this.camera.updateProjectionMatrix();
+            }
+
             // Resize renderer and camera to match host dimensions
             #resize(){
                 if (!this.container || !this.renderer || !this.camera) return;
@@ -11173,8 +11195,10 @@
                 const dpr = Math.min(window.devicePixelRatio || 1, 2);
                 this.renderer.setPixelRatio(dpr);
                 this.renderer.setSize(w, h, false);
+                
+                // Recompute camera framing when aspect changes
                 this.camera.aspect = w / h || 1;
-                this.camera.updateProjectionMatrix();
+                this.#frameCameraToHost();
             }
         }
 
