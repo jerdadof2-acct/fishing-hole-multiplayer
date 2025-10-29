@@ -10994,12 +10994,24 @@
                             console.log(`Cat3D: Model has ${meshCount} meshes, ${boxGeoCount} box geometries, ${totalVerts} total vertices`);
                         }
                         
-                        // 5) Put model at origin (center) for stable framing, then frame it
+                        // 5) Normalize model scale first (models can be exported at any scale)
                         this.model.updateWorldMatrix(true, true);
-                        const box = new THREE.Box3().setFromObject(this.model);
-                        const sphere = new THREE.Sphere();
+                        let box = new THREE.Box3().setFromObject(this.model);
+                        let sphere = new THREE.Sphere();
                         box.getBoundingSphere(sphere);
-                        console.log('Cat3D: Model bounding sphere - radius:', sphere.radius, 'center:', sphere.center);
+                        console.log('Cat3D: Model raw bounding sphere - radius:', sphere.radius, 'center:', sphere.center);
+                        
+                        // If model is way too large (>10 units radius), scale it down
+                        if (sphere.radius > 10) {
+                            const normalizeScale = 1.0 / sphere.radius; // Normalize to ~1 unit radius
+                            console.log('Cat3D: Model too large, normalizing scale by', normalizeScale);
+                            this.model.scale.multiplyScalar(normalizeScale);
+                            this.model.updateWorldMatrix(true, true);
+                            // Recompute after scaling
+                            box = new THREE.Box3().setFromObject(this.model);
+                            box.getBoundingSphere(sphere);
+                            console.log('Cat3D: Model normalized bounding sphere - radius:', sphere.radius, 'center:', sphere.center);
+                        }
                         
                         // Store sphere radius for resize handler
                         this._sphereRadius = sphere.radius;
@@ -11144,14 +11156,17 @@
                     }
                     
                     // Create bobber and fishing line for 3D casting
+                    // Size bobber relative to model (scale with model size)
+                    const bobberSize = Math.max(0.1, (this._sphereRadius || 1.0) * 0.1);
                     this.bobber = new THREE.Mesh(
-                        new THREE.SphereGeometry(0.05, 8, 8),
+                        new THREE.SphereGeometry(bobberSize, 8, 8),
                         new THREE.MeshStandardMaterial({ color: 0xff4444 })
                     );
                     this.bobber.name = '__bobber__';
                     this.bobber.visible = false; // Hidden until cast
                     this.bobber.userData.bobbing = false;
                     this.scene.add(this.bobber);
+                    console.log('Cat3D: Bobber created with size:', bobberSize);
                     
                     // Create fishing line (tube geometry connecting rod tip to bobber)
                     const lineGeometry = new THREE.BufferGeometry();
@@ -11164,6 +11179,7 @@
                     this.fishingLine.name = '__fishing_line__';
                     this.fishingLine.visible = false;
                     this.scene.add(this.fishingLine);
+                    console.log('Cat3D: Fishing line created');
                 }
             }
 
@@ -11238,7 +11254,12 @@
 
             // Animate cast: ballistic arc to random target
             animateCast({ rngSeed, lakeBounds, lakeMesh, raycaster, splashSystem }){
-                if (!this.bobber || !this.fishingLine || !this.rodTipBone) return;
+                if (!this.bobber || !this.fishingLine || !this.rodTipBone) {
+                    console.warn('Cat3D: Cannot animate cast - missing bobber, line, or rodTipBone');
+                    return;
+                }
+                
+                console.log('Cat3D: Starting cast animation');
                 
                 const rng = window.makeRNG ? window.makeRNG(rngSeed || Date.now()) : () => Math.random();
                 
@@ -11253,8 +11274,9 @@
                         : new THREE.Vector2(lakeBounds.wind?.x || 0, lakeBounds.wind?.y || 0)
                 };
                 
-                // Choose a spot on the lake
-                const target = window.randomLakeTarget ? window.randomLakeTarget({
+                // Choose a spot on the lake (scale to match model coordinate space)
+                // Lake bounds should be relative to model scale
+                let target = window.randomLakeTarget ? window.randomLakeTarget({
                     lakeBounds: bounds,
                     lakeMesh: lakeMesh || null,
                     raycaster: raycaster || new THREE.Raycaster(),
@@ -11276,6 +11298,8 @@
                 const startTip = new THREE.Vector3();
                 this.rodTipBone.getWorldPosition(startTip);
                 
+                console.log('Cat3D: Cast start tip:', startTip, 'target:', target);
+                
                 const end = target.clone();
                 const travel = startTip.distanceTo(end);
                 const duration = THREE.MathUtils.clamp(travel * 0.18, 0.45, 0.9);
@@ -11285,6 +11309,8 @@
                 this.bobber.visible = true;
                 this.fishingLine.visible = true;
                 this.bobber.position.copy(startTip); // Start at rod tip
+                
+                console.log('Cat3D: Bobber visible:', this.bobber.visible, 'Line visible:', this.fishingLine.visible);
                 
                 const t0 = performance.now() / 1000;
                 const step = () => {
