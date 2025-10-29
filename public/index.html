@@ -5252,8 +5252,8 @@
                 const mobileFishermanRow = document.getElementById('mobile-fisherman-row');
                 const mobileLake = document.getElementById('mobile-fishing-lake');
                 
-                // Clear existing fishermen and lines (including hooks) - comprehensive cleanup
-                if (fishermanRow) fishermanRow.innerHTML = '';
+                // Don't clear fisherman rows - reuse existing DOM to prevent disposal churn
+                // Only clear fishing lines and hooks from lakes
                 if (lake) {
                     // Remove all fishing lines and hooks
                     lake.querySelectorAll('.fishing-line').forEach(l => l.remove());
@@ -5261,7 +5261,6 @@
                     // Also remove any orphaned splashes
                     lake.querySelectorAll('.hook-splash, .hook-landing-splash').forEach(s => s.remove());
                 }
-                if (mobileFishermanRow) mobileFishermanRow.innerHTML = '';
                 if (mobileLake) {
                     // Remove all fishing lines and hooks
                     mobileLake.querySelectorAll('.fishing-line').forEach(l => l.remove());
@@ -5270,193 +5269,233 @@
                     mobileLake.querySelectorAll('.hook-splash, .hook-landing-splash').forEach(s => s.remove());
                 }
                 
-                // Add current player
-                const playerFisher = document.createElement('div');
-                playerFisher.className = 'fisherman you';
-                playerFisher.id = 'player-fisher';
+                // Clean up only disconnected/removed players from fisherman rows
+                const existingPlayerIds = new Set([window.safeKey(this.player.name)]);
+                this.otherPlayers.forEach(p => existingPlayerIds.add(window.safeKey(p.name)));
                 
-                // Check if character is using cat rig system
+                // Remove fisherman elements for players no longer in the game
+                if (fishermanRow) {
+                    fishermanRow.querySelectorAll('.fisherman').forEach(fisher => {
+                        const cat3d = fisher.querySelector('.cat3d');
+                        if (cat3d) {
+                            const playerId = cat3d.dataset.playerId || cat3d.dataset.cat3d;
+                            if (playerId && !existingPlayerIds.has(window.safeKey(playerId))) {
+                                // Player left, dispose and remove
+                                if (cat3d.__renderer && window.CatRigs) {
+                                    const rig = window.CatRigs.map.get(window.safeKey(playerId));
+                                    if (rig) rig.dispose();
+                                }
+                                fisher.remove();
+                            }
+                        }
+                    });
+                }
+                
+                if (mobileFishermanRow) {
+                    mobileFishermanRow.querySelectorAll('.mobile-fisherman').forEach(fisher => {
+                        const cat3d = fisher.querySelector('.cat3d');
+                        if (cat3d) {
+                            const playerId = cat3d.dataset.playerId || cat3d.dataset.cat3d;
+                            if (playerId && !existingPlayerIds.has(window.safeKey(playerId))) {
+                                // Player left, dispose and remove
+                                if (cat3d.__renderer && window.CatRigs) {
+                                    const rig = window.CatRigs.map.get(window.safeKey(playerId));
+                                    if (rig) rig.dispose();
+                                }
+                                fisher.remove();
+                            }
+                        }
+                    });
+                }
+                
+                // Add current player - reuse existing DOM if present
+                let playerFisher = fishermanRow?.querySelector('#player-fisher');
                 const useCatRig = this.player.character === 'cat-rig' || this.player.avatarOptions?.type === 'cat';
-                
-                // Detect if we're on mobile to choose which container to mount
                 const isMobile = window.matchMedia('(max-width: 768px)').matches;
                 
-                if (useCatRig) {
-                    // Only create container for the appropriate view (desktop OR mobile, not both)
-                    if (!isMobile) {
-                        // Create cat rig container with 3D mount point for desktop
-                        playerFisher.innerHTML = `
-                            <div class="cat3d" data-player-id="${this.player.name}"></div>
-                            <div class="cat-rig" data-player-id="${this.player.name}" style="display: none;"></div>
-                            <div class="fisherman-name">${this.player.name}</div>
-                        `;
-                        
-                        // Try to mount 3D cat first, fallback to 2D if WebGL not supported
-                        const tryMount = () => {
-                            console.log('WebGL available:', 'WebGLRenderingContext' in window);
-                            console.log('mountPlayerCat3D available:', !!window.mountPlayerCat3D);
-                            
-                            if ('WebGLRenderingContext' in window && window.mountPlayerCat3D) {
-                                console.log('Attempting to mount 3D cat for player:', this.player.name);
-                                const opts = this.player.avatarOptions || {
-                                    colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
-                                    gear: { hat: false, glasses: false, vest: false }
-                                };
-                                
-                                try {
-                                    window.mountPlayerCat3D(this.player.name, {
-                                        furColor: opts?.colors?.fur || '#f2a65a',
-                                        scale: 0.8,
-                                        profile: 'desktop'
-                                    });
-                                    console.log('3D cat mounted successfully');
-                                    return;
-                                } catch (error) {
-                                    console.log('3D cat mounting failed, falling back to 2D:', error);
-                                }
-                            }
-                            this.#fallbackTo2D(playerFisher);
-                        };
-
-                        if (window.Cat3DReady) tryMount();
-                        else window.addEventListener('cat3d-ready', tryMount, { once: true });
-                        
-                        const host = playerFisher.querySelector('.cat3d');
-                        host?.addEventListener('cat3d-failed', () => {
-                            this.#fallbackTo2D(playerFisher);
-                        }, { once: true });
+                if (!playerFisher) {
+                    playerFisher = document.createElement('div');
+                    playerFisher.className = 'fisherman you';
+                    playerFisher.id = 'player-fisher';
+                    
+                    if (useCatRig) {
+                        if (!isMobile) {
+                            const key = window.safeKey(this.player.name);
+                            playerFisher.innerHTML = `
+                                <div class="cat3d" data-player-id="${this.player.name}" data-cat3d="${key}"></div>
+                                <div class="cat-rig" data-player-id="${this.player.name}" style="display: none;"></div>
+                                <div class="fisherman-name">${this.player.name}</div>
+                            `;
+                        } else {
+                            playerFisher.innerHTML = `
+                                <div class="cat-rig" data-player-id="${this.player.name}" style="display: none;"></div>
+                                <div class="fisherman-name">${this.player.name}</div>
+                            `;
+                        }
                     } else {
-                        // Desktop container hidden on mobile
                         playerFisher.innerHTML = `
-                            <div class="cat-rig" data-player-id="${this.player.name}" style="display: none;"></div>
+                            <div class="fisherman-character">${this.player.character || '👨'}</div>
                             <div class="fisherman-name">${this.player.name}</div>
                         `;
                     }
+                    if (fishermanRow) fishermanRow.appendChild(playerFisher);
                 } else {
-                    // Fallback to emoji character
-                    playerFisher.innerHTML = `
-                        <div class="fisherman-character">${this.player.character || '👨'}</div>
-                        <div class="fisherman-name">${this.player.name}</div>
-                    `;
+                    // Update name if it changed
+                    const nameEl = playerFisher.querySelector('.fisherman-name');
+                    if (nameEl) nameEl.textContent = this.player.name;
                 }
-                if (fishermanRow) fishermanRow.appendChild(playerFisher);
 
-                // Add mobile player (only create if on mobile)
-                const mobilePlayerFisher = document.createElement('div');
-                mobilePlayerFisher.className = 'mobile-fisherman';
-                mobilePlayerFisher.id = 'mobile-player-fisher';
-                
-                if (useCatRig && isMobile) {
-                    // Create cat rig container for mobile with 3D mount point
-                    mobilePlayerFisher.innerHTML = `
-                        <div class="cat3d" data-player-id="${this.player.name}"></div>
-                        <div class="cat-rig" data-player-id="${this.player.name}" style="display: none;"></div>
-                        <div class="mobile-fisherman-name">${this.player.name}</div>
-                    `;
+                // Add mobile player - reuse existing DOM if present
+                let mobilePlayerFisher = mobileFishermanRow?.querySelector('#mobile-player-fisher');
+                if (!mobilePlayerFisher) {
+                    mobilePlayerFisher = document.createElement('div');
+                    mobilePlayerFisher.className = 'mobile-fisherman';
+                    mobilePlayerFisher.id = 'mobile-player-fisher';
                     
-                    // Try to mount 3D cat first, fallback to 2D if WebGL not supported
-                    const tryMountMobile = () => {
-                        if ('WebGLRenderingContext' in window && window.mountPlayerCat3D) {
+                    if (useCatRig && isMobile) {
+                        const key = window.safeKey(this.player.name);
+                        mobilePlayerFisher.innerHTML = `
+                            <div class="cat3d" data-player-id="${this.player.name}" data-cat3d="${key}"></div>
+                            <div class="cat-rig" data-player-id="${this.player.name}" style="display: none;"></div>
+                            <div class="mobile-fisherman-name">${this.player.name}</div>
+                        `;
+                    } else {
+                        mobilePlayerFisher.innerHTML = `
+                            <div class="mobile-fisherman-character">${this.player.character || '👨'}</div>
+                            <div class="mobile-fisherman-name">${this.player.name}</div>
+                        `;
+                    }
+                    if (mobileFishermanRow) mobileFishermanRow.appendChild(mobilePlayerFisher);
+                } else {
+                    const nameEl = mobilePlayerFisher.querySelector('.mobile-fisherman-name');
+                    if (nameEl) nameEl.textContent = this.player.name;
+                }
+
+                // Defer mount to ensure DOM is ready and avoid race conditions
+                if (useCatRig && window.mountPlayerCat3D) {
+                    requestAnimationFrame(() => {
+                        if (!isMobile && playerFisher?.querySelector('.cat3d')) {
                             const opts = this.player.avatarOptions || {
                                 colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
                                 gear: { hat: false, glasses: false, vest: false }
                             };
+                            window.mountPlayerCat3D(this.player.name, {
+                                furColor: opts?.colors?.fur || '#f2a65a',
+                                scale: 0.8,
+                                profile: 'desktop'
+                            });
+                        } else if (isMobile && mobilePlayerFisher?.querySelector('.cat3d')) {
+                            const opts = this.player.avatarOptions || {
+                                colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
+                                gear: { hat: false, glasses: false, vest: false }
+                            };
+                            window.mountPlayerCat3D(this.player.name, {
+                                furColor: opts?.colors?.fur || '#f2a65a',
+                                scale: 0.6,
+                                profile: 'mobile'
+                            });
+                        }
+                    });
+                }
+                
+                // Determine which players get 3D (limit to MAX_3D_RENDERERS)
+                const eligible3D = window.choose3DPlayers(this.otherPlayers, this.player.name);
+                
+                // Add other players - reuse existing DOM when possible
+                this.otherPlayers.forEach((p) => {
+                    const playerKey = window.safeKey(p.name);
+                    const shouldUse3D = eligible3D.has(playerKey);
+                    
+                    // Desktop version
+                    if (!isMobile) {
+                        let fisher = fishermanRow?.querySelector(`.fisherman.other[data-player-key="${playerKey}"]`);
+                        
+                        if (!fisher) {
+                            fisher = document.createElement('div');
+                            fisher.className = 'fisherman other';
+                            fisher.dataset.playerKey = playerKey;
+                            fisher.title = `${p.name} - Level ${p.level}`;
                             
-                            try {
-                                window.mountPlayerCat3D(this.player.name, {
-                                    furColor: opts?.colors?.fur || '#f2a65a',
-                                    scale: 0.6, // Smaller for mobile
-                                    profile: 'mobile'
+                            if (shouldUse3D) {
+                                fisher.innerHTML = `
+                                    <div class="cat3d" data-player-id="${p.name}" data-cat3d="${playerKey}"></div>
+                                    <div class="cat-rig" data-player-id="${p.name}" style="display:none;"></div>
+                                    <div class="fisherman-name">${p.name}</div>
+                                `;
+                            } else {
+                                fisher.innerHTML = `
+                                    <div class="cat-rig" data-player-id="${p.name}"></div>
+                                    <div class="fisherman-name">${p.name}</div>
+                                `;
+                            }
+                            if (fishermanRow) fishermanRow.appendChild(fisher);
+                        } else {
+                            // Update name/level
+                            const nameEl = fisher.querySelector('.fisherman-name');
+                            if (nameEl) nameEl.textContent = p.name;
+                            fisher.title = `${p.name} - Level ${p.level}`;
+                        }
+                        
+                        // Mount 3D only for eligible players, deferred to avoid race conditions
+                        if (shouldUse3D && fisher.querySelector('.cat3d') && window.mountPlayerCat3D) {
+                            requestAnimationFrame(() => {
+                                window.mountPlayerCat3D(p.name, {
+                                    furColor: p?.avatarOptions?.colors?.fur || '#c8a079',
+                                    scale: 0.8,
+                                    profile: 'desktop'
                                 });
-                                console.log('3D cat mounted successfully on mobile');
-                                return;
-                            } catch (error) {
-                                console.log('3D cat mounting failed on mobile, falling back to 2D:', error);
+                            });
+                        } else if (!shouldUse3D && fisher.querySelector('.cat-rig')) {
+                            // Use 2D for non-eligible players
+                            const rig = fisher.querySelector('.cat-rig');
+                            if (rig && window.renderCatRig) {
+                                window.renderCatRig(rig, p.avatarOptions || {});
                             }
                         }
-                        this.#fallbackTo2D(mobilePlayerFisher);
-                    };
-
-                    if (window.Cat3DReady) tryMountMobile();
-                    else window.addEventListener('cat3d-ready', tryMountMobile, { once: true });
-                    
-                    const mobileHost = mobilePlayerFisher.querySelector('.cat3d');
-                    mobileHost?.addEventListener('cat3d-failed', () => {
-                        this.#fallbackTo2D(mobilePlayerFisher);
-                    }, { once: true });
-                } else {
-                    // Fallback to emoji character or empty if desktop
-                    mobilePlayerFisher.innerHTML = `
-                        <div class="mobile-fisherman-character">${this.player.character || '👨'}</div>
-                        <div class="mobile-fisherman-name">${this.player.name}</div>
-                    `;
-                }
-                if (mobileFishermanRow) mobileFishermanRow.appendChild(mobilePlayerFisher);
-                
-                // Add other players (mount 3D cats)
-                // Reuse isMobile from above
-                this.otherPlayers.forEach((p) => {
-                    const fisher = document.createElement('div');
-                    fisher.className = 'fisherman other';
-
-                    // Only create desktop container if not on mobile
-                    if (!isMobile) {
-                        fisher.innerHTML = `
-                            <div class="cat3d" data-player-id="${p.name}"></div>
-                            <div class="cat-rig" data-player-id="${p.name}" style="display:none;"></div>
-                            <div class="fisherman-name">${p.name}</div>
-                        `;
-                        fisher.title = `${p.name} - Level ${p.level}`;
-                        if (fishermanRow) fishermanRow.appendChild(fisher);
-
-                        const tryMountOther = () => {
-                            if ('WebGLRenderingContext' in window && window.mountPlayerCat3D) {
-                                try {
-                                    window.mountPlayerCat3D(p.name, {
-                                        furColor: p?.avatarOptions?.colors?.fur || '#c8a079',
-                                        scale: 0.8,
-                                        profile: 'desktop'
-                                    });
-                                    return;
-                                } catch {}
-                            }
-                            const rig = fisher.querySelector('.cat-rig');
-                            if (rig && window.renderCatRig) window.renderCatRig(rig, p.avatarOptions || {});
-                        };
-
-                        if (window.Cat3DReady) tryMountOther();
-                        else window.addEventListener('cat3d-ready', tryMountOther, { once: true });
                     }
 
-                    // Add mobile other players (only if on mobile)
+                    // Mobile version
                     if (isMobile) {
-                        const mobileFisher = document.createElement('div');
-                        mobileFisher.className = 'mobile-fisherman';
+                        let mobileFisher = mobileFishermanRow?.querySelector(`.mobile-fisherman[data-player-key="${playerKey}"]`);
                         
-                        mobileFisher.innerHTML = `
-                            <div class="cat3d" data-player-id="${p.name}"></div>
-                            <div class="cat-rig" data-player-id="${p.name}" style="display:none;"></div>
-                            <div class="mobile-fisherman-name">${p.name}</div>
-                        `;
-                        if (mobileFishermanRow) mobileFishermanRow.appendChild(mobileFisher);
-
-                        const tryMountMobileOther = () => {
-                            if ('WebGLRenderingContext' in window && window.mountPlayerCat3D) {
-                                try {
-                                    window.mountPlayerCat3D(p.name, {
-                                        furColor: p?.avatarOptions?.colors?.fur || '#c8a079',
-                                        scale: 0.6, // Smaller for mobile
-                                        profile: 'mobile'
-                                    });
-                                    return;
-                                } catch {}
+                        if (!mobileFisher) {
+                            mobileFisher = document.createElement('div');
+                            mobileFisher.className = 'mobile-fisherman';
+                            mobileFisher.dataset.playerKey = playerKey;
+                            
+                            if (shouldUse3D) {
+                                mobileFisher.innerHTML = `
+                                    <div class="cat3d" data-player-id="${p.name}" data-cat3d="${playerKey}"></div>
+                                    <div class="cat-rig" data-player-id="${p.name}" style="display:none;"></div>
+                                    <div class="mobile-fisherman-name">${p.name}</div>
+                                `;
+                            } else {
+                                mobileFisher.innerHTML = `
+                                    <div class="cat-rig" data-player-id="${p.name}"></div>
+                                    <div class="mobile-fisherman-name">${p.name}</div>
+                                `;
                             }
+                            if (mobileFishermanRow) mobileFishermanRow.appendChild(mobileFisher);
+                        } else {
+                            const nameEl = mobileFisher.querySelector('.mobile-fisherman-name');
+                            if (nameEl) nameEl.textContent = p.name;
+                        }
+                        
+                        // Mount 3D only for eligible players, deferred
+                        if (shouldUse3D && mobileFisher.querySelector('.cat3d') && window.mountPlayerCat3D) {
+                            requestAnimationFrame(() => {
+                                window.mountPlayerCat3D(p.name, {
+                                    furColor: p?.avatarOptions?.colors?.fur || '#c8a079',
+                                    scale: 0.6,
+                                    profile: 'mobile'
+                                });
+                            });
+                        } else if (!shouldUse3D && mobileFisher.querySelector('.cat-rig')) {
                             const rig = mobileFisher.querySelector('.cat-rig');
-                            if (rig && window.renderCatRig) window.renderCatRig(rig, p.avatarOptions || {});
-                        };
-
-                        if (window.Cat3DReady) tryMountMobileOther();
-                        else window.addEventListener('cat3d-ready', tryMountMobileOther, { once: true });
+                            if (rig && window.renderCatRig) {
+                                window.renderCatRig(rig, p.avatarOptions || {});
+                            }
+                        }
                     }
                 });
             }
@@ -10500,6 +10539,35 @@
         import { GLTFLoader } from 'https://esm.sh/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
         import { RGBELoader } from 'https://esm.sh/three@0.160.0/examples/jsm/loaders/RGBELoader.js';
 
+        // Utility functions for bulletproof player container matching
+        window.safeKey = function(name) {
+            return String(name).trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-');
+        };
+
+        window.getCatContainerForPlayer = function(name) {
+            const key = window.safeKey(name);
+            // Try data-cat3d first, then data-player-id, then id fallback
+            return document.querySelector(`[data-cat3d="${key}"]`)
+                || document.querySelector(`.cat3d[data-player-id="${key}"]`)
+                || document.querySelector(`.cat3d[data-player-id="${name}"]`)
+                || document.getElementById(`cat3d-${key}`)
+                || null;
+        };
+
+        // Limit active 3D renderers to prevent context exhaustion
+        window.MAX_3D_RENDERERS = 4;
+        window.ACTIVE_3D_PLAYERS = new Set();
+
+        window.choose3DPlayers = function(allPlayers, you) {
+            const chosen = new Set([window.safeKey(you)]);
+            // Add up to MAX_3D_RENDERERS - 1 other players (nearest or most active)
+            const others = Array.from(allPlayers)
+                .filter(p => window.safeKey(p.name) !== window.safeKey(you))
+                .slice(0, window.MAX_3D_RENDERERS - 1);
+            others.forEach(p => chosen.add(window.safeKey(p.name)));
+            return chosen;
+        };
+
         class Cat3D {
             constructor(container, opts={}){
                 this.container = container;
@@ -10842,11 +10910,18 @@
                         this.container.__scene = null;
                         this.container.__camera = null;
                         this.container.__mounted = false;
+                        this.container.__mounting = false;
                         this.container.innerHTML = '';
                     }
                     
-                    // Decrement active context count
+                    // Decrement active context count and remove from active set
                     window.activeWebGLContexts = Math.max(0, (window.activeWebGLContexts || 1) - 1);
+                    if (this.container) {
+                        const playerKey = this.container.dataset.cat3d || this.container.dataset.playerId;
+                        if (playerKey && window.ACTIVE_3D_PLAYERS) {
+                            window.ACTIVE_3D_PLAYERS.delete(window.safeKey(playerKey));
+                        }
+                    }
                 }
             }
 
@@ -10871,19 +10946,27 @@
                 const el = (typeof selectorOrEl === 'string') ? document.querySelector(selectorOrEl) : selectorOrEl;
                 if (!el) return null;
                 
-                // Check for existing renderer on container
+                // Use safeKey for consistent mapping
+                const key = el.dataset.cat3d || el.dataset.playerId 
+                    ? window.safeKey(el.dataset.cat3d || el.dataset.playerId)
+                    : ('player-'+Math.random().toString(36).slice(2));
+                
+                // Idempotent: Check for existing renderer on container
                 if (el.__renderer && el.__mounted) {
-                    console.log('Cat3D: Reusing existing renderer for', el.dataset.playerId);
-                    const existing = this.map.get(el.dataset.playerId);
+                    console.log('Cat3D: Reusing existing renderer for', key);
+                    const existing = this.map.get(key);
                     if (existing) return existing;
                 }
                 
-                // Dispose existing rig if it exists in our map
-                const key = el.dataset.playerId || ('player-'+Math.random().toString(36).slice(2));
+                // Only dispose if it's actually different (not just a remount)
                 const existing = this.map.get(key);
-                if (existing) {
-                    console.log('Cat3D: Disposing existing rig before creating new one');
+                if (existing && existing.container !== el) {
+                    console.log('Cat3D: Disposing existing rig for different container');
                     existing.dispose();
+                } else if (existing && existing.container === el && el.__mounted) {
+                    // Same container, already mounted - reuse
+                    console.log('Cat3D: Container already mounted, reusing');
+                    return existing;
                 }
                 
                 // Ensure container is visible before mounting
@@ -10942,28 +11025,35 @@
 
         // EXAMPLE: mount your own cat after login (call once you render the fisherman row)
         window.mountPlayerCat3D = function(playerName, options={}){
-            // Guard against double-mounts - check if renderer already exists
-            const escapedName = (window.CSS && CSS.escape) ? CSS.escape(playerName) : playerName;
-            const sel = `.cat3d[data-player-id="${escapedName}"]`;
-            const host = document.querySelector(sel);
+            // Use bulletproof container finder
+            const host = window.getCatContainerForPlayer(playerName);
             
             if (!host) {
                 console.warn('mountPlayerCat3D: No container found for player', playerName);
                 return null;
             }
             
-            // If already mounted, return existing rig
+            // Idempotent: if already mounted, return existing rig
             if (host.__renderer && host.__mounted) {
-                const existing = window.CatRigs?.map?.get(playerName);
+                const playerKey = window.safeKey(playerName);
+                const existing = window.CatRigs?.map?.get(playerKey);
                 if (existing) {
                     console.log('mountPlayerCat3D: Reusing existing renderer for', playerName);
                     return existing;
                 }
             }
             
+            // Prevent re-entry during mount
+            if (host.__mounting) {
+                console.log('mountPlayerCat3D: Mount already in progress for', playerName);
+                return null;
+            }
+            host.__mounting = true;
+            
             // Check context limit before attempting mount
-            if (window.activeWebGLContexts >= 8) {
+            if (window.activeWebGLContexts >= window.MAX_3D_RENDERERS) {
                 console.warn('WebGL context limit reached, skipping 3D mount for', playerName);
+                host.__mounting = false;
                 host.dispatchEvent(new CustomEvent('cat3d-failed'));
                 return null;
             }
@@ -10972,16 +11062,26 @@
             const rect = host.getBoundingClientRect();
             if (rect.width === 0 || rect.height === 0 || host.offsetParent === null) {
                 console.warn('mountPlayerCat3D: Container not visible for', playerName);
+                host.__mounting = false;
                 host.dispatchEvent(new CustomEvent('cat3d-failed'));
                 return null;
             }
             
-            return CatRigs.mount(host, {
+            const playerKey = window.safeKey(playerName);
+            const rig = window.CatRigs.mount(host, {
                 modelUrl: options.modelUrl || './assets/cat/cat.glb',
                 envUrl:   options.envUrl   || null,
                 furColor: options.furColor || '#c8a079',
                 scale:    options.scale    || 0.9
             });
+            
+            host.__mounting = false;
+            
+            if (rig) {
+                window.ACTIVE_3D_PLAYERS.add(playerKey);
+            }
+            
+            return rig;
         };
         
         // Signal that 3D module is ready
