@@ -6303,6 +6303,11 @@
                     this.showFishStrike(); // Show bobber strike animation
                     this.fishStrikeTime = Date.now(); // Record when fish struck
                     
+                    // Trigger cat bite/reaction animation on fish strike
+                    if (window.CatRigs) {
+                        window.CatRigs.bite(this.player.name); // Alert reaction when fish strikes
+                    }
+                    
                     // Update button to allow hook setting
                     if (castBtn) {
                         castBtn.textContent = 'SET HOOK!';
