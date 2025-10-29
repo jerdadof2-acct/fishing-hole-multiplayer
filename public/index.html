@@ -6387,7 +6387,8 @@
             showFishStrike() {
                 // Show dramatic bobber strike animation
                 // Skip if using Cat3D overlay system
-                if (window.CatRigs && window.CatRigs.has(this.player.name)) {
+                const playerKey = window.safeKey ? window.safeKey(this.player.name) : this.player.name.toLowerCase();
+                if (window.CatRigs && window.CatRigs.map && window.CatRigs.map.has(playerKey)) {
                     // Cat3D handles strikes via overlay bobber - already done in castLine()
                     return;
                 }
@@ -6622,8 +6623,9 @@
                 this.removeFishingLine(0);
                 
                 // Clean up Cat3D overlay elements on miss
-                if (window.CatRigs && window.CatRigs.has(this.player.name)) {
-                    const cat3D = window.CatRigs.get(this.player.name);
+                const playerKey = window.safeKey ? window.safeKey(this.player.name) : this.player.name.toLowerCase();
+                if (window.CatRigs && window.CatRigs.map && window.CatRigs.map.has(playerKey)) {
+                    const cat3D = window.CatRigs.map.get(playerKey);
                     if (cat3D) {
                         if (cat3D._overlayLine) cat3D._overlayLine.style.display = 'none';
                         if (cat3D._overlayBobber) {
@@ -6836,8 +6838,9 @@
 
             removeFishingLine(playerIndex) {
                 // Clean up Cat3D overlay if using it (for current player only)
-                if (playerIndex === 0 && window.CatRigs && window.CatRigs.has(this.player.name)) {
-                    const cat3D = window.CatRigs.get(this.player.name);
+                const playerKey = window.safeKey ? window.safeKey(this.player.name) : this.player.name.toLowerCase();
+                if (playerIndex === 0 && window.CatRigs && window.CatRigs.map && window.CatRigs.map.has(playerKey)) {
+                    const cat3D = window.CatRigs.map.get(playerKey);
                     if (cat3D) {
                         if (cat3D._overlayLine) cat3D._overlayLine.style.display = 'none';
                         if (cat3D._overlayBobber) {
