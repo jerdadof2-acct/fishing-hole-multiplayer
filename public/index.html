@@ -10751,11 +10751,17 @@
             direction.y = 0; // Only rotate on Y axis
             if (direction.length() > 0.01) {
                 direction.normalize();
-                const targetRotation = Math.atan2(direction.x, direction.z);
+                let desiredYaw = Math.atan2(direction.x, direction.z);
+                
+                // Yaw offset: if cat model faces -Z (common), add 180°
+                // Adjust this based on your model's forward direction
+                const yawOffset = Math.PI; // 180° if model faces -Z; try 0, PI/2, -PI/2, etc.
+                desiredYaw += yawOffset;
+                
                 const currentRotation = modelRoot.rotation.y;
                 
                 // Normalize angle difference to [-PI, PI] range
-                let diff = targetRotation - currentRotation;
+                let diff = desiredYaw - currentRotation;
                 while (diff > Math.PI) diff -= 2 * Math.PI;
                 while (diff < -Math.PI) diff += 2 * Math.PI;
                 
@@ -11147,7 +11153,103 @@
                         }
                     });
                     
-                    // Create rod tip reference point (helper object if no bone found)
+                    // Load and attach fishing rod model
+                    this.rodModel = null;
+                    this.rodTipBone = null;
+                    
+                    // Find hand/grip bone for rod attachment
+                    let handBone = null;
+                    this.model.traverse(o => {
+                        if (o.isBone) {
+                            const name = (o.name || '').toLowerCase();
+                            if (name.includes('hand') || name.includes('grip') || name.includes('right_hand') || name.includes('r_hand')) {
+                                handBone = o;
+                            }
+                            // Find rod tip bone in cat model (if it has one)
+                            if ((/rod|tip|end/i.test(name)) && !this.rodTipBone) {
+                                if (/tip|end/i.test(name)) this.rodTipBone = o;
+                            }
+                        }
+                    });
+                    
+                    // Load fishing rod GLB
+                    const rodLoader = new GLTFLoader();
+                    rodLoader.load(
+                        '/assets/glb/fishing_rod_rigged_and_animated.glb',
+                        (rodGltf) => {
+                            console.log('Cat3D: Fishing rod loaded successfully');
+                            this.rodModel = rodGltf.scene;
+                            
+                            // Find rod tip bone in rod model
+                            this.rodModel.traverse(o => {
+                                if (o.isBone) {
+                                    const name = (o.name || '').toLowerCase();
+                                    if (name.includes('tip') || name.includes('end') || name.includes('rod_tip')) {
+                                        this.rodTipBone = o;
+                                        console.log('Cat3D: Found rod tip bone:', o.name);
+                                    }
+                                }
+                            });
+                            
+                            // If no rod tip bone found, create one at rod end
+                            if (!this.rodTipBone) {
+                                // Try to find rod mesh and estimate tip position
+                                let rodMesh = null;
+                                this.rodModel.traverse(o => {
+                                    if (o.isMesh && (o.name || '').toLowerCase().includes('rod')) {
+                                        rodMesh = o;
+                                    }
+                                });
+                                
+                                // Create rod tip helper at rod end (assuming rod extends along +Z or +Y)
+                                this.rodTipBone = new THREE.Object3D();
+                                this.rodTipBone.name = '__rod_tip__';
+                                if (rodMesh) {
+                                    const box = new THREE.Box3().setFromObject(rodMesh);
+                                    const size = box.getSize(new THREE.Vector3());
+                                    // Position tip at end of rod (adjust axis based on rod orientation)
+                                    this.rodTipBone.position.set(0, size.y * 0.4, size.z * 0.5);
+                                } else {
+                                    this.rodTipBone.position.set(0, 0.3, 1.0); // Default position
+                                }
+                                this.rodModel.add(this.rodTipBone);
+                                console.log('Cat3D: Created rod tip helper at:', this.rodTipBone.position);
+                            }
+                            
+                            // Attach rod to hand bone or approximate position
+                            if (handBone) {
+                                handBone.add(this.rodModel);
+                                console.log('Cat3D: Attached rod to hand bone:', handBone.name);
+                            } else {
+                                // Fallback: attach to model root at approximate hand position
+                                const rodAttachment = new THREE.Object3D();
+                                rodAttachment.name = '__rod_attachment__';
+                                rodAttachment.position.set(0.3, 0.5, 0.8); // Approximate hand position
+                                this.model.add(rodAttachment);
+                                rodAttachment.add(this.rodModel);
+                                console.log('Cat3D: Attached rod to approximate hand position');
+                            }
+                            
+                            // Scale rod to match cat size
+                            if (this._sphereRadius && this._sphereRadius > 0) {
+                                const rodScale = Math.max(0.5, Math.min(2.0, 1.0 / this._sphereRadius));
+                                this.rodModel.scale.setScalar(rodScale);
+                                console.log('Cat3D: Scaled rod by:', rodScale);
+                            }
+                        },
+                        (error) => {
+                            console.warn('Cat3D: Failed to load fishing rod, using helper object:', error);
+                            // Fallback: create rod tip helper if no rod loaded
+                            if (!this.rodTipBone) {
+                                this.rodTipBone = new THREE.Object3D();
+                                this.rodTipBone.name = '__rod_tip__';
+                                this.rodTipBone.position.set(0.3, 0.5, 0.8); // Approximate hand/rod position
+                                this.model.add(this.rodTipBone);
+                            }
+                        }
+                    );
+                    
+                    // Create rod tip reference point (helper object if no bone found yet - will be replaced if rod loads)
                     if (!this.rodTipBone) {
                         this.rodTipBone = new THREE.Object3D();
                         this.rodTipBone.name = '__rod_tip__';
@@ -11239,18 +11341,19 @@
             }
             
             // Update fishing line to snap from rod tip to bobber
-            // Project 3D position to 2D screen coordinates (relative to viewport)
+            // Project 3D position to 2D screen coordinates (page coordinates)
             #projectToScreen(worldPos) {
-                const vector = worldPos.clone();
-                vector.project(this.camera);
-                const width = this.container.clientWidth || 96;
-                const height = this.container.clientHeight || 96;
-                const x = (vector.x * 0.5 + 0.5) * width;
-                const y = (vector.y * -0.5 + 0.5) * height;
+                const v = worldPos.clone();
+                v.project(this.camera);
+                
+                // Use the actual WebGL canvas bounds on the page
+                const rect = this.renderer.domElement.getBoundingClientRect();
+                const x = rect.left + (v.x * 0.5 + 0.5) * rect.width;
+                const y = rect.top + (v.y * -0.5 + 0.5) * rect.height;
                 return { x, y };
             }
             
-            // Update 2D overlay line connecting cat container to projected bobber position
+            // Update 2D overlay line connecting rod tip to bobber
             #update2DFishingLine(){
                 if (!this.bobber || !this.rodTipBone || !this.container) return;
                 if (!this.bobber.visible) {
@@ -11260,29 +11363,27 @@
                     return;
                 }
                 
-                // Get container's screen position
-                const containerRect = this.container.getBoundingClientRect();
-                const containerCenter = {
-                    x: containerRect.left + containerRect.width / 2,
-                    y: containerRect.bottom
-                };
+                // Get rod tip world position and project to screen
+                this.rodTipBone.updateWorldMatrix(true, false);
+                const tipWorld = new THREE.Vector3();
+                this.rodTipBone.getWorldPosition(tipWorld);
+                const tipScreen = this.#projectToScreen(tipWorld);
                 
-                // Project bobber 3D position to screen coordinates
-                const bobberScreen = this.#projectToScreen(this.bobber.position);
-                const bobberWorld = new THREE.Vector3();
-                this.bobber.getWorldPosition(bobberWorld);
-                const bobberProjected = this.#projectToScreen(bobberWorld);
+                // Get bobber world position and project to screen
+                const bobWorld = new THREE.Vector3();
+                this.bobber.getWorldPosition(bobWorld);
+                const bobScreen = this.#projectToScreen(bobWorld);
                 
-                // Find lake container to calculate final position
+                // Find lake container and clamp bobber to lake bounds if needed
                 const isMobile = window.innerWidth <= 768;
                 const lake = document.getElementById(isMobile ? 'mobile-fishing-lake' : 'fishing-lake');
                 if (!lake) return;
                 
                 const lakeRect = lake.getBoundingClientRect();
                 
-                // Bobber should appear in lake container at projected X, near bottom of lake
-                const lakeX = lakeRect.left + bobberProjected.x;
-                const lakeY = lakeRect.top + lakeRect.height * 0.8; // 80% down the lake
+                // Clamp bobber to lake rect (so it stays visually in the lake)
+                const bobX = Math.min(Math.max(bobScreen.x, lakeRect.left), lakeRect.right);
+                const bobY = Math.min(Math.max(bobScreen.y, lakeRect.top), lakeRect.bottom * 0.98);
                 
                 // Create or update overlay line
                 if (!this._overlayLine) {
@@ -11291,7 +11392,7 @@
                     this._overlayLine.style.cssText = `
                         position: fixed;
                         pointer-events: none;
-                        z-index: 8;
+                        z-index: 1000;
                         border-left: 2px solid #cccccc;
                         transform-origin: top;
                     `;
@@ -11305,7 +11406,7 @@
                     this._overlayBobber.style.cssText = `
                         position: fixed;
                         pointer-events: none;
-                        z-index: 9;
+                        z-index: 1001;
                         width: 12px;
                         height: 12px;
                         border-radius: 50%;
@@ -11315,24 +11416,24 @@
                     document.body.appendChild(this._overlayBobber);
                 }
                 
-                // Calculate line from cat container to lake bobber position
-                const dx = lakeX - containerCenter.x;
-                const dy = lakeY - containerCenter.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                // Draw line from tipScreen -> bobX/bobY
+                const dx = bobX - tipScreen.x;
+                const dy = bobY - tipScreen.y;
+                const distance = Math.hypot(dx, dy);
+                const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
                 
                 // Position and style the line
                 this._overlayLine.style.display = 'block';
-                this._overlayLine.style.left = containerCenter.x + 'px';
-                this._overlayLine.style.top = containerCenter.y + 'px';
+                this._overlayLine.style.left = tipScreen.x + 'px';
+                this._overlayLine.style.top = tipScreen.y + 'px';
                 this._overlayLine.style.width = '2px';
                 this._overlayLine.style.height = distance + 'px';
-                this._overlayLine.style.transform = `rotate(${angle}deg)`;
+                this._overlayLine.style.transform = `rotate(${angleDeg}deg)`;
                 
                 // Position the bobber
                 this._overlayBobber.style.display = 'block';
-                this._overlayBobber.style.left = (lakeX - 6) + 'px';
-                this._overlayBobber.style.top = (lakeY - 6) + 'px';
+                this._overlayBobber.style.left = (bobX - 6) + 'px';
+                this._overlayBobber.style.top = (bobY - 6) + 'px';
             }
             
             #updateFishingLine(){
