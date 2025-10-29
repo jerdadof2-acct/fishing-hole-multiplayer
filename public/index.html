@@ -10868,6 +10868,7 @@
                         
                         // 4) QUICK ASSERTS: log what we actually got
                         let meshCount = 0, boxGeoCount = 0;
+                        let totalVerts = 0;
                         this.model.traverse((o) => {
                             if (o.isMesh) {
                                 meshCount++;
@@ -10875,13 +10876,19 @@
                                 const type = g ? g.type : 'Unknown';
                                 if (type && type.toLowerCase().includes('box')) boxGeoCount++;
                                 const vertCount = g?.attributes?.position?.count || 0;
+                                totalVerts += vertCount;
                                 console.log('Cat3D: mesh', o.name || '(unnamed)', 'geom:', type, 'verts:', vertCount);
                             }
                         });
                         if (meshCount === 0) {
-                            console.warn('Cat3D WARNING: GLB has no meshes — check /assets/cat/cat.glb');
+                            console.error('Cat3D ERROR: GLB has no meshes — check /assets/cat/cat.glb');
+                        } else if (totalVerts <= 8) {
+                            console.error('Cat3D ERROR: Model has only', totalVerts, 'vertices — this is a CUBE, not a cat!');
+                            console.error('Cat3D ERROR: The file /assets/cat/cat.glb appears to be a placeholder cube.');
+                            console.error('Cat3D ERROR: Please replace with a real cat GLB file that has proper cat geometry.');
+                            console.error('Cat3D ERROR: Expected hundreds or thousands of vertices, got', totalVerts);
                         } else {
-                            console.log(`Cat3D: Model has ${meshCount} meshes, ${boxGeoCount} box geometries`);
+                            console.log(`Cat3D: Model has ${meshCount} meshes, ${boxGeoCount} box geometries, ${totalVerts} total vertices`);
                         }
                         
                         // 5) Put model at origin (center) for stable framing, then frame it
