@@ -4785,10 +4785,21 @@
 
                 // Character System - New Integrated Approach
                 function initializeCharacterSystem() {
-                    // Load saved avatar options or use defaults
-                    const savedOptions = this.player?.avatarOptions || {
-                        colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
-                        gear: { hat: false, glasses: false, vest: false }
+                    // Load saved avatar options or use defaults - ensure complete structure
+                    const playerOptions = this.player?.avatarOptions;
+                    const savedOptions = {
+                        colors: {
+                            fur: playerOptions?.colors?.fur || '#f2a65a',
+                            pattern: playerOptions?.colors?.pattern || '#d77f3f',
+                            ear: playerOptions?.colors?.ear || '#c76b2a',
+                            eye: playerOptions?.colors?.eye || '#1e2a3a',
+                            belly: playerOptions?.colors?.belly || '#f8d7b1'
+                        },
+                        gear: {
+                            hat: playerOptions?.gear?.hat || false,
+                            glasses: playerOptions?.gear?.glasses || false,
+                            vest: playerOptions?.gear?.vest || false
+                        }
                     };
 
                     // Set initial values in editor - check if elements exist first
