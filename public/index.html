@@ -478,6 +478,11 @@
         @media (prefers-reduced-motion: reduce) {
             .fishing-lake::before { filter: none !important; }
         }
+        
+        /* Low performance mode - disable water distortion */
+        .fishing-lake.low-performance::before {
+            filter: none !important;
+        }
 
         @keyframes waterShimmer {
             0%, 100% {
@@ -651,6 +656,7 @@
             opacity: 0.55;
             box-shadow: 0 0 0 2px rgba(255,255,255,0.55) inset;
             animation: rippleOut 1000ms ease-out forwards;
+            mix-blend-mode: overlay;
         }
 
         .water-ripple-invert {
@@ -5520,6 +5526,18 @@
             }
 
             initializeWaterEffects() {
+                // Check for low-end device performance
+                const isLowEnd = navigator.hardwareConcurrency <= 2 || 
+                                navigator.deviceMemory <= 2 || 
+                                /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                
+                if (isLowEnd) {
+                    // Disable water distortion on low-end devices
+                    document.querySelectorAll('.fishing-lake').forEach(lake => {
+                        lake.classList.add('low-performance');
+                    });
+                }
+                
                 // Start water noise animation
                 this.startWaterNoiseAnimation();
                 
@@ -10422,6 +10440,7 @@
         import * as THREE from 'https://esm.sh/three@0.160.0';
         import { GLTFLoader } from 'https://esm.sh/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
         import { RGBELoader } from 'https://esm.sh/three@0.160.0/examples/jsm/loaders/RGBELoader.js';
+        import { PMREMGenerator } from 'https://esm.sh/three@0.160.0/examples/jsm/utils/PMREMGenerator.js';
 
         class Cat3D {
             constructor(container, opts={}){
@@ -10474,12 +10493,13 @@
                 try {
                     // environment (optional HDR for better reflections)
                     if (this.envUrl){
-                        const rgbe = new RGBELoader();
-                        rgbe.load(this.envUrl, (tex) => {
-                            tex.mapping = THREE.EquirectangularReflectionMapping;
-                            this.scene.environment = tex;
-                            this.scene.background = null; // keep canvas transparent
-                        });
+                        const pmrem = new PMREMGenerator(this.renderer);
+                        const hdr = await new RGBELoader().loadAsync(this.envUrl);
+                        const envMap = pmrem.fromEquirectangular(hdr).texture;
+                        this.scene.environment = envMap;
+                        this.scene.background = null; // keep canvas transparent
+                        hdr.dispose(); 
+                        pmrem.dispose();
                     }
 
                     // model
@@ -10498,6 +10518,8 @@
                                 if (m.map) m.map.colorSpace = THREE.SRGBColorSpace;
                                 if (m.emissiveMap) m.emissiveMap.colorSpace = THREE.SRGBColorSpace;
                                 m.envMapIntensity = 0.6;
+                                m.roughness = Math.min(0.9, (m.roughness ?? 0.6));
+                                m.metalness = Math.max(0.0, (m.metalness ?? 0.1));
                                 m.needsUpdate = true;
                             });
                         }
@@ -10690,13 +10712,15 @@
         };
 
         // CSS.escape polyfill for older browsers
-        if (!CSS.escape) {
-            CSS.escape = (s) => String(s).replace(/[^a-zA-Z0-9_\-]/g, (c)=>'\\'+c);
+        if (!window.CSS || !CSS.escape) { 
+            CSS = CSS || {}; 
+            CSS.escape = s => String(s).replace(/[^a-z0-9_\-]/gi, '\\$&'); 
         }
 
         // EXAMPLE: mount your own cat after login (call once you render the fisherman row)
         window.mountPlayerCat3D = function(playerName, options={}){
-            const host = document.querySelector(`.cat3d[data-player-id="${CSS.escape(playerName)}"]`);
+            const sel = `.cat3d[data-player-id="${(window.CSS&&CSS.escape)?CSS.escape(playerName):playerName}"]`;
+            const host = document.querySelector(sel);
             if (!host) return null;
             return CatRigs.mount(host, {
                 modelUrl: options.modelUrl || './assets/cat/cat.glb',
