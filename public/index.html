@@ -10482,6 +10482,13 @@
                 this.tint     = new THREE.Color(opts.furColor || '#c8a079');
                 this.scale    = opts.scale || 0.9;
 
+                // Check WebGL context limit before creating renderer
+                if (window.activeWebGLContexts >= 8) {
+                    console.warn('WebGL context limit reached, falling back to 2D');
+                    this.container.dispatchEvent(new CustomEvent('cat3d-failed'));
+                    return;
+                }
+
                 // renderer
                 this.renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, powerPreference:'high-performance' });
                 this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -10492,6 +10499,9 @@
                 this.renderer.setClearAlpha(0);
                 container.innerHTML = '';
                 container.appendChild(this.renderer.domElement);
+
+                // Track active contexts
+                window.activeWebGLContexts = (window.activeWebGLContexts || 0) + 1;
 
                 // scene/camera
                 this.scene = new THREE.Scene();
@@ -10717,7 +10727,11 @@
 
             dispose(){
                 cancelAnimationFrame(this.raf);
-                this.renderer.dispose();
+                if (this.renderer) {
+                    this.renderer.dispose();
+                    // Decrement active context count
+                    window.activeWebGLContexts = Math.max(0, (window.activeWebGLContexts || 1) - 1);
+                }
             }
 
             #resize(){
@@ -10734,15 +10748,26 @@
             mount(selectorOrEl, opts){
                 const el = (typeof selectorOrEl === 'string') ? document.querySelector(selectorOrEl) : selectorOrEl;
                 if (!el) return null;
-                const rig = new Cat3D(el, opts);
+                
+                // Dispose existing rig if it exists
                 const key = el.dataset.playerId || ('player-'+Math.random().toString(36).slice(2));
+                const existing = this.map.get(key);
+                if (existing) {
+                    existing.dispose();
+                }
+                
+                const rig = new Cat3D(el, opts);
                 this.map.set(key, rig);
                 return rig;
             },
             get(key){ return this.map.get(key); },
             bite(key){ this.map.get(key)?.bite(); },
             catch(key){ this.map.get(key)?.catch(); },
-            sad(key){ this.map.get(key)?.sad(); }
+            sad(key){ this.map.get(key)?.sad(); },
+            disposeAll(){
+                this.map.forEach(rig => rig.dispose());
+                this.map.clear();
+            }
         };
 
         // CSS.escape polyfill for older browsers
@@ -10753,6 +10778,12 @@
 
         // EXAMPLE: mount your own cat after login (call once you render the fisherman row)
         window.mountPlayerCat3D = function(playerName, options={}){
+            // Check context limit before attempting mount
+            if (window.activeWebGLContexts >= 8) {
+                console.warn('WebGL context limit reached, skipping 3D mount for', playerName);
+                return null;
+            }
+            
             const sel = `.cat3d[data-player-id="${(window.CSS&&CSS.escape)?CSS.escape(playerName):playerName}"]`;
             const host = document.querySelector(sel);
             if (!host) return null;
@@ -10767,6 +10798,13 @@
         // Signal that 3D module is ready
         window.Cat3DReady = true;
         window.dispatchEvent(new Event('cat3d-ready'));
+
+        // Cleanup WebGL contexts on page unload
+        window.addEventListener('beforeunload', () => {
+            if (window.CatRigs) {
+                window.CatRigs.disposeAll();
+            }
+        });
     </script>
 </body>
 </html>
