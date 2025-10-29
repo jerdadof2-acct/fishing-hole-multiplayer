@@ -11544,6 +11544,13 @@
                 this.bobber.getWorldPosition(bobWorld);
                 const bobScreen = this.#projectToScreen(bobWorld);
                 
+                // Find lake container and clamp bobber to lake bounds if needed
+                const isMobile = window.innerWidth <= 768;
+                const lake = document.getElementById(isMobile ? 'mobile-fishing-lake' : 'fishing-lake');
+                if (!lake) return;
+                
+                const lakeRect = lake.getBoundingClientRect();
+                
                 // Debug first few frames - show actual numeric values
                 if (!this._debugCount) this._debugCount = 0;
                 if (this._debugCount < 5) {
@@ -11560,22 +11567,15 @@
                             width: this.container.getBoundingClientRect().width.toFixed(1),
                             height: this.container.getBoundingClientRect().height.toFixed(1)
                         },
-                        lakeRect: lakeRect ? {
+                        lakeRect: {
                             left: lakeRect.left.toFixed(1),
                             top: lakeRect.top.toFixed(1),
                             width: lakeRect.width.toFixed(1),
                             height: lakeRect.height.toFixed(1)
-                        } : 'NOT FOUND'
+                        }
                     });
                     this._debugCount++;
                 }
-                
-                // Find lake container and clamp bobber to lake bounds if needed
-                const isMobile = window.innerWidth <= 768;
-                const lake = document.getElementById(isMobile ? 'mobile-fishing-lake' : 'fishing-lake');
-                if (!lake) return;
-                
-                const lakeRect = lake.getBoundingClientRect();
                 
                 // Use exact projected positions - no clamping during cast
                 // This ensures line connects properly from rod tip to bobber
