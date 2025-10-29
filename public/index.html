@@ -11236,20 +11236,110 @@
             }
             
             // Update fishing line to snap from rod tip to bobber
+            // Project 3D position to 2D screen coordinates (relative to viewport)
+            #projectToScreen(worldPos) {
+                const vector = worldPos.clone();
+                vector.project(this.camera);
+                const width = this.container.clientWidth || 96;
+                const height = this.container.clientHeight || 96;
+                const x = (vector.x * 0.5 + 0.5) * width;
+                const y = (vector.y * -0.5 + 0.5) * height;
+                return { x, y };
+            }
+            
+            // Update 2D overlay line connecting cat container to projected bobber position
+            #update2DFishingLine(){
+                if (!this.bobber || !this.rodTipBone || !this.container) return;
+                if (!this.bobber.visible) {
+                    // Hide overlay if bobber is hidden
+                    if (this._overlayLine) this._overlayLine.style.display = 'none';
+                    if (this._overlayBobber) this._overlayBobber.style.display = 'none';
+                    return;
+                }
+                
+                // Get container's screen position
+                const containerRect = this.container.getBoundingClientRect();
+                const containerCenter = {
+                    x: containerRect.left + containerRect.width / 2,
+                    y: containerRect.bottom
+                };
+                
+                // Project bobber 3D position to screen coordinates
+                const bobberScreen = this.#projectToScreen(this.bobber.position);
+                const bobberWorld = new THREE.Vector3();
+                this.bobber.getWorldPosition(bobberWorld);
+                const bobberProjected = this.#projectToScreen(bobberWorld);
+                
+                // Find lake container to calculate final position
+                const isMobile = window.innerWidth <= 768;
+                const lake = document.getElementById(isMobile ? 'mobile-fishing-lake' : 'fishing-lake');
+                if (!lake) return;
+                
+                const lakeRect = lake.getBoundingClientRect();
+                
+                // Bobber should appear in lake container at projected X, near bottom of lake
+                const lakeX = lakeRect.left + bobberProjected.x;
+                const lakeY = lakeRect.top + lakeRect.height * 0.8; // 80% down the lake
+                
+                // Create or update overlay line
+                if (!this._overlayLine) {
+                    this._overlayLine = document.createElement('div');
+                    this._overlayLine.className = 'cat3d-fishing-line';
+                    this._overlayLine.style.cssText = `
+                        position: fixed;
+                        pointer-events: none;
+                        z-index: 8;
+                        border-left: 2px solid #cccccc;
+                        transform-origin: top;
+                    `;
+                    document.body.appendChild(this._overlayLine);
+                }
+                
+                // Create or update overlay bobber
+                if (!this._overlayBobber) {
+                    this._overlayBobber = document.createElement('div');
+                    this._overlayBobber.className = 'cat3d-bobber';
+                    this._overlayBobber.style.cssText = `
+                        position: fixed;
+                        pointer-events: none;
+                        z-index: 9;
+                        width: 12px;
+                        height: 12px;
+                        border-radius: 50%;
+                        background: #ff4444;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                    `;
+                    document.body.appendChild(this._overlayBobber);
+                }
+                
+                // Calculate line from cat container to lake bobber position
+                const dx = lakeX - containerCenter.x;
+                const dy = lakeY - containerCenter.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                
+                // Position and style the line
+                this._overlayLine.style.display = 'block';
+                this._overlayLine.style.left = containerCenter.x + 'px';
+                this._overlayLine.style.top = containerCenter.y + 'px';
+                this._overlayLine.style.width = '2px';
+                this._overlayLine.style.height = distance + 'px';
+                this._overlayLine.style.transform = `rotate(${angle}deg)`;
+                
+                // Position the bobber
+                this._overlayBobber.style.display = 'block';
+                this._overlayBobber.style.left = (lakeX - 6) + 'px';
+                this._overlayBobber.style.top = (lakeY - 6) + 'px';
+            }
+            
             #updateFishingLine(){
-                if (!this.fishingLine || !this.bobber || !this.rodTipBone) return;
-                if (!this.bobber.visible || !this.fishingLine.visible) return;
+                // Keep 3D line updated for reference, but hide it (we use 2D overlay instead)
+                if (this.fishingLine) {
+                    this.fishingLine.visible = false; // Hide 3D line, use 2D overlay
+                }
                 
-                // Get rod tip world position
-                this.rodTipBone.updateWorldMatrix(true, false);
-                const tipWorld = new THREE.Vector3();
-                this.rodTipBone.getWorldPosition(tipWorld);
-                
-                // Update line geometry
-                const positions = this.fishingLine.geometry.attributes.position;
-                positions.setXYZ(0, tipWorld.x, tipWorld.y, tipWorld.z);
-                positions.setXYZ(1, this.bobber.position.x, this.bobber.position.y, this.bobber.position.z);
-                positions.needsUpdate = true;
+                // Update 2D overlay every frame
+                this.#update2DFishingLine();
             }
 
             // Animate cast: ballistic arc to random target
@@ -11305,12 +11395,12 @@
                 const duration = THREE.MathUtils.clamp(travel * 0.18, 0.45, 0.9);
                 const hop = THREE.MathUtils.clamp(travel * 0.18, 0.8, 2.8);
                 
-                // Show bobber and line
+                // Show bobber (3D line stays hidden, we use 2D overlay)
                 this.bobber.visible = true;
-                this.fishingLine.visible = true;
+                if (this.fishingLine) this.fishingLine.visible = false; // Use 2D overlay instead
                 this.bobber.position.copy(startTip); // Start at rod tip
                 
-                console.log('Cat3D: Bobber visible:', this.bobber.visible, 'Line visible:', this.fishingLine.visible);
+                console.log('Cat3D: Bobber visible:', this.bobber.visible, 'Using 2D overlay line');
                 
                 const t0 = performance.now() / 1000;
                 const step = () => {
@@ -11326,7 +11416,7 @@
                     // Move bobber
                     this.bobber.position.copy(p);
                     
-                    // Line will update automatically in #updateFishingLine()
+                    // 2D overlay line will update automatically in #updateFishingLine()
                     
                     if (u < 1) {
                         requestAnimationFrame(step);
@@ -11345,6 +11435,9 @@
                         } else {
                             this.bobber.position.y = lakeBounds.y;
                         }
+                        
+                        // Keep 2D overlay visible while bobber is on water (bobbing)
+                        // Overlay will continue updating in #updateFishingLine()
                         
                         // Splash effect
                         if (splashSystem?.spawnAt) {
@@ -11441,6 +11534,16 @@
             }
 
             dispose(){
+                // Clean up 2D overlay elements
+                if (this._overlayLine) {
+                    this._overlayLine.remove();
+                    this._overlayLine = null;
+                }
+                if (this._overlayBobber) {
+                    this._overlayBobber.remove();
+                    this._overlayBobber = null;
+                }
+                
                 cancelAnimationFrame(this.raf);
                 if (this.renderer) {
                     const gl = this.renderer.getContext?.();
