@@ -6835,6 +6835,24 @@
             }
 
             removeFishingLine(playerIndex) {
+                // Clean up Cat3D overlay if using it (for current player only)
+                if (playerIndex === 0 && window.CatRigs && window.CatRigs.has(this.player.name)) {
+                    const cat3D = window.CatRigs.get(this.player.name);
+                    if (cat3D) {
+                        if (cat3D._overlayLine) cat3D._overlayLine.style.display = 'none';
+                        if (cat3D._overlayBobber) {
+                            cat3D._overlayBobber.style.display = 'none';
+                            // Reset any animations
+                            cat3D._overlayBobber.style.animation = '';
+                            cat3D._overlayBobber.style.transform = '';
+                            cat3D._overlayBobber.style.filter = '';
+                        }
+                        if (cat3D.bobber) cat3D.bobber.visible = false;
+                        if (cat3D.fishingLine) cat3D.fishingLine.visible = false;
+                    }
+                }
+                
+                // Legacy DOM line cleanup
                 const lake = document.getElementById('fishing-lake');
                 const mobileLake = document.getElementById('mobile-fishing-lake');
                 
