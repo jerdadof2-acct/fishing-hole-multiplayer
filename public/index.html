@@ -5372,50 +5372,66 @@
                 }
                 if (mobileFishermanRow) mobileFishermanRow.appendChild(mobilePlayerFisher);
                 
-                // Add other players (all cats now!)
-                this.otherPlayers.forEach((player, index) => {
-                    // Generate or use stored cat avatar for each player
-                    if (!player.character) {
-                        // Use cat rig system for other players
-                        player.character = 'cat-rig';
-                    }
-                    
+                // Add other players (mount 3D cats)
+                this.otherPlayers.forEach((p) => {
                     const fisher = document.createElement('div');
                     fisher.className = 'fisherman other';
-                    
-                    // Check if character is an image URL (cat) or emoji
-                    const isImageUrl = player.character && (player.character.startsWith('http') || player.character.startsWith('data:'));
-                    
-                    if (isImageUrl) {
-                        fisher.innerHTML = `
-                            <img src="${player.character}" alt="${player.name}" class="fisherman-avatar" style="width: 40px; height: 40px; border-radius: 50%;">
-                            <div class="fisherman-name">${player.name}</div>
-                        `;
-                    } else {
-                        fisher.innerHTML = `
-                            <div class="fisherman-character">${player.character || '🐱'}</div>
-                            <div class="fisherman-name">${player.name}</div>
-                        `;
-                    }
-                    fisher.title = `${player.name} - Level ${player.level}`;
+
+                    // Always provide 3D + 2D fallback hosts, like you do for the main player
+                    fisher.innerHTML = `
+                        <div class="cat3d" data-player-id="${p.name}"></div>
+                        <div class="cat-rig" data-player-id="${p.name}" style="display:none;"></div>
+                        <div class="fisherman-name">${p.name}</div>
+                    `;
+                    fisher.title = `${p.name} - Level ${p.level}`;
                     if (fishermanRow) fishermanRow.appendChild(fisher);
+
+                    const tryMountOther = () => {
+                        if ('WebGLRenderingContext' in window && window.mountPlayerCat3D) {
+                            try {
+                                window.mountPlayerCat3D(p.name, {
+                                    furColor: p?.avatarOptions?.colors?.fur || '#c8a079',
+                                    scale: 0.8
+                                });
+                                return;
+                            } catch {}
+                        }
+                        // 2D fallback if you have a renderer; else leave the hidden .cat-rig alone
+                        const rig = fisher.querySelector('.cat-rig');
+                        if (rig && window.renderCatRig) window.renderCatRig(rig, p.avatarOptions || {});
+                    };
+
+                    if (window.Cat3DReady) tryMountOther();
+                    else window.addEventListener('cat3d-ready', tryMountOther, { once: true });
 
                     // Add mobile other players
                     const mobileFisher = document.createElement('div');
                     mobileFisher.className = 'mobile-fisherman';
                     
-                    if (isImageUrl) {
-                        mobileFisher.innerHTML = `
-                            <img src="${player.character}" alt="${player.name}" class="mobile-fisherman-avatar" style="width: 30px; height: 30px; border-radius: 50%;">
-                            <div class="mobile-fisherman-name">${player.name}</div>
-                        `;
-                    } else {
-                        mobileFisher.innerHTML = `
-                            <div class="mobile-fisherman-character">${player.character || '🐱'}</div>
-                            <div class="mobile-fisherman-name">${player.name}</div>
-                        `;
-                    }
+                    mobileFisher.innerHTML = `
+                        <div class="cat3d" data-player-id="${p.name}"></div>
+                        <div class="cat-rig" data-player-id="${p.name}" style="display:none;"></div>
+                        <div class="mobile-fisherman-name">${p.name}</div>
+                    `;
                     if (mobileFishermanRow) mobileFishermanRow.appendChild(mobileFisher);
+
+                    const tryMountMobileOther = () => {
+                        if ('WebGLRenderingContext' in window && window.mountPlayerCat3D) {
+                            try {
+                                window.mountPlayerCat3D(p.name, {
+                                    furColor: p?.avatarOptions?.colors?.fur || '#c8a079',
+                                    scale: 0.6 // Smaller for mobile
+                                });
+                                return;
+                            } catch {}
+                        }
+                        // 2D fallback
+                        const rig = mobileFisher.querySelector('.cat-rig');
+                        if (rig && window.renderCatRig) window.renderCatRig(rig, p.avatarOptions || {});
+                    };
+
+                    if (window.Cat3DReady) tryMountMobileOther();
+                    else window.addEventListener('cat3d-ready', tryMountMobileOther, { once: true });
                 });
             }
 
@@ -10441,6 +10457,12 @@
                 }
             }
         }
+
+        // Safe 2D fallback renderer
+        window.renderCatRig ||= function(el, options={}){
+            el.style.display = 'block';
+            el.innerHTML = '<div style="width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;background:#1c2740;color:#9fd1ff;">🐱</div>';
+        };
 
         // Start the game
         const game = new FishingHoleMultiplayer();
