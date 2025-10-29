@@ -627,10 +627,11 @@
             display: block; 
         }
 
-        /* 3D Cat containers */
+        /* 3D Cat containers - Make 3D host visible and predictable */
         .cat3d { 
-            width: 80px; 
-            height: 80px; 
+            width: 96px; 
+            height: 96px; 
+            display: block;
             position: relative; 
             border-radius: 8px;
             overflow: hidden;
@@ -638,8 +639,8 @@
         
         @media (max-width: 768px) { 
             .cat3d { 
-                width: 64px; 
-                height: 64px; 
+                width: 80px; 
+                height: 80px; 
             } 
         }
 
@@ -5272,8 +5273,8 @@
                     `;
                     
                     // Try to mount 3D cat first, fallback to 2D if WebGL not supported
-                    // Add a small delay to ensure Three.js has loaded
-                    setTimeout(() => {
+                    // Handle race condition - wait for 3D module to be ready
+                    const tryMount = () => {
                         console.log('WebGL available:', 'WebGLRenderingContext' in window);
                         console.log('mountPlayerCat3D available:', !!window.mountPlayerCat3D);
                         
@@ -5285,22 +5286,29 @@
                                 gear: { hat: false, glasses: false, vest: false }
                             };
                             
-                        try {
-                            window.mountPlayerCat3D(this.player.name, {
-                                furColor: opts?.colors?.fur || '#f2a65a',
-                                scale: 0.8
-                            });
-                            console.log('3D cat mounted successfully');
-                        } catch (error) {
-                            console.log('3D cat mounting failed, falling back to 2D:', error);
-                            // Fall through to 2D fallback
-                            this.#fallbackTo2D(playerFisher);
+                            try {
+                                window.mountPlayerCat3D(this.player.name, {
+                                    furColor: opts?.colors?.fur || '#f2a65a',
+                                    scale: 0.8
+                                });
+                                console.log('3D cat mounted successfully');
+                                return;
+                            } catch (error) {
+                                console.log('3D cat mounting failed, falling back to 2D:', error);
+                            }
                         }
-                        } else {
-                            console.log('Falling back to 2D cat rig');
-                            this.#fallbackTo2D(playerFisher);
-                        }
-                    }, 100);
+                        this.#fallbackTo2D(playerFisher);
+                    };
+
+                    // If the module already loaded, mount immediately; otherwise wait for it
+                    if (window.Cat3DReady) tryMount();
+                    else window.addEventListener('cat3d-ready', tryMount, { once: true });
+                    
+                    // Listen for 3D load failures
+                    const host = playerFisher.querySelector('.cat3d');
+                    host?.addEventListener('cat3d-failed', () => {
+                        this.#fallbackTo2D(playerFisher);
+                    }, { once: true });
                 } else {
                     // Fallback to emoji character
                     playerFisher.innerHTML = `
@@ -5324,34 +5332,37 @@
                     `;
                     
                     // Try to mount 3D cat first, fallback to 2D if WebGL not supported
-                    if ('WebGLRenderingContext' in window && window.mountPlayerCat3D) {
-                        // Use 3D cat
-                        const opts = this.player.avatarOptions || {
-                            colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
-                            gear: { hat: false, glasses: false, vest: false }
-                        };
-                        
-                        window.mountPlayerCat3D(this.player.name, {
-                            furColor: opts?.colors?.fur || '#f2a65a',
-                            scale: 0.6 // Smaller for mobile
-                        });
-                    } else {
-                        // Fallback to 2D cat rig
-                        const cat3dEl = mobilePlayerFisher.querySelector('.cat3d');
-                        const catRigEl = mobilePlayerFisher.querySelector('.cat-rig');
-                        if (cat3dEl) cat3dEl.style.display = 'none';
-                        if (catRigEl) catRigEl.style.display = 'block';
-                        
-                        const opts = this.player.avatarOptions || {
-                            colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
-                            gear: { hat: false, glasses: false, vest: false }
-                        };
-                        
-                        const rigContainer = mobilePlayerFisher.querySelector('.cat-rig');
-                        if (window.renderCatRig && rigContainer) {
-                            window.renderCatRig(rigContainer, opts);
+                    const tryMountMobile = () => {
+                        if ('WebGLRenderingContext' in window && window.mountPlayerCat3D) {
+                            // Use 3D cat
+                            const opts = this.player.avatarOptions || {
+                                colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
+                                gear: { hat: false, glasses: false, vest: false }
+                            };
+                            
+                            try {
+                                window.mountPlayerCat3D(this.player.name, {
+                                    furColor: opts?.colors?.fur || '#f2a65a',
+                                    scale: 0.6 // Smaller for mobile
+                                });
+                                console.log('3D cat mounted successfully on mobile');
+                                return;
+                            } catch (error) {
+                                console.log('3D cat mounting failed on mobile, falling back to 2D:', error);
+                            }
                         }
-                    }
+                        this.#fallbackTo2D(mobilePlayerFisher);
+                    };
+
+                    // If the module already loaded, mount immediately; otherwise wait for it
+                    if (window.Cat3DReady) tryMountMobile();
+                    else window.addEventListener('cat3d-ready', tryMountMobile, { once: true });
+                    
+                    // Listen for 3D load failures
+                    const mobileHost = mobilePlayerFisher.querySelector('.cat3d');
+                    mobileHost?.addEventListener('cat3d-failed', () => {
+                        this.#fallbackTo2D(mobilePlayerFisher);
+                    }, { once: true });
                 } else {
                     // Fallback to emoji character
                     mobilePlayerFisher.innerHTML = `
@@ -10525,7 +10536,9 @@
                         }
                     });
                 } catch (error) {
-                    console.log('3D cat model not available, falling back to placeholder:', error.message);
+                    console.error('Cat GLB load failed:', error);
+                    // Expose a hook so game code can fallback
+                    this.container.dispatchEvent(new CustomEvent('cat3d-failed'));
                     this.#createPlaceholder();
                 }
 
@@ -10729,6 +10742,10 @@
                 scale:    options.scale    || 0.9
             });
         };
+        
+        // Signal that 3D module is ready
+        window.Cat3DReady = true;
+        window.dispatchEvent(new Event('cat3d-ready'));
     </script>
 </body>
 </html>
