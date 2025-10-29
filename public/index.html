@@ -633,8 +633,15 @@
             height: 96px; 
             display: block;
             position: relative; 
+            z-index: 9; /* Above water overlays (z-index 5-7) */
             border-radius: 8px;
             overflow: hidden;
+        }
+        
+        .cat3d canvas { 
+            display: block; 
+            width: 100%; 
+            height: 100%; 
         }
         
         @media (max-width: 768px) { 
@@ -5271,51 +5278,60 @@
                 // Check if character is using cat rig system
                 const useCatRig = this.player.character === 'cat-rig' || this.player.avatarOptions?.type === 'cat';
                 
+                // Detect if we're on mobile to choose which container to mount
+                const isMobile = window.matchMedia('(max-width: 768px)').matches;
+                
                 if (useCatRig) {
-                    // Create cat rig container with 3D mount point
-                    playerFisher.innerHTML = `
-                        <div class="cat3d" data-player-id="${this.player.name}"></div>
-                        <div class="cat-rig" data-player-id="${this.player.name}" style="display: none;"></div>
-                        <div class="fisherman-name">${this.player.name}</div>
-                    `;
-                    
-                    // Try to mount 3D cat first, fallback to 2D if WebGL not supported
-                    // Handle race condition - wait for 3D module to be ready
-                    const tryMount = () => {
-                        console.log('WebGL available:', 'WebGLRenderingContext' in window);
-                        console.log('mountPlayerCat3D available:', !!window.mountPlayerCat3D);
+                    // Only create container for the appropriate view (desktop OR mobile, not both)
+                    if (!isMobile) {
+                        // Create cat rig container with 3D mount point for desktop
+                        playerFisher.innerHTML = `
+                            <div class="cat3d" data-player-id="${this.player.name}"></div>
+                            <div class="cat-rig" data-player-id="${this.player.name}" style="display: none;"></div>
+                            <div class="fisherman-name">${this.player.name}</div>
+                        `;
                         
-                        if ('WebGLRenderingContext' in window && window.mountPlayerCat3D) {
-                            console.log('Attempting to mount 3D cat for player:', this.player.name);
-                            // Use 3D cat
-                            const opts = this.player.avatarOptions || {
-                                colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
-                                gear: { hat: false, glasses: false, vest: false }
-                            };
+                        // Try to mount 3D cat first, fallback to 2D if WebGL not supported
+                        const tryMount = () => {
+                            console.log('WebGL available:', 'WebGLRenderingContext' in window);
+                            console.log('mountPlayerCat3D available:', !!window.mountPlayerCat3D);
                             
-                            try {
-                                window.mountPlayerCat3D(this.player.name, {
-                                    furColor: opts?.colors?.fur || '#f2a65a',
-                                    scale: 0.8
-                                });
-                                console.log('3D cat mounted successfully');
-                                return;
-                            } catch (error) {
-                                console.log('3D cat mounting failed, falling back to 2D:', error);
+                            if ('WebGLRenderingContext' in window && window.mountPlayerCat3D) {
+                                console.log('Attempting to mount 3D cat for player:', this.player.name);
+                                const opts = this.player.avatarOptions || {
+                                    colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
+                                    gear: { hat: false, glasses: false, vest: false }
+                                };
+                                
+                                try {
+                                    window.mountPlayerCat3D(this.player.name, {
+                                        furColor: opts?.colors?.fur || '#f2a65a',
+                                        scale: 0.8,
+                                        profile: 'desktop'
+                                    });
+                                    console.log('3D cat mounted successfully');
+                                    return;
+                                } catch (error) {
+                                    console.log('3D cat mounting failed, falling back to 2D:', error);
+                                }
                             }
-                        }
-                        this.#fallbackTo2D(playerFisher);
-                    };
+                            this.#fallbackTo2D(playerFisher);
+                        };
 
-                    // If the module already loaded, mount immediately; otherwise wait for it
-                    if (window.Cat3DReady) tryMount();
-                    else window.addEventListener('cat3d-ready', tryMount, { once: true });
-                    
-                    // Listen for 3D load failures
-                    const host = playerFisher.querySelector('.cat3d');
-                    host?.addEventListener('cat3d-failed', () => {
-                        this.#fallbackTo2D(playerFisher);
-                    }, { once: true });
+                        if (window.Cat3DReady) tryMount();
+                        else window.addEventListener('cat3d-ready', tryMount, { once: true });
+                        
+                        const host = playerFisher.querySelector('.cat3d');
+                        host?.addEventListener('cat3d-failed', () => {
+                            this.#fallbackTo2D(playerFisher);
+                        }, { once: true });
+                    } else {
+                        // Desktop container hidden on mobile
+                        playerFisher.innerHTML = `
+                            <div class="cat-rig" data-player-id="${this.player.name}" style="display: none;"></div>
+                            <div class="fisherman-name">${this.player.name}</div>
+                        `;
+                    }
                 } else {
                     // Fallback to emoji character
                     playerFisher.innerHTML = `
@@ -5325,12 +5341,12 @@
                 }
                 if (fishermanRow) fishermanRow.appendChild(playerFisher);
 
-                // Add mobile player
+                // Add mobile player (only create if on mobile)
                 const mobilePlayerFisher = document.createElement('div');
                 mobilePlayerFisher.className = 'mobile-fisherman';
                 mobilePlayerFisher.id = 'mobile-player-fisher';
                 
-                if (useCatRig) {
+                if (useCatRig && isMobile) {
                     // Create cat rig container for mobile with 3D mount point
                     mobilePlayerFisher.innerHTML = `
                         <div class="cat3d" data-player-id="${this.player.name}"></div>
@@ -5341,7 +5357,6 @@
                     // Try to mount 3D cat first, fallback to 2D if WebGL not supported
                     const tryMountMobile = () => {
                         if ('WebGLRenderingContext' in window && window.mountPlayerCat3D) {
-                            // Use 3D cat
                             const opts = this.player.avatarOptions || {
                                 colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
                                 gear: { hat: false, glasses: false, vest: false }
@@ -5350,7 +5365,8 @@
                             try {
                                 window.mountPlayerCat3D(this.player.name, {
                                     furColor: opts?.colors?.fur || '#f2a65a',
-                                    scale: 0.6 // Smaller for mobile
+                                    scale: 0.6, // Smaller for mobile
+                                    profile: 'mobile'
                                 });
                                 console.log('3D cat mounted successfully on mobile');
                                 return;
@@ -5361,17 +5377,15 @@
                         this.#fallbackTo2D(mobilePlayerFisher);
                     };
 
-                    // If the module already loaded, mount immediately; otherwise wait for it
                     if (window.Cat3DReady) tryMountMobile();
                     else window.addEventListener('cat3d-ready', tryMountMobile, { once: true });
                     
-                    // Listen for 3D load failures
                     const mobileHost = mobilePlayerFisher.querySelector('.cat3d');
                     mobileHost?.addEventListener('cat3d-failed', () => {
                         this.#fallbackTo2D(mobilePlayerFisher);
                     }, { once: true });
                 } else {
-                    // Fallback to emoji character
+                    // Fallback to emoji character or empty if desktop
                     mobilePlayerFisher.innerHTML = `
                         <div class="mobile-fisherman-character">${this.player.character || '👨'}</div>
                         <div class="mobile-fisherman-name">${this.player.name}</div>
@@ -5380,65 +5394,70 @@
                 if (mobileFishermanRow) mobileFishermanRow.appendChild(mobilePlayerFisher);
                 
                 // Add other players (mount 3D cats)
+                // Reuse isMobile from above
                 this.otherPlayers.forEach((p) => {
                     const fisher = document.createElement('div');
                     fisher.className = 'fisherman other';
 
-                    // Always provide 3D + 2D fallback hosts, like you do for the main player
-                    fisher.innerHTML = `
-                        <div class="cat3d" data-player-id="${p.name}"></div>
-                        <div class="cat-rig" data-player-id="${p.name}" style="display:none;"></div>
-                        <div class="fisherman-name">${p.name}</div>
-                    `;
-                    fisher.title = `${p.name} - Level ${p.level}`;
-                    if (fishermanRow) fishermanRow.appendChild(fisher);
+                    // Only create desktop container if not on mobile
+                    if (!isMobile) {
+                        fisher.innerHTML = `
+                            <div class="cat3d" data-player-id="${p.name}"></div>
+                            <div class="cat-rig" data-player-id="${p.name}" style="display:none;"></div>
+                            <div class="fisherman-name">${p.name}</div>
+                        `;
+                        fisher.title = `${p.name} - Level ${p.level}`;
+                        if (fishermanRow) fishermanRow.appendChild(fisher);
 
-                    const tryMountOther = () => {
-                        if ('WebGLRenderingContext' in window && window.mountPlayerCat3D) {
-                            try {
-                                window.mountPlayerCat3D(p.name, {
-                                    furColor: p?.avatarOptions?.colors?.fur || '#c8a079',
-                                    scale: 0.8
-                                });
-                                return;
-                            } catch {}
-                        }
-                        // 2D fallback if you have a renderer; else leave the hidden .cat-rig alone
-                        const rig = fisher.querySelector('.cat-rig');
-                        if (rig && window.renderCatRig) window.renderCatRig(rig, p.avatarOptions || {});
-                    };
+                        const tryMountOther = () => {
+                            if ('WebGLRenderingContext' in window && window.mountPlayerCat3D) {
+                                try {
+                                    window.mountPlayerCat3D(p.name, {
+                                        furColor: p?.avatarOptions?.colors?.fur || '#c8a079',
+                                        scale: 0.8,
+                                        profile: 'desktop'
+                                    });
+                                    return;
+                                } catch {}
+                            }
+                            const rig = fisher.querySelector('.cat-rig');
+                            if (rig && window.renderCatRig) window.renderCatRig(rig, p.avatarOptions || {});
+                        };
 
-                    if (window.Cat3DReady) tryMountOther();
-                    else window.addEventListener('cat3d-ready', tryMountOther, { once: true });
+                        if (window.Cat3DReady) tryMountOther();
+                        else window.addEventListener('cat3d-ready', tryMountOther, { once: true });
+                    }
 
-                    // Add mobile other players
-                    const mobileFisher = document.createElement('div');
-                    mobileFisher.className = 'mobile-fisherman';
-                    
-                    mobileFisher.innerHTML = `
-                        <div class="cat3d" data-player-id="${p.name}"></div>
-                        <div class="cat-rig" data-player-id="${p.name}" style="display:none;"></div>
-                        <div class="mobile-fisherman-name">${p.name}</div>
-                    `;
-                    if (mobileFishermanRow) mobileFishermanRow.appendChild(mobileFisher);
+                    // Add mobile other players (only if on mobile)
+                    if (isMobile) {
+                        const mobileFisher = document.createElement('div');
+                        mobileFisher.className = 'mobile-fisherman';
+                        
+                        mobileFisher.innerHTML = `
+                            <div class="cat3d" data-player-id="${p.name}"></div>
+                            <div class="cat-rig" data-player-id="${p.name}" style="display:none;"></div>
+                            <div class="mobile-fisherman-name">${p.name}</div>
+                        `;
+                        if (mobileFishermanRow) mobileFishermanRow.appendChild(mobileFisher);
 
-                    const tryMountMobileOther = () => {
-                        if ('WebGLRenderingContext' in window && window.mountPlayerCat3D) {
-                            try {
-                                window.mountPlayerCat3D(p.name, {
-                                    furColor: p?.avatarOptions?.colors?.fur || '#c8a079',
-                                    scale: 0.6 // Smaller for mobile
-                                });
-                                return;
-                            } catch {}
-                        }
-                        // 2D fallback
-                        const rig = mobileFisher.querySelector('.cat-rig');
-                        if (rig && window.renderCatRig) window.renderCatRig(rig, p.avatarOptions || {});
-                    };
+                        const tryMountMobileOther = () => {
+                            if ('WebGLRenderingContext' in window && window.mountPlayerCat3D) {
+                                try {
+                                    window.mountPlayerCat3D(p.name, {
+                                        furColor: p?.avatarOptions?.colors?.fur || '#c8a079',
+                                        scale: 0.6, // Smaller for mobile
+                                        profile: 'mobile'
+                                    });
+                                    return;
+                                } catch {}
+                            }
+                            const rig = mobileFisher.querySelector('.cat-rig');
+                            if (rig && window.renderCatRig) window.renderCatRig(rig, p.avatarOptions || {});
+                        };
 
-                    if (window.Cat3DReady) tryMountMobileOther();
-                    else window.addEventListener('cat3d-ready', tryMountMobileOther, { once: true });
+                        if (window.Cat3DReady) tryMountMobileOther();
+                        else window.addEventListener('cat3d-ready', tryMountMobileOther, { once: true });
+                    }
                 });
             }
 
@@ -10488,6 +10507,14 @@
                 this.envUrl   = opts.envUrl   || null; // '/assets/env/lake.hdr'
                 this.tint     = new THREE.Color(opts.furColor || '#c8a079');
                 this.scale    = opts.scale || 0.9;
+                
+                // Guard against double-mounts
+                if (container.__renderer || container.__mounted) {
+                    console.warn('Cat3D: Container already has a renderer, reusing or disposing existing');
+                    if (container.__renderer && container.__renderer.dispose) {
+                        container.__renderer.dispose();
+                    }
+                }
 
                 // Check WebGL context limit before creating renderer
                 if (window.activeWebGLContexts >= 8) {
@@ -10496,23 +10523,60 @@
                     return;
                 }
 
+                // Check if container is visible before mounting
+                const rect = container.getBoundingClientRect();
+                if (rect.width === 0 || rect.height === 0 || container.offsetParent === null) {
+                    console.warn('Cat3D: Container not visible, deferring mount');
+                    // Container might become visible later, but skip for now
+                    this.container.dispatchEvent(new CustomEvent('cat3d-failed'));
+                    return;
+                }
+
                 // renderer
                 this.renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, powerPreference:'high-performance' });
-                this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-                this.renderer.setSize(container.clientWidth, container.clientHeight);
+                const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                this.renderer.setPixelRatio(dpr);
+                this.renderer.setSize(container.clientWidth, container.clientHeight, false);
                 this.renderer.outputColorSpace = THREE.SRGBColorSpace;
                 this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
                 this.renderer.toneMappingExposure = 1.1;
                 this.renderer.setClearAlpha(0);
+                
                 container.innerHTML = '';
                 container.appendChild(this.renderer.domElement);
+                
+                // Cache renderer on container to prevent duplicates
+                container.__renderer = this.renderer;
+                container.__scene = null; // will be set below
+                container.__camera = null; // will be set below
+                container.__mounted = true;
 
                 // Track active contexts
                 window.activeWebGLContexts = (window.activeWebGLContexts || 0) + 1;
 
+                // Handle context lost/restored events
+                const canvas = this.renderer.domElement;
+                canvas.addEventListener('webglcontextlost', (e) => {
+                    e.preventDefault();
+                    console.warn('WebGL context lost for cat:', container.dataset.playerId);
+                    this.running = false;
+                    cancelAnimationFrame(this.raf);
+                });
+                
+                canvas.addEventListener('webglcontextrestored', () => {
+                    console.log('WebGL context restored for cat:', container.dataset.playerId);
+                    // Rebuild materials/programs/textures as needed
+                    this.#load().then(() => {
+                        this.running = true;
+                        this.#loop();
+                    });
+                });
+
                 // scene/camera
                 this.scene = new THREE.Scene();
-                this.camera = new THREE.PerspectiveCamera(30, container.clientWidth/container.clientHeight, 0.1, 50);
+                container.__scene = this.scene;
+                this.camera = new THREE.PerspectiveCamera(30, container.clientWidth/container.clientHeight || 1, 0.1, 50);
+                container.__camera = this.camera;
                 this.camera.position.set(0.2, 0.9, 2.2);
 
                 // lights (work even without HDRI)
@@ -10523,6 +10587,7 @@
 
                 // state
                 this.clock = new THREE.Clock();
+                this.running = true;
                 this.mixer = null;
                 this.clips = {};
                 this.blinkMorph = null;
@@ -10532,7 +10597,9 @@
                 this.model = null;
 
                 // load everything
-                this.#load().then(()=>this.#loop());
+                this.#load().then(()=>{
+                    if (this.running) this.#loop();
+                });
 
                 // resize
                 new ResizeObserver(()=>this.#resize()).observe(container);
@@ -10642,6 +10709,7 @@
 
             // realtime loop
             #loop = ()=>{
+                if (!this.running) return;
                 const dt = this.clock.getDelta();
                 if (this.mixer) this.mixer.update(dt);
 
@@ -10735,16 +10803,63 @@
             dispose(){
                 cancelAnimationFrame(this.raf);
                 if (this.renderer) {
+                    const gl = this.renderer.getContext?.();
                     this.renderer.dispose();
+                    
+                    // Dispose geometries and materials
+                    if (this.scene) {
+                        this.scene.traverse(obj => {
+                            if (obj.geometry) {
+                                obj.geometry.dispose();
+                            }
+                            if (obj.material) {
+                                const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+                                mats.forEach(m => {
+                                    if (m.dispose) m.dispose();
+                                    if (m.map && m.map.dispose) m.map.dispose();
+                                    if (m.envMap && m.envMap.dispose) m.envMap.dispose();
+                                    if (m.normalMap && m.normalMap.dispose) m.normalMap.dispose();
+                                    if (m.emissiveMap && m.emissiveMap.dispose) m.emissiveMap.dispose();
+                                });
+                            }
+                        });
+                    }
+                    
+                    // Force context loss if possible
+                    if (gl?.getExtension) {
+                        const ext = gl.getExtension('WEBGL_lose_context');
+                        if (ext) ext.loseContext();
+                    }
+                    
+                    // Remove canvas from DOM
+                    if (this.renderer.domElement) {
+                        this.renderer.domElement.remove();
+                    }
+                    
+                    // Clear container references
+                    if (this.container) {
+                        this.container.__renderer = null;
+                        this.container.__scene = null;
+                        this.container.__camera = null;
+                        this.container.__mounted = false;
+                        this.container.innerHTML = '';
+                    }
+                    
                     // Decrement active context count
                     window.activeWebGLContexts = Math.max(0, (window.activeWebGLContexts || 1) - 1);
                 }
             }
 
             #resize(){
-                const w = this.container.clientWidth, h = this.container.clientHeight;
-                this.renderer.setSize(w,h,false);
-                this.camera.aspect = w/h || 1;
+                if (!this.container || !this.renderer) return;
+                const w = this.container.clientWidth;
+                const h = this.container.clientHeight;
+                if (w === 0 || h === 0) return;
+                
+                const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                this.renderer.setPixelRatio(dpr);
+                this.renderer.setSize(w, h, false);
+                this.camera.aspect = w / h || 1;
                 this.camera.updateProjectionMatrix();
             }
         }
@@ -10756,16 +10871,41 @@
                 const el = (typeof selectorOrEl === 'string') ? document.querySelector(selectorOrEl) : selectorOrEl;
                 if (!el) return null;
                 
-                // Dispose existing rig if it exists
+                // Check for existing renderer on container
+                if (el.__renderer && el.__mounted) {
+                    console.log('Cat3D: Reusing existing renderer for', el.dataset.playerId);
+                    const existing = this.map.get(el.dataset.playerId);
+                    if (existing) return existing;
+                }
+                
+                // Dispose existing rig if it exists in our map
                 const key = el.dataset.playerId || ('player-'+Math.random().toString(36).slice(2));
                 const existing = this.map.get(key);
                 if (existing) {
+                    console.log('Cat3D: Disposing existing rig before creating new one');
                     existing.dispose();
                 }
                 
+                // Ensure container is visible before mounting
+                const rect = el.getBoundingClientRect();
+                if (rect.width === 0 || rect.height === 0 || el.offsetParent === null) {
+                    console.warn('Cat3D: Container not visible, cannot mount');
+                    return null;
+                }
+                
+                // Check WebGL context limit
+                if (window.activeWebGLContexts >= 8) {
+                    console.warn('WebGL context limit reached, cannot mount new cat');
+                    el.dispatchEvent(new CustomEvent('cat3d-failed'));
+                    return null;
+                }
+                
                 const rig = new Cat3D(el, opts);
-                this.map.set(key, rig);
-                return rig;
+                if (rig.renderer) {
+                    this.map.set(key, rig);
+                    return rig;
+                }
+                return null;
             },
             get(key){ return this.map.get(key); },
             bite(key){ this.map.get(key)?.bite(); },
@@ -10776,6 +10916,23 @@
                 this.map.clear();
             }
         };
+        
+        // Global resize handler for all cat containers
+        window.addEventListener('resize', () => {
+            document.querySelectorAll('.cat3d').forEach(container => {
+                if (container.__renderer && container.__camera) {
+                    const w = container.clientWidth;
+                    const h = container.clientHeight;
+                    if (w === 0 || h === 0) return;
+                    
+                    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                    container.__renderer.setPixelRatio(dpr);
+                    container.__renderer.setSize(w, h, false);
+                    container.__camera.aspect = w / h || 1;
+                    container.__camera.updateProjectionMatrix();
+                }
+            });
+        });
 
         // CSS.escape polyfill for older browsers
         if (!window.CSS || !CSS.escape) { 
@@ -10785,15 +10942,40 @@
 
         // EXAMPLE: mount your own cat after login (call once you render the fisherman row)
         window.mountPlayerCat3D = function(playerName, options={}){
-            // Check context limit before attempting mount
-            if (window.activeWebGLContexts >= 8) {
-                console.warn('WebGL context limit reached, skipping 3D mount for', playerName);
+            // Guard against double-mounts - check if renderer already exists
+            const escapedName = (window.CSS && CSS.escape) ? CSS.escape(playerName) : playerName;
+            const sel = `.cat3d[data-player-id="${escapedName}"]`;
+            const host = document.querySelector(sel);
+            
+            if (!host) {
+                console.warn('mountPlayerCat3D: No container found for player', playerName);
                 return null;
             }
             
-            const sel = `.cat3d[data-player-id="${(window.CSS&&CSS.escape)?CSS.escape(playerName):playerName}"]`;
-            const host = document.querySelector(sel);
-            if (!host) return null;
+            // If already mounted, return existing rig
+            if (host.__renderer && host.__mounted) {
+                const existing = window.CatRigs?.map?.get(playerName);
+                if (existing) {
+                    console.log('mountPlayerCat3D: Reusing existing renderer for', playerName);
+                    return existing;
+                }
+            }
+            
+            // Check context limit before attempting mount
+            if (window.activeWebGLContexts >= 8) {
+                console.warn('WebGL context limit reached, skipping 3D mount for', playerName);
+                host.dispatchEvent(new CustomEvent('cat3d-failed'));
+                return null;
+            }
+            
+            // Ensure container is visible
+            const rect = host.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0 || host.offsetParent === null) {
+                console.warn('mountPlayerCat3D: Container not visible for', playerName);
+                host.dispatchEvent(new CustomEvent('cat3d-failed'));
+                return null;
+            }
+            
             return CatRigs.mount(host, {
                 modelUrl: options.modelUrl || './assets/cat/cat.glb',
                 envUrl:   options.envUrl   || null,
