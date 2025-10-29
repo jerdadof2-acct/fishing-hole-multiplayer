@@ -5352,6 +5352,14 @@
                     // Update name if it changed
                     const nameEl = playerFisher.querySelector('.fisherman-name');
                     if (nameEl) nameEl.textContent = this.player.name;
+                    
+                    // Update data-cat3d attribute if cat3d container exists
+                    const cat3dEl = playerFisher.querySelector('.cat3d');
+                    if (cat3dEl && useCatRig) {
+                        const key = window.safeKey(this.player.name);
+                        cat3dEl.setAttribute('data-cat3d', key);
+                        cat3dEl.setAttribute('data-player-id', this.player.name);
+                    }
                 }
 
                 // Add mobile player - reuse existing DOM if present
@@ -5378,6 +5386,14 @@
                 } else {
                     const nameEl = mobilePlayerFisher.querySelector('.mobile-fisherman-name');
                     if (nameEl) nameEl.textContent = this.player.name;
+                    
+                    // Update data-cat3d attribute if cat3d container exists
+                    const cat3dEl = mobilePlayerFisher.querySelector('.cat3d');
+                    if (cat3dEl && useCatRig && isMobile) {
+                        const key = window.safeKey(this.player.name);
+                        cat3dEl.setAttribute('data-cat3d', key);
+                        cat3dEl.setAttribute('data-player-id', this.player.name);
+                    }
                 }
 
                 // Defer mount to ensure DOM is ready and avoid race conditions
