@@ -11230,6 +11230,9 @@
                     }
                     this._firstRender = false;
                 }
+                
+                // Update 2D fishing line overlay every frame
+                this.#updateFishingLine();
 
                 this.renderer.render(this.scene, this.camera);
                 this.raf = requestAnimationFrame(this.#loop);
