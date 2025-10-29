@@ -3620,7 +3620,8 @@
                 <!-- Character Preview -->
                 <div style="text-align: center; margin: 15px 0; min-height: 120px; background: rgba(20,30,50,0.8); border: 2px solid rgba(100,200,255,0.4); border-radius: 12px; padding: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
                     <div id="character-preview-container" style="display: flex; justify-content: center; margin-bottom: 8px;">
-                        <div id="character-preview-avatar" class="cat-rig" style="width: 80px; height: 80px;"></div>
+                        <div id="character-preview-avatar" class="cat3d" style="width: 80px; height: 80px;" data-player-id="preview"></div>
+                        <div id="character-preview-avatar-2d" class="cat-rig" style="width: 80px; height: 80px; display: none;" data-player-id="preview"></div>
                     </div>
                     <div style="color: #ffffff; font-size: 11px; font-weight: 600;">Your Fishing Cat 🐱</div>
                 </div>
@@ -4913,9 +4914,30 @@
                         vest: document.getElementById('gearVest')?.checked || false
                     };
 
-                    const previewContainer = document.getElementById('character-preview-avatar');
-                    if (window.renderCatRig && previewContainer) {
-                        window.renderCatRig(previewContainer, { colors, gear });
+                    // Try 3D preview first
+                    const preview3D = document.getElementById('character-preview-avatar');
+                    const preview2D = document.getElementById('character-preview-avatar-2d');
+                    
+                    if ('WebGLRenderingContext' in window && window.mountPlayerCat3D) {
+                        // Use 3D preview
+                        if (preview3D) preview3D.style.display = 'block';
+                        if (preview2D) preview2D.style.display = 'none';
+                        
+                        // Mount or update 3D cat
+                        if (preview3D) {
+                            window.mountPlayerCat3D('preview', {
+                                furColor: colors.fur,
+                                scale: 0.8
+                            });
+                        }
+                    } else {
+                        // Fallback to 2D preview
+                        if (preview3D) preview3D.style.display = 'none';
+                        if (preview2D) preview2D.style.display = 'block';
+                        
+                        if (window.renderCatRig && preview2D) {
+                            window.renderCatRig(preview2D, { colors, gear });
+                        }
                     }
                 }
 
@@ -10346,10 +10368,10 @@
 
     <!-- Three.js 3D Cat System -->
     <script type="module">
-        import * as THREE from 'https://cdn.skypack.dev/three@0.160.0';
-        import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
-        import { RGBELoader } from 'https://cdn.skypack.dev/three@0.160.0/examples/jsm/loaders/RGBELoader.js';
-        import { PMREMGenerator } from 'https://cdn.skypack.dev/three@0.160.0/examples/jsm/utils/PMREMGenerator.js';
+        import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+        import { GLTFLoader } from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+        import { RGBELoader } from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/RGBELoader.js';
+        import { PMREMGenerator } from 'https://unpkg.com/three@0.160.0/examples/jsm/utils/PMREMGenerator.js';
 
         class Cat3D {
             constructor(container, opts={}){
