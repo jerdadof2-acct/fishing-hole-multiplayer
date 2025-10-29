@@ -4786,45 +4786,65 @@
                 // Character System - New Integrated Approach
                 function initializeCharacterSystem() {
                     // Load saved avatar options or use defaults
-                    const savedOptions = this.player.avatarOptions || {
+                    const savedOptions = this.player?.avatarOptions || {
                         colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
                         gear: { hat: false, glasses: false, vest: false }
                     };
 
-                    // Set initial values in editor
-                    document.getElementById('furColor').value = savedOptions.colors.fur;
-                    document.getElementById('patColor').value = savedOptions.colors.pattern;
-                    document.getElementById('eyeColor').value = savedOptions.colors.eye;
-                    document.getElementById('belColor').value = savedOptions.colors.belly;
-                    document.getElementById('gearHat').checked = savedOptions.gear.hat;
-                    document.getElementById('gearGl').checked = savedOptions.gear.glasses;
-                    document.getElementById('gearVest').checked = savedOptions.gear.vest;
+                    // Set initial values in editor - check if elements exist first
+                    const furColorEl = document.getElementById('furColor');
+                    const patColorEl = document.getElementById('patColor');
+                    const eyeColorEl = document.getElementById('eyeColor');
+                    const belColorEl = document.getElementById('belColor');
+                    const gearHatEl = document.getElementById('gearHat');
+                    const gearGlEl = document.getElementById('gearGl');
+                    const gearVestEl = document.getElementById('gearVest');
+
+                    if (furColorEl) furColorEl.value = savedOptions.colors.fur;
+                    if (patColorEl) patColorEl.value = savedOptions.colors.pattern;
+                    if (eyeColorEl) eyeColorEl.value = savedOptions.colors.eye;
+                    if (belColorEl) belColorEl.value = savedOptions.colors.belly;
+                    if (gearHatEl) gearHatEl.checked = savedOptions.gear.hat;
+                    if (gearGlEl) gearGlEl.checked = savedOptions.gear.glasses;
+                    if (gearVestEl) gearVestEl.checked = savedOptions.gear.vest;
 
                     // Update both previews
                     updateCharacterPreview();
                     updateLivePreview();
 
                     // Randomize button
-                    document.getElementById('randomize-cat-btn').addEventListener('click', () => {
-                        randomizeCatAppearance();
-                    });
+                    const randomizeBtn = document.getElementById('randomize-cat-btn');
+                    if (randomizeBtn) {
+                        randomizeBtn.addEventListener('click', () => {
+                            randomizeCatAppearance();
+                        });
+                    }
 
                     // Preview button
-                    document.getElementById('preview-cat-btn').addEventListener('click', () => {
-                        updateLivePreview();
-                    });
+                    const previewBtn = document.getElementById('preview-cat-btn');
+                    if (previewBtn) {
+                        previewBtn.addEventListener('click', () => {
+                            updateLivePreview();
+                        });
+                    }
 
                     // Save button
-                    document.getElementById('save-cat-look').addEventListener('click', () => {
-                        saveCatLook();
-                    });
+                    const saveBtn = document.getElementById('save-cat-look');
+                    if (saveBtn) {
+                        saveBtn.addEventListener('click', () => {
+                            saveCatLook();
+                        });
+                    }
 
                     // Auto-update preview on color/gear changes
                     ['furColor', 'patColor', 'eyeColor', 'belColor', 'gearHat', 'gearGl', 'gearVest'].forEach(id => {
-                        document.getElementById(id).addEventListener('change', () => {
-                            updateCharacterPreview();
-                            updateLivePreview();
-                        });
+                        const element = document.getElementById(id);
+                        if (element) {
+                            element.addEventListener('change', () => {
+                                updateCharacterPreview();
+                                updateLivePreview();
+                            });
+                        }
                     });
                 }
 
@@ -4852,18 +4872,18 @@
 
                 function updateCharacterPreview() {
                     const colors = {
-                        fur: document.getElementById('furColor').value,
-                        pattern: document.getElementById('patColor').value,
+                        fur: document.getElementById('furColor')?.value || '#f2a65a',
+                        pattern: document.getElementById('patColor')?.value || '#d77f3f',
                         ear: '#c76b2a',
-                        eye: document.getElementById('eyeColor').value,
-                        belly: document.getElementById('belColor').value,
+                        eye: document.getElementById('eyeColor')?.value || '#1e2a3a',
+                        belly: document.getElementById('belColor')?.value || '#f8d7b1',
                         whisker: '#2b2b2b'
                     };
 
                     const gear = {
-                        hat: document.getElementById('gearHat').checked,
-                        glasses: document.getElementById('gearGl').checked,
-                        vest: document.getElementById('gearVest').checked
+                        hat: document.getElementById('gearHat')?.checked || false,
+                        glasses: document.getElementById('gearGl')?.checked || false,
+                        vest: document.getElementById('gearVest')?.checked || false
                     };
 
                     const previewContainer = document.getElementById('character-preview-avatar');
@@ -4874,18 +4894,18 @@
 
                 function updateLivePreview() {
                     const colors = {
-                        fur: document.getElementById('furColor').value,
-                        pattern: document.getElementById('patColor').value,
+                        fur: document.getElementById('furColor')?.value || '#f2a65a',
+                        pattern: document.getElementById('patColor')?.value || '#d77f3f',
                         ear: '#c76b2a',
-                        eye: document.getElementById('eyeColor').value,
-                        belly: document.getElementById('belColor').value,
+                        eye: document.getElementById('eyeColor')?.value || '#1e2a3a',
+                        belly: document.getElementById('belColor')?.value || '#f8d7b1',
                         whisker: '#2b2b2b'
                     };
 
                     const gear = {
-                        hat: document.getElementById('gearHat').checked,
-                        glasses: document.getElementById('gearGl').checked,
-                        vest: document.getElementById('gearVest').checked
+                        hat: document.getElementById('gearHat')?.checked || false,
+                        glasses: document.getElementById('gearGl')?.checked || false,
+                        vest: document.getElementById('gearVest')?.checked || false
                     };
 
                     const previewContainer = document.getElementById('live-cat-preview');
@@ -4896,36 +4916,40 @@
 
                 function saveCatLook() {
                     const colors = {
-                        fur: document.getElementById('furColor').value,
-                        pattern: document.getElementById('patColor').value,
+                        fur: document.getElementById('furColor')?.value || '#f2a65a',
+                        pattern: document.getElementById('patColor')?.value || '#d77f3f',
                         ear: '#c76b2a',
-                        eye: document.getElementById('eyeColor').value,
-                        belly: document.getElementById('belColor').value,
+                        eye: document.getElementById('eyeColor')?.value || '#1e2a3a',
+                        belly: document.getElementById('belColor')?.value || '#f8d7b1',
                         whisker: '#2b2b2b'
                     };
 
                     const gear = {
-                        hat: document.getElementById('gearHat').checked,
-                        glasses: document.getElementById('gearGl').checked,
-                        vest: document.getElementById('gearVest').checked
+                        hat: document.getElementById('gearHat')?.checked || false,
+                        glasses: document.getElementById('gearGl')?.checked || false,
+                        vest: document.getElementById('gearVest')?.checked || false
                     };
 
-                    // Save to player data
-                    this.player.avatarOptions = { colors, gear, type: 'cat' };
-                    this.saveGameData();
+                    // Save to player data - ensure player exists
+                    if (this.player) {
+                        this.player.avatarOptions = { colors, gear, type: 'cat' };
+                        this.saveGameData();
+                    }
 
                     // Show success message
                     const saveBtn = document.getElementById('save-cat-look');
-                    const originalText = saveBtn.textContent;
-                    saveBtn.textContent = '✅ Saved!';
-                    saveBtn.style.background = 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)';
-                    
-                    setTimeout(() => {
-                        saveBtn.textContent = originalText;
-                        saveBtn.style.background = 'linear-gradient(135deg, #ff7043 0%, #f4511e 100%)';
-                    }, 2000);
+                    if (saveBtn) {
+                        const originalText = saveBtn.textContent;
+                        saveBtn.textContent = '✅ Saved!';
+                        saveBtn.style.background = 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)';
+                        
+                        setTimeout(() => {
+                            saveBtn.textContent = originalText;
+                            saveBtn.style.background = 'linear-gradient(135deg, #ff7043 0%, #f4511e 100%)';
+                        }, 2000);
+                    }
 
-                    console.log('Cat look saved:', this.player.avatarOptions);
+                    console.log('Cat look saved:', colors, gear);
                 }
 
                 // Initialize the character system
