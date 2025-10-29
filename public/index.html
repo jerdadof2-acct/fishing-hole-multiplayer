@@ -11350,12 +11350,23 @@
                             
                             // Create rod tip locator at rod end
                             if (!rodTipBoneFromRod) {
+                                // Calculate rod bounding box to find actual rod tip position
+                                const rodBox = new THREE.Box3().setFromObject(this.rodModel);
+                                const rodSize = rodBox.getSize(new THREE.Vector3());
+                                const rodCenter = rodBox.getCenter(new THREE.Vector3());
+                                const rodMaxZ = rodBox.max.z;
+                                
                                 this.rodTipBone = new THREE.Object3D();
                                 this.rodTipBone.name = 'RodTip';
-                                // Position at rod end in local rod space (adjust based on your rod model)
-                                this.rodTipBone.position.set(0, 0, -1.0); // Move to rod end - adjust if needed
+                                // Position at actual rod tip (furthest point in +Z or -Z depending on orientation)
+                                // Try -Z first (common rod orientation), if that doesn't work visually, try +Z
+                                this.rodTipBone.position.set(0, 0, rodMaxZ - rodCenter.z); // Local position at rod tip
                                 this.rodModel.add(this.rodTipBone);
-                                console.log('Cat3D: Created rod tip locator at:', this.rodTipBone.position);
+                                console.log('Cat3D: Rod bounding box:', {
+                                    size: { x: rodSize.x.toFixed(3), y: rodSize.y.toFixed(3), z: rodSize.z.toFixed(3) },
+                                    center: { x: rodCenter.x.toFixed(3), y: rodCenter.y.toFixed(3), z: rodCenter.z.toFixed(3) },
+                                    tipLocalPos: { x: this.rodTipBone.position.x.toFixed(3), y: this.rodTipBone.position.y.toFixed(3), z: this.rodTipBone.position.z.toFixed(3) }
+                                });
                             } else {
                                 this.rodTipBone = rodTipBoneFromRod;
                             }
@@ -11533,14 +11544,28 @@
                 this.bobber.getWorldPosition(bobWorld);
                 const bobScreen = this.#projectToScreen(bobWorld);
                 
-                // Debug first few frames
+                // Debug first few frames - show actual numeric values
                 if (!this._debugCount) this._debugCount = 0;
                 if (this._debugCount < 5) {
-                    console.log('Cat3D Overlay Debug:', {
-                        tipWorld, tipScreen,
-                        bobWorld, bobScreen,
+                    console.log('Cat3D Overlay Debug Frame', this._debugCount, ':', {
+                        tipWorld: { x: tipWorld.x.toFixed(3), y: tipWorld.y.toFixed(3), z: tipWorld.z.toFixed(3) },
+                        tipScreen: { x: tipScreen.x.toFixed(1), y: tipScreen.y.toFixed(1) },
+                        bobWorld: { x: bobWorld.x.toFixed(3), y: bobWorld.y.toFixed(3), z: bobWorld.z.toFixed(3) },
+                        bobScreen: { x: bobScreen.x.toFixed(1), y: bobScreen.y.toFixed(1) },
                         rodTipBone: this.rodTipBone.name,
-                        containerRect: this.container.getBoundingClientRect()
+                        bobberVisible: this.bobber.visible,
+                        containerRect: {
+                            left: this.container.getBoundingClientRect().left.toFixed(1),
+                            top: this.container.getBoundingClientRect().top.toFixed(1),
+                            width: this.container.getBoundingClientRect().width.toFixed(1),
+                            height: this.container.getBoundingClientRect().height.toFixed(1)
+                        },
+                        lakeRect: lakeRect ? {
+                            left: lakeRect.left.toFixed(1),
+                            top: lakeRect.top.toFixed(1),
+                            width: lakeRect.width.toFixed(1),
+                            height: lakeRect.height.toFixed(1)
+                        } : 'NOT FOUND'
                     });
                     this._debugCount++;
                 }
