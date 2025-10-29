@@ -5255,34 +5255,35 @@
                     `;
                     
                     // Try to mount 3D cat first, fallback to 2D if WebGL not supported
-                    if ('WebGLRenderingContext' in window && window.mountPlayerCat3D) {
-                        // Use 3D cat
-                        const opts = this.player.avatarOptions || {
-                            colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
-                            gear: { hat: false, glasses: false, vest: false }
-                        };
+                    // Add a small delay to ensure Three.js has loaded
+                    setTimeout(() => {
+                        console.log('WebGL available:', 'WebGLRenderingContext' in window);
+                        console.log('mountPlayerCat3D available:', !!window.mountPlayerCat3D);
                         
-                        window.mountPlayerCat3D(this.player.name, {
-                            furColor: opts.colors.fur,
-                            scale: 0.8
-                        });
-                    } else {
-                        // Fallback to 2D cat rig
-                        const cat3dEl = playerFisher.querySelector('.cat3d');
-                        const catRigEl = playerFisher.querySelector('.cat-rig');
-                        if (cat3dEl) cat3dEl.style.display = 'none';
-                        if (catRigEl) catRigEl.style.display = 'block';
-                        
-                        const opts = this.player.avatarOptions || {
-                            colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
-                            gear: { hat: false, glasses: false, vest: false }
-                        };
-                        
-                        const rigContainer = playerFisher.querySelector('.cat-rig');
-                        if (window.renderCatRig && rigContainer) {
-                            window.renderCatRig(rigContainer, opts);
+                        if ('WebGLRenderingContext' in window && window.mountPlayerCat3D) {
+                            console.log('Attempting to mount 3D cat for player:', this.player.name);
+                            // Use 3D cat
+                            const opts = this.player.avatarOptions || {
+                                colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
+                                gear: { hat: false, glasses: false, vest: false }
+                            };
+                            
+                            try {
+                                window.mountPlayerCat3D(this.player.name, {
+                                    furColor: opts.colors.fur,
+                                    scale: 0.8
+                                });
+                                console.log('3D cat mounted successfully');
+                            } catch (error) {
+                                console.log('3D cat mounting failed, falling back to 2D:', error);
+                                // Fall through to 2D fallback
+                                this.#fallbackTo2D(playerFisher);
+                            }
+                        } else {
+                            console.log('Falling back to 2D cat rig');
+                            this.#fallbackTo2D(playerFisher);
                         }
-                    }
+                    }, 100);
                 } else {
                     // Fallback to emoji character
                     playerFisher.innerHTML = `
@@ -10364,6 +10365,29 @@
                     }
                 }
             }
+
+            #fallbackTo2D(fisherElement) {
+                // Fallback to 2D cat rig
+                const cat3dEl = fisherElement.querySelector('.cat3d');
+                const catRigEl = fisherElement.querySelector('.cat-rig');
+                if (cat3dEl) cat3dEl.style.display = 'none';
+                if (catRigEl) catRigEl.style.display = 'block';
+                
+                const opts = this.player.avatarOptions || {
+                    colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
+                    gear: { hat: false, glasses: false, vest: false }
+                };
+                
+                const rigContainer = fisherElement.querySelector('.cat-rig');
+                if (window.renderCatRig && rigContainer) {
+                    console.log('Rendering 2D cat rig');
+                    window.renderCatRig(rigContainer, opts);
+                } else {
+                    console.log('2D cat rig not available, showing placeholder');
+                    // Show a simple placeholder
+                    rigContainer.innerHTML = '<div style="width: 100%; height: 100%; background: #f2a65a; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #1e2a3a; font-size: 12px;">🐱</div>';
+                }
+            }
         }
 
         // Start the game
@@ -10375,7 +10399,6 @@
         import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
         import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
         import { RGBELoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/RGBELoader.js';
-        import { PMREMGenerator } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/utils/PMREMGenerator.js';
 
         class Cat3D {
             constructor(container, opts={}){
@@ -10423,14 +10446,14 @@
 
             async #load(){
                 try {
-                    // environment
-                    if (this.envUrl){
-                        const pmrem = new PMREMGenerator(this.renderer);
-                        const hdr = await new RGBELoader().loadAsync(this.envUrl);
-                        const envMap = pmrem.fromEquirectangular(hdr).texture;
-                        this.scene.environment = envMap;
-                        hdr.dispose(); pmrem.dispose();
-                    }
+                    // environment (simplified - no HDRI needed for basic cat)
+                    // if (this.envUrl){
+                    //     const pmrem = new PMREMGenerator(this.renderer);
+                    //     const hdr = await new RGBELoader().loadAsync(this.envUrl);
+                    //     const envMap = pmrem.fromEquirectangular(hdr).texture;
+                    //     this.scene.environment = envMap;
+                    //     hdr.dispose(); pmrem.dispose();
+                    // }
 
                     // model
                     const gltf = await new GLTFLoader().loadAsync(this.modelUrl);
