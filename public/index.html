@@ -10663,7 +10663,7 @@
         class Cat3D {
             constructor(container, opts={}){
                 this.container = container;
-                this.modelUrl = opts.modelUrl || '/assets/cat/cat.glb'; // absolute path for production
+                this.modelUrl = opts.modelUrl || '/assets/glb/PZSNQ3IH66OXPUSBTYNAMD6EC.glb'; // Real cat model
                 this.envUrl   = opts.envUrl   || null; // '/assets/env/lake.hdr'
                 this.tint     = new THREE.Color(opts.furColor || '#c8a079');
                 this.scale    = opts.scale || 0.9;
@@ -10881,10 +10881,10 @@
                             }
                         });
                         if (meshCount === 0) {
-                            console.error('Cat3D ERROR: GLB has no meshes — check /assets/cat/cat.glb');
+                            console.error('Cat3D ERROR: GLB has no meshes — check model URL:', this.modelUrl);
                         } else if (totalVerts <= 8) {
                             console.error('Cat3D ERROR: Model has only', totalVerts, 'vertices — this is a CUBE, not a cat!');
-                            console.error('Cat3D ERROR: The file /assets/cat/cat.glb appears to be a placeholder cube.');
+                            console.error('Cat3D ERROR: The file', this.modelUrl, 'appears to be a placeholder cube.');
                             console.error('Cat3D ERROR: Please replace with a real cat GLB file that has proper cat geometry.');
                             console.error('Cat3D ERROR: Expected hundreds or thousands of vertices, got', totalVerts);
                         } else {
@@ -11403,7 +11403,7 @@
             
             const playerKey = window.safeKey(playerName);
             const rig = window.CatRigs.mount(host, {
-                modelUrl: options.modelUrl || '/assets/cat/cat.glb', // absolute path for production
+                modelUrl: options.modelUrl || '/assets/glb/PZSNQ3IH66OXPUSBTYNAMD6EC.glb', // Real cat model
                 envUrl:   options.envUrl   || null,
                 furColor: options.furColor || '#c8a079',
                 scale:    options.scale    || 0.9
