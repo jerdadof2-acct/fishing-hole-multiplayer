@@ -10451,7 +10451,6 @@
         import * as THREE from 'https://esm.sh/three@0.160.0';
         import { GLTFLoader } from 'https://esm.sh/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
         import { RGBELoader } from 'https://esm.sh/three@0.160.0/examples/jsm/loaders/RGBELoader.js';
-        import { PMREMGenerator } from 'https://esm.sh/three@0.160.0/examples/jsm/utils/PMREMGenerator.js';
 
         class Cat3D {
             constructor(container, opts={}){
@@ -10504,13 +10503,12 @@
                 try {
                     // environment (optional HDR for better reflections)
                     if (this.envUrl){
-                        const pmrem = new PMREMGenerator(this.renderer);
-                        const hdr = await new RGBELoader().loadAsync(this.envUrl);
-                        const envMap = pmrem.fromEquirectangular(hdr).texture;
-                        this.scene.environment = envMap;
-                        this.scene.background = null; // keep canvas transparent
-                        hdr.dispose(); 
-                        pmrem.dispose();
+                        const rgbe = new RGBELoader();
+                        rgbe.load(this.envUrl, (tex) => {
+                            tex.mapping = THREE.EquirectangularReflectionMapping;
+                            this.scene.environment = tex;
+                            this.scene.background = null; // keep canvas transparent
+                        });
                     }
 
                     // model
