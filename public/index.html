@@ -622,6 +622,22 @@
             display: block; 
         }
 
+        /* 3D Cat containers */
+        .cat3d { 
+            width: 80px; 
+            height: 80px; 
+            position: relative; 
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        @media (max-width: 768px) { 
+            .cat3d { 
+                width: 64px; 
+                height: 64px; 
+            } 
+        }
+
         /* Generic ripple elements */
         .water-ripple, .water-ripple-invert {
             position: absolute;
@@ -5203,22 +5219,41 @@
                 const useCatRig = this.player.character === 'cat-rig' || this.player.avatarOptions?.type === 'cat';
                 
                 if (useCatRig) {
-                    // Create cat rig container
+                    // Create cat rig container with 3D mount point
                     playerFisher.innerHTML = `
-                        <div class="cat-rig" data-player-id="${this.player.name}"></div>
+                        <div class="cat3d" data-player-id="${this.player.name}"></div>
+                        <div class="cat-rig" data-player-id="${this.player.name}" style="display: none;"></div>
                         <div class="fisherman-name">${this.player.name}</div>
                     `;
                     
-                    // Use stored avatarOptions if present; fallback colors/gear
-                    const opts = this.player.avatarOptions || {
-                        colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
-                        gear: { hat: false, glasses: false, vest: false }
-                    };
-                    
-                    // Render the cat rig
-                    const rigContainer = playerFisher.querySelector('.cat-rig');
-                    if (window.renderCatRig) {
-                        window.renderCatRig(rigContainer, opts);
+                    // Try to mount 3D cat first, fallback to 2D if WebGL not supported
+                    if ('WebGLRenderingContext' in window && window.mountPlayerCat3D) {
+                        // Use 3D cat
+                        const opts = this.player.avatarOptions || {
+                            colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
+                            gear: { hat: false, glasses: false, vest: false }
+                        };
+                        
+                        window.mountPlayerCat3D(this.player.name, {
+                            furColor: opts.colors.fur,
+                            scale: 0.8
+                        });
+                    } else {
+                        // Fallback to 2D cat rig
+                        const cat3dEl = playerFisher.querySelector('.cat3d');
+                        const catRigEl = playerFisher.querySelector('.cat-rig');
+                        if (cat3dEl) cat3dEl.style.display = 'none';
+                        if (catRigEl) catRigEl.style.display = 'block';
+                        
+                        const opts = this.player.avatarOptions || {
+                            colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
+                            gear: { hat: false, glasses: false, vest: false }
+                        };
+                        
+                        const rigContainer = playerFisher.querySelector('.cat-rig');
+                        if (window.renderCatRig && rigContainer) {
+                            window.renderCatRig(rigContainer, opts);
+                        }
                     }
                 } else {
                     // Fallback to emoji character
@@ -5235,22 +5270,41 @@
                 mobilePlayerFisher.id = 'mobile-player-fisher';
                 
                 if (useCatRig) {
-                    // Create cat rig container for mobile
+                    // Create cat rig container for mobile with 3D mount point
                     mobilePlayerFisher.innerHTML = `
-                        <div class="cat-rig" data-player-id="${this.player.name}"></div>
+                        <div class="cat3d" data-player-id="${this.player.name}"></div>
+                        <div class="cat-rig" data-player-id="${this.player.name}" style="display: none;"></div>
                         <div class="mobile-fisherman-name">${this.player.name}</div>
                     `;
                     
-                    // Use stored avatarOptions if present; fallback colors/gear
-                    const opts = this.player.avatarOptions || {
-                        colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
-                        gear: { hat: false, glasses: false, vest: false }
-                    };
-                    
-                    // Render the cat rig
-                    const rigContainer = mobilePlayerFisher.querySelector('.cat-rig');
-                    if (window.renderCatRig) {
-                        window.renderCatRig(rigContainer, opts);
+                    // Try to mount 3D cat first, fallback to 2D if WebGL not supported
+                    if ('WebGLRenderingContext' in window && window.mountPlayerCat3D) {
+                        // Use 3D cat
+                        const opts = this.player.avatarOptions || {
+                            colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
+                            gear: { hat: false, glasses: false, vest: false }
+                        };
+                        
+                        window.mountPlayerCat3D(this.player.name, {
+                            furColor: opts.colors.fur,
+                            scale: 0.6 // Smaller for mobile
+                        });
+                    } else {
+                        // Fallback to 2D cat rig
+                        const cat3dEl = mobilePlayerFisher.querySelector('.cat3d');
+                        const catRigEl = mobilePlayerFisher.querySelector('.cat-rig');
+                        if (cat3dEl) cat3dEl.style.display = 'none';
+                        if (catRigEl) catRigEl.style.display = 'block';
+                        
+                        const opts = this.player.avatarOptions || {
+                            colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
+                            gear: { hat: false, glasses: false, vest: false }
+                        };
+                        
+                        const rigContainer = mobilePlayerFisher.querySelector('.cat-rig');
+                        if (window.renderCatRig && rigContainer) {
+                            window.renderCatRig(rigContainer, opts);
+                        }
                     }
                 } else {
                     // Fallback to emoji character
@@ -6145,13 +6199,18 @@
                                 console.log('No splash system available for suction!');
                             }
                             
-                            // Add cat wow emote for fish strike
-                            const playerFisher = document.getElementById('player-fisher');
-                            const mobilePlayerFisher = document.getElementById('mobile-player-fisher');
-                            const rigContainer = playerFisher?.querySelector('.cat-rig') || mobilePlayerFisher?.querySelector('.cat-rig');
-                            if (rigContainer && window.catRigPlay) {
-                                window.catRigPlay.wow(rigContainer);
-                            }
+                        // Add cat wow emote for fish strike
+                        const playerFisher = document.getElementById('player-fisher');
+                        const mobilePlayerFisher = document.getElementById('mobile-player-fisher');
+                        const rigContainer = playerFisher?.querySelector('.cat-rig') || mobilePlayerFisher?.querySelector('.cat-rig');
+                        if (rigContainer && window.catRigPlay) {
+                            window.catRigPlay.wow(rigContainer);
+                        }
+                        
+                        // Add 3D cat bite reaction
+                        if (window.CatRigs) {
+                            window.CatRigs.bite(this.player.name);
+                        }
                         }
                     }
                 });
@@ -6790,6 +6849,11 @@
                         if (rigContainer && window.catRigPlay) {
                             window.catRigPlay.cheer(rigContainer);
                         }
+                        
+                        // Add 3D cat catch reaction
+                        if (window.CatRigs) {
+                            window.CatRigs.catch(this.player.name);
+                        }
                     } else {
                         // Show humorous "no catch" messages
                         const noCatchMessages = [
@@ -6854,6 +6918,11 @@
                         const rigContainer = playerFisher?.querySelector('.cat-rig') || mobilePlayerFisher?.querySelector('.cat-rig');
                         if (rigContainer && window.catRigPlay) {
                             window.catRigPlay.sad(rigContainer);
+                        }
+                        
+                        // Add 3D cat sad reaction
+                        if (window.CatRigs) {
+                            window.CatRigs.sad(this.player.name);
                         }
                     }
                 }, 400);
@@ -10273,6 +10342,245 @@
 
         // Start the game
         const game = new FishingHoleMultiplayer();
+    </script>
+
+    <!-- Three.js 3D Cat System -->
+    <script type="module">
+        import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+        import { GLTFLoader }   from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+        import { RGBELoader }   from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/RGBELoader.js';
+        import { PMREMGenerator } from 'https://unpkg.com/three@0.160.0/examples/jsm/pmrem/PMREMGenerator.js';
+
+        class Cat3D {
+            constructor(container, opts={}){
+                this.container = container;
+                this.modelUrl = opts.modelUrl || '/assets/cat/cat.glb';
+                this.envUrl   = opts.envUrl   || null; // '/assets/env/lake.hdr'
+                this.tint     = new THREE.Color(opts.furColor || '#c8a079');
+                this.scale    = opts.scale || 0.9;
+
+                // renderer
+                this.renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, powerPreference:'high-performance' });
+                this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+                this.renderer.setSize(container.clientWidth, container.clientHeight);
+                this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+                container.innerHTML = '';
+                container.appendChild(this.renderer.domElement);
+
+                // scene/camera
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(30, container.clientWidth/container.clientHeight, 0.1, 50);
+                this.camera.position.set(0.2, 0.9, 2.2);
+
+                // lights (work even without HDRI)
+                const hemi = new THREE.HemisphereLight(0xffffff, 0x446688, 0.7);
+                const key  = new THREE.DirectionalLight(0xffffff, 0.7); key.position.set(1.5, 2, 1.2);
+                const rim  = new THREE.DirectionalLight(0x88ccff, 0.25); rim.position.set(-2, 1.2, -1.5);
+                this.scene.add(hemi, key, rim);
+
+                // state
+                this.clock = new THREE.Clock();
+                this.mixer = null;
+                this.clips = {};
+                this.blinkMorph = null;
+                this.earMorphL = null;
+                this.earMorphR = null;
+                this.tailBone = null;
+                this.model = null;
+
+                // load everything
+                this.#load().then(()=>this.#loop());
+
+                // resize
+                new ResizeObserver(()=>this.#resize()).observe(container);
+            }
+
+            async #load(){
+                // environment
+                if (this.envUrl){
+                    const pmrem = new PMREMGenerator(this.renderer);
+                    const hdr = await new RGBELoader().loadAsync(this.envUrl);
+                    const envMap = pmrem.fromEquirectangular(hdr).texture;
+                    this.scene.environment = envMap;
+                    hdr.dispose(); pmrem.dispose();
+                }
+
+                // model
+                const gltf = await new GLTFLoader().loadAsync(this.modelUrl);
+                this.model = gltf.scene;
+                this.model.scale.setScalar(this.scale);
+                // center roughly
+                this.model.position.set(0, -0.5, 0);
+                this.scene.add(this.model);
+
+                // tint fur (supports both MeshStandardMaterial and MultiMat)
+                this.model.traverse(o=>{
+                    if (o.isMesh && o.material){
+                        // if there's a "fur" or "body" material name, tint that; else tint all slightly
+                        const mats = Array.isArray(o.material)? o.material : [o.material];
+                        mats.forEach(m=>{
+                            if (m.color) {
+                                if ((m.name||'').toLowerCase().includes('fur') || (m.name||'').toLowerCase().includes('body')) {
+                                    m.color.multiply(this.tint);
+                                } else {
+                                    m.color.multiply(new THREE.Color('#f0f0f0'));
+                                }
+                                m.roughness = Math.min(0.9, (m.roughness ?? 0.6) + 0.1);
+                                m.metalness = Math.max(0.0, (m.metalness ?? 0.1) - 0.05);
+                            }
+                        });
+                    }
+                });
+
+                // animation mixer & clip map
+                if (gltf.animations?.length){
+                    this.mixer = new THREE.AnimationMixer(this.model);
+                    gltf.animations.forEach(clip => { this.clips[clip.name.toLowerCase()] = clip; });
+                    // prefer provided idle; else we'll procedural-breathe
+                    const idle = this.clips['idle'] || this.clips['breath'] || this.clips['breathing'];
+                    if (idle) this.mixer.clipAction(idle).play();
+                }
+
+                // morph targets (blink/ears) if present
+                this.model.traverse(o=>{
+                    if (o.isMesh && o.morphTargetDictionary){
+                        const d = o.morphTargetDictionary;
+                        if (d.EyesClosed   !== undefined) this.blinkMorph = { mesh:o, idx:d.EyesClosed };
+                        if (d.Blink        !== undefined) this.blinkMorph = { mesh:o, idx:d.Blink };
+                        if (d.EarTwitch_L  !== undefined) this.earMorphL  = { mesh:o, idx:d.EarTwitch_L };
+                        if (d.EarTwitch_R  !== undefined) this.earMorphR  = { mesh:o, idx:d.EarTwitch_R };
+                    }
+                    if (o.isBone && /tail/i.test(o.name)) this.tailBone = o;
+                });
+            }
+
+            // realtime loop
+            #loop = ()=>{
+                const dt = this.clock.getDelta();
+                if (this.mixer) this.mixer.update(dt);
+
+                // procedural blink if no morphs/clip running
+                this.#updateProcedurals();
+
+                this.renderer.render(this.scene, this.camera);
+                this.raf = requestAnimationFrame(this.#loop);
+            }
+
+            #updateProcedurals(){
+                const t = performance.now()*0.001;
+
+                // blink (morph or fake by moving eyelids if you add them later)
+                if (this.blinkMorph){
+                    // random sparse blink
+                    const phase = (Math.sin(t*0.25)+1)/2; // slow wave 0..1
+                    const rand  = (Math.sin(t*7.733)+1)/2; // pseudo-rand 0..1
+                    let blink = 0.0;
+                    if (rand > 0.985) blink = 1.0; // quick full blink
+                    else if (rand > 0.96) blink = 0.35;
+                    this.blinkMorph.mesh.morphTargetInfluences[this.blinkMorph.idx] = THREE.MathUtils.damp(
+                        this.blinkMorph.mesh.morphTargetInfluences[this.blinkMorph.idx] || 0, blink, 12, this.clock.getDelta()
+                    );
+                }
+
+                // tail sway if we found a tail bone (small, natural)
+                if (this.tailBone){
+                    this.tailBone.rotation.z = Math.sin(t*1.8) * THREE.MathUtils.degToRad(7);
+                }
+            }
+
+            // === reactions you can call from game ===
+            bite(){
+                // ear flick + quick look
+                if (this.earMorphL) this.#pulseMorph(this.earMorphL, 0.6, 120);
+                if (this.earMorphR) this.#pulseMorph(this.earMorphR, 0.6, 180);
+                this.#cameraNod(0.02, 180);
+            }
+            catch(){
+                // happy bounce (play "Celebrate" clip if present, else nudge model)
+                const clip = this.clips['celebrate'] || this.clips['cheer'];
+                if (clip && this.mixer){
+                    this.mixer.stopAllAction();
+                    const act = this.mixer.clipAction(clip);
+                    act.reset().play();
+                } else {
+                    this.#bounce(0.06, 280);
+                }
+            }
+            sad(){
+                // subtle head dip
+                this.#cameraNod(-0.03, 260);
+            }
+
+            // helpers
+            #pulseMorph(target, amount=0.6, ms=150){
+                const inf = target.mesh.morphTargetInfluences;
+                const i = target.idx;
+                let t0; const tick = (ts)=>{
+                    if (!t0) t0 = ts;
+                    const a = (ts - t0)/ms;
+                    if (a < 0.5) inf[i] = amount * (a/0.5); else inf[i] = amount * (1 - (a-0.5)/0.5);
+                    if (a<1) requestAnimationFrame(tick); else inf[i]=0;
+                };
+                requestAnimationFrame(tick);
+            }
+            #bounce(height=0.05, ms=220){
+                const y0 = this.model.position.y; let t0;
+                const tick=(ts)=>{ if(!t0) t0=ts; const a=(ts-t0)/ms;
+                    const y = Math.sin(Math.min(a,1)*Math.PI)*height;
+                    this.model.position.y = y0 + y;
+                    if (a<1) requestAnimationFrame(tick); else this.model.position.y=y0;
+                }; requestAnimationFrame(tick);
+            }
+            #cameraNod(amount=0.02, ms=180){
+                const x0 = this.camera.rotation.x; let t0;
+                const tick=(ts)=>{ if(!t0) t0=ts; const a=(ts-t0)/ms;
+                    const k = Math.sin(Math.min(a,1)*Math.PI);
+                    this.camera.rotation.x = x0 + k*amount;
+                    if (a<1) requestAnimationFrame(tick); else this.camera.rotation.x=x0;
+                }; requestAnimationFrame(tick);
+            }
+
+            dispose(){
+                cancelAnimationFrame(this.raf);
+                this.renderer.dispose();
+            }
+
+            #resize(){
+                const w = this.container.clientWidth, h = this.container.clientHeight;
+                this.renderer.setSize(w,h,false);
+                this.camera.aspect = w/h || 1;
+                this.camera.updateProjectionMatrix();
+            }
+        }
+
+        // Simple manager so your game can access cats by player name/id
+        window.CatRigs = {
+            map: new Map(),
+            mount(selectorOrEl, opts){
+                const el = (typeof selectorOrEl === 'string') ? document.querySelector(selectorOrEl) : selectorOrEl;
+                if (!el) return null;
+                const rig = new Cat3D(el, opts);
+                const key = el.dataset.playerId || ('player-'+Math.random().toString(36).slice(2));
+                this.map.set(key, rig);
+                return rig;
+            },
+            get(key){ return this.map.get(key); },
+            bite(key){ this.map.get(key)?.bite(); },
+            catch(key){ this.map.get(key)?.catch(); },
+            sad(key){ this.map.get(key)?.sad(); }
+        };
+
+        // EXAMPLE: mount your own cat after login (call once you render the fisherman row)
+        window.mountPlayerCat3D = function(playerName, options={}){
+            const host = document.querySelector(`.cat3d[data-player-id="${CSS.escape(playerName)}"]`);
+            if (!host) return null;
+            return CatRigs.mount(host, {
+                modelUrl: options.modelUrl || '/assets/cat/cat.glb',
+                envUrl:   options.envUrl   || null,
+                furColor: options.furColor || '#c8a079',
+                scale:    options.scale    || 0.9
+            });
+        };
     </script>
 </body>
 </html>
