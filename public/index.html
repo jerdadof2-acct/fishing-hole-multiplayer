@@ -4102,7 +4102,7 @@
                         const realPlayers = realPlayerData.map(playerData => ({
                             name: playerData.name,
                             level: playerData.level || 1,
-                            character: playerData.character || `https://robohash.org/cat-${playerData.name}?set=set4&size=200x200`, // Use received character
+                            character: playerData.character || 'cat-rig', // Use cat rig system
                             fishing: false,
                             catches: 0,
                             isCasting: false,
@@ -4874,6 +4874,12 @@
                             });
                         }
                     });
+                    
+                    // Force initial preview update
+                    setTimeout(() => {
+                        updateCharacterPreview();
+                        console.log('Character preview initialized');
+                    }, 100);
                 }
 
                 function randomizeCatAppearance() {
@@ -5341,9 +5347,8 @@
                 this.otherPlayers.forEach((player, index) => {
                     // Generate or use stored cat avatar for each player
                     if (!player.character) {
-                        // Generate a unique cat based on player name
-                        const catSeed = `cat-${player.name}-${index}`;
-                        player.character = `https://robohash.org/${catSeed}?set=set4&size=200x200`;
+                        // Use cat rig system for other players
+                        player.character = 'cat-rig';
                     }
                     
                     const fisher = document.createElement('div');
@@ -7630,9 +7635,8 @@
                 // Add 3-6 random AI players (all cats!)
                 const numPlayers = Math.floor(Math.random() * 4) + 3;
                 for (let i = 0; i < numPlayers; i++) {
-                    // Generate unique cat avatar for each AI player
-                    const catSeed = `cat-ai-${aiNames[i]}-${i}`;
-                    const catAvatar = `https://robohash.org/${catSeed}?set=set4&size=200x200`;
+                    // Use cat rig system for AI players
+                    const catCharacter = 'cat-rig';
                     
                     this.otherPlayers.push({
                         name: aiNames[i], // Use unique AI names
@@ -7643,7 +7647,7 @@
                         biggestCatch: Math.random() * 15, // Random biggest catch 0-15 lbs
                         recentCatches: this.generateSimulatedCatches(Math.floor(Math.random() * 20) + 5), // 5-25 catches
                         isSimulated: true, // Mark as AI player
-                        character: catAvatar // Assign cat avatar
+                        character: catCharacter // Use cat rig system
                     });
                 }
 
