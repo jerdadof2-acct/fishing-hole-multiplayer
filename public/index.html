@@ -11551,29 +11551,21 @@
                 
                 const lakeRect = lake.getBoundingClientRect();
                 
-                // Debug first few frames - show actual numeric values
+                // Debug first few frames - show actual numeric values (readable format)
                 if (!this._debugCount) this._debugCount = 0;
                 if (this._debugCount < 5) {
-                    console.log('Cat3D Overlay Debug Frame', this._debugCount, ':', {
-                        tipWorld: { x: tipWorld.x.toFixed(3), y: tipWorld.y.toFixed(3), z: tipWorld.z.toFixed(3) },
-                        tipScreen: { x: tipScreen.x.toFixed(1), y: tipScreen.y.toFixed(1) },
-                        bobWorld: { x: bobWorld.x.toFixed(3), y: bobWorld.y.toFixed(3), z: bobWorld.z.toFixed(3) },
-                        bobScreen: { x: bobScreen.x.toFixed(1), y: bobScreen.y.toFixed(1) },
-                        rodTipBone: this.rodTipBone.name,
-                        bobberVisible: this.bobber.visible,
-                        containerRect: {
-                            left: this.container.getBoundingClientRect().left.toFixed(1),
-                            top: this.container.getBoundingClientRect().top.toFixed(1),
-                            width: this.container.getBoundingClientRect().width.toFixed(1),
-                            height: this.container.getBoundingClientRect().height.toFixed(1)
-                        },
-                        lakeRect: {
-                            left: lakeRect.left.toFixed(1),
-                            top: lakeRect.top.toFixed(1),
-                            width: lakeRect.width.toFixed(1),
-                            height: lakeRect.height.toFixed(1)
-                        }
-                    });
+                    console.group(`Cat3D Overlay Debug Frame ${this._debugCount}`);
+                    console.log('Rod Tip World:', `${tipWorld.x.toFixed(3)}, ${tipWorld.y.toFixed(3)}, ${tipWorld.z.toFixed(3)}`);
+                    console.log('Rod Tip Screen:', `${tipScreen.x.toFixed(1)}, ${tipScreen.y.toFixed(1)}`);
+                    console.log('Bobber World:', `${bobWorld.x.toFixed(3)}, ${bobWorld.y.toFixed(3)}, ${bobWorld.z.toFixed(3)}`);
+                    console.log('Bobber Screen:', `${bobScreen.x.toFixed(1)}, ${bobScreen.y.toFixed(1)}`);
+                    console.log('Distance (screen):', Math.hypot(bobScreen.x - tipScreen.x, bobScreen.y - tipScreen.y).toFixed(1), 'px');
+                    const containerRect = this.container.getBoundingClientRect();
+                    console.log('Cat Container:', `left:${containerRect.left.toFixed(1)} top:${containerRect.top.toFixed(1)} w:${containerRect.width.toFixed(1)} h:${containerRect.height.toFixed(1)}`);
+                    console.log('Lake Container:', `left:${lakeRect.left.toFixed(1)} top:${lakeRect.top.toFixed(1)} w:${lakeRect.width.toFixed(1)} h:${lakeRect.height.toFixed(1)}`);
+                    console.log('Bobber visible:', this.bobber.visible);
+                    console.log('Rod tip bone:', this.rodTipBone.name);
+                    console.groupEnd();
                     this._debugCount++;
                 }
                 
