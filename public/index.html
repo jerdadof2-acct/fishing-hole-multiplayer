@@ -10821,8 +10821,9 @@
                         const center = box.getCenter(new THREE.Vector3());
                         console.log('Cat3D: Model bounding box - size:', size, 'center:', center);
                         
-                        // Scale model to fit nicely in the container - reduce cat size but keep it visible
-                        const actualScale = this.scale * 0.35; // Smaller cat so full body fits in container, but still visible
+                        // Scale model smaller so full cat fits in container (container size stays 96x96px via CSS)
+                        // Reduce the model scale directly - base scale is usually 0.9, so this makes cat smaller
+                        const actualScale = this.scale * 0.4; // Smaller cat model (container unaffected)
                         this.model.scale.setScalar(actualScale);
                         
                         // Position model centered at origin
