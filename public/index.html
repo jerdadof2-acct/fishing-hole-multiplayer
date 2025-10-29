@@ -3634,7 +3634,7 @@
                 <!-- Character Preview -->
                 <div style="text-align: center; margin: 15px 0; min-height: 120px; background: rgba(20,30,50,0.8); border: 2px solid rgba(100,200,255,0.4); border-radius: 12px; padding: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
                     <div id="character-preview-container" style="display: flex; justify-content: center; margin-bottom: 8px;">
-                        <div id="character-preview-avatar" class="cat3d" style="width: 80px; height: 80px;" data-player-id="preview"></div>
+                        <div id="character-preview-avatar" class="cat3d" style="width: 80px; height: 80px;" data-player-id="preview" data-cat3d="preview"></div>
                         <div id="character-preview-avatar-2d" class="cat-rig" style="width: 80px; height: 80px; display: none;" data-player-id="preview"></div>
                     </div>
                     <div style="color: #ffffff; font-size: 11px; font-weight: 600;">Your Fishing Cat 🐱</div>
@@ -4950,12 +4950,21 @@
                         if (preview3D) preview3D.style.display = 'block';
                         if (preview2D) preview2D.style.display = 'none';
                         
-                        // Mount or update 3D cat
+                        // Mount or update 3D cat - defer to ensure container is visible
                         if (preview3D) {
-                            window.mountPlayerCat3D('preview', {
-                                furColor: colors.fur,
-                                scale: 0.8
-                            });
+                            // Check if preview container is visible before mounting
+                            const previewRect = preview3D.getBoundingClientRect();
+                            if (previewRect.width > 0 && previewRect.height > 0 && preview3D.offsetParent !== null) {
+                                // Container is visible, mount immediately
+                                requestAnimationFrame(() => {
+                                    window.mountPlayerCat3D('preview', {
+                                        furColor: colors.fur,
+                                        scale: 0.8
+                                    });
+                                });
+                            }
+                            // If not visible, mount will happen when updateCharacterPreview is called again
+                            // when the character selection panel becomes visible
                         }
                     } else {
                         // Fallback to 2D preview
@@ -11061,6 +11070,12 @@
             // Ensure container is visible
             const rect = host.getBoundingClientRect();
             if (rect.width === 0 || rect.height === 0 || host.offsetParent === null) {
+                // For preview, this is expected when the character selection panel isn't visible yet
+                if (playerName === 'preview') {
+                    // Silently skip preview mount if not visible - it will mount when visible
+                    host.__mounting = false;
+                    return null;
+                }
                 console.warn('mountPlayerCat3D: Container not visible for', playerName);
                 host.__mounting = false;
                 host.dispatchEvent(new CustomEvent('cat3d-failed'));
