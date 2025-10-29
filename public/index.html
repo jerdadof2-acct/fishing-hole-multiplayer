@@ -11155,7 +11155,7 @@
                     
                     // Load and attach fishing rod model
                     this.rodModel = null;
-                    this.rodTipBone = null;
+                    // Note: rodTipBone may already be found above, don't reset it
                     
                     // Find hand/grip bone for rod attachment
                     let handBone = null;
@@ -11180,16 +11180,22 @@
                             console.log('Cat3D: Fishing rod loaded successfully');
                             this.rodModel = rodGltf.scene;
                             
-                            // Find rod tip bone in rod model
+                            // Find rod tip bone in rod model (use rod's bone if found)
+                            let rodTipBoneFromRod = null;
                             this.rodModel.traverse(o => {
                                 if (o.isBone) {
                                     const name = (o.name || '').toLowerCase();
                                     if (name.includes('tip') || name.includes('end') || name.includes('rod_tip')) {
-                                        this.rodTipBone = o;
-                                        console.log('Cat3D: Found rod tip bone:', o.name);
+                                        rodTipBoneFromRod = o;
+                                        console.log('Cat3D: Found rod tip bone in rod model:', o.name);
                                     }
                                 }
                             });
+                            
+                            // Use rod's tip bone if found, otherwise keep existing
+                            if (rodTipBoneFromRod) {
+                                this.rodTipBone = rodTipBoneFromRod;
+                            }
                             
                             // If no rod tip bone found, create one at rod end
                             if (!this.rodTipBone) {
