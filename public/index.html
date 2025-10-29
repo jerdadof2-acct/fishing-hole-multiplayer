@@ -422,11 +422,11 @@
         }
 
         .fishing-lake {
-            width: calc(100% - 40px);
+            width: calc(100% - 0px); /* Removed extra padding since in lake-side container */
             max-width: calc(100vw - 600px);
-            height: calc(100vh - 300px);
-            min-height: 400px;
-            max-height: 600px;
+            height: calc(100vh - 350px); /* Reduced height to make room for cat */
+            min-height: 350px;
+            max-height: 550px;
             border: 3px solid rgba(100, 181, 246, 0.6);
             border-radius: 20px;
             position: relative;
@@ -3211,10 +3211,15 @@
                 <!-- Center Game Area -->
                 <div class="center-area">
                     <div class="fishing-area">
-                        <div class="fisherman-row" id="fisherman-row">
-                            <!-- Fishermen will be added here -->
-                        </div>
-                        <div class="fishing-lake" id="fishing-lake">
+                        <!-- Side-by-side layout: Player cat on left, lake on right -->
+                        <div class="fishing-game-layout">
+                            <div class="player-cat-side">
+                                <div class="fisherman-row" id="fisherman-row">
+                                    <!-- Fishermen will be added here -->
+                                </div>
+                            </div>
+                            <div class="lake-side">
+                                <div class="fishing-lake" id="fishing-lake">
                             <div class="ripples" id="ripples"></div>
                             <div id="caustics-layer" aria-hidden="true"></div>
                             <!-- Realistic splash canvas (drawn above water surface) -->
@@ -11265,30 +11270,47 @@
                             console.log('Cat3D: Fishing rod loaded successfully');
                             this.rodModel = rodGltf.scene;
                             
-                            // Scale and orient rod properly
-                            this.rodModel.scale.setScalar(1.0); // Start with 1.0, adjust as needed
+                            // Scale and orient rod properly - make it bigger and visible
+                            this.rodModel.scale.setScalar(1.5); // Make rod bigger (was 1.0)
                             this.rodModel.rotation.set(0, Math.PI, 0); // Often needed if rod faces backward
                             this.rodModel.position.set(0, -0.02, 0.06); // Small offset in the hand - tweak as needed
                             
-                            // Ensure rod materials are visible
+                            // Ensure rod is visible
+                            this.rodModel.visible = true;
                             this.rodModel.traverse(o => {
+                                o.visible = true; // Make sure all parts are visible
                                 if (o.isMesh && o.material) {
                                     const mats = Array.isArray(o.material) ? o.material : [o.material];
-                                    mats.forEach(m => {
+                                    mats.forEach((m, idx) => {
+                                        // Convert to visible material
                                         if (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial) {
-                                            // Convert to standard material if needed
-                                            m = new THREE.MeshStandardMaterial({
-                                                color: m.color || 0xcccccc,
+                                            const newMat = new THREE.MeshStandardMaterial({
+                                                color: (m.color && m.color.r > 0) ? m.color : new THREE.Color(0xcccccc),
                                                 map: m.map,
                                                 roughness: 0.7,
                                                 metalness: 0.1
                                             });
-                                            o.material = mats.length === 1 ? m : mats;
+                                            if (Array.isArray(o.material)) {
+                                                o.material[idx] = newMat;
+                                            } else {
+                                                o.material = newMat;
+                                            }
+                                            m = newMat;
                                         }
+                                        // Ensure material is bright and visible
+                                        m.color = m.color || new THREE.Color(0xcccccc);
+                                        if (m.color.r === 0 && m.color.g === 0 && m.color.b === 0) {
+                                            m.color.setHex(0xcccccc); // Default gray if black
+                                        }
+                                        m.transparent = false;
+                                        m.opacity = 1.0;
+                                        m.visible = true;
                                         m.needsUpdate = true;
                                     });
                                 }
                             });
+                            
+                            console.log('Cat3D: Rod model scaled to 1.5x, materials updated for visibility');
                             
                             // Find rod tip bone in rod model first
                             let rodTipBoneFromRod = null;
