@@ -3989,7 +3989,14 @@
                             const welcomeName = document.getElementById('welcome-name');
                             const welcomeAvatar = document.getElementById('welcome-avatar');
                             if (welcomeName) welcomeName.textContent = this.player.name;
-                            if (welcomeAvatar) welcomeAvatar.src = this.player.character;
+                            // Don't use robohash - hide avatar image since we use 3D cats
+                            if (welcomeAvatar) {
+                                if (this.player.character === 'cat-rig' || this.player.avatarOptions?.type === 'cat') {
+                                    welcomeAvatar.style.display = 'none'; // Hide image, use 3D cat instead
+                                } else {
+                                    welcomeAvatar.src = this.player.character;
+                                }
+                            }
                             
                             // Hide welcome screen after 2 seconds and start game
                             setTimeout(() => {
@@ -9969,11 +9976,18 @@
                     mobileSoundBtn.textContent = this.soundEnabled ? '🔊' : '🔇';
                 }
                 
-                // Update character display (image)
+                // Update character display (image) - don't show robohash, use 3D cats instead
                 const mobileCharacterDisplayImg = document.getElementById('mobile-character-display-img');
-                if (mobileCharacterDisplayImg && this.player.character) {
-                    mobileCharacterDisplayImg.src = this.player.character;
-                    mobileCharacterDisplayImg.style.display = 'block';
+                if (mobileCharacterDisplayImg) {
+                    // Hide image if using cat-rig system (3D cats)
+                    if (this.player.character === 'cat-rig' || this.player.avatarOptions?.type === 'cat') {
+                        mobileCharacterDisplayImg.style.display = 'none';
+                    } else if (this.player.character && !this.player.character.includes('robohash')) {
+                        mobileCharacterDisplayImg.src = this.player.character;
+                        mobileCharacterDisplayImg.style.display = 'block';
+                    } else {
+                        mobileCharacterDisplayImg.style.display = 'none'; // Hide robohash
+                    }
                 }
                 
                 // Update mobile inventory
@@ -10809,8 +10823,8 @@
                         const center = box.getCenter(new THREE.Vector3());
                         console.log('Cat3D: Model bounding box - size:', size, 'center:', center);
                         
-                        // Make model larger and more visible (scale up from 0.9 to 2.0)
-                        const actualScale = this.scale * 2.0; // Scale up to make it more visible
+                        // Make model larger and more visible (scale up significantly)
+                        const actualScale = this.scale * 3.0; // Scale up to 3x for better visibility
                         this.model.scale.setScalar(actualScale);
                         
                         // Position model better - center it and raise it up so camera can see it
@@ -10900,11 +10914,15 @@
                                     if (materialName.includes('fur') || materialName.includes('body')) {
                                         // For fur/body, use the tint color directly but brightened
                                         m.color.copy(this.tint);
-                                        // Ensure minimum brightness - if too dark, brighten it
+                                        // Ensure minimum brightness - brighten significantly
                                         const brightness = m.color.r + m.color.g + m.color.b;
-                                        if (brightness < 0.5) {
-                                            m.color.multiplyScalar(2.0); // Double brightness if too dark
+                                        if (brightness < 1.0) {
+                                            m.color.multiplyScalar(1.5 / Math.max(brightness, 0.3)); // Brighten to ensure visibility
                                         }
+                                        // Ensure color is bright enough to be seen
+                                        m.color.r = Math.max(0.3, m.color.r);
+                                        m.color.g = Math.max(0.3, m.color.g);
+                                        m.color.b = Math.max(0.3, m.color.b);
                                     } else {
                                         // For other parts, use light color
                                         m.color.copy(new THREE.Color(0xf0f0f0)); // Light gray
