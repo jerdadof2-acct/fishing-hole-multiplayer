@@ -5193,13 +5193,24 @@
                 // Use cat rig system instead of robohash
                 this.player.character = 'cat-rig'; // Mark as using cat rig system
                 
-                // Ensure avatarOptions exist
+                // Ensure avatarOptions exist with proper structure
                 if (!this.player.avatarOptions) {
                     this.player.avatarOptions = {
                         colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
                         gear: { hat: false, glasses: false, vest: false },
                         type: 'cat'
                     };
+                } else {
+                    // Ensure nested structure exists
+                    if (!this.player.avatarOptions.colors) {
+                        this.player.avatarOptions.colors = { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' };
+                    }
+                    if (!this.player.avatarOptions.gear) {
+                        this.player.avatarOptions.gear = { hat: false, glasses: false, vest: false };
+                    }
+                    if (!this.player.avatarOptions.type) {
+                        this.player.avatarOptions.type = 'cat';
+                    }
                 }
                 
                 this.saveGameData();
@@ -5268,17 +5279,17 @@
                                 gear: { hat: false, glasses: false, vest: false }
                             };
                             
-                            try {
-                                window.mountPlayerCat3D(this.player.name, {
-                                    furColor: opts.colors.fur,
-                                    scale: 0.8
-                                });
-                                console.log('3D cat mounted successfully');
-                            } catch (error) {
-                                console.log('3D cat mounting failed, falling back to 2D:', error);
-                                // Fall through to 2D fallback
-                                this.#fallbackTo2D(playerFisher);
-                            }
+                        try {
+                            window.mountPlayerCat3D(this.player.name, {
+                                furColor: opts?.colors?.fur || '#f2a65a',
+                                scale: 0.8
+                            });
+                            console.log('3D cat mounted successfully');
+                        } catch (error) {
+                            console.log('3D cat mounting failed, falling back to 2D:', error);
+                            // Fall through to 2D fallback
+                            this.#fallbackTo2D(playerFisher);
+                        }
                         } else {
                             console.log('Falling back to 2D cat rig');
                             this.#fallbackTo2D(playerFisher);
@@ -5315,7 +5326,7 @@
                         };
                         
                         window.mountPlayerCat3D(this.player.name, {
-                            furColor: opts.colors.fur,
+                            furColor: opts?.colors?.fur || '#f2a65a',
                             scale: 0.6 // Smaller for mobile
                         });
                     } else {
@@ -10373,9 +10384,21 @@
                 if (cat3dEl) cat3dEl.style.display = 'none';
                 if (catRigEl) catRigEl.style.display = 'block';
                 
-                const opts = this.player.avatarOptions || {
-                    colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
-                    gear: { hat: false, glasses: false, vest: false }
+                // Ensure avatarOptions has proper structure
+                const avatarOptions = this.player?.avatarOptions || {};
+                const opts = {
+                    colors: {
+                        fur: avatarOptions?.colors?.fur || '#f2a65a',
+                        pattern: avatarOptions?.colors?.pattern || '#d77f3f',
+                        ear: avatarOptions?.colors?.ear || '#c76b2a',
+                        eye: avatarOptions?.colors?.eye || '#1e2a3a',
+                        belly: avatarOptions?.colors?.belly || '#f8d7b1'
+                    },
+                    gear: {
+                        hat: avatarOptions?.gear?.hat || false,
+                        glasses: avatarOptions?.gear?.glasses || false,
+                        vest: avatarOptions?.gear?.vest || false
+                    }
                 };
                 
                 const rigContainer = fisherElement.querySelector('.cat-rig');
