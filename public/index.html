@@ -10595,23 +10595,33 @@
 
         window.getCatContainerForPlayer = function(name) {
             const key = window.safeKey(name);
-            // Try data-cat3d first, then data-player-id, then id fallback
-            return document.querySelector(`[data-cat3d="${key}"]`)
-                || document.querySelector(`.cat3d[data-player-id="${key}"]`)
-                || document.querySelector(`.cat3d[data-player-id="${name}"]`)
-                || document.getElementById(`cat3d-${key}`)
-                || null;
+            // Try the most reliable first: data-cat3d=safeKey
+            let el =
+                document.querySelector(`.cat3d[data-cat3d="${key}"]`) ||
+                document.querySelector(`.cat3d[data-player-id="${key}"]`) ||
+                document.querySelector(`.cat3d[data-player-id="${name}"]`) ||
+                document.getElementById(`cat3d-${key}`);
+            if (!el) {
+                // Last-ditch: current player bucket
+                el = document.querySelector('#player-fisher .cat3d')
+                    || document.querySelector('.fisherman.you .cat3d')
+                    || document.querySelector('#mobile-player-fisher .cat3d');
+            }
+            if (!el) {
+                console.warn('mountPlayerCat3D: No container found for', name, { key });
+            }
+            return el || null;
         };
 
         // Limit active 3D renderers to prevent context exhaustion
-        // Reduced to 3 to provide more headroom (player + 2 bots max)
-        window.MAX_3D_RENDERERS = 3;
+        // Reduced to 2 for testing (player + 1 bot max) - can scale up after pipeline is validated
+        window.MAX_3D_RENDERERS = 2;
         window.ACTIVE_3D_PLAYERS = new Set();
 
         window.choose3DPlayers = function(allPlayers, you) {
             const chosen = new Set([window.safeKey(you)]);
             // Add up to MAX_3D_RENDERERS - 1 other players (nearest or most active)
-            // MAX_3D_RENDERERS is 3, so we add 2 others (player + 2 bots = 3 total)
+            // MAX_3D_RENDERERS is 2, so we add 1 other (player + 1 bot = 2 total)
             const others = Array.from(allPlayers)
                 .filter(p => window.safeKey(p.name) !== window.safeKey(you))
                 .slice(0, Math.max(0, window.MAX_3D_RENDERERS - 1));
@@ -10659,7 +10669,8 @@
                 this.renderer.outputColorSpace = THREE.SRGBColorSpace;
                 this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
                 this.renderer.toneMappingExposure = 1.1;
-                this.renderer.setClearAlpha(0);
+                // Set visible background color so canvas is obvious even if model fails
+                this.renderer.setClearColor(0x0a1628, 1); // visible dark blue
                 
                 container.innerHTML = '';
                 container.appendChild(this.renderer.domElement);
@@ -10736,13 +10747,47 @@
                         });
                     }
 
-                    // model
-                    const gltf = await new GLTFLoader().loadAsync(this.modelUrl);
-                    this.model = gltf.scene;
-                    this.model.scale.setScalar(this.scale);
-                    // center roughly
-                    this.model.position.set(0, -0.5, 0);
-                    this.scene.add(this.model);
+                    // model - use load with error callback for better error handling
+                    const loader = new GLTFLoader();
+                    let gltf;
+                    try {
+                        gltf = await new Promise((resolve, reject) => {
+                            loader.load(
+                                this.modelUrl,
+                                (gltf) => resolve(gltf),
+                                undefined,
+                                (err) => {
+                                    console.error('Cat3D GLTF failed:', this.modelUrl, err);
+                                    // Put a simple visible placeholder in the scene
+                                    const geo = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+                                    const mat = new THREE.MeshStandardMaterial({ 
+                                        color: this.tint,
+                                        metalness: 0.2, 
+                                        roughness: 0.8 
+                                    });
+                                    const cube = new THREE.Mesh(geo, mat);
+                                    cube.position.set(0, -0.5, 0);
+                                    this.scene.add(cube);
+                                    this.model = cube;
+                                    
+                                    // Also notify DOM so your page can 2D-fallback if desired
+                                    this.container.dispatchEvent(new CustomEvent('cat3d-failed'));
+                                    reject(err);
+                                }
+                            );
+                        });
+                        this.model = gltf.scene;
+                        this.model.scale.setScalar(this.scale);
+                        // center roughly
+                        this.model.position.set(0, -0.5, 0);
+                        this.scene.add(this.model);
+                    } catch (loadError) {
+                        // Error handler already added placeholder, just rethrow to outer catch
+                        if (!this.model) {
+                            throw loadError;
+                        }
+                        // Model was set in error handler, continue
+                    }
                     
                     // improve materials with tone mapping and environment intensity
                     this.scene.traverse((obj) => {
@@ -10768,10 +10813,13 @@
                         if (idle) this.mixer.clipAction(idle).play();
                     }
                 } catch (error) {
-                    console.error('Cat GLB load failed:', error);
+                    console.error('Cat GLB load failed:', this.modelUrl, error);
                     // Expose a hook so game code can fallback
                     this.container.dispatchEvent(new CustomEvent('cat3d-failed'));
-                    this.#createPlaceholder();
+                    // Create placeholder if model failed
+                    if (!this.model) {
+                        this.#createPlaceholder();
+                    }
                 }
 
                 // tint fur (supports both MeshStandardMaterial and MultiMat)
@@ -11074,8 +11122,8 @@
             CSS.escape = s => String(s).replace(/[^a-z0-9_\-]/gi, '\\$&'); 
         }
 
-        // EXAMPLE: mount your own cat after login (call once you render the fisherman row)
-        window.mountPlayerCat3D = function(playerName, options={}){
+        // Internal mount function that does the actual work
+        window._reallyMountPlayerCat3D = function(playerName, options={}){
             // Use bulletproof container finder
             const host = window.getCatContainerForPlayer(playerName);
             
@@ -11139,6 +11187,28 @@
             }
             
             return rig;
+        };
+
+        // Public mount function with race condition protection
+        window.mountPlayerCat3D = function(playerName, options={}){
+            // De-race the first mount (ensure the host actually has a size)
+            requestAnimationFrame(() => {
+                const host = window.getCatContainerForPlayer(playerName);
+                if (!host) {
+                    // Try one more frame later if host doesn't exist yet
+                    return requestAnimationFrame(() => {
+                        if (window.getCatContainerForPlayer(playerName)) {
+                            window._reallyMountPlayerCat3D(playerName, options);
+                        }
+                    });
+                }
+                const r = host.getBoundingClientRect();
+                if (r.width === 0 || r.height === 0 || host.offsetParent === null) {
+                    // try one more frame later (layout just changed)
+                    return requestAnimationFrame(() => window._reallyMountPlayerCat3D(playerName, options));
+                }
+                window._reallyMountPlayerCat3D(playerName, options);
+            });
         };
         
         // Signal that 3D module is ready
