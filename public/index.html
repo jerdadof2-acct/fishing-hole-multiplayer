@@ -10723,10 +10723,12 @@
                 this.scene = new THREE.Scene();
                 container.__scene = this.scene;
                 // Add visual helper so you see "something" even before the model loads
-                this.scene.add(new THREE.AxesHelper(1)); // X/Y/Z cross so you can confirm the loop renders
-                this.camera = new THREE.PerspectiveCamera(30, container.clientWidth/container.clientHeight || 1, 0.1, 50);
+                // Make axes helper bigger (2 units) so it's more visible
+                this.scene.add(new THREE.AxesHelper(2)); // X/Y/Z cross so you can confirm the loop renders
+                this.camera = new THREE.PerspectiveCamera(45, container.clientWidth/container.clientHeight || 1, 0.1, 50);
                 container.__camera = this.camera;
-                this.camera.position.set(0.2, 0.9, 2.2);
+                // Adjust camera to see model better - closer and looking at origin
+                this.camera.position.set(0, 0.5, 2.5);
                 this.camera.lookAt(0, 0, 0); // Ensure camera is looking at origin where model will be
                 console.log('Cat3D: Camera initialized at', this.camera.position, 'looking at origin');
 
@@ -10807,21 +10809,39 @@
                         const center = box.getCenter(new THREE.Vector3());
                         console.log('Cat3D: Model bounding box - size:', size, 'center:', center);
                         
-                        this.model.scale.setScalar(this.scale);
-                        // center roughly
-                        this.model.position.set(0, -0.5, 0);
-                        this.scene.add(this.model);
+                        // Make model larger and more visible (scale up from 0.9 to 2.0)
+                        const actualScale = this.scale * 2.0; // Scale up to make it more visible
+                        this.model.scale.setScalar(actualScale);
                         
-                        // Ensure model is visible
-                        this.model.visible = true;
+                        // Position model better - center it and raise it up so camera can see it
+                        this.model.position.set(0, 0, 0); // Center at origin
+                        
+                        // Ensure all meshes have visible materials
                         this.model.traverse((child) => {
                             if (child.isMesh) {
                                 child.visible = true;
-                                child.frustumCulled = false; // Ensure it's not culled
+                                child.frustumCulled = false;
+                                
+                                // Make materials more visible - ensure they have color and aren't transparent
+                                const mats = Array.isArray(child.material) ? child.material : [child.material];
+                                mats.forEach((mat) => {
+                                    if (mat) {
+                                        mat.transparent = false;
+                                        mat.opacity = 1.0;
+                                        // If material doesn't have a visible color, give it one
+                                        if (!mat.color || mat.color.getHex() === 0x000000) {
+                                            mat.color = new THREE.Color(0xcccccc); // Light gray fallback
+                                        }
+                                        mat.needsUpdate = true;
+                                    }
+                                });
                             }
                         });
                         
-                        console.log('Cat3D: Model added to scene at position:', this.model.position, 'scale:', this.scale, 'visible:', this.model.visible);
+                        this.scene.add(this.model);
+                        this.model.visible = true;
+                        
+                        console.log('Cat3D: Model added to scene at position:', this.model.position, 'scale:', actualScale, 'visible:', this.model.visible);
                     } catch (loadError) {
                         // Error handler already added placeholder, just rethrow to outer catch
                         if (!this.model) {
