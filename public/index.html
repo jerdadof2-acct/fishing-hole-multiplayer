@@ -5361,6 +5361,21 @@
                         cat3dEl.setAttribute('data-player-id', this.player.name);
                     }
                 }
+                
+                // Ensure player's cat mounts immediately after row is created
+                if (useCatRig && !isMobile && playerFisher?.querySelector('.cat3d') && window.mountPlayerCat3D) {
+                    const my3d = playerFisher.querySelector('.cat3d');
+                    requestAnimationFrame(() => {
+                        const r = my3d.getBoundingClientRect();
+                        if (r.width > 0 && r.height > 0 && my3d.offsetParent !== null) {
+                            window.mountPlayerCat3D(this.player.name, {
+                                furColor: this.player?.avatarOptions?.colors?.fur || '#c8a079',
+                                scale: 0.9,
+                                profile: 'desktop'
+                            });
+                        }
+                    });
+                }
 
                 // Add mobile player - reuse existing DOM if present
                 let mobilePlayerFisher = mobileFishermanRow?.querySelector('#mobile-player-fisher');
@@ -10614,14 +10629,14 @@
         };
 
         // Limit active 3D renderers to prevent context exhaustion
-        // Reduced to 2 for testing (player + 1 bot max) - can scale up after pipeline is validated
-        window.MAX_3D_RENDERERS = 2;
+        // Set to 6 to allow more AIs to use 3D (player + 5 bots max)
+        window.MAX_3D_RENDERERS = 6;
         window.ACTIVE_3D_PLAYERS = new Set();
 
         window.choose3DPlayers = function(allPlayers, you) {
             const chosen = new Set([window.safeKey(you)]);
             // Add up to MAX_3D_RENDERERS - 1 other players (nearest or most active)
-            // MAX_3D_RENDERERS is 2, so we add 1 other (player + 1 bot = 2 total)
+            // MAX_3D_RENDERERS is 6, so we add 5 others (player + 5 bots = 6 total)
             const others = Array.from(allPlayers)
                 .filter(p => window.safeKey(p.name) !== window.safeKey(you))
                 .slice(0, Math.max(0, window.MAX_3D_RENDERERS - 1));
@@ -10632,7 +10647,7 @@
         class Cat3D {
             constructor(container, opts={}){
                 this.container = container;
-                this.modelUrl = opts.modelUrl || './assets/cat/cat.glb';
+                this.modelUrl = opts.modelUrl || '/assets/cat/cat.glb'; // absolute path for production
                 this.envUrl   = opts.envUrl   || null; // '/assets/env/lake.hdr'
                 this.tint     = new THREE.Color(opts.furColor || '#c8a079');
                 this.scale    = opts.scale || 0.9;
@@ -10662,16 +10677,17 @@
                 }
 
                 // renderer
-                this.renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false, powerPreference:'high-performance' });
+                this.renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, powerPreference:'high-performance' });
                 const dpr = Math.min(window.devicePixelRatio || 1, 2);
                 this.renderer.setPixelRatio(dpr);
                 this.renderer.setSize(container.clientWidth, container.clientHeight, false);
                 this.renderer.outputColorSpace = THREE.SRGBColorSpace;
                 this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
                 this.renderer.toneMappingExposure = 1.1;
-                // Set visible background color so canvas is obvious even if model fails
-                this.renderer.setClearAlpha(1);
-                this.renderer.setClearColor(0x101820, 1); // dark background to verify draw
+                // Transparent canvas so you can see debug/underlay and avoid "big dark rectangle"
+                this.renderer.setClearAlpha(0); // transparent canvas
+                // Optional: keep a slight tint while debugging:
+                // this.renderer.setClearColor(0x101820, 0.15);
                 
                 container.innerHTML = '';
                 container.appendChild(this.renderer.domElement);
@@ -11177,7 +11193,7 @@
             
             const playerKey = window.safeKey(playerName);
             const rig = window.CatRigs.mount(host, {
-                modelUrl: options.modelUrl || './assets/cat/cat.glb',
+                modelUrl: options.modelUrl || '/assets/cat/cat.glb', // absolute path for production
                 envUrl:   options.envUrl   || null,
                 furColor: options.furColor || '#c8a079',
                 scale:    options.scale    || 0.9
