@@ -10533,6 +10533,15 @@
                             });
                         }
                     });
+
+                    // animation mixer & clip map
+                    if (gltf.animations?.length){
+                        this.mixer = new THREE.AnimationMixer(this.model);
+                        gltf.animations.forEach(clip => { this.clips[clip.name.toLowerCase()] = clip; });
+                        // prefer provided idle; else we'll procedural-breathe
+                        const idle = this.clips['idle'] || this.clips['breath'] || this.clips['breathing'];
+                        if (idle) this.mixer.clipAction(idle).play();
+                    }
                 } catch (error) {
                     console.error('Cat GLB load failed:', error);
                     // Expose a hook so game code can fallback
@@ -10560,14 +10569,6 @@
                         }
                     });
 
-                    // animation mixer & clip map
-                    if (gltf.animations?.length){
-                        this.mixer = new THREE.AnimationMixer(this.model);
-                        gltf.animations.forEach(clip => { this.clips[clip.name.toLowerCase()] = clip; });
-                        // prefer provided idle; else we'll procedural-breathe
-                        const idle = this.clips['idle'] || this.clips['breath'] || this.clips['breathing'];
-                        if (idle) this.mixer.clipAction(idle).play();
-                    }
 
                     // morph targets (blink/ears) if present
                     this.model.traverse(o=>{
