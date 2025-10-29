@@ -409,6 +409,29 @@
             min-height: 0;
             box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.5);
         }
+        
+        /* Side-by-side layout: cat on left, lake on right */
+        .fishing-game-layout {
+            display: flex;
+            flex-direction: row;
+            gap: 15px;
+            align-items: flex-start;
+            width: 100%;
+            max-width: 1400px;
+        }
+        
+        .player-cat-side {
+            flex-shrink: 0;
+            width: 120px; /* Fixed width for cat container */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .lake-side {
+            flex: 1;
+            min-width: 0; /* Allow lake to shrink if needed */
+        }
 
         .fisherman-row {
             display: flex;
