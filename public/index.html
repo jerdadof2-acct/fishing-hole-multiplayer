@@ -11552,8 +11552,9 @@
                 const lakeRect = lake.getBoundingClientRect();
                 
                 // Debug first few frames - show actual numeric values (readable format)
+                // Reduce debug frequency - only every 10th frame to avoid spam
                 if (!this._debugCount) this._debugCount = 0;
-                if (this._debugCount < 5) {
+                if (this._debugCount < 5 && this._debugCount % 10 === 0) {
                     console.group(`Cat3D Overlay Debug Frame ${this._debugCount}`);
                     console.log('Rod Tip World:', `${tipWorld.x.toFixed(3)}, ${tipWorld.y.toFixed(3)}, ${tipWorld.z.toFixed(3)}`);
                     console.log('Rod Tip Screen:', `${tipScreen.x.toFixed(1)}, ${tipScreen.y.toFixed(1)}`);
@@ -11721,8 +11722,9 @@
                 
                 const end = target.clone();
                 const travel = startTip.distanceTo(end);
-                const duration = THREE.MathUtils.clamp(travel * 0.18, 0.45, 0.9);
-                const hop = THREE.MathUtils.clamp(travel * 0.18, 0.8, 2.8);
+                // Make animation much slower and more visible (1.5-3 seconds)
+                const duration = THREE.MathUtils.clamp(travel * 0.5, 1.5, 3.0);
+                const hop = THREE.MathUtils.clamp(travel * 0.25, 1.2, 3.5);
                 
                 // Show bobber (overlay line will show automatically)
                 this.bobber.visible = true;
@@ -11759,20 +11761,25 @@
                     this.bobber.position.copy(p);
                     
                     // Force update world matrix for overlay projection
+                    // Update matrix immediately so overlay gets correct position
                     this.bobber.updateWorldMatrix(true, false);
                     
-                    // Debug first few frames
-                    if (frameCount < 3) {
+                    // Debug every 10th frame or first 3 frames
+                    if (frameCount < 3 || (frameCount % 10 === 0 && frameCount < 30)) {
+                        const bobWorld = new THREE.Vector3();
+                        this.bobber.getWorldPosition(bobWorld);
                         console.log(`Cat3D: Animation frame ${frameCount}:`, {
                             t: t.toFixed(3),
                             u: u.toFixed(3),
                             ease: ease.toFixed(3),
-                            bobberPos: `${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)}`
+                            localPos: `${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)}`,
+                            worldPos: `${bobWorld.x.toFixed(3)}, ${bobWorld.y.toFixed(3)}, ${bobWorld.z.toFixed(3)}`
                         });
-                        frameCount++;
                     }
+                    frameCount++;
                     
                     // 2D overlay line will update automatically in #updateFishingLine()
+                    // But we need to ensure the main render loop sees this position change
                     
                     if (u < 1) {
                         requestAnimationFrame(step);
