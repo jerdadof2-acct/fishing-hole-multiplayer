@@ -3641,7 +3641,7 @@
                 </div>
 
                 <!-- Cat Customization Editor -->
-                <div id="cat-editor" style="background: rgba(20, 30, 50, 0.9); border: 2px solid rgba(100, 200, 255, 0.4); border-radius: 12px; padding: 15px; margin-top: 15px;">
+                <div id="cat-editor" style="background: rgba(20, 30, 50, 0.9); border: 2px solid rgba(100, 200, 255, 0.4); border-radius: 12px; padding: 15px; margin-top: 15px; display: none;">
                     <h3 style="color: #64b5f6; font-size: 16px; margin: 0 0 12px 0; text-align: center;">🎨 Customize Your Cat</h3>
                     
                     <!-- Color Customization -->
@@ -3693,6 +3693,7 @@
                 </div>
                 
             </div>
+            <button class="login-btn" id="create-character-btn" style="background: linear-gradient(135deg, #ff7043 0%, #f4511e 100%); margin-bottom: 10px;">🎨 CREATE CHARACTER</button>
             <button class="login-btn" id="login-btn">JOIN THE CLUB!</button>
         </div>
     </div>
@@ -4805,6 +4806,12 @@
                 document.getElementById('chat-toggle').addEventListener('click', () => this.toggleChat());
 
                 // Login button
+                document.getElementById('create-character-btn').addEventListener('click', () => {
+                    const catEditor = document.getElementById('cat-editor');
+                    if (catEditor) {
+                        catEditor.style.display = catEditor.style.display === 'none' ? 'block' : 'none';
+                    }
+                });
                 document.getElementById('login-btn').addEventListener('click', () => this.login());
 
                 // Character System - New Integrated Approach
