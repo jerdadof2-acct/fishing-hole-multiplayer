@@ -6308,25 +6308,18 @@
                     const lakeEl = document.getElementById(isMobile ? 'mobile-fishing-lake' : 'fishing-lake');
                     if (!lakeEl) return;
                     
-                    const lakeRect = lakeEl.getBoundingClientRect();
-                    const catRect = cat3D.container.getBoundingClientRect();
-                    
-                    // Convert lake container center to relative offset from cat
-                    // Cast should go forward (positive Z) and slightly toward lake center
-                    const lakeCenterX = (lakeRect.left + lakeRect.width / 2) - (catRect.left + catRect.width / 2);
-                    const distance = Math.max(catRect.width * 2, 3.0); // Cast distance in 3D units
-                    
-                    // Scale screen pixels to 3D units (rough approximation)
-                    const scaleX = distance / (lakeRect.width || 500); // pixels to 3D units
-                    const targetX3D = lakeCenterX * scaleX * 0.1; // Small horizontal offset
-                    
+                    // Simple 3D casting: cast forward (positive Z) toward lake
+                    // Since cat is on left and lake on right, cast should go mostly in +Z (forward)
+                    // Use simple fixed bounds that match the normalized model scale (~1 unit)
                     const lakeBounds = {
-                        center: { x: targetX3D, y: 0, z: distance }, // Cast forward toward lake
-                        halfW: Math.min(8, distance * 0.3),  // Smaller spread - more centered
-                        halfH: Math.min(6, distance * 0.25),  // Smaller spread
-                        y: -0.5,       // Water surface Y (below rod tip)
+                        center: { x: 0, y: -0.5, z: 2.5 }, // Forward and slightly down (water level)
+                        halfW: 1.5,  // Small horizontal spread
+                        halfH: 1.0,   // Small depth spread
+                        y: -0.5,      // Water surface Y (below rod tip at ~0)
                         wind: { x: 0, y: 0 } // Optional wind
                     };
+                    
+                    console.log('Cat3D: Casting with simplified lakeBounds:', lakeBounds);
                     
                     // Generate random seed for deterministic casting
                     const rngSeed = Date.now() + Math.floor(Math.random() * 10000);
