@@ -10806,6 +10806,7 @@
                                         roughness: 0.8 
                                     });
                                     const cube = new THREE.Mesh(geo, mat);
+                                    cube.name = '__cat_placeholder__'; // Named so we can remove it on success
                                     cube.position.set(0, -0.5, 0);
                                     this.scene.add(cube);
                                     this.model = cube;
@@ -10819,26 +10820,45 @@
                         this.model = gltf.scene;
                         console.log('Cat3D: GLTF loaded successfully:', this.modelUrl, this.model);
                         
-                        // Apply any base scale first (if provided)
+                        // HARDENING PATCH: Ensure real cat shows, not placeholder boxes
+                        
+                        // 1) If we ever added a placeholder cube earlier, remove it now
+                        const oldPlaceholder = this.scene.getObjectByName('__cat_placeholder__');
+                        if (oldPlaceholder) {
+                            this.scene.remove(oldPlaceholder);
+                            console.log('Cat3D: Removed old placeholder cube');
+                        }
+                        
+                        // 2) Apply any base scale first (if provided)
                         if (this.scale !== 1.0) {
                             this.model.scale.setScalar(this.scale);
                         }
                         
-                        // Ensure all meshes have visible materials
-                        this.model.traverse((child) => {
-                            if (child.isMesh) {
-                                child.visible = true;
-                                child.frustumCulled = false;
+                        // 3) Make sure everything in the model is visible and lit; swap unlit mats
+                        this.model.traverse((o) => {
+                            if (o.isMesh) {
+                                // Ensure it renders with lights
+                                if (!(o.material && (o.material.isMeshStandardMaterial || o.material.isMeshPhysicalMaterial))) {
+                                    const color = (o.material && o.material.color) ? o.material.color.clone() : new THREE.Color(0xcccccc);
+                                    const map = (o.material && o.material.map) ? o.material.map : null;
+                                    const rough = (o.material && o.material.roughness !== undefined) ? o.material.roughness : 0.7;
+                                    const metal = (o.material && o.material.metalness !== undefined) ? o.material.metalness : 0.0;
+                                    o.material = new THREE.MeshStandardMaterial({ color, map, roughness: rough, metalness: metal });
+                                    console.log('Cat3D: Converted unlit material to MeshStandardMaterial for', o.name || 'mesh');
+                                }
+                                o.castShadow = true;
+                                o.receiveShadow = true;
+                                o.visible = true;
+                                o.frustumCulled = true;
                                 
-                                // Make materials more visible - ensure they have color and aren't transparent
-                                const mats = Array.isArray(child.material) ? child.material : [child.material];
+                                // Ensure materials are visible
+                                const mats = Array.isArray(o.material) ? o.material : [o.material];
                                 mats.forEach((mat) => {
                                     if (mat) {
                                         mat.transparent = false;
                                         mat.opacity = 1.0;
-                                        // If material doesn't have a visible color, give it one
                                         if (!mat.color || mat.color.getHex() === 0x000000) {
-                                            mat.color = new THREE.Color(0xcccccc); // Light gray fallback
+                                            mat.color = new THREE.Color(0xcccccc);
                                         }
                                         mat.needsUpdate = true;
                                     }
@@ -10846,15 +10866,26 @@
                             }
                         });
                         
-                        // Add model to scene
-                        this.scene.add(this.model);
-                        this.model.visible = true;
+                        // 4) QUICK ASSERTS: log what we actually got
+                        let meshCount = 0, boxGeoCount = 0;
+                        this.model.traverse((o) => {
+                            if (o.isMesh) {
+                                meshCount++;
+                                const g = o.geometry;
+                                const type = g ? g.type : 'Unknown';
+                                if (type && type.toLowerCase().includes('box')) boxGeoCount++;
+                                const vertCount = g?.attributes?.position?.count || 0;
+                                console.log('Cat3D: mesh', o.name || '(unnamed)', 'geom:', type, 'verts:', vertCount);
+                            }
+                        });
+                        if (meshCount === 0) {
+                            console.warn('Cat3D WARNING: GLB has no meshes — check /assets/cat/cat.glb');
+                        } else {
+                            console.log(`Cat3D: Model has ${meshCount} meshes, ${boxGeoCount} box geometries`);
+                        }
                         
-                        // Frame camera to model using bounding-sphere, aspect-aware fit
-                        // Ensure world matrices are current
+                        // 5) Put model at origin (center) for stable framing, then frame it
                         this.model.updateWorldMatrix(true, true);
-                        
-                        // Compute tight bounds
                         const box = new THREE.Box3().setFromObject(this.model);
                         const sphere = new THREE.Sphere();
                         box.getBoundingSphere(sphere);
@@ -10868,6 +10899,33 @@
                         
                         // Frame camera to host (reusable for resize)
                         this.#frameCameraToHost();
+                        
+                        // 6) Add or refresh "good" lights so the cat doesn't read like a flat box
+                        let hemi = this.scene.getObjectByName('__cat_hemi__');
+                        let key = this.scene.getObjectByName('__cat_key__');
+                        if (!hemi) {
+                            hemi = new THREE.HemisphereLight(0xffffff, 0x334455, 0.8);
+                            hemi.name = '__cat_hemi__';
+                            this.scene.add(hemi);
+                            console.log('Cat3D: Added hemisphere light');
+                        }
+                        if (!key) {
+                            key = new THREE.DirectionalLight(0xffffff, 0.85);
+                            key.name = '__cat_key__';
+                            key.position.set(2.5, 3, 2.5);
+                            key.castShadow = false;
+                            this.scene.add(key);
+                            console.log('Cat3D: Added directional key light');
+                        }
+                        
+                        // 7) Make sure renderer is set up for sane color/lighting
+                        this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+                        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                        this.renderer.toneMappingExposure = 1.0;
+                        
+                        // 8) Finally add model to scene and render
+                        this.scene.add(this.model);
+                        this.model.visible = true;
                         
                         console.log('Cat3D: Camera auto-framed (bounding-sphere) - position:', this.camera.position, 'distance:', this._cameraDistance, 'sphere radius:', sphere.radius);
                     } catch (loadError) {
