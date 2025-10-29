@@ -4031,7 +4031,8 @@
                     // Only position players if not auto-logged in
                     this.positionPlayers();
                 }
-                this.simulateMultiplayer();
+                // AI/Other players disabled - only showing player's cat
+                // this.simulateMultiplayer();
                 this.updateDisplay();
                 this.updateAchievementsDisplay();
                 this.updateLeaderboard();
@@ -5455,6 +5456,9 @@
                     });
                 }
                 
+                // Skip other players - only showing player's cat
+                // No AI or other players for now
+                /*
                 // Determine which players get 3D (limit to MAX_3D_RENDERERS)
                 const eligible3D = window.choose3DPlayers(this.otherPlayers, this.player.name);
                 
@@ -5569,6 +5573,7 @@
                         }
                     }
                 });
+                */ // End commented other players section
             }
 
             createAnimatedRipples() {
@@ -6260,8 +6265,41 @@
                     mobileCastBtn.disabled = true;
                 }
 
-                // Add fishing line for current player
-                this.addFishingLine(0, true);
+                // Get player's 3D cat for ballistic casting
+                const playerKey = window.safeKey(this.player.name);
+                const catRig = window.CatRigs?.map?.get(playerKey);
+                const cat3D = catRig?.model ? catRig : null;
+                
+                if (cat3D && cat3D.animateCast) {
+                    // Use 3D ballistic casting system
+                    const lake = document.getElementById('fishing-lake');
+                    const lakeRect = lake?.getBoundingClientRect();
+                    
+                    // Define lake bounds (adjust to match your actual lake dimensions)
+                    const lakeBounds = {
+                        center: new THREE.Vector3(0, 0, 0), // Adjust to actual lake center
+                        halfW: 22,  // Half width
+                        halfH: 16,  // Half height
+                        y: 0,       // Water surface Y
+                        wind: new THREE.Vector2(0, 0) // Optional wind
+                    };
+                    
+                    // Generate random seed for deterministic casting
+                    const rngSeed = Date.now() + Math.floor(Math.random() * 10000);
+                    
+                    // Trigger 3D cast animation
+                    cat3D.animateCast({
+                        rngSeed,
+                        lakeBounds,
+                        lakeMesh: null, // No mesh yet, using flat plane
+                        raycaster: new THREE.Raycaster(),
+                        splashSystem: window.splashFX || window.mobileSplashFX
+                    });
+                } else {
+                    // Fallback to 2D casting system
+                    this.addFishingLine(0, true);
+                }
+                
                 this.playSound('cast'); // Casting sound
                 
                 // Notify server
@@ -6270,7 +6308,7 @@
                 }
                 
                 const ripples = document.getElementById('ripples');
-                ripples.classList.add('active');
+                if (ripples) ripples.classList.add('active');
 
                 // Progressive bite timing based on level
                 // Levels 1-5: Quick paced (0.5 to 2 seconds)
@@ -10655,17 +10693,12 @@
 
         // Limit active 3D renderers to prevent context exhaustion
         // Set to 6 to allow more AIs to use 3D (player + 5 bots max)
-        window.MAX_3D_RENDERERS = 6;
+        window.MAX_3D_RENDERERS = 1; // Only player, no AI/other players
         window.ACTIVE_3D_PLAYERS = new Set();
 
         window.choose3DPlayers = function(allPlayers, you) {
+            // Only return the player - no AI or other players
             const chosen = new Set([window.safeKey(you)]);
-            // Add up to MAX_3D_RENDERERS - 1 other players (nearest or most active)
-            // MAX_3D_RENDERERS is 6, so we add 5 others (player + 5 bots = 6 total)
-            const others = Array.from(allPlayers)
-                .filter(p => window.safeKey(p.name) !== window.safeKey(you))
-                .slice(0, Math.max(0, window.MAX_3D_RENDERERS - 1));
-            others.forEach(p => chosen.add(window.safeKey(p.name)));
             return chosen;
         };
 
@@ -11034,7 +11067,42 @@
                             if (d.EarTwitch_R  !== undefined) this.earMorphR  = { mesh:o, idx:d.EarTwitch_R };
                         }
                         if (o.isBone && /tail/i.test(o.name)) this.tailBone = o;
+                        // Find rod tip bone or create attachment point
+                        if (o.isBone && (/rod|tip|hand/i.test(o.name))) {
+                            if (/tip|end/i.test(o.name)) this.rodTipBone = o;
+                            else if (!this.rodTipBone) this.rodTipBone = o; // fallback to first rod/hand bone
+                        }
                     });
+                    
+                    // Create rod tip reference point (helper object if no bone found)
+                    if (!this.rodTipBone) {
+                        this.rodTipBone = new THREE.Object3D();
+                        this.rodTipBone.name = '__rod_tip__';
+                        this.rodTipBone.position.set(0.3, 0.5, 0.8); // Approximate hand/rod position
+                        this.model.add(this.rodTipBone);
+                    }
+                    
+                    // Create bobber and fishing line for 3D casting
+                    this.bobber = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.05, 8, 8),
+                        new THREE.MeshStandardMaterial({ color: 0xff4444 })
+                    );
+                    this.bobber.name = '__bobber__';
+                    this.bobber.visible = false; // Hidden until cast
+                    this.bobber.userData.bobbing = false;
+                    this.scene.add(this.bobber);
+                    
+                    // Create fishing line (tube geometry connecting rod tip to bobber)
+                    const lineGeometry = new THREE.BufferGeometry();
+                    const positions = new Float32Array(6); // 2 points * 3 coords
+                    lineGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                    this.fishingLine = new THREE.Line(
+                        lineGeometry,
+                        new THREE.LineBasicMaterial({ color: 0xcccccc, linewidth: 2 })
+                    );
+                    this.fishingLine.name = '__fishing_line__';
+                    this.fishingLine.visible = false;
+                    this.scene.add(this.fishingLine);
                 }
             }
 
@@ -11063,6 +11131,16 @@
 
                 // procedural blink if no morphs/clip running
                 this.#updateProcedurals();
+                
+                // Update fishing line to connect rod tip to bobber every frame
+                this.#updateFishingLine();
+                
+                // Update bobber idle bobbing if active
+                if (this.bobber?.userData?.bobbing) {
+                    const baseY = this.bobber.userData.baseY || this.bobber.position.y;
+                    this.bobber.userData.bobPhase = (this.bobber.userData.bobPhase || 0) + dt;
+                    this.bobber.position.y = baseY + Math.sin(this.bobber.userData.bobPhase * 2.2) * 0.005;
+                }
 
                 // Log first frame to verify scene has content
                 if (this._firstRender) {
@@ -11079,7 +11157,112 @@
                 this.renderer.render(this.scene, this.camera);
                 this.raf = requestAnimationFrame(this.#loop);
             }
+            
+            // Update fishing line to snap from rod tip to bobber
+            #updateFishingLine(){
+                if (!this.fishingLine || !this.bobber || !this.rodTipBone) return;
+                if (!this.bobber.visible || !this.fishingLine.visible) return;
+                
+                // Get rod tip world position
+                this.rodTipBone.updateWorldMatrix(true, false);
+                const tipWorld = new THREE.Vector3();
+                this.rodTipBone.getWorldPosition(tipWorld);
+                
+                // Update line geometry
+                const positions = this.fishingLine.geometry.attributes.position;
+                positions.setXYZ(0, tipWorld.x, tipWorld.y, tipWorld.z);
+                positions.setXYZ(1, this.bobber.position.x, this.bobber.position.y, this.bobber.position.z);
+                positions.needsUpdate = true;
+            }
 
+            // Animate cast: ballistic arc to random target
+            animateCast({ rngSeed, lakeBounds, lakeMesh, raycaster, splashSystem }){
+                if (!this.bobber || !this.fishingLine || !this.rodTipBone) return;
+                
+                const rng = window.makeRNG ? window.makeRNG(rngSeed || Date.now()) : () => Math.random();
+                
+                // Choose a spot on the lake
+                const target = window.randomLakeTarget ? window.randomLakeTarget({
+                    lakeBounds: lakeBounds,
+                    lakeMesh: lakeMesh || null,
+                    raycaster: raycaster || new THREE.Raycaster(),
+                    rng, padding: 2.0
+                }) : new THREE.Vector3();
+                
+                // Optional wind/skill tweaks
+                const wind = lakeBounds.wind || new THREE.Vector2(0, 0);
+                const skill = 0.7; // Could use this.player.stats.patience or similar
+                target.x += wind.x * (1 - skill) * (0.5 + rng() * 0.5);
+                target.z += wind.y * (1 - skill) * (0.5 + rng() * 0.5);
+                
+                // Face cat toward target
+                if (window.faceModelYawToward && this.model) {
+                    window.faceModelYawToward(this.model, target, 0.4);
+                }
+                
+                // Get rod tip world position
+                this.rodTipBone.updateWorldMatrix(true, false);
+                const startTip = new THREE.Vector3();
+                this.rodTipBone.getWorldPosition(startTip);
+                
+                const end = target.clone();
+                const travel = startTip.distanceTo(end);
+                const duration = THREE.MathUtils.clamp(travel * 0.18, 0.45, 0.9);
+                const hop = THREE.MathUtils.clamp(travel * 0.18, 0.8, 2.8);
+                
+                // Show bobber and line
+                this.bobber.visible = true;
+                this.fishingLine.visible = true;
+                this.bobber.position.copy(startTip); // Start at rod tip
+                
+                const t0 = performance.now() / 1000;
+                const step = () => {
+                    const t = performance.now() / 1000 - t0;
+                    const u = THREE.MathUtils.clamp(t / duration, 0, 1);
+                    const ease = u * u * (3 - 2 * u); // smoothstep
+                    
+                    // Position along ground
+                    const p = new THREE.Vector3().lerpVectors(startTip, end, ease);
+                    // Add vertical arc
+                    p.y = startTip.y + Math.sin(Math.PI * ease) * hop;
+                    
+                    // Move bobber
+                    this.bobber.position.copy(p);
+                    
+                    // Line will update automatically in #updateFishingLine()
+                    
+                    if (u < 1) {
+                        requestAnimationFrame(step);
+                    } else {
+                        // Snap to water surface
+                        if (lakeMesh && raycaster) {
+                            const start = new THREE.Vector3(end.x, end.y + 100, end.z);
+                            const dir = new THREE.Vector3(0, -1, 0);
+                            raycaster.set(start, dir);
+                            const hit = raycaster.intersectObject(lakeMesh, true)[0];
+                            if (hit) {
+                                this.bobber.position.copy(hit.point);
+                            } else {
+                                this.bobber.position.y = lakeBounds.y;
+                            }
+                        } else {
+                            this.bobber.position.y = lakeBounds.y;
+                        }
+                        
+                        // Splash effect
+                        if (splashSystem?.spawnAt) {
+                            splashSystem.spawnAt(this.bobber.position);
+                        }
+                        
+                        // Start idle bobbing
+                        this.bobber.userData.bobbing = true;
+                        this.bobber.userData.bobPhase = 0;
+                        this.bobber.userData.baseY = this.bobber.position.y;
+                    }
+                };
+                requestAnimationFrame(step);
+            }
+            
             #updateProcedurals(){
                 const t = performance.now()*0.001;
 
