@@ -11546,23 +11546,18 @@
                 
                 const lakeRect = lake.getBoundingClientRect();
                 
-                // Clamp bobber to lake rect (so it stays visually in the lake)
-                // But only if the bobber is actually in the lake area
+                // Use exact projected positions - no clamping during cast
+                // This ensures line connects properly from rod tip to bobber
                 let bobX = bobScreen.x;
                 let bobY = bobScreen.y;
                 
-                // Only clamp if bobber is near the lake container
-                if (bobScreen.x >= lakeRect.left - 50 && bobScreen.x <= lakeRect.right + 50 &&
-                    bobScreen.y >= lakeRect.top - 50 && bobScreen.y <= lakeRect.bottom + 50) {
-                    // Bobber is near lake - clamp to lake bounds
+                // Only clamp when bobber has landed (is bobbing on water)
+                if (this.bobber.userData?.bobbing) {
+                    // Bobber is floating - keep it visually in lake
                     bobX = Math.min(Math.max(bobScreen.x, lakeRect.left + 10), lakeRect.right - 10);
-                    bobY = Math.min(Math.max(bobScreen.y, lakeRect.top + lakeRect.height * 0.3), lakeRect.bottom - 20);
-                } else {
-                    // Bobber is far from lake - might be off-screen or casting animation in progress
-                    // Let it be positioned naturally during cast, clamp later when landed
-                    bobX = bobScreen.x;
-                    bobY = bobScreen.y;
+                    bobY = Math.min(Math.max(bobScreen.y, lakeRect.top + lakeRect.height * 0.4), lakeRect.bottom - 20);
                 }
+                // During cast animation, use exact projection so line follows bobber correctly
                 
                 // Create or update overlay line
                 if (!this._overlayLine) {
