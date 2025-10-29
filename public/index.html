@@ -10740,7 +10740,7 @@
                 this.camera = new THREE.PerspectiveCamera(45, container.clientWidth/container.clientHeight || 1, 0.1, 50);
                 container.__camera = this.camera;
                 // Camera positioned to show full cat model nicely framed in 96x96px container
-                this.camera.position.set(0, 0.7, 2.2); // Closer to see the cat model clearly
+                this.camera.position.set(0, 0.6, 2.0); // Close enough to see cat clearly
                 this.camera.lookAt(0, 0, 0); // Look at origin where model is centered
                 console.log('Cat3D: Camera initialized at', this.camera.position, 'looking at origin');
 
@@ -10821,9 +10821,9 @@
                         const center = box.getCenter(new THREE.Vector3());
                         console.log('Cat3D: Model bounding box - size:', size, 'center:', center);
                         
-                        // Scale model to be visible in container (container size stays 96x96px via CSS)
-                        // Base scale is usually 0.9, we want cat to be visible but fit nicely in frame
-                        const actualScale = this.scale * 1.0; // Keep original scale - cat should be visible
+                        // Scale model to be clearly visible in 96x96px container
+                        // Need larger scale so cat is visible, not tiny boxes
+                        const actualScale = this.scale * 1.8; // Make cat larger so it's clearly visible
                         this.model.scale.setScalar(actualScale);
                         
                         // Position model centered at origin
@@ -10918,10 +10918,10 @@
                                         if (brightness < 1.0) {
                                             m.color.multiplyScalar(1.5 / Math.max(brightness, 0.3)); // Brighten to ensure visibility
                                         }
-                                        // Ensure color is bright enough to be seen
-                                        m.color.r = Math.max(0.3, m.color.r);
-                                        m.color.g = Math.max(0.3, m.color.g);
-                                        m.color.b = Math.max(0.3, m.color.b);
+                                        // Ensure color is bright enough to be seen - make much brighter
+                                        m.color.r = Math.max(0.6, m.color.r); // Minimum 60% brightness
+                                        m.color.g = Math.max(0.6, m.color.g);
+                                        m.color.b = Math.max(0.6, m.color.b);
                                     } else {
                                         // For other parts, use light color
                                         m.color.copy(new THREE.Color(0xf0f0f0)); // Light gray
