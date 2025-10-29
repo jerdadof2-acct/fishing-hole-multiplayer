@@ -10426,7 +10426,7 @@
         class Cat3D {
             constructor(container, opts={}){
                 this.container = container;
-                this.modelUrl = opts.modelUrl || '/assets/cat/cat.glb';
+                this.modelUrl = opts.modelUrl || './assets/cat/cat.glb';
                 this.envUrl   = opts.envUrl   || null; // '/assets/env/lake.hdr'
                 this.tint     = new THREE.Color(opts.furColor || '#c8a079');
                 this.scale    = opts.scale || 0.9;
@@ -10436,6 +10436,9 @@
                 this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
                 this.renderer.setSize(container.clientWidth, container.clientHeight);
                 this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+                this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                this.renderer.toneMappingExposure = 1.1;
+                this.renderer.setClearAlpha(0);
                 container.innerHTML = '';
                 container.appendChild(this.renderer.domElement);
 
@@ -10469,14 +10472,15 @@
 
             async #load(){
                 try {
-                    // environment (simplified - no HDRI needed for basic cat)
-                    // if (this.envUrl){
-                    //     const pmrem = new PMREMGenerator(this.renderer);
-                    //     const hdr = await new RGBELoader().loadAsync(this.envUrl);
-                    //     const envMap = pmrem.fromEquirectangular(hdr).texture;
-                    //     this.scene.environment = envMap;
-                    //     hdr.dispose(); pmrem.dispose();
-                    // }
+                    // environment (optional HDR for better reflections)
+                    if (this.envUrl){
+                        const rgbe = new RGBELoader();
+                        rgbe.load(this.envUrl, (tex) => {
+                            tex.mapping = THREE.EquirectangularReflectionMapping;
+                            this.scene.environment = tex;
+                            this.scene.background = null; // keep canvas transparent
+                        });
+                    }
 
                     // model
                     const gltf = await new GLTFLoader().loadAsync(this.modelUrl);
@@ -10485,6 +10489,19 @@
                     // center roughly
                     this.model.position.set(0, -0.5, 0);
                     this.scene.add(this.model);
+                    
+                    // improve materials with tone mapping and environment intensity
+                    this.scene.traverse((obj) => {
+                        if (obj.isMesh && obj.material) {
+                            const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+                            mats.forEach((m) => {
+                                if (m.map) m.map.colorSpace = THREE.SRGBColorSpace;
+                                if (m.emissiveMap) m.emissiveMap.colorSpace = THREE.SRGBColorSpace;
+                                m.envMapIntensity = 0.6;
+                                m.needsUpdate = true;
+                            });
+                        }
+                    });
                 } catch (error) {
                     console.log('3D cat model not available, falling back to placeholder:', error.message);
                     this.#createPlaceholder();
@@ -10672,12 +10689,17 @@
             sad(key){ this.map.get(key)?.sad(); }
         };
 
+        // CSS.escape polyfill for older browsers
+        if (!CSS.escape) {
+            CSS.escape = (s) => String(s).replace(/[^a-zA-Z0-9_\-]/g, (c)=>'\\'+c);
+        }
+
         // EXAMPLE: mount your own cat after login (call once you render the fisherman row)
         window.mountPlayerCat3D = function(playerName, options={}){
             const host = document.querySelector(`.cat3d[data-player-id="${CSS.escape(playerName)}"]`);
             if (!host) return null;
             return CatRigs.mount(host, {
-                modelUrl: options.modelUrl || '/assets/cat/cat.glb',
+                modelUrl: options.modelUrl || './assets/cat/cat.glb',
                 envUrl:   options.envUrl   || null,
                 furColor: options.furColor || '#c8a079',
                 scale:    options.scale    || 0.9
