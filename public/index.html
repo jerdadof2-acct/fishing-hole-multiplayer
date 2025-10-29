@@ -10753,7 +10753,12 @@
                 direction.normalize();
                 const targetRotation = Math.atan2(direction.x, direction.z);
                 const currentRotation = modelRoot.rotation.y;
-                const diff = THREE.MathUtils.normalizeAngle(targetRotation - currentRotation);
+                
+                // Normalize angle difference to [-PI, PI] range
+                let diff = targetRotation - currentRotation;
+                while (diff > Math.PI) diff -= 2 * Math.PI;
+                while (diff < -Math.PI) diff += 2 * Math.PI;
+                
                 modelRoot.rotation.y = currentRotation + diff * lerpSpeed;
             }
         };
