@@ -635,7 +635,7 @@
             position: relative; 
             z-index: 9; /* Above water overlays (z-index 5-7) */
             border-radius: 8px;
-            overflow: hidden;
+            overflow: visible; /* Changed from hidden to visible during camera framing testing */
         }
         
         .cat3d canvas { 
@@ -9979,14 +9979,16 @@
                 // Update character display (image) - don't show robohash, use 3D cats instead
                 const mobileCharacterDisplayImg = document.getElementById('mobile-character-display-img');
                 if (mobileCharacterDisplayImg) {
-                    // Hide image if using cat-rig system (3D cats)
-                    if (this.player.character === 'cat-rig' || this.player.avatarOptions?.type === 'cat') {
+                    // Always hide image when using cat-rig system or if character is robohash URL
+                    if (this.player.character === 'cat-rig' || 
+                        this.player.avatarOptions?.type === 'cat' ||
+                        (this.player.character && (this.player.character.includes('robohash') || this.player.character.includes('robohash.org')))) {
                         mobileCharacterDisplayImg.style.display = 'none';
-                    } else if (this.player.character && !this.player.character.includes('robohash')) {
+                    } else if (this.player.character && !this.player.character.includes('robohash') && !this.player.character.includes('robohash.org')) {
                         mobileCharacterDisplayImg.src = this.player.character;
                         mobileCharacterDisplayImg.style.display = 'block';
                     } else {
-                        mobileCharacterDisplayImg.style.display = 'none'; // Hide robohash
+                        mobileCharacterDisplayImg.style.display = 'none'; // Hide robohash or unknown
                     }
                 }
                 
@@ -10815,19 +10817,10 @@
                         this.model = gltf.scene;
                         console.log('Cat3D: GLTF loaded successfully:', this.modelUrl, this.model);
                         
-                        // Compute bounding box to verify model has geometry
-                        const box = new THREE.Box3().setFromObject(this.model);
-                        const size = box.getSize(new THREE.Vector3());
-                        const center = box.getCenter(new THREE.Vector3());
-                        console.log('Cat3D: Model bounding box - size:', size, 'center:', center);
-                        
-                        // Scale model to be clearly visible in 96x96px container
-                        // Need larger scale so cat is visible, not tiny boxes
-                        const actualScale = this.scale * 1.8; // Make cat larger so it's clearly visible
-                        this.model.scale.setScalar(actualScale);
-                        
-                        // Position model centered at origin
-                        this.model.position.set(0, 0, 0);
+                        // Apply any base scale first (if provided)
+                        if (this.scale !== 1.0) {
+                            this.model.scale.setScalar(this.scale);
+                        }
                         
                         // Ensure all meshes have visible materials
                         this.model.traverse((child) => {
@@ -10851,10 +10844,37 @@
                             }
                         });
                         
+                        // Add model to scene
                         this.scene.add(this.model);
                         this.model.visible = true;
                         
-                        console.log('Cat3D: Model added to scene at position:', this.model.position, 'scale:', actualScale, 'visible:', this.model.visible);
+                        // Frame camera to model based on bounding box (automatic fitting)
+                        const box = new THREE.Box3().setFromObject(this.model);
+                        const size = new THREE.Vector3();
+                        box.getSize(size);
+                        const center = new THREE.Vector3();
+                        box.getCenter(center);
+                        console.log('Cat3D: Model bounding box - size:', size, 'center:', center);
+                        
+                        // Move model so its center is at the origin
+                        this.model.position.sub(center);
+                        
+                        // Compute ideal camera distance to fit the *largest* dimension
+                        const maxDim = Math.max(size.x, size.y, size.z);
+                        const fov = this.camera.fov * Math.PI / 180;
+                        let camDist = (maxDim / 2) / Math.tan(fov / 2);
+                        
+                        // Pad a little so ears/tail never clip
+                        camDist *= 1.35;
+                        
+                        // Put the camera a bit above so we see the face nicely
+                        this.camera.position.set(0, maxDim * 0.4, camDist);
+                        this.camera.near = Math.max(0.01, camDist / 100);
+                        this.camera.far = camDist * 100;
+                        this.camera.lookAt(0, 0, 0);
+                        this.camera.updateProjectionMatrix();
+                        
+                        console.log('Cat3D: Camera auto-framed - position:', this.camera.position, 'distance:', camDist, 'maxDim:', maxDim);
                     } catch (loadError) {
                         // Error handler already added placeholder, just rethrow to outer catch
                         if (!this.model) {
@@ -11128,10 +11148,11 @@
                 }
             }
 
+            // Resize renderer and camera to match host dimensions
             #resize(){
-                if (!this.container || !this.renderer) return;
-                const w = this.container.clientWidth;
-                const h = this.container.clientHeight;
+                if (!this.container || !this.renderer || !this.camera) return;
+                const w = this.container.clientWidth || 96;
+                const h = this.container.clientHeight || 96;
                 if (w === 0 || h === 0) return;
                 
                 const dpr = Math.min(window.devicePixelRatio || 1, 2);
