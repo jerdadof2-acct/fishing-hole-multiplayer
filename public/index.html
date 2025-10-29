@@ -6234,6 +6234,10 @@
             }
 
             castLine() {
+                // Trigger cat casting animation
+                if (window.CatRigs) {
+                    window.CatRigs.bite(this.player.name); // Quick reaction when casting
+                }
                 if (this.isCasting) return;
 
                 this.isCasting = true;
@@ -11237,8 +11241,9 @@
                 // Distance to fit WIDTH accounts for aspect:
                 const fitWidthDist = sphereRadius / (Math.tan(halfFov) * aspect);
                 
-                // Pick the larger, then add moderate padding (tune 1.15–1.35)
-                const dist = Math.max(fitHeightDist, fitWidthDist) * 1.25;
+                        // Pick the larger, then add moderate padding (tune 1.0–1.35 for size)
+                        // Smaller multiplier = bigger cat appearance
+                        const dist = Math.max(fitHeightDist, fitWidthDist) * 0.95; // Reduced from 1.25 to make cat bigger
                 this._cameraDistance = dist;
                 
                 // Slightly above center so the face isn't dead-center
