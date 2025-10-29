@@ -10737,10 +10737,10 @@
                 this.scene = new THREE.Scene();
                 container.__scene = this.scene;
                 // AxesHelper removed - cats are now visible and rendering correctly
-                this.camera = new THREE.PerspectiveCamera(35, container.clientWidth/container.clientHeight || 1, 0.1, 50);
+                this.camera = new THREE.PerspectiveCamera(50, container.clientWidth/container.clientHeight || 1, 0.1, 50);
                 container.__camera = this.camera;
-                // Camera positioned to show full cat model nicely framed
-                this.camera.position.set(0, 0.8, 3.0); // A bit further back and higher for better view
+                // Camera positioned to show full cat model nicely framed - further back to see whole cat
+                this.camera.position.set(0, 0.5, 4.5); // Much further back to see full cat
                 this.camera.lookAt(0, 0, 0); // Look at origin where model is centered
                 console.log('Cat3D: Camera initialized at', this.camera.position, 'looking at origin');
 
@@ -10821,8 +10821,8 @@
                         const center = box.getCenter(new THREE.Vector3());
                         console.log('Cat3D: Model bounding box - size:', size, 'center:', center);
                         
-                        // Scale model appropriately (not too large, not too small)
-                        const actualScale = this.scale * 2.2; // Good balance - visible but not filling entire view
+                        // Scale model to fit nicely in the container - much smaller
+                        const actualScale = this.scale * 0.6; // Much smaller scale so full cat is visible
                         this.model.scale.setScalar(actualScale);
                         
                         // Position model centered at origin
