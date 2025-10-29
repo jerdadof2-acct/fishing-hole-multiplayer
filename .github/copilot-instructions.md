@@ -13,40 +13,52 @@
 - Explain your OBSERVATIONS clearly, then provide REASONING to identify the exact issue. Add console logs when needed to gather more information.
 
 
-The system implements a multiplayer fishing game with the following core business components:
+## Game Systems Architecture
 
-## Player Management System
-- Experience-based progression system
-- Currency and inventory management
-- Location unlocking mechanics
-- Achievement tracking for fish catches
-- Personal record management for top 10 catches
+### Progressive Fishing Core
+- Dynamic difficulty scaling tied to player progression
+- Level-based action timing system (0.5-7 seconds)
+- Exponential experience curve for advancement
+- Room capacity management (8 players max)
 
-## Tournament Framework
-- Active tournament state tracking
+### Tournament Economy
+- Multi-tiered equipment progression system
+- Five equipment categories with exponential pricing
+- Premium equipment valued up to $100,000
+- Long-term economic progression paths
+
+### Fish Generation
+- Tournament multiplier system (up to 3x size)
+- Balanced catch probability distribution
+- 50+ planned fish species
+- Regional availability restrictions
+
+### Social Growth System
+- Achievement-triggered social sharing
+- Screenshot system with integrated statistics
+- Tournament participation tracking
+- Daily challenge progression
+- Streak bonus implementation
+
+## Integration Points
+
+### Tournament Management
+- Lifecycle control (start/active/end states)
 - Real-time leaderboard maintenance
-- Individual catch recording
-- Historical performance data
-- Tournament-specific metrics
+- Prize distribution handling
+- Special catch broadcasting
 
-## Multiplayer Integration
-- Live catch broadcasting
-- Active player status management
-- Real-time chat functionality
-- Achievement synchronization
-- Player roster updates
+### Player Progression
+- Persistent character data management
+- Achievement tracking system
+- Location unlock mechanics
+- Equipment progression tracking
 
-## Seasonal Content
-- Season-specific catch records
-- Progression tracking by season
-- Seasonal statistics aggregation
-- Achievement unlocks per season
-
-Business Logic Importance Score: 75
-- Core gameplay systems implementation
-- Tournament management features
-- Player progression mechanics
-- Season-based content management
+Importance Score: 75/100
+- Complex multiplayer fishing mechanics
+- Sophisticated tournament implementation
+- Multi-layered progression systems
+- Integrated social mechanics
 
 $END$
 

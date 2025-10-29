@@ -1,34 +1,48 @@
 ---
-description: Specifies real-time multiplayer synchronization and player interaction systems for a fishing game
+description: Technical specification for real-time multiplayer game synchronization, broadcasting, and player interaction systems
 ---
 
 
 # realtime-multiplayer
 
-## Core Functionality
+## Core Synchronization Components
 
-The real-time multiplayer system implements three primary features:
+1. Global Catch Broadcasting
+- Broadcasts special catches (rare, huge, legendary, trophy) across all active players
+- Suppresses regular catch notifications to prevent chat spam
+- Tournament-specific silent broadcasting for score tracking
+Importance Score: 85/100
 
-1. Catch Broadcasting
-- Notifies all connected players when fish are caught
-- Shares catch details including weight and species
-- Updates global leaderboards in real-time
-
-2. Player Synchronization
-- Maintains active player roster
-- Updates player locations and activities
-- Syncs achievement notifications
-
-3. Chat System
-- Global chat for all players
-- Tournament-specific chat channels
-- Location-based player communication
-
+2. Tournament Room Management
+- 8-player capacity limit per tournament instance
+- Real-time participant registration tracking
+- Live tournament state synchronization
+- Active tournament phase coordination
 Importance Score: 75/100
-- Critical gameplay feature enabling social interaction
-- Core tournament functionality requirements
-- Real-time achievement sharing
-- However, implements standard multiplayer patterns
+
+3. Player State Synchronization
+- Real-time tracking of player locations
+- Tournament participation status
+- Catch recording and validation
+- Score/leaderboard updates
+Importance Score: 70/100
+
+## Implementation Structure
+
+/server.js
+- Handles real-time player interaction coordination
+- Manages special catch event broadcasting
+- Controls tournament state synchronization
+- Coordinates multi-player fishing sessions
+
+Key Multiplayer Features:
+- Tournament-specific broadcasting rules
+- Global catch announcements
+- Live participant tracking
+- Real-time score updates
+
+Overall Importance Score: 77/100
+(Weighted average based on criticality of multiplayer components to game functionality)
 
 $END$
 

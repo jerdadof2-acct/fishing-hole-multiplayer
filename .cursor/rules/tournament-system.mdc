@@ -1,39 +1,43 @@
 ---
-description: Defines tournament mechanics, player performance tracking, and competitive multiplayer features for the fishing game
+description: Specification for tournament mechanics, player competition systems, and competitive gameplay features
 ---
 
 
 # tournament-system
 
-Tournament mechanics handle player competition and result tracking through several key components:
+Tournament Core Components:
 
-Primary Tournament Logic (/server.js):
+1. Room Management
+- 8-player room size limit
+- Tournament-specific player grouping
+Importance Score: 65/100
 
-1. Tournament Result Tracking
-- Records participation and outcomes of fishing tournaments
-- Maintains tournament-specific catch statistics and leaderboards
-- Stores historical performance data per player
-
-2. Real-time Competition Features
-- Broadcasts tournament catches to participants
-- Tracks active tournament roster
-- Maintains real-time tournament status
-
-3. Tournament Statistics
-- Total weight calculations per tournament
-- Fish count tracking
-- Biggest catch records
-- Tournament participation history
-
+2. Catch Multipliers
+- Tournament-specific fish size multiplier system
+- Maximum multiplier: 3x normal size
+- Affects scoring and rankings
 Importance Score: 75/100
 
-Reasoning:
-- Core competitive gameplay mechanics
-- Essential multiplayer tournament features
-- Tournament-specific data tracking systems
-- Basic implementation without complex rulesets
+3. Catch Distribution
+- Equal probability distribution for catches
+- Tournament-specific catch tracking
+- Silent broadcasting for tournament catches
+Importance Score: 70/100
 
-The tournament system provides foundational competitive features for the fishing game, though specific implementation details like tournament types, duration rules, or special scoring mechanisms are not defined in the available specification.
+4. Tournament Lifecycle
+- Start phase with registration
+- Active phase for catch tracking
+- End phase for winner determination
+- Prize distribution system
+Importance Score: 80/100
+
+Key Integration Points:
+- Interfaces with catch recording system
+- Maintains tournament-specific leaderboards
+- Coordinates with broadcasting rules for tournament events
+
+Overall Tournament System Score: 72/100
+(Weighted average based on competitive gameplay impact and tournament-specific mechanics)
 
 $END$
 

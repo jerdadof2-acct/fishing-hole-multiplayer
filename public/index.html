@@ -10346,10 +10346,10 @@
 
     <!-- Three.js 3D Cat System -->
     <script type="module">
-        import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-        import { GLTFLoader }   from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
-        import { RGBELoader }   from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/RGBELoader.js';
-        import { PMREMGenerator } from 'https://unpkg.com/three@0.160.0/examples/jsm/pmrem/PMREMGenerator.js';
+        import * as THREE from 'https://cdn.skypack.dev/three@0.160.0';
+        import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+        import { RGBELoader } from 'https://cdn.skypack.dev/three@0.160.0/examples/jsm/loaders/RGBELoader.js';
+        import { PMREMGenerator } from 'https://cdn.skypack.dev/three@0.160.0/examples/jsm/utils/PMREMGenerator.js';
 
         class Cat3D {
             constructor(container, opts={}){
@@ -10396,62 +10396,86 @@
             }
 
             async #load(){
-                // environment
-                if (this.envUrl){
-                    const pmrem = new PMREMGenerator(this.renderer);
-                    const hdr = await new RGBELoader().loadAsync(this.envUrl);
-                    const envMap = pmrem.fromEquirectangular(hdr).texture;
-                    this.scene.environment = envMap;
-                    hdr.dispose(); pmrem.dispose();
-                }
+                try {
+                    // environment
+                    if (this.envUrl){
+                        const pmrem = new PMREMGenerator(this.renderer);
+                        const hdr = await new RGBELoader().loadAsync(this.envUrl);
+                        const envMap = pmrem.fromEquirectangular(hdr).texture;
+                        this.scene.environment = envMap;
+                        hdr.dispose(); pmrem.dispose();
+                    }
 
-                // model
-                const gltf = await new GLTFLoader().loadAsync(this.modelUrl);
-                this.model = gltf.scene;
-                this.model.scale.setScalar(this.scale);
-                // center roughly
-                this.model.position.set(0, -0.5, 0);
-                this.scene.add(this.model);
+                    // model
+                    const gltf = await new GLTFLoader().loadAsync(this.modelUrl);
+                    this.model = gltf.scene;
+                    this.model.scale.setScalar(this.scale);
+                    // center roughly
+                    this.model.position.set(0, -0.5, 0);
+                    this.scene.add(this.model);
+                } catch (error) {
+                    console.log('3D cat model not available, falling back to placeholder:', error.message);
+                    this.#createPlaceholder();
+                }
 
                 // tint fur (supports both MeshStandardMaterial and MultiMat)
-                this.model.traverse(o=>{
-                    if (o.isMesh && o.material){
-                        // if there's a "fur" or "body" material name, tint that; else tint all slightly
-                        const mats = Array.isArray(o.material)? o.material : [o.material];
-                        mats.forEach(m=>{
-                            if (m.color) {
-                                if ((m.name||'').toLowerCase().includes('fur') || (m.name||'').toLowerCase().includes('body')) {
-                                    m.color.multiply(this.tint);
-                                } else {
-                                    m.color.multiply(new THREE.Color('#f0f0f0'));
+                if (this.model) {
+                    this.model.traverse(o=>{
+                        if (o.isMesh && o.material){
+                            // if there's a "fur" or "body" material name, tint that; else tint all slightly
+                            const mats = Array.isArray(o.material)? o.material : [o.material];
+                            mats.forEach(m=>{
+                                if (m.color) {
+                                    if ((m.name||'').toLowerCase().includes('fur') || (m.name||'').toLowerCase().includes('body')) {
+                                        m.color.multiply(this.tint);
+                                    } else {
+                                        m.color.multiply(new THREE.Color('#f0f0f0'));
+                                    }
+                                    m.roughness = Math.min(0.9, (m.roughness ?? 0.6) + 0.1);
+                                    m.metalness = Math.max(0.0, (m.metalness ?? 0.1) - 0.05);
                                 }
-                                m.roughness = Math.min(0.9, (m.roughness ?? 0.6) + 0.1);
-                                m.metalness = Math.max(0.0, (m.metalness ?? 0.1) - 0.05);
-                            }
-                        });
-                    }
-                });
+                            });
+                        }
+                    });
 
-                // animation mixer & clip map
-                if (gltf.animations?.length){
-                    this.mixer = new THREE.AnimationMixer(this.model);
-                    gltf.animations.forEach(clip => { this.clips[clip.name.toLowerCase()] = clip; });
-                    // prefer provided idle; else we'll procedural-breathe
-                    const idle = this.clips['idle'] || this.clips['breath'] || this.clips['breathing'];
-                    if (idle) this.mixer.clipAction(idle).play();
+                    // animation mixer & clip map
+                    if (gltf.animations?.length){
+                        this.mixer = new THREE.AnimationMixer(this.model);
+                        gltf.animations.forEach(clip => { this.clips[clip.name.toLowerCase()] = clip; });
+                        // prefer provided idle; else we'll procedural-breathe
+                        const idle = this.clips['idle'] || this.clips['breath'] || this.clips['breathing'];
+                        if (idle) this.mixer.clipAction(idle).play();
+                    }
+
+                    // morph targets (blink/ears) if present
+                    this.model.traverse(o=>{
+                        if (o.isMesh && o.morphTargetDictionary){
+                            const d = o.morphTargetDictionary;
+                            if (d.EyesClosed   !== undefined) this.blinkMorph = { mesh:o, idx:d.EyesClosed };
+                            if (d.Blink        !== undefined) this.blinkMorph = { mesh:o, idx:d.Blink };
+                            if (d.EarTwitch_L  !== undefined) this.earMorphL  = { mesh:o, idx:d.EarTwitch_L };
+                            if (d.EarTwitch_R  !== undefined) this.earMorphR  = { mesh:o, idx:d.EarTwitch_R };
+                        }
+                        if (o.isBone && /tail/i.test(o.name)) this.tailBone = o;
+                    });
                 }
+            }
 
-                // morph targets (blink/ears) if present
-                this.model.traverse(o=>{
-                    if (o.isMesh && o.morphTargetDictionary){
-                        const d = o.morphTargetDictionary;
-                        if (d.EyesClosed   !== undefined) this.blinkMorph = { mesh:o, idx:d.EyesClosed };
-                        if (d.Blink        !== undefined) this.blinkMorph = { mesh:o, idx:d.Blink };
-                        if (d.EarTwitch_L  !== undefined) this.earMorphL  = { mesh:o, idx:d.EarTwitch_L };
-                        if (d.EarTwitch_R  !== undefined) this.earMorphR  = { mesh:o, idx:d.EarTwitch_R };
-                    }
-                    if (o.isBone && /tail/i.test(o.name)) this.tailBone = o;
+            #createPlaceholder(){
+                // Create a simple cat-like placeholder using basic geometry
+                const geometry = new THREE.SphereGeometry(0.5, 16, 12);
+                const material = new THREE.MeshStandardMaterial({ 
+                    color: this.tint,
+                    roughness: 0.8,
+                    metalness: 0.1
                 });
+                
+                this.model = new THREE.Mesh(geometry, material);
+                this.model.position.set(0, -0.5, 0);
+                this.scene.add(this.model);
+                
+                // Add simple breathing animation
+                this.breathingScale = 1.0;
             }
 
             // realtime loop
@@ -10468,6 +10492,12 @@
 
             #updateProcedurals(){
                 const t = performance.now()*0.001;
+
+                // Simple breathing animation for placeholder
+                if (this.breathingScale !== undefined && this.model) {
+                    this.breathingScale = 1.0 + Math.sin(t * 2.3) * 0.02;
+                    this.model.scale.setScalar(this.scale * this.breathingScale);
+                }
 
                 // blink (morph or fake by moving eyelids if you add them later)
                 if (this.blinkMorph){

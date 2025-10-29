@@ -1,35 +1,50 @@
 ---
-description: Specifications for player advancement systems, achievements, and progression mechanics in gaming contexts
+description: Specification for implementing player advancement, leveling, and progression mechanics in a fishing game
 ---
 
 
 # player-progression-model
 
-The available information suggests a basic gaming progression system without detailed implementation specifics.
+## Level-Based Progression System
+Experience scaling follows non-linear progression with exponential growth:
+- Level 1→2: 100 XP
+- Level 5→6: 750 XP  
+- Level 10→11: 5,000 XP
+- Level 15→16: 20,000+ XP
 
-Core Components:
-- Player state tracking
-- Experience and level management
-- Achievement recording
-- Inventory system
-- Location unlocking mechanics
+Importance Score: 85/100
 
-Relevant Business Logic Elements:
-1. Player State Management
-- Maintains current level and experience points
-- Tracks player achievements and milestones
-- Records inventory state and unlocked items
-- Manages access to game locations
+## Time Scaling Mechanics
+Dynamic action timing based on player level:
+- Level 1-5: 0.5-2 second actions
+- Level 6-10: 2-4 second actions  
+- Level 11-15: 3-5.5 second actions
+- Level 16+: 4-7 second actions
 
-2. Progression System Structure
-- Level-based advancement framework
-- Achievement-based unlocking system
-- Location accessibility tiers
+Importance Score: 75/100
 
-Importance Score: 25/100
+## Equipment Progression 
+Exponential pricing curve across multiple categories:
+- Equipment Types: Rods, reels, hooks, lines, baits
+- Price Range: Free to $100,000
+- Strategic price gates for progression control
+- Tiered advancement system
 
-Reasoning:
-While the specification mentions player progression components, it provides only structural information without implementation details or unique business rules. The available documentation focuses on standard gaming progression patterns rather than specific mechanics or algorithms.
+Importance Score: 80/100
+
+## Player State Management
+Core progression tracking:
+- Experience points accumulation
+- Level advancement
+- Location unlocking system
+- Equipment inventory
+- Catch statistics
+- Tournament performance metrics
+
+Importance Score: 90/100
+
+Overall System Score: 82/100
+(Weighted average based on component complexity and business impact)
 
 $END$
 

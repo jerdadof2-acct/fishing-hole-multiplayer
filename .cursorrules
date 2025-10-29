@@ -10,40 +10,40 @@
 - Explain your OBSERVATIONS clearly, then provide REASONING to identify the exact issue. Add console logs when needed to gather more information.
 
 
-The system implements a multiplayer fishing game with the following core business components:
+The fishing game business logic consists of four interconnected systems:
 
-## Player Management System
-- Experience-based progression system
-- Currency and inventory management
-- Location unlocking mechanics
-- Achievement tracking for fish catches
-- Personal record management for top 10 catches
+## Progressive Gameplay Scaling
+Core timing system that adapts game mechanics based on player progression:
+- Early game (L1-5): Fast-paced 0.5-2s actions
+- Mid game (L6-10): Moderate 2-4s actions 
+- Advanced (L11-15): Strategic 3-5.5s actions
+- Endgame (16+): Complex 4-7s actions
 
-## Tournament Framework
-- Active tournament state tracking
-- Real-time leaderboard maintenance
-- Individual catch recording
-- Historical performance data
-- Tournament-specific metrics
+## Economy Framework
+Equipment progression through exponential pricing tiers:
+- Multiple gear categories: rods, reels, hooks, lines, baits
+- Strategic pricing gates from free to $100,000
+- Exponential cost scaling for progression control
 
-## Multiplayer Integration
-- Live catch broadcasting
-- Active player status management
-- Real-time chat functionality
-- Achievement synchronization
-- Player roster updates
+## Experience System
+Non-linear progression framework:
+- Starting requirement: 100 XP (L1→2)
+- Mid-game acceleration: 750 XP (L5→6)
+- Late-game scaling: 5,000 XP (L10→11)
+- Endgame requirement: 20,000+ XP (L15→16)
 
-## Seasonal Content
-- Season-specific catch records
-- Progression tracking by season
-- Seasonal statistics aggregation
-- Achievement unlocks per season
+## Tournament Engine
+Competitive gameplay structure:
+- 8-player room capacity
+- Tournament-specific catch multipliers up to 3x
+- Balanced catch probability distribution
 
-Business Logic Importance Score: 75
-- Core gameplay systems implementation
-- Tournament management features
-- Player progression mechanics
-- Season-based content management
+Overall System Score: 73/100
+Core strengths:
+- Integrated progression mechanics
+- Multi-tiered economy system
+- Tournament-specific enhancements
+- Cat-themed fishing elements
 
 $END$
 
