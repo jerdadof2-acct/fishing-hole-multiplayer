@@ -10891,13 +10891,27 @@
                             const mats = Array.isArray(o.material)? o.material : [o.material];
                             mats.forEach(m=>{
                                 if (m.color) {
-                                    if ((m.name||'').toLowerCase().includes('fur') || (m.name||'').toLowerCase().includes('body')) {
-                                        m.color.multiply(this.tint);
+                                    // Ensure material is visible
+                                    m.transparent = false;
+                                    m.opacity = 1.0;
+                                    
+                                    // Use copy and brighten rather than multiply to avoid darkening
+                                    const materialName = (m.name || '').toLowerCase();
+                                    if (materialName.includes('fur') || materialName.includes('body')) {
+                                        // For fur/body, use the tint color directly but brightened
+                                        m.color.copy(this.tint);
+                                        // Ensure minimum brightness - if too dark, brighten it
+                                        const brightness = m.color.r + m.color.g + m.color.b;
+                                        if (brightness < 0.5) {
+                                            m.color.multiplyScalar(2.0); // Double brightness if too dark
+                                        }
                                     } else {
-                                        m.color.multiply(new THREE.Color('#f0f0f0'));
+                                        // For other parts, use light color
+                                        m.color.copy(new THREE.Color(0xf0f0f0)); // Light gray
                                     }
                                     m.roughness = Math.min(0.9, (m.roughness ?? 0.6) + 0.1);
                                     m.metalness = Math.max(0.0, (m.metalness ?? 0.1) - 0.05);
+                                    m.needsUpdate = true;
                                 }
                             });
                         }
