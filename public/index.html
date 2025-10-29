@@ -11157,12 +11157,20 @@
                     this.rodModel = null;
                     // Note: rodTipBone may already be found above, don't reset it
                     
-                    // Find hand/grip bone for rod attachment
+                    // Find hand/grip bone for rod attachment (try common names)
                     let handBone = null;
                     this.model.traverse(o => {
                         if (o.isBone) {
                             const name = (o.name || '').toLowerCase();
-                            if (name.includes('hand') || name.includes('grip') || name.includes('right_hand') || name.includes('r_hand')) {
+                            // Try common hand bone names
+                            if (name === 'mixamorigrighthand' || name === 'mixamorig:righthand' || 
+                                name === 'righthand' || name === 'handr' ||
+                                name.includes('hand_r') || name.includes('right_hand')) {
+                                handBone = o;
+                            }
+                            // Also check for hand in general
+                            if (!handBone && (name.includes('hand') || name.includes('grip')) && 
+                                (name.includes('r') || name.includes('right') || !name.includes('left'))) {
                                 handBone = o;
                             }
                             // Find rod tip bone in cat model (if it has one)
@@ -11171,6 +11179,12 @@
                             }
                         }
                     });
+                    // Fallback: try direct name lookup
+                    if (!handBone) {
+                        handBone = this.model.getObjectByName('mixamorigRightHand') ||
+                                   this.model.getObjectByName('RightHand') ||
+                                   this.model.getObjectByName('handr');
+                    }
                     
                     // Load fishing rod GLB
                     const rodLoader = new GLTFLoader();
@@ -11180,7 +11194,32 @@
                             console.log('Cat3D: Fishing rod loaded successfully');
                             this.rodModel = rodGltf.scene;
                             
-                            // Find rod tip bone in rod model (use rod's bone if found)
+                            // Scale and orient rod properly
+                            this.rodModel.scale.setScalar(1.0); // Start with 1.0, adjust as needed
+                            this.rodModel.rotation.set(0, Math.PI, 0); // Often needed if rod faces backward
+                            this.rodModel.position.set(0, -0.02, 0.06); // Small offset in the hand - tweak as needed
+                            
+                            // Ensure rod materials are visible
+                            this.rodModel.traverse(o => {
+                                if (o.isMesh && o.material) {
+                                    const mats = Array.isArray(o.material) ? o.material : [o.material];
+                                    mats.forEach(m => {
+                                        if (!m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial) {
+                                            // Convert to standard material if needed
+                                            m = new THREE.MeshStandardMaterial({
+                                                color: m.color || 0xcccccc,
+                                                map: m.map,
+                                                roughness: 0.7,
+                                                metalness: 0.1
+                                            });
+                                            o.material = mats.length === 1 ? m : mats;
+                                        }
+                                        m.needsUpdate = true;
+                                    });
+                                }
+                            });
+                            
+                            // Find rod tip bone in rod model first
                             let rodTipBoneFromRod = null;
                             this.rodModel.traverse(o => {
                                 if (o.isBone) {
@@ -11192,56 +11231,22 @@
                                 }
                             });
                             
-                            // Use rod's tip bone if found, otherwise keep existing
-                            if (rodTipBoneFromRod) {
+                            // Create rod tip locator at rod end
+                            if (!rodTipBoneFromRod) {
+                                this.rodTipBone = new THREE.Object3D();
+                                this.rodTipBone.name = 'RodTip';
+                                // Position at rod end in local rod space (adjust based on your rod model)
+                                this.rodTipBone.position.set(0, 0, -1.0); // Move to rod end - adjust if needed
+                                this.rodModel.add(this.rodTipBone);
+                                console.log('Cat3D: Created rod tip locator at:', this.rodTipBone.position);
+                            } else {
                                 this.rodTipBone = rodTipBoneFromRod;
                             }
                             
-                            // If no rod tip bone found, create one at rod end
-                            if (!this.rodTipBone) {
-                                // Try to find rod mesh and estimate tip position
-                                let rodMesh = null;
-                                this.rodModel.traverse(o => {
-                                    if (o.isMesh && (o.name || '').toLowerCase().includes('rod')) {
-                                        rodMesh = o;
-                                    }
-                                });
-                                
-                                // Create rod tip helper at rod end (assuming rod extends along +Z or +Y)
-                                this.rodTipBone = new THREE.Object3D();
-                                this.rodTipBone.name = '__rod_tip__';
-                                if (rodMesh) {
-                                    const box = new THREE.Box3().setFromObject(rodMesh);
-                                    const size = box.getSize(new THREE.Vector3());
-                                    // Position tip at end of rod (adjust axis based on rod orientation)
-                                    this.rodTipBone.position.set(0, size.y * 0.4, size.z * 0.5);
-                                } else {
-                                    this.rodTipBone.position.set(0, 0.3, 1.0); // Default position
-                                }
-                                this.rodModel.add(this.rodTipBone);
-                                console.log('Cat3D: Created rod tip helper at:', this.rodTipBone.position);
-                            }
-                            
-                            // Attach rod to hand bone or approximate position
-                            if (handBone) {
-                                handBone.add(this.rodModel);
-                                console.log('Cat3D: Attached rod to hand bone:', handBone.name);
-                            } else {
-                                // Fallback: attach to model root at approximate hand position
-                                const rodAttachment = new THREE.Object3D();
-                                rodAttachment.name = '__rod_attachment__';
-                                rodAttachment.position.set(0.3, 0.5, 0.8); // Approximate hand position
-                                this.model.add(rodAttachment);
-                                rodAttachment.add(this.rodModel);
-                                console.log('Cat3D: Attached rod to approximate hand position');
-                            }
-                            
-                            // Scale rod to match cat size
-                            if (this._sphereRadius && this._sphereRadius > 0) {
-                                const rodScale = Math.max(0.5, Math.min(2.0, 1.0 / this._sphereRadius));
-                                this.rodModel.scale.setScalar(rodScale);
-                                console.log('Cat3D: Scaled rod by:', rodScale);
-                            }
+                            // Attach rod to hand bone or fallback
+                            const attachBone = handBone || this.model; // fallback to model root
+                            attachBone.add(this.rodModel);
+                            console.log('Cat3D: Attached rod to', handBone ? `hand bone: ${handBone.name}` : 'model root');
                         },
                         (progress) => {
                             // Progress callback - not an error, just log progress
@@ -11276,31 +11281,44 @@
                         this.model.add(this.rodTipBone);
                     }
                     
-                    // Create bobber and fishing line for 3D casting
-                    // Size bobber relative to model (scale with model size)
-                    const bobberSize = Math.max(0.1, (this._sphereRadius || 1.0) * 0.1);
-                    this.bobber = new THREE.Mesh(
-                        new THREE.SphereGeometry(bobberSize, 8, 8),
-                        new THREE.MeshStandardMaterial({ color: 0xff4444 })
-                    );
-                    this.bobber.name = '__bobber__';
+                    // Create bobber - make it clearly visible
+                    const bobberGeom = new THREE.SphereGeometry(0.025, 24, 16); // 2.5cm, high resolution
+                    const bobberMat = new THREE.MeshStandardMaterial({ 
+                        color: 0xff3333,
+                        roughness: 0.5,
+                        metalness: 0.1
+                    });
+                    this.bobber = new THREE.Mesh(bobberGeom, bobberMat);
+                    this.bobber.name = 'Bobber';
                     this.bobber.visible = false; // Hidden until cast
+                    this.bobber.castShadow = true;
+                    this.bobber.receiveShadow = false;
+                    this.bobber.renderOrder = 2; // Ensure above water (set water to 1)
+                    this.bobber.material.depthWrite = true;
+                    this.bobber.material.depthTest = true;
                     this.bobber.userData.bobbing = false;
                     this.scene.add(this.bobber);
-                    console.log('Cat3D: Bobber created with size:', bobberSize);
+                    console.log('Cat3D: Bobber created (0.025 radius, renderOrder 2)');
                     
-                    // Create fishing line (tube geometry connecting rod tip to bobber)
-                    const lineGeometry = new THREE.BufferGeometry();
-                    const positions = new Float32Array(6); // 2 points * 3 coords
-                    lineGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-                    this.fishingLine = new THREE.Line(
-                        lineGeometry,
-                        new THREE.LineBasicMaterial({ color: 0xcccccc, linewidth: 2 })
-                    );
-                    this.fishingLine.name = '__fishing_line__';
+                    // Create fishing line using world positions
+                    const lineGeo = new THREE.BufferGeometry().setFromPoints([
+                        new THREE.Vector3(),
+                        new THREE.Vector3()
+                    ]);
+                    const lineMat = new THREE.LineBasicMaterial({ 
+                        color: 0xcccccc,
+                        linewidth: 2 // May not work on all GPUs, but fine
+                    });
+                    this.fishingLine = new THREE.Line(lineGeo, lineMat);
+                    this.fishingLine.name = 'FishingLine';
                     this.fishingLine.visible = false;
+                    this.fishingLine.renderOrder = 3; // Above water and bobber
                     this.scene.add(this.fishingLine);
-                    console.log('Cat3D: Fishing line created');
+                    console.log('Cat3D: Fishing line created (using world positions)');
+                    
+                    // Reusable world position vectors for line updates
+                    this._worldPosA = new THREE.Vector3();
+                    this._worldPosB = new THREE.Vector3();
                 }
             }
 
@@ -11333,11 +11351,12 @@
                 // Update fishing line to connect rod tip to bobber every frame
                 this.#updateFishingLine();
                 
-                // Update bobber idle bobbing if active
+                // Update bobber idle bobbing if active (buoyancy jiggle)
                 if (this.bobber?.userData?.bobbing) {
                     const baseY = this.bobber.userData.baseY || this.bobber.position.y;
                     this.bobber.userData.bobPhase = (this.bobber.userData.bobPhase || 0) + dt;
-                    this.bobber.position.y = baseY + Math.sin(this.bobber.userData.bobPhase * 2.2) * 0.005;
+                    // More visible bobbing motion
+                    this.bobber.position.y = baseY + Math.sin(this.bobber.userData.bobPhase * 2.2) * 0.006;
                 }
 
                 // Log first frame to verify scene has content
@@ -11456,12 +11475,22 @@
             }
             
             #updateFishingLine(){
-                // Keep 3D line updated for reference, but hide it (we use 2D overlay instead)
-                if (this.fishingLine) {
-                    this.fishingLine.visible = false; // Hide 3D line, use 2D overlay
+                // Update 3D line using world positions
+                if (this.fishingLine && this.bobber && this.rodTipBone && 
+                    this.bobber.visible && this.fishingLine.visible) {
+                    
+                    // Get world positions
+                    this.rodTipBone.getWorldPosition(this._worldPosA);
+                    this.bobber.getWorldPosition(this._worldPosB);
+                    
+                    // Update line geometry
+                    const pos = this.fishingLine.geometry.attributes.position;
+                    pos.setXYZ(0, this._worldPosA.x, this._worldPosA.y, this._worldPosA.z);
+                    pos.setXYZ(1, this._worldPosB.x, this._worldPosB.y, this._worldPosB.z);
+                    pos.needsUpdate = true;
                 }
                 
-                // Update 2D overlay every frame
+                // Also update 2D overlay for cross-container visibility
                 this.#update2DFishingLine();
             }
 
@@ -11518,12 +11547,14 @@
                 const duration = THREE.MathUtils.clamp(travel * 0.18, 0.45, 0.9);
                 const hop = THREE.MathUtils.clamp(travel * 0.18, 0.8, 2.8);
                 
-                // Show bobber (3D line stays hidden, we use 2D overlay)
+                // Show bobber and fishing line
                 this.bobber.visible = true;
-                if (this.fishingLine) this.fishingLine.visible = false; // Use 2D overlay instead
+                if (this.fishingLine) {
+                    this.fishingLine.visible = true; // Show 3D line too
+                }
                 this.bobber.position.copy(startTip); // Start at rod tip
                 
-                console.log('Cat3D: Bobber visible:', this.bobber.visible, 'Using 2D overlay line');
+                console.log('Cat3D: Bobber visible:', this.bobber.visible, '3D line visible:', this.fishingLine?.visible);
                 
                 const t0 = performance.now() / 1000;
                 const step = () => {
@@ -11545,6 +11576,7 @@
                         requestAnimationFrame(step);
                     } else {
                         // Snap to water surface
+                        const waterSurfaceY = lakeBounds.y || 0;
                         if (lakeMesh && raycaster) {
                             const start = new THREE.Vector3(end.x, end.y + 100, end.z);
                             const dir = new THREE.Vector3(0, -1, 0);
@@ -11552,15 +11584,18 @@
                             const hit = raycaster.intersectObject(lakeMesh, true)[0];
                             if (hit) {
                                 this.bobber.position.copy(hit.point);
+                                this.bobber.position.y += 0.01; // Lift slightly above water
                             } else {
-                                this.bobber.position.y = lakeBounds.y;
+                                this.bobber.position.y = waterSurfaceY + 0.01;
                             }
                         } else {
-                            this.bobber.position.y = lakeBounds.y;
+                            this.bobber.position.y = waterSurfaceY + 0.01;
                         }
                         
-                        // Keep 2D overlay visible while bobber is on water (bobbing)
-                        // Overlay will continue updating in #updateFishingLine()
+                        // Keep line and overlay visible while bobber is on water
+                        if (this.fishingLine) {
+                            this.fishingLine.visible = true;
+                        }
                         
                         // Splash effect
                         if (splashSystem?.spawnAt) {
