@@ -10736,9 +10736,7 @@
                 // scene/camera
                 this.scene = new THREE.Scene();
                 container.__scene = this.scene;
-                // Add visual helper so you see "something" even before the model loads
-                // Make axes helper bigger (2 units) so it's more visible
-                this.scene.add(new THREE.AxesHelper(2)); // X/Y/Z cross so you can confirm the loop renders
+                // AxesHelper removed - cats are now visible and rendering correctly
                 this.camera = new THREE.PerspectiveCamera(45, container.clientWidth/container.clientHeight || 1, 0.1, 50);
                 container.__camera = this.camera;
                 // Adjust camera to see model better - closer and looking at origin
