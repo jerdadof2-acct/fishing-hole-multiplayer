@@ -11882,9 +11882,11 @@
                     isFinite(bobX) && isFinite(bobY) &&
                     Math.abs(bobX) < 10000 && Math.abs(bobY) < 10000;
                 
-                // Debug validation on first frame
-                if (this._debugCount === 0) {
-                    console.log('Cat3D: Overlay validation - tipValid:', tipValid, 'bobValid:', bobValid, 'tipScreen:', tipScreen.x.toFixed(1), tipScreen.y.toFixed(1), 'bobX/Y:', bobX.toFixed(1), bobY.toFixed(1), 'shouldShow:', shouldShow);
+                // Debug validation - always log first few times to diagnose
+                if (!this._validationLogged || this._validationLogged < 3) {
+                    if (!this._validationLogged) this._validationLogged = 0;
+                    console.log('Cat3D: Overlay validation - tipValid:', tipValid, 'bobValid:', bobValid, 'tipScreen:', tipScreen.x.toFixed(1), tipScreen.y.toFixed(1), 'bobX/Y:', bobX.toFixed(1), bobY.toFixed(1), 'shouldShow:', shouldShow, 'tipValid&&bobValid:', tipValid && bobValid);
+                    this._validationLogged++;
                 }
                 
                 // Always create overlay elements if they don't exist
@@ -11919,7 +11921,8 @@
                     console.log('Cat3D: Created overlay bobber element');
                 }
                 
-                if (tipValid && bobValid) {
+                // ALWAYS draw if shouldShow is true, even if validation fails
+                if (shouldShow || (tipValid && bobValid)) {
                     // Draw line from tipScreen -> bobX/bobY
                     const dx = bobX - tipScreen.x;
                     const dy = bobY - tipScreen.y;
@@ -11929,27 +11932,29 @@
                     if (shouldShow || distance > 0.5) {
                         const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
                         
-                        // Position and style the line - always show if casting
+                        // Position and style the line - always show if shouldShow
                         this._overlayLine.style.display = 'block';
-                        this._overlayLine.style.left = tipScreen.x + 'px';
-                        this._overlayLine.style.top = tipScreen.y + 'px';
+                        this._overlayLine.style.left = finalTipX + 'px';
+                        this._overlayLine.style.top = finalTipY + 'px';
                         this._overlayLine.style.width = '2px';
                         this._overlayLine.style.height = Math.max(distance, 1) + 'px'; // Min 1px to avoid zero height
                         this._overlayLine.style.transform = `rotate(${angleDeg}deg)`;
                         this._overlayLine.style.transformOrigin = 'top center';
                         this._overlayLine.style.opacity = '1.0';
+                        this._overlayLine.style.visibility = 'visible';
                         
                         // Position the bobber
                         this._overlayBobber.style.display = 'block';
-                        this._overlayBobber.style.left = (bobX - 6) + 'px';
-                        this._overlayBobber.style.top = (bobY - 6) + 'px';
+                        this._overlayBobber.style.left = (finalBobX - 6) + 'px';
+                        this._overlayBobber.style.top = (finalBobY - 6) + 'px';
                         this._overlayBobber.style.opacity = '1.0';
+                        this._overlayBobber.style.visibility = 'visible';
                         
-                        // Debug on first frame - always log when drawing
-                        if (this._debugCount === 0) {
-                            console.log('Cat3D: Drawing overlay line from rod tip:', tipScreen.x.toFixed(1), tipScreen.y.toFixed(1), 'to bobber:', bobX.toFixed(1), bobY.toFixed(1), 'distance:', distance.toFixed(1), 'shouldShow:', shouldShow, 'casting:', this._casting, 'reeling:', this._reeling, 'bobber.visible:', this.bobber.visible);
-                            // Force reset debug count so we see this log
-                            this._debugCount = 1;
+                        // Debug - log when drawing (first few times)
+                        if (!this._drawLogged || this._drawLogged < 3) {
+                            if (!this._drawLogged) this._drawLogged = 0;
+                            console.log('Cat3D: Drawing overlay line from rod tip:', finalTipX.toFixed(1), finalTipY.toFixed(1), 'to bobber:', finalBobX.toFixed(1), finalBobY.toFixed(1), 'distance:', distance.toFixed(1), 'shouldShow:', shouldShow, 'casting:', this._casting, 'reeling:', this._reeling, 'bobber.visible:', this.bobber.visible, 'tipValid:', tipValid, 'bobValid:', bobValid);
+                            this._drawLogged++;
                         }
                     } else {
                         // Line too short - but still show bobber if shouldShow
