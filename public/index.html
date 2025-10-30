@@ -11001,6 +11001,10 @@
         };
 
         class Cat3D {
+            // Static shared overlay elements (one per page, not per instance)
+            static overlayLineEl = null;
+            static overlayBobberEl = null;
+            
             constructor(container, opts={}){
                 this.container = container;
                 this.modelUrl = opts.modelUrl || '/assets/glb/PZSNQ3IH66OXPUSBTYNAMD6EC.glb'; // Real cat model
@@ -11835,11 +11839,11 @@
                     bobY = Math.min(Math.max(bobScreen.y, lakeRect.top + lakeRect.height * 0.4), lakeRect.bottom - 20);
                 }
                 
-                // Create per-instance overlay elements if they don't exist
-                if (!this._overlayLine) {
-                    this._overlayLine = document.createElement('div');
-                    this._overlayLine.className = 'cat3d-fishing-line';
-                    this._overlayLine.style.cssText = `
+                // Create/use global shared overlay elements (once per page, not per instance)
+                if (!Cat3D.overlayLineEl) {
+                    Cat3D.overlayLineEl = document.createElement('div');
+                    Cat3D.overlayLineEl.className = 'cat3d-fishing-line';
+                    Cat3D.overlayLineEl.style.cssText = `
                         position: fixed;
                         pointer-events: none;
                         z-index: 1100;
@@ -11847,12 +11851,12 @@
                         background: linear-gradient(to bottom, rgba(204,204,204,0.9), rgba(204,204,204,0.6));
                         transform-origin: top center;
                     `;
-                    document.body.appendChild(this._overlayLine);
+                    document.body.appendChild(Cat3D.overlayLineEl);
                 }
-                if (!this._overlayBobber) {
-                    this._overlayBobber = document.createElement('div');
-                    this._overlayBobber.className = 'cat3d-bobber';
-                    this._overlayBobber.style.cssText = `
+                if (!Cat3D.overlayBobberEl) {
+                    Cat3D.overlayBobberEl = document.createElement('div');
+                    Cat3D.overlayBobberEl.className = 'cat3d-bobber';
+                    Cat3D.overlayBobberEl.style.cssText = `
                         position: fixed;
                         pointer-events: none;
                         z-index: 1101;
@@ -11862,10 +11866,14 @@
                         background: radial-gradient(circle at 30% 30%, #ffffff, #ff4444);
                         box-shadow: 0 2px 4px rgba(0,0,0,0.3);
                     `;
-                    document.body.appendChild(this._overlayBobber);
+                    document.body.appendChild(Cat3D.overlayBobberEl);
                 }
                 
-                // Validate coordinates
+                // Assign instance references for easy access
+                this._overlayLine = Cat3D.overlayLineEl;
+                this._overlayBobber = Cat3D.overlayBobberEl;
+                
+                // Always try to draw if casting/reeling - be lenient with validation
                 const tipValid = !isNaN(tipScreen.x) && !isNaN(tipScreen.y) && 
                     isFinite(tipScreen.x) && isFinite(tipScreen.y) &&
                     Math.abs(tipScreen.x) < 10000 && Math.abs(tipScreen.y) < 10000;
@@ -11873,28 +11881,47 @@
                     isFinite(bobX) && isFinite(bobY) &&
                     Math.abs(bobX) < 10000 && Math.abs(bobY) < 10000;
                 
-                if (!tipValid || !bobValid) {
+                // Only skip drawing if coordinates are invalid and we're not casting/reeling
+                if ((!tipValid || !bobValid) && !shouldShow) {
                     return;
                 }
                 
+                // Use valid coordinates or fallbacks if validation failed but shouldShow is true
+                const finalTipX = tipValid ? tipScreen.x : (this.container?.getBoundingClientRect().left || 0) + 48;
+                const finalTipY = tipValid ? tipScreen.y : (this.container?.getBoundingClientRect().top || 0) + 29;
+                const finalBobX = bobValid ? bobX : bobScreen.x;
+                const finalBobY = bobValid ? bobY : bobScreen.y;
+                
                 // Draw line from tip to bobber
-                const dx = bobX - tipScreen.x;
-                const dy = bobY - tipScreen.y;
+                const dx = finalBobX - finalTipX;
+                const dy = finalBobY - finalTipY;
                 const distance = Math.hypot(dx, dy);
-                const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
                 
-                // Position and style the line
-                this._overlayLine.style.display = 'block';
-                this._overlayLine.style.left = tipScreen.x + 'px';
-                this._overlayLine.style.top = tipScreen.y + 'px';
-                this._overlayLine.style.width = '2px';
-                this._overlayLine.style.height = Math.max(distance, 1) + 'px';
-                this._overlayLine.style.transform = `rotate(${angleDeg}deg)`;
-                
-                // Position the bobber
-                this._overlayBobber.style.display = 'block';
-                this._overlayBobber.style.left = (bobX - 6) + 'px';
-                this._overlayBobber.style.top = (bobY - 6) + 'px';
+                // Always show line and bobber if shouldShow is true, regardless of distance
+                if (shouldShow || distance > 0.5) {
+                    const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
+                    
+                    // Position and style the line
+                    this._overlayLine.style.display = 'block';
+                    this._overlayLine.style.left = finalTipX + 'px';
+                    this._overlayLine.style.top = finalTipY + 'px';
+                    this._overlayLine.style.width = '2px';
+                    this._overlayLine.style.height = Math.max(distance, 1) + 'px';
+                    this._overlayLine.style.transform = `rotate(${angleDeg}deg)`;
+                    this._overlayLine.style.opacity = '1.0';
+                    this._overlayLine.style.visibility = 'visible';
+                    
+                    // Position the bobber
+                    this._overlayBobber.style.display = 'block';
+                    this._overlayBobber.style.left = (finalBobX - 6) + 'px';
+                    this._overlayBobber.style.top = (finalBobY - 6) + 'px';
+                    this._overlayBobber.style.opacity = '1.0';
+                    this._overlayBobber.style.visibility = 'visible';
+                } else {
+                    // Line too short - hide elements
+                    this._overlayLine.style.display = 'none';
+                    this._overlayBobber.style.display = 'none';
+                }
             }
             
             #updateFishingLine(){
