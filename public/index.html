@@ -11052,8 +11052,11 @@
             console.log('Overlay line enabled:', window.USE_OVERLAY_LINE, 'Legacy DOM line enabled:', window.USE_LEGACY_LAKE_LINE);
         };
 
-        // Start the game
+        // Expose constructor globally for console/tests
+        window.FishingHoleMultiplayer = FishingHoleMultiplayer;
+        // Start the game and expose instance globally
         const game = new FishingHoleMultiplayer();
+        window.game = game;
     </script>
 
     <!-- Three.js 3D Cat System -->
