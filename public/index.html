@@ -11664,11 +11664,43 @@
                 // procedural blink if no morphs/clip running
                 this.#updateProcedurals();
                 
+                // Handle reel-in animation if active (move bobber toward rod tip in 3D)
+                if (this._reeling && this.bobber && this.rodTipBone) {
+                    const tipWorld = new THREE.Vector3();
+                    this.rodTipBone.updateWorldMatrix(true, false);
+                    this.rodTipBone.getWorldPosition(tipWorld);
+                    
+                    const reelElapsed = (Date.now() - this._reelStartTime) / 1000;
+                    const reelDuration = this._reelDuration || 1.0;
+                    
+                    if (reelElapsed < reelDuration) {
+                        // Ease-out curve for smooth reel-in
+                        const t = reelElapsed / reelDuration;
+                        const eased = 1 - Math.pow(1 - t, 3); // Cubic ease-out
+                        
+                        // Lerp bobber position toward rod tip
+                        this.bobber.position.lerpVectors(this._reelStartPos, tipWorld, eased);
+                        this.bobber.updateWorldMatrix(true, false);
+                    } else {
+                        // Reel-in complete - hide bobber and overlay
+                        this.bobber.position.copy(tipWorld);
+                        this.bobber.visible = false;
+                        this._reeling = false;
+                        this._casting = false;
+                        
+                        // Hide overlay elements
+                        if (this._overlayLine) this._overlayLine.style.display = 'none';
+                        if (this._overlayBobber) this._overlayBobber.style.display = 'none';
+                    }
+                }
+                
                 // Update fishing line to connect rod tip to bobber every frame
-                // Force update bobber world matrix before overlay projection if animating
-                if (this.bobber && !this.bobber.userData?.bobbing) {
+                // Force update bobber world matrix before overlay projection if animating (but not during reel-in)
+                if (this.bobber && !this.bobber.userData?.bobbing && !this._reeling) {
                     this.bobber.updateWorldMatrix(true, false);
                 }
+                
+                // Update fishing line (3D and 2D overlay) every frame - single consolidated call
                 this.#updateFishingLine();
                 
                 // Update bobber idle bobbing if active (buoyancy jiggle) - but not during reel-in
