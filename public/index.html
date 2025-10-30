@@ -12428,13 +12428,19 @@
                 }
                 
                 // Extract player name from element dataset or opts
-                const playerName = el.dataset.cat3d || el.dataset.playerId || opts.playerName || '';
-                
+                let playerName = el.dataset.cat3d || el.dataset.playerId || opts.playerName || '';
+                // Fallback: if missing, assume local player's name when available
+                if (!playerName && window.fishingHoleGame && window.fishingHoleGame.player && window.fishingHoleGame.player.name) {
+                    playerName = window.fishingHoleGame.player.name;
+                    opts.playerName = playerName;
+                    if (window.DEBUG_OVERLAY) console.log('Cat3D: playerName missing on container; defaulting to local player', playerName);
+                }
+
                 // Determine if this is the local player (only local player uses overlay)
                 const isLocalPlayer = (playerName === 'preview' || 
                     (window.fishingHoleGame && window.fishingHoleGame.player && 
                      window.fishingHoleGame.player.name === playerName));
-                
+
                 opts.isLocalPlayer = isLocalPlayer;
                 
                 const rig = new Cat3D(el, opts);
