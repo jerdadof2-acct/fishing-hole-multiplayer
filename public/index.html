@@ -6716,6 +6716,9 @@
                 if (window.CatRigs && window.CatRigs.map && window.CatRigs.map.has(playerKey)) {
                     const cat3D = window.CatRigs.map.get(playerKey);
                     if (cat3D) {
+                        // Clear casting flag
+                        cat3D._casting = false;
+                        
                         if (cat3D._overlayLine) {
                             cat3D._overlayLine.style.display = 'none';
                             if (cat3D._overlayLine._svg) {
@@ -7000,6 +7003,8 @@
                             }
                             if (cat3D.bobber) cat3D.bobber.visible = false;
                             if (cat3D.fishingLine) cat3D.fishingLine.visible = false;
+                            // Clear casting flag
+                            cat3D._casting = false;
                         }
                     }
                 }
