@@ -6307,34 +6307,45 @@
                     mobileCastBtn.disabled = true;
                 }
 
-                // Simple casting: cat is now inside lake on deck, so cast directly into water
-                // Use legacy 2D system which works well
-                if (window.USE_LEGACY_LAKE_LINE !== false) {
-                    this.addFishingLine(0, true);
-                }
-                
-                // Also update Cat3D bobber if available (cat is on deck, cast down into water)
+                // Casting: Cat is now inside lake on deck, use Cat3D overlay line if available
                 const playerKey = window.safeKey ? window.safeKey(this.player.name) : this.player.name.toLowerCase();
                 const cat3D = window.CatRigs && window.CatRigs.map && window.CatRigs.map.has(playerKey) 
                     ? window.CatRigs.map.get(playerKey) 
                     : null;
                     
                 if (cat3D && cat3D.bobber) {
-                    // Cat is on deck, cast bobber straight down into water
+                    // Use Cat3D overlay line system - everything is in same container now
                     // Position bobber below the deck in the water
                     cat3D.bobber.position.set(0, -1.2, 1.8); // Below deck, forward a bit, in water
                     cat3D.bobber.visible = true;
                     cat3D.bobber.userData.bobbing = true;
                     
-                    // Since everything is in same container now, overlay bobber positioning is simpler
-                    const lakeEl = document.getElementById('fishing-lake');
-                    if (lakeEl && cat3D._overlayBobber) {
-                        const lakeRect = lakeEl.getBoundingClientRect();
-                        // Place bobber in water area (below deck position)
-                        // Deck is at top: 20px, so bobber goes below deck in the water
-                        cat3D._overlayBobber.style.display = 'block';
-                        cat3D._overlayBobber.style.left = (lakeRect.left + lakeRect.width / 2 - 6) + 'px';
-                        cat3D._overlayBobber.style.top = (lakeRect.top + lakeRect.height * 0.6 - 6) + 'px'; // In water area below deck
+                    // Force overlay line update every frame (it's already in the render loop, but ensure it's called)
+                    cat3D._casting = true;
+                    
+                    // Ensure rod tip exists - create fallback if needed
+                    if (!cat3D.rodTipBone) {
+                        console.warn('Cat3D: No rodTipBone found, creating fallback');
+                        cat3D.rodTipBone = new THREE.Object3D();
+                        cat3D.rodTipBone.name = 'RodTipFallback';
+                        // Position at approximate rod tip location (near cat's hand)
+                        cat3D.rodTipBone.position.set(0.3, 0.5, 0.8);
+                        if (cat3D.model) {
+                            cat3D.model.add(cat3D.rodTipBone);
+                        }
+                    }
+                    
+                    // Legacy line system for backwards compatibility (but hide it if Cat3D is active)
+                    if (window.USE_LEGACY_LAKE_LINE !== false) {
+                        const legacyLine = this.addFishingLine(0, true);
+                        if (legacyLine) {
+                            legacyLine.style.opacity = '0'; // Hide legacy line, use Cat3D overlay instead
+                        }
+                    }
+                } else {
+                    // Fallback to legacy 2D system if Cat3D not available
+                    if (window.USE_LEGACY_LAKE_LINE !== false) {
+                        this.addFishingLine(0, true);
                     }
                 }
                 
