@@ -10890,6 +10890,7 @@
         window.USE_OVERLAY_LINE = USE_OVERLAY_LINE;
         window.USE_LEGACY_LAKE_LINE = USE_LEGACY_LAKE_LINE;
         window.DEBUG_OVERLAY = window.DEBUG_OVERLAY ?? true; // toggle debug logs for overlay
+        window.FORCE_OVERLAY_FOR_ALL = window.FORCE_OVERLAY_FOR_ALL ?? false; // bypass local-only guard
 
         // Helper to toggle overlay at runtime and keep fallback in sync
         window.setOverlayLineEnabled = function(enabled){
@@ -11022,6 +11023,16 @@
                 this.tint     = new THREE.Color(opts.furColor || '#c8a079');
                 this.scale    = opts.scale || 0.9;
                 this.isLocalPlayer = opts.isLocalPlayer || false; // Only local player uses overlay
+                if (window.DEBUG_OVERLAY) {
+                    console.log('Cat3D: Instance created', {
+                        playerName: opts?.playerName,
+                        isLocalPlayer: this.isLocalPlayer,
+                        containerData: {
+                            playerId: container?.dataset?.playerId,
+                            cat3d: container?.dataset?.cat3d
+                        }
+                    });
+                }
                 
                 // Guard against double-mounts
                 if (container.__renderer || container.__mounted) {
@@ -11752,7 +11763,7 @@
 
                 // Log first frame to verify scene has content
                 if (this._firstRender) {
-                    console.log('Cat3D: First render - scene children:', this.scene.children.length, 'model:', !!this.model);
+                    console.log('Cat3D: First render - scene children:', this.scene.children.length, 'model:', !!this.model, 'isLocalPlayer:', this.isLocalPlayer);
                     if (this.model) {
                         const box = new THREE.Box3().setFromObject(this.model);
                         const size = box.getSize(new THREE.Vector3());
@@ -11781,12 +11792,28 @@
             
             // Update 2D overlay line connecting rod tip to bobber
             #update2DFishingLine(){
-                // Only local player uses overlay - bots/remote players skip
-                if (!this.isLocalPlayer) {
+                if (window.DEBUG_OVERLAY && !this._loggedOverlayEntry) {
+                    console.log('Overlay: entering update for instance', { isLocalPlayer: this.isLocalPlayer, forceAll: window.FORCE_OVERLAY_FOR_ALL });
+                    this._loggedOverlayEntry = true;
+                }
+                // Only local player uses overlay unless override enabled
+                if (!this.isLocalPlayer && !window.FORCE_OVERLAY_FOR_ALL) {
+                    if (window.DEBUG_OVERLAY && !this._loggedOverlaySkip) {
+                        console.log('Overlay: skipped (not local and no override)');
+                        this._loggedOverlaySkip = true;
+                    }
                     return;
                 }
                 
                 if (!this.bobber || !this.container || !this.camera) {
+                    if (window.DEBUG_OVERLAY && !this._loggedOverlayMissing) {
+                        console.log('Overlay: missing bobber/container/camera', {
+                            hasBobber: !!this.bobber,
+                            hasContainer: !!this.container,
+                            hasCamera: !!this.camera
+                        });
+                        this._loggedOverlayMissing = true;
+                    }
                     return;
                 }
                 
