@@ -11665,12 +11665,31 @@
             
             // Update 2D overlay line connecting rod tip to bobber
             #update2DFishingLine(){
-                if (!this.bobber || !this.rodTipBone || !this.container) {
-                    if (!this.rodTipBone) console.warn('Cat3D: No rodTipBone found');
+                if (!this.bobber || !this.container) {
                     return;
                 }
-                if (!this.bobber.visible) {
-                    // Hide overlay if bobber is hidden
+                
+                // Ensure rod tip exists - create fallback if needed
+                if (!this.rodTipBone) {
+                    if (!this._rodTipFallbackCreated) {
+                        console.warn('Cat3D: No rodTipBone found, creating fallback');
+                        this.rodTipBone = new THREE.Object3D();
+                        this.rodTipBone.name = 'RodTipFallback';
+                        // Position at approximate rod tip location (near cat's hand/rod)
+                        this.rodTipBone.position.set(0.3, 0.5, 0.8);
+                        if (this.model) {
+                            this.model.add(this.rodTipBone);
+                        }
+                        this._rodTipFallbackCreated = true;
+                    } else {
+                        // Still no rod tip, can't draw line
+                        return;
+                    }
+                }
+                
+                // Only hide overlay if bobber is explicitly hidden AND not casting
+                if (!this.bobber.visible && !this._casting) {
+                    // Hide overlay if bobber is hidden and not casting
                     if (this._overlayLine) this._overlayLine.style.display = 'none';
                     if (this._overlayBobber) this._overlayBobber.style.display = 'none';
                     return;
