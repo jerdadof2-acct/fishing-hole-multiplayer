@@ -6363,8 +6363,9 @@
                     // Legacy line system for backwards compatibility (but hide it if Cat3D is active)
                     if (window.USE_LEGACY_LAKE_LINE !== false) {
                         const legacyLine = this.addFishingLine(0, true);
-                        if (legacyLine) {
-                            legacyLine.style.opacity = '0'; // Hide legacy line, use Cat3D overlay instead
+                        if (legacyLine && window.USE_OVERLAY_LINE) {
+                            // Only hide legacy line if overlay is enabled
+                            legacyLine.style.opacity = '0';
                         }
                     }
                 } else {
@@ -11845,6 +11846,22 @@
                     bobY = Math.min(Math.max(bobScreen.y, lakeRect.top + lakeRect.height * 0.4), lakeRect.bottom - 20);
                 }
                 
+                // If overlay disabled, hide overlay elements and skip drawing (fallback will handle)
+                if (window && window.USE_OVERLAY_LINE === false) {
+                    if (Cat3D.overlayLineEl) {
+                        Cat3D.overlayLineEl.style.display = 'none';
+                        Cat3D.overlayLineEl.style.visibility = 'hidden';
+                    }
+                    if (Cat3D.overlayBobberEl) {
+                        Cat3D.overlayBobberEl.style.display = 'none';
+                        Cat3D.overlayBobberEl.style.visibility = 'hidden';
+                        Cat3D.overlayBobberEl.style.animation = '';
+                        Cat3D.overlayBobberEl.style.transform = '';
+                        Cat3D.overlayBobberEl.style.filter = '';
+                    }
+                    return;
+                }
+
                 // Create/use global shared overlay elements (once per page, not per instance)
                 if (!Cat3D.overlayLineEl) {
                     Cat3D.overlayLineEl = document.createElement('div');
