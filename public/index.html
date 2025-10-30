@@ -10883,8 +10883,8 @@
         };
 
         // === GLOBAL SWITCHES ===
-        const USE_LEGACY_LAKE_LINE = true;   // Use simple legacy DOM line system (working well)
-        const USE_OVERLAY_LINE = false;      // Disable overlay for now (was causing issues)
+        const USE_LEGACY_LAKE_LINE = false;  // Local player won't use legacy DOM line
+        const USE_OVERLAY_LINE = true;       // Use cross-container overlay line/bobber
         window.USE_LEGACY_LAKE_LINE = USE_LEGACY_LAKE_LINE;
         window.USE_OVERLAY_LINE = USE_OVERLAY_LINE;
 
@@ -11731,7 +11731,6 @@
                 
                 // Update fishing line (3D and 2D overlay) every frame - single consolidated call
                 this.#updateFishingLine();
-                this.#update2DFishingLine();
                 
                 // Update bobber idle bobbing if active (buoyancy jiggle) - but not during reel-in
                 if (this.bobber?.userData?.bobbing && !this._reeling) {
@@ -11947,6 +11946,9 @@
 
                 // Ensure visible while casting/reeling or when bobber is visible
                 this.fishingLine.visible = !!(this._casting || this._reeling || this.bobber.visible);
+                
+                // Update overlay line/bobber for local player every frame
+                this.#update2DFishingLine();
             }
 
             // Animate cast: ballistic arc to random target
