@@ -6342,7 +6342,7 @@
                     cat3D.bobber.visible = true;
                     cat3D.bobber.userData.bobbing = true;
                     
-                    // Force overlay line update every frame (it's already in the render loop, but ensure it's called)
+                    // Set casting flag BEFORE checking rod tip
                     cat3D._casting = true;
                     
                     // Ensure rod tip exists - create fallback if needed
@@ -6355,6 +6355,12 @@
                         if (cat3D.model) {
                             cat3D.model.add(cat3D.rodTipBone);
                         }
+                    }
+                    
+                    // Force immediate overlay update to show line/bobber right away
+                    // This ensures overlay is created and visible immediately
+                    if (cat3D.#update2DFishingLine) {
+                        cat3D.#update2DFishingLine();
                     }
                     
                     // Legacy line system for backwards compatibility (but hide it if Cat3D is active)
@@ -11692,9 +11698,13 @@
                     }
                 }
                 
-                // Only hide overlay if bobber is explicitly hidden AND not casting
-                if (!this.bobber.visible && !this._casting) {
-                    // Hide overlay if bobber is hidden and not casting
+                // If casting, always show overlay regardless of bobber visibility
+                // Bobber might be set to visible=true but the check runs before it updates
+                if (this._casting) {
+                    // Force bobber visible during casting
+                    if (this.bobber) this.bobber.visible = true;
+                } else if (!this.bobber.visible) {
+                    // Only hide if not casting and bobber is explicitly hidden
                     if (this._overlayLine) this._overlayLine.style.display = 'none';
                     if (this._overlayBobber) this._overlayBobber.style.display = 'none';
                     return;
