@@ -3227,6 +3227,8 @@
     </style>
 </head>
 <body>
+    <!-- High-Z 2D FX overlay (single canvas for line, bobber, splashes) -->
+    <canvas id="fx-overlay" width="0" height="0" style="position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:20051;"></canvas>
     <div class="game-container">
         <div class="main-area">
             <div class="header">
@@ -3802,6 +3804,97 @@
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
     
     <script>
+        // Simple FX overlay engine: draws line, bobber, and effects on a single high-Z canvas
+        (function(){
+            const canvas = document.getElementById('fx-overlay');
+            const ctx = canvas.getContext('2d');
+            const DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+            function resize(){
+                const w = Math.ceil(window.innerWidth);
+                const h = Math.ceil(window.innerHeight);
+                canvas.style.width = w + 'px';
+                canvas.style.height = h + 'px';
+                canvas.width = Math.max(1, Math.floor(w * DPR));
+                canvas.height = Math.max(1, Math.floor(h * DPR));
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            const state = {
+                show: false,
+                tip: { x: 0, y: 0 },
+                bob: { x: 0, y: 0 },
+                bobberPulse: 0,
+                splashes: [] // {x,y,age}
+            };
+
+            function draw(){
+                if (!canvas.width || !canvas.height) return;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                if (!state.show) return;
+
+                ctx.save();
+                ctx.scale(DPR, DPR);
+                // Line
+                ctx.strokeStyle = 'rgba(220,220,220,0.95)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(state.tip.x, state.tip.y);
+                ctx.lineTo(state.bob.x, state.bob.y);
+                ctx.stroke();
+
+                // Bobber
+                const pulse = 1 + 0.08 * Math.sin(state.bobberPulse);
+                const r = 6 * pulse;
+                const gx = state.bob.x;
+                const gy = state.bob.y;
+                const grd = ctx.createRadialGradient(gx - r * 0.2, gy - r * 0.2, r * 0.1, gx, gy, r);
+                grd.addColorStop(0, '#ffffff');
+                grd.addColorStop(0.28, '#ffffff');
+                grd.addColorStop(0.3, '#ff4444');
+                grd.addColorStop(1, '#aa0000');
+                ctx.fillStyle = grd;
+                ctx.beginPath();
+                ctx.arc(gx, gy, r, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Splashes
+                const now = performance.now();
+                state.splashes = state.splashes.filter(s => now - s.t0 < 1000);
+                for (const s of state.splashes){
+                    const t = (now - s.t0) / 1000; // 0..1
+                    const alpha = Math.max(0, 1 - t);
+                    const radius = 12 + 40 * t;
+                    ctx.strokeStyle = `rgba(170, 210, 255, ${0.35 * alpha})`;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+
+            function loop(){
+                state.bobberPulse += 0.15;
+                draw();
+                requestAnimationFrame(loop);
+            }
+            requestAnimationFrame(loop);
+
+            window.fxOverlay = {
+                setEnabled(enabled){ state.show = !!enabled; },
+                setLine(tipX, tipY, bobX, bobY){
+                    state.tip.x = tipX; state.tip.y = tipY;
+                    state.bob.x = bobX; state.bob.y = bobY;
+                    state.show = true;
+                },
+                hide(){ state.show = false; },
+                splash(x, y){ state.splashes.push({ x, y, t0: performance.now() }); }
+            };
+        })();
+        </script>
         class FishingHoleMultiplayer {
             constructor() {
                 // WebSocket connection for multiplayer
@@ -6360,14 +6453,8 @@
                     // Note: Overlay updates automatically every frame in the render loop (#updateFishingLine)
                     // The casting flag ensures it stays visible
                     
-                    // Legacy line system for backwards compatibility (but hide it if Cat3D is active)
-                    if (window.USE_LEGACY_LAKE_LINE !== false) {
-                        const legacyLine = this.addFishingLine(0, true);
-                        if (legacyLine && window.USE_OVERLAY_LINE) {
-                            // Only hide legacy line if overlay is enabled
-                            legacyLine.style.opacity = '0';
-                        }
-                    }
+                    // Disable legacy DOM line when overlay is active (FX overlay replaces it)
+                    // No-op
                 } else {
                     // Fallback to legacy 2D system if Cat3D not available
                     if (window.USE_LEGACY_LAKE_LINE !== false) {
@@ -6900,13 +6987,10 @@
                     const hookY = hookRect.top - lakeRect.top;
                     
                     // Emit splash effect at hook impact point
-                    const splashSystem = isMobile ? window.mobileSplashFX : window.splashFX;
-                    
-                    if (splashSystem) {
-                        splashSystem.emitSplash(hookX, hookY, 1.0, 'impact');
-                    } else {
-                        console.log('No splash system available!');
-                    }
+                        // Route splash to FX overlay if available
+                        if (window.fxOverlay) {
+                            window.fxOverlay.splash(hookX, hookY);
+                        }
                 }, 200); // Increased delay to ensure hook is fully positioned
                 
                 activeLake.appendChild(line);
@@ -11842,8 +11926,7 @@
                     this._overlayLoggedInit = true;
                 }
                 if (!shouldShow) {
-                    if (this._overlayLine) this._overlayLine.style.display = 'none';
-                    if (this._overlayBobber) this._overlayBobber.style.display = 'none';
+                    if (window.fxOverlay) window.fxOverlay.hide();
                     return;
                 }
                 
@@ -11878,55 +11961,11 @@
                     bobY = Math.min(Math.max(bobScreen.y, lakeRect.top + lakeRect.height * 0.4), lakeRect.bottom - 20);
                 }
                 
-                // If overlay disabled, hide overlay elements and skip drawing (fallback will handle)
+                // If overlay disabled, ensure FX overlay hides and skip
                 if (window && window.USE_OVERLAY_LINE === false) {
-                    if (Cat3D.overlayLineEl) {
-                        Cat3D.overlayLineEl.style.display = 'none';
-                        Cat3D.overlayLineEl.style.visibility = 'hidden';
-                    }
-                    if (Cat3D.overlayBobberEl) {
-                        Cat3D.overlayBobberEl.style.display = 'none';
-                        Cat3D.overlayBobberEl.style.visibility = 'hidden';
-                        Cat3D.overlayBobberEl.style.animation = '';
-                        Cat3D.overlayBobberEl.style.transform = '';
-                        Cat3D.overlayBobberEl.style.filter = '';
-                    }
+                    if (window.fxOverlay) window.fxOverlay.hide();
                     return;
                 }
-
-                // Create/use global shared overlay elements (once per page, not per instance)
-                if (!Cat3D.overlayLineEl) {
-                    Cat3D.overlayLineEl = document.createElement('div');
-                    Cat3D.overlayLineEl.className = 'cat3d-fishing-line';
-                    Cat3D.overlayLineEl.style.cssText = `
-                        position: fixed;
-                        pointer-events: none;
-                        z-index: 20050;
-                        width: 2px;
-                        background: linear-gradient(to bottom, rgba(204,204,204,0.9), rgba(204,204,204,0.6));
-                        transform-origin: top center;
-                    `;
-                    document.body.appendChild(Cat3D.overlayLineEl);
-                }
-                if (!Cat3D.overlayBobberEl) {
-                    Cat3D.overlayBobberEl = document.createElement('div');
-                    Cat3D.overlayBobberEl.className = 'cat3d-bobber';
-                    Cat3D.overlayBobberEl.style.cssText = `
-                        position: fixed;
-                        pointer-events: none;
-                        z-index: 20051;
-                        width: 12px;
-                        height: 12px;
-                        border-radius: 50%;
-                        background: radial-gradient(circle at 30% 30%, #ffffff, #ff4444);
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-                    `;
-                    document.body.appendChild(Cat3D.overlayBobberEl);
-                }
-                
-                // Assign instance references for easy access
-                this._overlayLine = Cat3D.overlayLineEl;
-                this._overlayBobber = Cat3D.overlayBobberEl;
                 
                 // Always try to draw if casting/reeling - be lenient with validation
                 const tipValid = !isNaN(tipScreen.x) && !isNaN(tipScreen.y) && 
@@ -11956,22 +11995,10 @@
                 if (shouldShow || distance > 0.5) {
                     const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
                     
-                    // Position and style the line
-                    this._overlayLine.style.display = 'block';
-                    this._overlayLine.style.left = finalTipX + 'px';
-                    this._overlayLine.style.top = finalTipY + 'px';
-                    this._overlayLine.style.width = '2px';
-                    this._overlayLine.style.height = Math.max(distance, 1) + 'px';
-                    this._overlayLine.style.transform = `rotate(${angleDeg}deg)`;
-                    this._overlayLine.style.opacity = '1.0';
-                    this._overlayLine.style.visibility = 'visible';
-                    
-                    // Position the bobber
-                    this._overlayBobber.style.display = 'block';
-                    this._overlayBobber.style.left = (finalBobX - 6) + 'px';
-                    this._overlayBobber.style.top = (finalBobY - 6) + 'px';
-                    this._overlayBobber.style.opacity = '1.0';
-                    this._overlayBobber.style.visibility = 'visible';
+                    // Draw on FX overlay
+                    if (window.fxOverlay) {
+                        window.fxOverlay.setLine(finalTipX, finalTipY, finalBobX, finalBobY);
+                    }
 
                     // Debug occasionally
                     this._overlayDebugCount = (this._overlayDebugCount || 0) + 1;
@@ -11986,9 +12013,7 @@
                         });
                     }
                 } else {
-                    // Line too short - hide elements
-                    this._overlayLine.style.display = 'none';
-                    this._overlayBobber.style.display = 'none';
+                    if (window.fxOverlay) window.fxOverlay.hide();
                 }
             }
             
