@@ -6903,27 +6903,10 @@
             }
 
             removeFishingLine(playerIndex) {
-                // Clean up Cat3D overlay if using it (for current player only)
-                const playerKey = window.safeKey ? window.safeKey(this.player.name) : this.player.name.toLowerCase();
-                if (playerIndex === 0 && window.CatRigs && window.CatRigs.map && window.CatRigs.map.has(playerKey)) {
-                    const cat3D = window.CatRigs.map.get(playerKey);
-                    if (cat3D) {
-                        if (cat3D._overlayLine) cat3D._overlayLine.style.display = 'none';
-                        if (cat3D._overlayBobber) {
-                            cat3D._overlayBobber.style.display = 'none';
-                            // Reset any animations
-                            cat3D._overlayBobber.style.animation = '';
-                            cat3D._overlayBobber.style.transform = '';
-                            cat3D._overlayBobber.style.filter = '';
-                        }
-                        if (cat3D.bobber) cat3D.bobber.visible = false;
-                        if (cat3D.fishingLine) cat3D.fishingLine.visible = false;
-                    }
-                }
-                
-                // Legacy DOM line cleanup
-                const lake = document.getElementById('fishing-lake');
-                const mobileLake = document.getElementById('mobile-fishing-lake');
+                // Legacy DOM line cleanup (only if legacy system enabled)
+                if (window.USE_LEGACY_LAKE_LINE) {
+                    const lake = document.getElementById('fishing-lake');
+                    const mobileLake = document.getElementById('mobile-fishing-lake');
                 
                 const isMobile = window.innerWidth <= 768;
                 const activeLake = isMobile ? mobileLake : lake;
