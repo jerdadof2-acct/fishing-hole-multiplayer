@@ -7143,11 +7143,36 @@
                 
                 if (!activeLake) return;
                 
-                // Only remove lines for the current player (playerIndex 0)
+                // Start 3D reel-in animation for player (Cat3D overlay system)
+                const playerKey = window.safeKey ? window.safeKey(this.player.name) : this.player.name.toLowerCase();
+                if (window.CatRigs && window.CatRigs.map && window.CatRigs.map.has(playerKey)) {
+                    const cat3D = window.CatRigs.map.get(playerKey);
+                    if (cat3D && cat3D.bobber && cat3D.rodTipBone && cat3D.bobber.visible) {
+                        // Start 3D reel-in: lerp bobber toward rod tip
+                        cat3D._reeling = true;
+                        cat3D._reelStartTime = Date.now();
+                        cat3D._reelDuration = 1.0; // 1 second reel-in
+                        cat3D._reelStartPos = new THREE.Vector3();
+                        cat3D.bobber.getWorldPosition(cat3D._reelStartPos);
+                        cat3D._casting = false; // Clear casting flag
+                        console.log('Cat3D: Starting 3D reel-in animation');
+                    }
+                }
+                
+                // Legacy DOM line system - DISABLED for player 0 (we use Cat3D overlay now)
+                // Only process legacy lines for NPCs (playerIndex > 0) if they exist
                 const lines = activeLake.querySelectorAll('.fishing-line');
                 lines.forEach(line => {
-                    // Only process lines that belong to the current player (playerIndex 0)
+                    // Skip player 0 - they use Cat3D overlay system
                     if (line.dataset.playerIndex === '0') {
+                        // Hide/remove legacy line immediately for player
+                        line.style.display = 'none';
+                        setTimeout(() => line.remove(), 100);
+                        return;
+                    }
+                    
+                    // For NPCs (if any), keep legacy behavior
+                    if (line.dataset.playerIndex && parseInt(line.dataset.playerIndex) > 0) {
                         // Store original height for animation
                         const originalHeight = line.offsetHeight;
                         line.style.setProperty('--original-height', originalHeight + 'px');
@@ -11437,19 +11462,34 @@
                             
                             console.log('Cat3D: Rod model scaled to 1.5x, materials updated for visibility');
                             
-                            // Find rod tip bone in rod model first
+                            // Robustly find rod tip bone - try multiple name patterns
+                            const tryNames = ['RodTip', 'rodTip', 'tip', 'Tip', 'Rod_Tip', 'RodEnd', 'rod_tip', 'rod_end'];
                             let rodTipBoneFromRod = null;
-                            this.rodModel.traverse(o => {
-                                if (o.isBone) {
-                                    const name = (o.name || '').toLowerCase();
-                                    if (name.includes('tip') || name.includes('end') || name.includes('rod_tip')) {
-                                        rodTipBoneFromRod = o;
-                                        console.log('Cat3D: Found rod tip bone in rod model:', o.name);
-                                    }
-                                }
-                            });
                             
-                            // Create rod tip locator at rod end
+                            // First try direct name lookup
+                            for (const name of tryNames) {
+                                const found = this.rodModel.getObjectByName(name);
+                                if (found) {
+                                    rodTipBoneFromRod = found;
+                                    console.log('Cat3D: Found rod tip bone by name:', name);
+                                    break;
+                                }
+                            }
+                            
+                            // If not found, traverse and search for bones with tip-related names
+                            if (!rodTipBoneFromRod) {
+                                this.rodModel.traverse(o => {
+                                    if (o.isBone || o.isObject3D) {
+                                        const name = (o.name || '').toLowerCase();
+                                        if (name.includes('tip') || name.includes('end') || name.includes('rod_tip') || name.includes('rodend')) {
+                                            rodTipBoneFromRod = o;
+                                            console.log('Cat3D: Found rod tip bone by traversal:', o.name);
+                                        }
+                                    }
+                                });
+                            }
+                            
+                            // Create fallback rod tip if not found
                             if (!rodTipBoneFromRod) {
                                 // Calculate rod bounding box to find actual rod tip position
                                 const rodBox = new THREE.Box3().setFromObject(this.rodModel);
@@ -11457,20 +11497,20 @@
                                 const rodCenter = rodBox.getCenter(new THREE.Vector3());
                                 const rodMaxZ = rodBox.max.z;
                                 
-                                this.rodTipBone = new THREE.Object3D();
-                                this.rodTipBone.name = 'RodTip';
-                                // Position at actual rod tip (furthest point in +Z or -Z depending on orientation)
-                                // Try -Z first (common rod orientation), if that doesn't work visually, try +Z
-                                this.rodTipBone.position.set(0, 0, rodMaxZ - rodCenter.z); // Local position at rod tip
-                                this.rodModel.add(this.rodTipBone);
-                                console.log('Cat3D: Rod bounding box:', {
+                                rodTipBoneFromRod = new THREE.Object3D();
+                                rodTipBoneFromRod.name = 'RodTipFallback';
+                                // Position at actual rod tip (furthest point in +Z)
+                                rodTipBoneFromRod.position.set(0, 0, rodMaxZ - rodCenter.z); // Local position at rod tip
+                                this.rodModel.add(rodTipBoneFromRod);
+                                console.log('Cat3D: Created fallback rod tip bone at:', {
                                     size: { x: rodSize.x.toFixed(3), y: rodSize.y.toFixed(3), z: rodSize.z.toFixed(3) },
                                     center: { x: rodCenter.x.toFixed(3), y: rodCenter.y.toFixed(3), z: rodCenter.z.toFixed(3) },
-                                    tipLocalPos: { x: this.rodTipBone.position.x.toFixed(3), y: this.rodTipBone.position.y.toFixed(3), z: this.rodTipBone.position.z.toFixed(3) }
+                                    tipLocalPos: { x: rodTipBoneFromRod.position.x.toFixed(3), y: rodTipBoneFromRod.position.y.toFixed(3), z: rodTipBoneFromRod.position.z.toFixed(3) }
                                 });
-                            } else {
-                                this.rodTipBone = rodTipBoneFromRod;
                             }
+                            
+                            // Store as rod tip bone (always exists now)
+                            this.rodTipBone = rodTipBoneFromRod;
                             
                             // Robust hand bone finder - try multiple names
                             if (!handBone) {
@@ -11631,8 +11671,8 @@
                 }
                 this.#updateFishingLine();
                 
-                // Update bobber idle bobbing if active (buoyancy jiggle)
-                if (this.bobber?.userData?.bobbing) {
+                // Update bobber idle bobbing if active (buoyancy jiggle) - but not during reel-in
+                if (this.bobber?.userData?.bobbing && !this._reeling) {
                     const baseY = this.bobber.userData.baseY || this.bobber.position.y;
                     this.bobber.userData.bobPhase = (this.bobber.userData.bobPhase || 0) + dt;
                     // More visible bobbing motion
@@ -11651,7 +11691,7 @@
                     this._firstRender = false;
                 }
                 
-                // Update 2D fishing line overlay every frame
+                // Update fishing line (3D and 2D overlay) every frame - single consolidated call
                 this.#updateFishingLine();
 
                 this.renderer.render(this.scene, this.camera);
