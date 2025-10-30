@@ -11925,7 +11925,8 @@
             }
             
             #updateFishingLine(){
-                // Update 3D line using world positions
+                // Update 3D line using world positions (only if both are visible)
+                // Note: During cast/reel we use overlay only, 3D line stays hidden
                 if (this.fishingLine && this.bobber && this.rodTipBone && 
                     this.bobber.visible && this.fishingLine.visible) {
                     
@@ -11940,7 +11941,8 @@
                     pos.needsUpdate = true;
                 }
                 
-                // Also update 2D overlay for cross-container visibility
+                // Always update 2D overlay for cross-container visibility
+                // This runs every frame for the local player
                 this.#update2DFishingLine();
             }
 
@@ -12348,6 +12350,9 @@
                     el.dispatchEvent(new CustomEvent('cat3d-failed'));
                     return null;
                 }
+                
+                // Extract player name from element dataset or opts
+                const playerName = el.dataset.cat3d || el.dataset.playerId || opts.playerName || '';
                 
                 // Determine if this is the local player (only local player uses overlay)
                 const isLocalPlayer = (playerName === 'preview' || 
