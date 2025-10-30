@@ -6658,18 +6658,45 @@
                     mobileCastBtn.onclick = () => this.castLine();
                 }
                 
-                // Remove fishing line (both legacy and Cat3D overlay)
-                this.removeFishingLine(0);
+                // Remove fishing line - legacy system
+                if (window.USE_LEGACY_LAKE_LINE) {
+                    this.removeFishingLine(0);
+                }
+                
+                // Clear overlay line and bobber
+                const oLine = document.querySelector('.cat3d-fishing-line');
+                const oBob = document.querySelector('.cat3d-bobber');
+                if (oLine) {
+                    oLine.style.display = 'none';
+                    // Remove SVG if it exists
+                    if (oLine._svg) {
+                        oLine._svg.remove();
+                        oLine._svg = null;
+                        oLine._path = null;
+                    }
+                }
+                if (oBob) {
+                    oBob.style.display = 'none';
+                    oBob.style.animation = '';
+                    oBob.style.transform = '';
+                    oBob.style.filter = '';
+                }
                 
                 // Clean up Cat3D overlay elements on miss
                 const playerKey = window.safeKey ? window.safeKey(this.player.name) : this.player.name.toLowerCase();
                 if (window.CatRigs && window.CatRigs.map && window.CatRigs.map.has(playerKey)) {
                     const cat3D = window.CatRigs.map.get(playerKey);
                     if (cat3D) {
-                        if (cat3D._overlayLine) cat3D._overlayLine.style.display = 'none';
+                        if (cat3D._overlayLine) {
+                            cat3D._overlayLine.style.display = 'none';
+                            if (cat3D._overlayLine._svg) {
+                                cat3D._overlayLine._svg.remove();
+                                cat3D._overlayLine._svg = null;
+                                cat3D._overlayLine._path = null;
+                            }
+                        }
                         if (cat3D._overlayBobber) {
                             cat3D._overlayBobber.style.display = 'none';
-                            // Reset strike animation
                             cat3D._overlayBobber.style.animation = '';
                             cat3D._overlayBobber.style.transform = '';
                             cat3D._overlayBobber.style.filter = '';
