@@ -11767,16 +11767,19 @@
                     }
                 }
                 
-                // If casting, always show overlay regardless of bobber visibility
-                // Bobber might be set to visible=true but the check runs before it updates
-                if (this._casting) {
-                    // Force bobber visible during casting
-                    if (this.bobber) this.bobber.visible = true;
-                } else if (!this.bobber.visible) {
-                    // Only hide if not casting and bobber is explicitly hidden
+                // Always show overlay if bobber is visible OR if casting/reeling
+                // Don't hide overlay unless bobber is explicitly hidden AND not casting/reeling
+                const shouldShow = this.bobber.visible || this._casting || this._reeling;
+                if (!shouldShow) {
+                    // Only hide if bobber is hidden and not casting/reeling
                     if (this._overlayLine) this._overlayLine.style.display = 'none';
                     if (this._overlayBobber) this._overlayBobber.style.display = 'none';
                     return;
+                }
+                
+                // Force bobber visible if casting/reeling (override any visibility flags)
+                if (this._casting || this._reeling) {
+                    if (this.bobber) this.bobber.visible = true;
                 }
                 
                 // Get rod tip world position and project to screen
@@ -11908,8 +11911,8 @@
                     const dy = bobY - tipScreen.y;
                     const distance = Math.hypot(dx, dy);
                     
-                    // Always show line and bobber if casting, regardless of distance
-                    if (this._casting || distance > 0.5) {
+                    // Always show line and bobber if bobber is visible or casting/reeling, regardless of distance
+                    if (shouldShow || distance > 0.5) {
                         const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
                         
                         // Position and style the line - always show if casting
@@ -11928,13 +11931,13 @@
                         this._overlayBobber.style.top = (bobY - 6) + 'px';
                         this._overlayBobber.style.opacity = '1.0';
                         
-                        // Debug on first frame
-                        if (this._debugCount === 0 && this._casting) {
-                            console.log('Cat3D: Drawing overlay line from rod tip:', tipScreen.x.toFixed(1), tipScreen.y.toFixed(1), 'to bobber:', bobX.toFixed(1), bobY.toFixed(1), 'distance:', distance.toFixed(1));
+                        // Debug on first frame - always log when drawing
+                        if (this._debugCount === 0) {
+                            console.log('Cat3D: Drawing overlay line from rod tip:', tipScreen.x.toFixed(1), tipScreen.y.toFixed(1), 'to bobber:', bobX.toFixed(1), bobY.toFixed(1), 'distance:', distance.toFixed(1), 'shouldShow:', shouldShow, 'casting:', this._casting, 'reeling:', this._reeling, 'bobber.visible:', this.bobber.visible);
                         }
                     } else {
-                        // Line too short - but still show bobber if casting
-                        if (this._casting && this._overlayBobber) {
+                        // Line too short - but still show bobber if shouldShow
+                        if (shouldShow && this._overlayBobber) {
                             this._overlayBobber.style.display = 'block';
                             this._overlayBobber.style.left = (bobX - 6) + 'px';
                             this._overlayBobber.style.top = (bobY - 6) + 'px';
@@ -11948,8 +11951,8 @@
                     if (this._casting && this._debugCount === 0) {
                         console.warn('Cat3D: Invalid overlay coordinates - tipValid:', tipValid, 'tipScreen:', tipScreen, 'bobValid:', bobValid, 'bobX/Y:', bobX, bobY);
                     }
-                    // Show bobber if casting even with invalid tip (bobber position might still be valid)
-                    if (this._casting && this._overlayBobber && bobValid) {
+                    // Show bobber if shouldShow even with invalid tip (bobber position might still be valid)
+                    if (shouldShow && this._overlayBobber && bobValid) {
                         this._overlayBobber.style.display = 'block';
                         this._overlayBobber.style.left = (bobX - 6) + 'px';
                         this._overlayBobber.style.top = (bobY - 6) + 'px';
@@ -11960,9 +11963,9 @@
                             this._overlayLine.style.top = tipScreen.y + 'px';
                         }
                     } else {
-                        // Only hide if not casting
-                        if (this._overlayLine && !this._casting) this._overlayLine.style.display = 'none';
-                        if (this._overlayBobber && !this._casting) this._overlayBobber.style.display = 'none';
+                        // Only hide if not shouldShow
+                        if (this._overlayLine && !shouldShow) this._overlayLine.style.display = 'none';
+                        if (this._overlayBobber && !shouldShow) this._overlayBobber.style.display = 'none';
                     }
                 }
             }
