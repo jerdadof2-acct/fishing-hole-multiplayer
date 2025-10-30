@@ -11835,9 +11835,9 @@
                 const lakeRect = lake.getBoundingClientRect();
                 
                 // Debug first few frames - show actual numeric values (readable format)
-                // Reduce debug frequency - only every 10th frame to avoid spam
+                // Always show first frame, then reduce frequency
                 if (!this._debugCount) this._debugCount = 0;
-                if (this._debugCount < 5 && this._debugCount % 10 === 0) {
+                if (this._debugCount === 0) {
                     console.group(`Cat3D Overlay Debug Frame ${this._debugCount}`);
                     console.log('Rod Tip World:', `${tipWorld.x.toFixed(3)}, ${tipWorld.y.toFixed(3)}, ${tipWorld.z.toFixed(3)}`);
                     console.log('Rod Tip Screen:', `${tipScreen.x.toFixed(1)}, ${tipScreen.y.toFixed(1)}`);
@@ -11849,7 +11849,14 @@
                     console.log('Lake Container:', `left:${lakeRect.left.toFixed(1)} top:${lakeRect.top.toFixed(1)} w:${lakeRect.width.toFixed(1)} h:${lakeRect.height.toFixed(1)}`);
                     console.log('Bobber visible:', this.bobber.visible);
                     console.log('Rod tip bone:', this.rodTipBone.name);
+                    console.log('shouldShow:', shouldShow, 'casting:', this._casting, 'reeling:', this._reeling);
                     console.groupEnd();
+                    this._debugCount = 1; // Mark as processed but keep count for later checks
+                } else if (this._debugCount < 50 && this._debugCount % 10 === 0) {
+                    // Occasional updates after first frame
+                    console.log(`Cat3D Overlay Frame ${this._debugCount}: shouldShow:`, shouldShow, 'bobber.visible:', this.bobber.visible);
+                    this._debugCount++;
+                } else if (this._debugCount < 50) {
                     this._debugCount++;
                 }
                 
@@ -11875,6 +11882,11 @@
                     isFinite(bobX) && isFinite(bobY) &&
                     Math.abs(bobX) < 10000 && Math.abs(bobY) < 10000;
                 
+                // Debug validation on first frame
+                if (this._debugCount === 0) {
+                    console.log('Cat3D: Overlay validation - tipValid:', tipValid, 'bobValid:', bobValid, 'tipScreen:', tipScreen.x.toFixed(1), tipScreen.y.toFixed(1), 'bobX/Y:', bobX.toFixed(1), bobY.toFixed(1), 'shouldShow:', shouldShow);
+                }
+                
                 // Always create overlay elements if they don't exist
                 if (!this._overlayLine) {
                     this._overlayLine = document.createElement('div');
@@ -11888,6 +11900,7 @@
                         background: linear-gradient(to bottom, rgba(204,204,204,0.9), rgba(204,204,204,0.6));
                     `;
                     document.body.appendChild(this._overlayLine);
+                    console.log('Cat3D: Created overlay line element');
                 }
                 if (!this._overlayBobber) {
                     this._overlayBobber = document.createElement('div');
@@ -11903,6 +11916,7 @@
                         box-shadow: 0 2px 4px rgba(0,0,0,0.3);
                     `;
                     document.body.appendChild(this._overlayBobber);
+                    console.log('Cat3D: Created overlay bobber element');
                 }
                 
                 if (tipValid && bobValid) {
@@ -11934,6 +11948,8 @@
                         // Debug on first frame - always log when drawing
                         if (this._debugCount === 0) {
                             console.log('Cat3D: Drawing overlay line from rod tip:', tipScreen.x.toFixed(1), tipScreen.y.toFixed(1), 'to bobber:', bobX.toFixed(1), bobY.toFixed(1), 'distance:', distance.toFixed(1), 'shouldShow:', shouldShow, 'casting:', this._casting, 'reeling:', this._reeling, 'bobber.visible:', this.bobber.visible);
+                            // Force reset debug count so we see this log
+                            this._debugCount = 1;
                         }
                     } else {
                         // Line too short - but still show bobber if shouldShow
@@ -11947,9 +11963,10 @@
                         }
                     }
                 } else {
-                    // Invalid coordinates - log debug info
-                    if (this._casting && this._debugCount === 0) {
-                        console.warn('Cat3D: Invalid overlay coordinates - tipValid:', tipValid, 'tipScreen:', tipScreen, 'bobValid:', bobValid, 'bobX/Y:', bobX, bobY);
+                    // Invalid coordinates - log debug info (always log on first frame or if shouldShow)
+                    if (shouldShow || this._debugCount === 0) {
+                        console.warn('Cat3D: Invalid overlay coordinates - tipValid:', tipValid, 'tipScreen:', tipScreen, 'bobValid:', bobValid, 'bobX/Y:', bobX, bobY, 'shouldShow:', shouldShow);
+                        this._debugCount = 1; // Prevent spam
                     }
                     // Show bobber if shouldShow even with invalid tip (bobber position might still be valid)
                     if (shouldShow && this._overlayBobber && bobValid) {
