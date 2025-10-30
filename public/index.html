@@ -10889,6 +10889,7 @@
         const USE_LEGACY_LAKE_LINE = !USE_OVERLAY_LINE; // Fallback when overlay is off
         window.USE_OVERLAY_LINE = USE_OVERLAY_LINE;
         window.USE_LEGACY_LAKE_LINE = USE_LEGACY_LAKE_LINE;
+        window.DEBUG_OVERLAY = window.DEBUG_OVERLAY ?? true; // toggle debug logs for overlay
 
         // Helper to toggle overlay at runtime and keep fallback in sync
         window.setOverlayLineEnabled = function(enabled){
@@ -11809,6 +11810,10 @@
                 
                 // Show overlay whenever we have a bobber AND either it's visible or we're in a cast/reel state
                 const shouldShow = !!this.bobber && (this.bobber.visible || this._casting || this._reeling);
+                if (window.DEBUG_OVERLAY && !this._overlayLoggedInit) {
+                    console.log('Overlay init check:', { shouldShow, bobberVisible: !!(this.bobber && this.bobber.visible), casting: !!this._casting, reeling: !!this._reeling });
+                    this._overlayLoggedInit = true;
+                }
                 if (!shouldShow) {
                     if (this._overlayLine) this._overlayLine.style.display = 'none';
                     if (this._overlayBobber) this._overlayBobber.style.display = 'none';
@@ -11940,6 +11945,19 @@
                     this._overlayBobber.style.top = (finalBobY - 6) + 'px';
                     this._overlayBobber.style.opacity = '1.0';
                     this._overlayBobber.style.visibility = 'visible';
+
+                    // Debug occasionally
+                    this._overlayDebugCount = (this._overlayDebugCount || 0) + 1;
+                    if (window.DEBUG_OVERLAY && (this._overlayDebugCount <= 3 || this._overlayDebugCount % 30 === 0)) {
+                        console.log('Overlay draw:', {
+                            tip: { x: finalTipX, y: finalTipY },
+                            bob: { x: finalBobX, y: finalBobY },
+                            distance,
+                            angleDeg,
+                            lineDisplay: this._overlayLine.style.display,
+                            bobberDisplay: this._overlayBobber.style.display
+                        });
+                    }
                 } else {
                     // Line too short - hide elements
                     this._overlayLine.style.display = 'none';
