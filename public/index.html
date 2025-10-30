@@ -12493,12 +12493,19 @@
                 return null;
             }
             
-            // Idempotent: if already mounted, return existing rig
+            // Idempotent: if already mounted, update flags and return existing rig
             if (host.__renderer && host.__mounted) {
                 const playerKey = window.safeKey(playerName);
                 const existing = window.CatRigs?.map?.get(playerKey);
                 if (existing) {
-                    console.log('mountPlayerCat3D: Reusing existing renderer for', playerName);
+                    // Ensure local/overlay flags are in sync even on reuse
+                    const isLocalPlayer = (playerName === 'preview' || 
+                        (window.fishingHoleGame && window.fishingHoleGame.player && 
+                         window.fishingHoleGame.player.name === playerName));
+                    existing.isLocalPlayer = !!isLocalPlayer;
+                    if (window.DEBUG_OVERLAY) {
+                        console.log('mountPlayerCat3D: Reusing existing renderer for', playerName, 'isLocalPlayer:', existing.isLocalPlayer);
+                    }
                     return existing;
                 }
             }
