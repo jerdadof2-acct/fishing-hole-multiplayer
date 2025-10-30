@@ -11731,6 +11731,7 @@
                 
                 // Update fishing line (3D and 2D overlay) every frame - single consolidated call
                 this.#updateFishingLine();
+                this.#update2DFishingLine();
                 
                 // Update bobber idle bobbing if active (buoyancy jiggle) - but not during reel-in
                 if (this.bobber?.userData?.bobbing && !this._reeling) {
@@ -11798,17 +11799,15 @@
                     }
                 }
                 
-                // Always show overlay if bobber is visible OR if casting/reeling
-                // Don't hide overlay unless bobber is explicitly hidden AND not casting/reeling
-                const shouldShow = this.bobber.visible || this._casting || this._reeling;
+                // Show overlay whenever we have a bobber AND either it's visible or we're in a cast/reel state
+                const shouldShow = !!this.bobber && (this.bobber.visible || this._casting || this._reeling);
                 if (!shouldShow) {
-                    // Only hide if bobber is hidden and not casting/reeling
                     if (this._overlayLine) this._overlayLine.style.display = 'none';
                     if (this._overlayBobber) this._overlayBobber.style.display = 'none';
                     return;
                 }
                 
-                // Force bobber visible if casting/reeling (override any visibility flags)
+                // Ensure bobber is on during cast/reel
                 if (this._casting || this._reeling) {
                     if (this.bobber) this.bobber.visible = true;
                 }
@@ -11925,25 +11924,29 @@
             }
             
             #updateFishingLine(){
-                // Update 3D line using world positions (only if both are visible)
-                // Note: During cast/reel we use overlay only, 3D line stays hidden
-                if (this.fishingLine && this.bobber && this.rodTipBone && 
-                    this.bobber.visible && this.fishingLine.visible) {
-                    
-                    // Get world positions
-                    this.rodTipBone.getWorldPosition(this._worldPosA);
-                    this.bobber.getWorldPosition(this._worldPosB);
-                    
-                    // Update line geometry
-                    const pos = this.fishingLine.geometry.attributes.position;
-                    pos.setXYZ(0, this._worldPosA.x, this._worldPosA.y, this._worldPosA.z);
-                    pos.setXYZ(1, this._worldPosB.x, this._worldPosB.y, this._worldPosB.z);
-                    pos.needsUpdate = true;
-                }
-                
-                // Always update 2D overlay for cross-container visibility
-                // This runs every frame for the local player
-                this.#update2DFishingLine();
+                if (!this.fishingLine || !this.bobber || !this.rodTipBone) return;
+
+                // Make sure world matrices are current
+                this.model?.updateWorldMatrix(true, false);
+                this.rodModel?.updateWorldMatrix(true, false);
+                this.rodTipBone.updateWorldMatrix(true, false);
+                this.bobber.parent?.updateWorldMatrix(true, false);
+                this.bobber.updateWorldMatrix(true, false);
+
+                // Get world positions
+                const tipWorld = this._worldPosA || new THREE.Vector3();
+                const bobWorld = this._worldPosB || new THREE.Vector3();
+                this.rodTipBone.getWorldPosition(tipWorld);
+                this.bobber.getWorldPosition(bobWorld);
+
+                // Write into the buffer geometry
+                const pos = this.fishingLine.geometry.attributes.position;
+                pos.setXYZ(0, tipWorld.x, tipWorld.y, tipWorld.z);
+                pos.setXYZ(1, bobWorld.x, bobWorld.y, bobWorld.z);
+                pos.needsUpdate = true;
+
+                // Ensure visible while casting/reeling or when bobber is visible
+                this.fishingLine.visible = !!(this._casting || this._reeling || this.bobber.visible);
             }
 
             // Animate cast: ballistic arc to random target
@@ -11954,8 +11957,9 @@
                 }
                 
                 // FORCE bobber visible and set casting flag at start
-                this.bobber.visible = true;
-                this._casting = true;
+                this._casting = true;          // make sure state is set
+                if (this.bobber) this.bobber.visible = true;
+                if (this.fishingLine) this.fishingLine.visible = true;
                 
                 console.log('Cat3D: Starting cast animation');
                 
