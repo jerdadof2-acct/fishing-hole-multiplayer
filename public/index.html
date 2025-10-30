@@ -915,7 +915,7 @@
         .cat3d-fishing-line {
             position: fixed;
             pointer-events: none;
-            z-index: 1000;
+            z-index: 20050;
             background: linear-gradient(180deg, transparent 0%, rgba(200,200,200,0.8) 50%, transparent 100%);
             border-left: 1px solid rgba(200, 200, 200, 0.9);
             border-right: 1px solid rgba(200, 200, 200, 0.9);
@@ -925,7 +925,7 @@
         .cat3d-bobber {
             position: fixed;
             pointer-events: none;
-            z-index: 1001;
+            z-index: 20051;
             width: 12px;
             height: 12px;
             border-radius: 50%;
@@ -6782,7 +6782,7 @@
             addFishingLine(playerIndex, isCasting = false) {
                 // Guard: Skip legacy DOM line creation for local player (playerIndex 0)
                 // They use Cat3D overlay system instead
-                if (playerIndex === 0) {
+                if (playerIndex === 0 && window.USE_OVERLAY_LINE) {
                     return null;
                 }
                 

@@ -1,50 +1,49 @@
 ---
-description: Specification for implementing player advancement, leveling, and progression mechanics in a fishing game
+description: Documents player state management, progression systems, and related mechanics for games with leveling/achievement features
 ---
 
 
 # player-progression-model
 
 ## Level-Based Progression System
-Experience scaling follows non-linear progression with exponential growth:
-- Level 1→2: 100 XP
-- Level 5→6: 750 XP  
-- Level 10→11: 5,000 XP
-- Level 15→16: 20,000+ XP
+- Experience requirements follow exponential curve:
+  - Level 1→2: 100 XP
+  - Level 5→6: 750 XP
+  - Level 10→11: 5,000 XP
+  - Level 15→16: 20,000+ XP
+
+## Gameplay Difficulty Scaling
+Adaptive timing mechanics based on player level:
+- Level 1-5: 0.5-2s cast/wait time
+- Level 6-10: 2-4s cast/wait time
+- Level 11-15: 3-5.5s cast/wait time
+- Level 16+: 4-7s cast/wait time
+
+## Equipment Progression Tiers
+Equipment unlocks with exponential price scaling:
+- Basic Rod: Free (Starting)
+- Fiberglass Rod: $250
+- Carbon Fiber Rod: $1,000
+- Pro Rod: $3,500
+- Master Rod: $10,000
+- Legendary Rod: $30,000
+- Trophy Rod: $100,000
+
+## Player Statistics Tracking
+- Location unlock status
+- Gear progression state
+- Seasonal catch records
+- Tournament performance history
+- Achievement completion status
+- Top 10 biggest catches per player
+
+## Session Management
+- Player activity timestamps
+- Total session counting
+- Tournament participation records
 
 Importance Score: 85/100
-
-## Time Scaling Mechanics
-Dynamic action timing based on player level:
-- Level 1-5: 0.5-2 second actions
-- Level 6-10: 2-4 second actions  
-- Level 11-15: 3-5.5 second actions
-- Level 16+: 4-7 second actions
-
-Importance Score: 75/100
-
-## Equipment Progression 
-Exponential pricing curve across multiple categories:
-- Equipment Types: Rods, reels, hooks, lines, baits
-- Price Range: Free to $100,000
-- Strategic price gates for progression control
-- Tiered advancement system
-
-Importance Score: 80/100
-
-## Player State Management
-Core progression tracking:
-- Experience points accumulation
-- Level advancement
-- Location unlocking system
-- Equipment inventory
-- Catch statistics
-- Tournament performance metrics
-
-Importance Score: 90/100
-
-Overall System Score: 82/100
-(Weighted average based on component complexity and business impact)
+This module handles core progression mechanics that drive player engagement and retention through carefully balanced experience curves, equipment unlocks, and achievement tracking.
 
 $END$
 

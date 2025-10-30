@@ -1,46 +1,43 @@
 ---
-description: Analyzes data flow patterns and component interactions in a multiplayer fishing game system
+description: Analyzes data flow patterns in a multiplayer fishing game focusing on state management and event propagation
 ---
 
 
-# Data-Flow
+# data-flow
 
-Primary Data Flows:
+## Player State Updates
+- Progressive level-based timing system pushes updated cast/wait times to client
+- Experience gain events trigger level progression checks
+- Equipment purchases modify player inventory and balance
+- Achievement progress updates broadcast to affected players
 
-1. Player State Updates (Importance: 85/100)
-- Experience points flow from catch events to player progression system
-- Level achievements trigger gameplay scaling adjustments
-- Equipment purchases modify player inventory and economic status
+## Tournament Data Flow
+- Registration data collected during initialization phase
+- Real-time catch data updates tournament leaderboards
+- Score multipliers (up to 3x) applied to qualifying catches
+- Results and prizes distributed through broadcast system
 
-2. Tournament Event Flow (Importance: 80/100)
-- Tournament registration data flows to participant management
-- Catch events route through special tournament broadcasting rules
-- Tournament-specific fish size multipliers (up to 3x) affect catch calculations
-- Results flow to prize distribution system
+## Seasonal/Progress Tracking
+- Player statistics tracked across multiple categories:
+  - Location access status
+  - Equipment unlocks
+  - Catch history by season
+  - Tournament participation records
+- Top 10 biggest catches maintained per player
+- Session tracking data updated on connect/disconnect
 
-3. Seasonal Tracking Flow (Importance: 75/100)
-- Top 10 biggest fish records maintained across seasons
-- Special catch categories (rare, huge, legendary, trophy) flow to global broadcasting
-- Tournament performance statistics flow to seasonal leaderboards
+## Broadcast Rules
+- Special catches trigger global announcements
+- Tournament catches silently update scoring
+- Regular catches suppressed from broadcast
+- Room-specific announcements limited to 8 players
 
-4. Experience Scaling Flow (Importance: 70/100)
-- Non-linear XP requirements flow through progression gates:
-  * Level 1→2: 100 XP
-  * Level 5→6: 750 XP
-  * Level 10→11: 5,000 XP
-  * Level 15→16: 20,000+ XP
+## Bot Integration
+- AI competitor data injected into player rooms
+- Competitive catch rates synchronized with player progression
+- Cat-themed personality data mapped to bot behaviors
 
-5. Game State Broadcasts (Importance: 65/100)
-- Special catches broadcast globally
-- Tournament catches broadcast silently for scoring
-- Regular catches suppressed in global chat
-- Player achievements flow to notification system
-
-Key Integration Points:
-- Player Progression → Gameplay Scaling
-- Tournament Events → Broadcasting Rules
-- Catch Recording → Seasonal Statistics
-- Experience Points → Level Advancement
+Importance Score: 85/100
 
 $END$
 

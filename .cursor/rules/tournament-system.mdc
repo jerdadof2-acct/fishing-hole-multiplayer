@@ -1,43 +1,43 @@
 ---
-description: Specification for tournament mechanics, player competition systems, and competitive gameplay features
+description: Specification for tournament management, scoring, and leaderboard systems in multiplayer fishing game
 ---
 
 
 # tournament-system
 
-Tournament Core Components:
+## Tournament Core Components
 
-1. Room Management
-- 8-player room size limit
-- Tournament-specific player grouping
-Importance Score: 65/100
+1. Multi-Phase Tournament Structure
+- Participant registration phase
+- Countdown phase
+- Active competition tracking
+- Results calculation
+- Prize distribution
 
-2. Catch Multipliers
-- Tournament-specific fish size multiplier system
-- Maximum multiplier: 3x normal size
-- Affects scoring and rankings
-Importance Score: 75/100
+2. Room Management
+- 8 player capacity per tournament room
+- Tournament-specific fish size multipliers up to 3x
+- Real-time catch announcements
+- Live leaderboard updates
 
-3. Catch Distribution
-- Equal probability distribution for catches
-- Tournament-specific catch tracking
-- Silent broadcasting for tournament catches
-Importance Score: 70/100
+3. Result Tracking
+- Tournament-specific catch broadcasting
+- Silent scoring system for tournament catches
+- Global broadcasting for special catches (rare/huge/legendary/trophy)
 
-4. Tournament Lifecycle
-- Start phase with registration
-- Active phase for catch tracking
-- End phase for winner determination
-- Prize distribution system
-Importance Score: 80/100
+4. Statistical Components
+- Tournament participation history
+- Top 10 biggest fish leaderboard per player
+- Competition performance metrics
+- Tournament-specific player statistics
 
-Key Integration Points:
-- Interfaces with catch recording system
-- Maintains tournament-specific leaderboards
-- Coordinates with broadcasting rules for tournament events
-
-Overall Tournament System Score: 72/100
-(Weighted average based on competitive gameplay impact and tournament-specific mechanics)
+## Score: 85/100
+High score justified by:
+- Custom tournament lifecycle management
+- Specialized multiplier system for tournament catches
+- Real-time competitive elements
+- Multi-phase tournament structure
+- Integrated leaderboard systems
 
 $END$
 

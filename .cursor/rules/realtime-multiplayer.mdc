@@ -1,48 +1,27 @@
 ---
-description: Technical specification for real-time multiplayer game synchronization, broadcasting, and player interaction systems
+description: Documentation for real-time player synchronization, catch broadcasting, and chat system implementation
 ---
 
 
 # realtime-multiplayer
 
-## Core Synchronization Components
+## Room Management
+- 8 player per room capacity limit
+- Real-time synchronization of player states within rooms
+- Room-specific tournament multipliers up to 3x for fish sizes
 
-1. Global Catch Broadcasting
-- Broadcasts special catches (rare, huge, legendary, trophy) across all active players
-- Suppresses regular catch notifications to prevent chat spam
-- Tournament-specific silent broadcasting for score tracking
-Importance Score: 85/100
+## Catch Broadcasting System
+- Global broadcasts for special catches (rare/huge/legendary/trophy)
+- Tournament-specific silent broadcasts for scoring
+- Suppression of regular catches to reduce notification spam
 
-2. Tournament Room Management
-- 8-player capacity limit per tournament instance
-- Real-time participant registration tracking
-- Live tournament state synchronization
-- Active tournament phase coordination
-Importance Score: 75/100
+## Tournament Integration
+- Room-based real-time catch announcements
+- Live leaderboard updates during tournaments
+- Real-time multiplier effects on catch sizes
 
-3. Player State Synchronization
-- Real-time tracking of player locations
-- Tournament participation status
-- Catch recording and validation
-- Score/leaderboard updates
-Importance Score: 70/100
-
-## Implementation Structure
-
-/server.js
-- Handles real-time player interaction coordination
-- Manages special catch event broadcasting
-- Controls tournament state synchronization
-- Coordinates multi-player fishing sessions
-
-Key Multiplayer Features:
-- Tournament-specific broadcasting rules
-- Global catch announcements
-- Live participant tracking
-- Real-time score updates
-
-Overall Importance Score: 77/100
-(Weighted average based on criticality of multiplayer components to game functionality)
+## Importance Score: 80/100
+The real-time multiplayer components form a critical part of the game's social and competitive features, implementing specialized broadcast rules and room-based tournament mechanics.
 
 $END$
 
