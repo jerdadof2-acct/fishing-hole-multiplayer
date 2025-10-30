@@ -11923,9 +11923,15 @@
                 
                 // ALWAYS draw if shouldShow is true, even if validation fails
                 if (shouldShow || (tipValid && bobValid)) {
+                    // Use valid coordinates or fallbacks if validation failed but shouldShow is true
+                    const finalTipX = tipValid ? tipScreen.x : (this.container?.getBoundingClientRect().left || 0) + 48;
+                    const finalTipY = tipValid ? tipScreen.y : (this.container?.getBoundingClientRect().top || 0) + 29;
+                    const finalBobX = bobValid ? bobX : bobScreen.x;
+                    const finalBobY = bobValid ? bobY : bobScreen.y;
+                    
                     // Draw line from tipScreen -> bobX/bobY
-                    const dx = bobX - tipScreen.x;
-                    const dy = bobY - tipScreen.y;
+                    const dx = finalBobX - finalTipX;
+                    const dy = finalBobY - finalTipY;
                     const distance = Math.hypot(dx, dy);
                     
                     // Always show line and bobber if bobber is visible or casting/reeling, regardless of distance
