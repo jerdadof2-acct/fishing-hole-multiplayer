@@ -6357,11 +6357,8 @@
                         }
                     }
                     
-                    // Force immediate overlay update to show line/bobber right away
-                    // This ensures overlay is created and visible immediately
-                    if (cat3D.#update2DFishingLine) {
-                        cat3D.#update2DFishingLine();
-                    }
+                    // Note: Overlay updates automatically every frame in the render loop (#updateFishingLine)
+                    // The casting flag ensures it stays visible
                     
                     // Legacy line system for backwards compatibility (but hide it if Cat3D is active)
                     if (window.USE_LEGACY_LAKE_LINE !== false) {
@@ -11766,13 +11763,13 @@
                 let bobX = bobScreen.x;
                 let bobY = bobScreen.y;
                 
-                // Only clamp when bobber has landed (is bobbing on water)
-                if (this.bobber.userData?.bobbing) {
+                // Only clamp when bobber has landed AND NOT casting (is bobbing on water after cast completes)
+                if (this.bobber.userData?.bobbing && !this._casting) {
                     // Bobber is floating - keep it visually in lake
                     bobX = Math.min(Math.max(bobScreen.x, lakeRect.left + 10), lakeRect.right - 10);
                     bobY = Math.min(Math.max(bobScreen.y, lakeRect.top + lakeRect.height * 0.4), lakeRect.bottom - 20);
                 }
-                // During cast animation, use exact projection so line follows bobber correctly
+                // During cast, use exact projection so line follows bobber correctly
                 
                 // Create or update overlay line
                 if (!this._overlayLine) {
