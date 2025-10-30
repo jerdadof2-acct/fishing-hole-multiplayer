@@ -11897,9 +11897,9 @@
                         position: fixed;
                         pointer-events: none;
                         z-index: 1000;
-                        border-left: 2px solid #cccccc;
-                        transform-origin: top center;
+                        width: 2px;
                         background: linear-gradient(to bottom, rgba(204,204,204,0.9), rgba(204,204,204,0.6));
+                        transform-origin: top center;
                     `;
                     document.body.appendChild(this._overlayLine);
                     console.log('Cat3D: Created overlay line element');
@@ -11939,15 +11939,31 @@
                         const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
                         
                         // Position and style the line - always show if shouldShow
+                        const lineHeight = Math.max(distance, 1);
                         this._overlayLine.style.display = 'block';
                         this._overlayLine.style.left = finalTipX + 'px';
                         this._overlayLine.style.top = finalTipY + 'px';
                         this._overlayLine.style.width = '2px';
-                        this._overlayLine.style.height = Math.max(distance, 1) + 'px'; // Min 1px to avoid zero height
+                        this._overlayLine.style.height = lineHeight + 'px';
                         this._overlayLine.style.transform = `rotate(${angleDeg}deg)`;
                         this._overlayLine.style.transformOrigin = 'top center';
                         this._overlayLine.style.opacity = '1.0';
                         this._overlayLine.style.visibility = 'visible';
+                        
+                        // Debug - verify element is in DOM and visible
+                        if (!this._drawLogged || this._drawLogged === 1) {
+                            console.log('Cat3D: Overlay line element:', {
+                                inDOM: document.body.contains(this._overlayLine),
+                                display: window.getComputedStyle(this._overlayLine).display,
+                                visibility: window.getComputedStyle(this._overlayLine).visibility,
+                                opacity: window.getComputedStyle(this._overlayLine).opacity,
+                                zIndex: window.getComputedStyle(this._overlayLine).zIndex,
+                                left: this._overlayLine.style.left,
+ positioning: this._overlayLine.style.top,
+                                width: this._overlayLine.style.width,
+                                height: this._overlayLine.style.height
+                            });
+                        }
                         
                         // Position the bobber
                         this._overlayBobber.style.display = 'block';
@@ -11955,6 +11971,19 @@
                         this._overlayBobber.style.top = (finalBobY - 6) + 'px';
                         this._overlayBobber.style.opacity = '1.0';
                         this._overlayBobber.style.visibility = 'visible';
+                        
+                        // Debug - verify bobber element is in DOM and visible
+                        if (!this._drawLogged || this._drawLogged === 1) {
+                            console.log('Cat3D: Overlay bobber element:', {
+                                inDOM: document.body.contains(this._overlayBobber),
+                                display: window.getComputedStyle(this._overlayBobber).display,
+                                visibility: window.getComputedStyle(this._overlayBobber).visibility,
+                                opacity: window.getComputedStyle(this._overlayBobber).opacity,
+                                zIndex: window.getComputedStyle(this._overlayBobber).zIndex,
+                                left: this._overlayBobber.style.left,
+                                top: this._overlayBobber.style.top
+                            });
+                        }
                         
                         // Debug - log when drawing (first few times)
                         if (!this._drawLogged || this._drawLogged < 3) {
