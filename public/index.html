@@ -409,7 +409,7 @@
             min-height: 0;
             box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.5);
         }
-        
+
         /* Side-by-side layout: cat on left, lake on right */
         .fishing-game-layout {
             display: flex;
@@ -3237,16 +3237,16 @@
                         <!-- Side-by-side layout: Player cat on left, lake on right -->
                         <div class="fishing-game-layout">
                             <div class="player-cat-side">
-                                <div class="fisherman-row" id="fisherman-row">
-                                    <!-- Fishermen will be added here -->
-                                </div>
+                        <div class="fisherman-row" id="fisherman-row">
+                            <!-- Fishermen will be added here -->
+                        </div>
                             </div>
                             <div class="lake-side">
-                                <div class="fishing-lake" id="fishing-lake">
-                                    <div class="ripples" id="ripples"></div>
-                                    <div id="caustics-layer" aria-hidden="true"></div>
-                                    <!-- Realistic splash canvas (drawn above water surface) -->
-                                    <canvas id="splash-canvas" aria-hidden="true"></canvas>
+                        <div class="fishing-lake" id="fishing-lake">
+                            <div class="ripples" id="ripples"></div>
+                            <div id="caustics-layer" aria-hidden="true"></div>
+                            <!-- Realistic splash canvas (drawn above water surface) -->
+                            <canvas id="splash-canvas" aria-hidden="true"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -4995,11 +4995,11 @@
                             if (previewRect.width > 0 && previewRect.height > 0 && preview3D.offsetParent !== null) {
                                 // Container is visible, mount immediately
                                 requestAnimationFrame(() => {
-                                    window.mountPlayerCat3D('preview', {
-                                        furColor: colors.fur,
-                                        scale: 0.8
+                            window.mountPlayerCat3D('preview', {
+                                furColor: colors.fur,
+                                scale: 0.8
                                     });
-                                });
+                            });
                             }
                             // If not visible, mount will happen when updateCharacterPreview is called again
                             // when the character selection panel becomes visible
@@ -5364,28 +5364,28 @@
                     playerFisher = document.createElement('div');
                     playerFisher.className = 'fisherman you';
                     playerFisher.id = 'player-fisher';
-                    
-                    if (useCatRig) {
+                
+                if (useCatRig) {
                         if (!isMobile) {
                             const key = window.safeKey(this.player.name);
-                            playerFisher.innerHTML = `
+                    playerFisher.innerHTML = `
                                 <div class="cat3d" data-player-id="${this.player.name}" data-cat3d="${key}"></div>
-                                <div class="cat-rig" data-player-id="${this.player.name}" style="display: none;"></div>
-                                <div class="fisherman-name">${this.player.name}</div>
-                            `;
+                        <div class="cat-rig" data-player-id="${this.player.name}" style="display: none;"></div>
+                        <div class="fisherman-name">${this.player.name}</div>
+                    `;
                         } else {
                             playerFisher.innerHTML = `
                                 <div class="cat-rig" data-player-id="${this.player.name}" style="display: none;"></div>
                                 <div class="fisherman-name">${this.player.name}</div>
                             `;
                         }
-                    } else {
-                        playerFisher.innerHTML = `
-                            <div class="fisherman-character">${this.player.character || '👨'}</div>
-                            <div class="fisherman-name">${this.player.name}</div>
-                        `;
-                    }
-                    if (fishermanRow) fishermanRow.appendChild(playerFisher);
+                } else {
+                    playerFisher.innerHTML = `
+                        <div class="fisherman-character">${this.player.character || '👨'}</div>
+                        <div class="fisherman-name">${this.player.name}</div>
+                    `;
+                }
+                if (fishermanRow) fishermanRow.appendChild(playerFisher);
                 } else {
                     // Update name if it changed
                     const nameEl = playerFisher.querySelector('.fisherman-name');
@@ -5419,16 +5419,16 @@
                 let mobilePlayerFisher = mobileFishermanRow?.querySelector('#mobile-player-fisher');
                 if (!mobilePlayerFisher) {
                     mobilePlayerFisher = document.createElement('div');
-                    mobilePlayerFisher.className = 'mobile-fisherman';
-                    mobilePlayerFisher.id = 'mobile-player-fisher';
-                    
+                mobilePlayerFisher.className = 'mobile-fisherman';
+                mobilePlayerFisher.id = 'mobile-player-fisher';
+                
                     if (useCatRig && isMobile) {
                         const key = window.safeKey(this.player.name);
-                        mobilePlayerFisher.innerHTML = `
+                    mobilePlayerFisher.innerHTML = `
                             <div class="cat3d" data-player-id="${this.player.name}" data-cat3d="${key}"></div>
-                            <div class="cat-rig" data-player-id="${this.player.name}" style="display: none;"></div>
-                            <div class="mobile-fisherman-name">${this.player.name}</div>
-                        `;
+                        <div class="cat-rig" data-player-id="${this.player.name}" style="display: none;"></div>
+                        <div class="mobile-fisherman-name">${this.player.name}</div>
+                    `;
                     } else {
                         mobilePlayerFisher.innerHTML = `
                             <div class="mobile-fisherman-character">${this.player.character || '👨'}</div>
@@ -5457,10 +5457,10 @@
                             // Only mount if container is visible
                             const rect = cat3dEl.getBoundingClientRect();
                             if (rect.width > 0 && rect.height > 0 && cat3dEl.offsetParent !== null) {
-                                const opts = this.player.avatarOptions || {
-                                    colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
-                                    gear: { hat: false, glasses: false, vest: false }
-                                };
+                            const opts = this.player.avatarOptions || {
+                                colors: { fur: '#f2a65a', pattern: '#d77f3f', ear: '#c76b2a', eye: '#1e2a3a', belly: '#f8d7b1' },
+                                gear: { hat: false, glasses: false, vest: false }
+                            };
                                 window.mountPlayerCat3D(this.player.name, {
                                     furColor: opts?.colors?.fur || '#f2a65a',
                                     scale: 0.8,
@@ -5503,23 +5503,23 @@
                         
                         if (!fisher) {
                             fisher = document.createElement('div');
-                            fisher.className = 'fisherman other';
+                    fisher.className = 'fisherman other';
                             fisher.dataset.playerKey = playerKey;
                             fisher.title = `${p.name} - Level ${p.level}`;
-                            
+
                             if (shouldUse3D) {
-                                fisher.innerHTML = `
+                    fisher.innerHTML = `
                                     <div class="cat3d" data-player-id="${p.name}" data-cat3d="${playerKey}"></div>
-                                    <div class="cat-rig" data-player-id="${p.name}" style="display:none;"></div>
-                                    <div class="fisherman-name">${p.name}</div>
-                                `;
+                        <div class="cat-rig" data-player-id="${p.name}" style="display:none;"></div>
+                        <div class="fisherman-name">${p.name}</div>
+                    `;
                             } else {
                                 fisher.innerHTML = `
                                     <div class="cat-rig" data-player-id="${p.name}"></div>
                                     <div class="fisherman-name">${p.name}</div>
                                 `;
                             }
-                            if (fishermanRow) fishermanRow.appendChild(fisher);
+                    if (fishermanRow) fishermanRow.appendChild(fisher);
                         } else {
                             // Update name/level
                             const nameEl = fisher.querySelector('.fisherman-name');
@@ -5535,17 +5535,17 @@
                                 if (cat3dEl) {
                                     const rect = cat3dEl.getBoundingClientRect();
                                     if (rect.width > 0 && rect.height > 0 && cat3dEl.offsetParent !== null) {
-                                        window.mountPlayerCat3D(p.name, {
-                                            furColor: p?.avatarOptions?.colors?.fur || '#c8a079',
+                                window.mountPlayerCat3D(p.name, {
+                                    furColor: p?.avatarOptions?.colors?.fur || '#c8a079',
                                             scale: 0.8,
                                             profile: 'desktop'
-                                        });
-                                    }
+                                });
+                        }
                                 }
                             });
                         } else if (!shouldUse3D && fisher.querySelector('.cat-rig')) {
                             // Use 2D for non-eligible players
-                            const rig = fisher.querySelector('.cat-rig');
+                        const rig = fisher.querySelector('.cat-rig');
                             if (rig && window.renderCatRig) {
                                 window.renderCatRig(rig, p.avatarOptions || {});
                             }
@@ -5558,22 +5558,22 @@
                         
                         if (!mobileFisher) {
                             mobileFisher = document.createElement('div');
-                            mobileFisher.className = 'mobile-fisherman';
+                    mobileFisher.className = 'mobile-fisherman';
                             mobileFisher.dataset.playerKey = playerKey;
-                            
+                    
                             if (shouldUse3D) {
-                                mobileFisher.innerHTML = `
+                    mobileFisher.innerHTML = `
                                     <div class="cat3d" data-player-id="${p.name}" data-cat3d="${playerKey}"></div>
-                                    <div class="cat-rig" data-player-id="${p.name}" style="display:none;"></div>
-                                    <div class="mobile-fisherman-name">${p.name}</div>
-                                `;
+                        <div class="cat-rig" data-player-id="${p.name}" style="display:none;"></div>
+                        <div class="mobile-fisherman-name">${p.name}</div>
+                    `;
                             } else {
                                 mobileFisher.innerHTML = `
                                     <div class="cat-rig" data-player-id="${p.name}"></div>
                                     <div class="mobile-fisherman-name">${p.name}</div>
                                 `;
                             }
-                            if (mobileFishermanRow) mobileFishermanRow.appendChild(mobileFisher);
+                    if (mobileFishermanRow) mobileFishermanRow.appendChild(mobileFisher);
                         } else {
                             const nameEl = mobileFisher.querySelector('.mobile-fisherman-name');
                             if (nameEl) nameEl.textContent = p.name;
@@ -5587,16 +5587,16 @@
                                 if (cat3dEl) {
                                     const rect = cat3dEl.getBoundingClientRect();
                                     if (rect.width > 0 && rect.height > 0 && cat3dEl.offsetParent !== null) {
-                                        window.mountPlayerCat3D(p.name, {
-                                            furColor: p?.avatarOptions?.colors?.fur || '#c8a079',
+                                window.mountPlayerCat3D(p.name, {
+                                    furColor: p?.avatarOptions?.colors?.fur || '#c8a079',
                                             scale: 0.6,
                                             profile: 'mobile'
-                                        });
-                                    }
+                                });
+                        }
                                 }
                             });
                         } else if (!shouldUse3D && mobileFisher.querySelector('.cat-rig')) {
-                            const rig = mobileFisher.querySelector('.cat-rig');
+                        const rig = mobileFisher.querySelector('.cat-rig');
                             if (rig && window.renderCatRig) {
                                 window.renderCatRig(rig, p.avatarOptions || {});
                             }
@@ -6335,7 +6335,7 @@
                 } else {
                     // Fallback to 2D casting system (only if Cat3D unavailable)
                     if (window.USE_LEGACY_LAKE_LINE) {
-                        this.addFishingLine(0, true);
+                this.addFishingLine(0, true);
                         console.log('Cat3D: Using legacy 2D cast system (Cat3D unavailable)');
                     } else {
                         console.log('Cat3D: Legacy system disabled, Cat3D unavailable');
@@ -6660,7 +6660,7 @@
                 
                 // Remove fishing line - legacy system
                 if (window.USE_LEGACY_LAKE_LINE) {
-                    this.removeFishingLine(0);
+                this.removeFishingLine(0);
                 }
                 
                 // Clear overlay line and bobber
@@ -6905,29 +6905,29 @@
             removeFishingLine(playerIndex) {
                 // Legacy DOM line cleanup (only if legacy system enabled)
                 if (window.USE_LEGACY_LAKE_LINE) {
-                    const lake = document.getElementById('fishing-lake');
-                    const mobileLake = document.getElementById('mobile-fishing-lake');
-                    const isMobile = window.innerWidth <= 768;
-                    const activeLake = isMobile ? mobileLake : lake;
-                    
+                const lake = document.getElementById('fishing-lake');
+                const mobileLake = document.getElementById('mobile-fishing-lake');
+                const isMobile = window.innerWidth <= 768;
+                const activeLake = isMobile ? mobileLake : lake;
+                
                     if (activeLake) {
-                        // Find and remove fishing lines for the specified player
-                        const lines = activeLake.querySelectorAll('.fishing-line');
-                        lines.forEach(line => {
-                            if (line.dataset.playerIndex === playerIndex.toString()) {
-                                // Remove associated splash if it exists
-                                const splashId = line.dataset.splashId;
-                                if (splashId) {
-                                    const splash = document.getElementById(splashId);
-                                    if (splash) {
-                                        splash.remove();
-                                    }
-                                }
-                                
-                                // Remove the line itself
-                                line.remove();
+                // Find and remove fishing lines for the specified player
+                const lines = activeLake.querySelectorAll('.fishing-line');
+                lines.forEach(line => {
+                    if (line.dataset.playerIndex === playerIndex.toString()) {
+                        // Remove associated splash if it exists
+                        const splashId = line.dataset.splashId;
+                        if (splashId) {
+                            const splash = document.getElementById(splashId);
+                            if (splash) {
+                                splash.remove();
                             }
-                        });
+                        }
+                        
+                        // Remove the line itself
+                        line.remove();
+                    }
+                });
                     }
                 }
                 
@@ -10184,8 +10184,8 @@
                         (this.player.character && (this.player.character.includes('robohash') || this.player.character.includes('robohash.org')))) {
                         mobileCharacterDisplayImg.style.display = 'none';
                     } else if (this.player.character && !this.player.character.includes('robohash') && !this.player.character.includes('robohash.org')) {
-                        mobileCharacterDisplayImg.src = this.player.character;
-                        mobileCharacterDisplayImg.style.display = 'block';
+                    mobileCharacterDisplayImg.src = this.player.character;
+                    mobileCharacterDisplayImg.style.display = 'block';
                     } else {
                         mobileCharacterDisplayImg.style.display = 'none'; // Hide robohash or unknown
                     }
@@ -11089,7 +11089,7 @@
                                 }
                             );
                         });
-                        this.model = gltf.scene;
+                    this.model = gltf.scene;
                         console.log('Cat3D: GLTF loaded successfully:', this.modelUrl, this.model);
                         
                         // HARDENING PATCH: Ensure real cat shows, not placeholder boxes
@@ -11103,7 +11103,7 @@
                         
                         // 2) Apply any base scale first (if provided)
                         if (this.scale !== 1.0) {
-                            this.model.scale.setScalar(this.scale);
+                    this.model.scale.setScalar(this.scale);
                         }
                         
                         // 3) Make sure everything in the model is visible and lit; swap unlit mats
@@ -11215,7 +11215,7 @@
                         this.renderer.toneMappingExposure = 1.0;
                         
                         // 8) Finally add model to scene and render
-                        this.scene.add(this.model);
+                    this.scene.add(this.model);
                         this.model.visible = true;
                         
                         console.log('Cat3D: Camera auto-framed (bounding-sphere) - position:', this.camera.position, 'distance:', this._cameraDistance, 'sphere radius:', sphere.radius);
@@ -11256,7 +11256,7 @@
                     this.container.dispatchEvent(new CustomEvent('cat3d-failed'));
                     // Create placeholder if model failed
                     if (!this.model) {
-                        this.#createPlaceholder();
+                    this.#createPlaceholder();
                     }
                 }
 
@@ -11453,7 +11453,12 @@
                             this.rodTipBone = this.rodTipBone || rodTipBoneFromRod;
                         },
                         (err) => {
-                            // Error callback - use fallback visible rod
+                            // Error callback - only log actual errors (not ProgressEvents)
+                            if (err && err.type === 'progress') {
+                                // This is a progress event, not an error - ignore it
+                                return;
+                            }
+                            // This is a real error - use fallback visible rod
                             console.warn('Cat3D: Rod GLB failed, using fallback:', err);
                             
                             // Fallback: draw a thin cylinder so you SEE a rod no matter what
@@ -11942,7 +11947,7 @@
                 // Start the animation loop
                 requestAnimationFrame(step);
             }
-            
+
             #updateProcedurals(){
                 const t = performance.now()*0.001;
 
@@ -12165,7 +12170,7 @@
                 // Idempotent: Check for existing renderer on container
                 if (el.__renderer && el.__mounted) {
                     console.log('Cat3D: Reusing existing renderer for', key);
-                    const existing = this.map.get(key);
+                const existing = this.map.get(key);
                     if (existing) return existing;
                 }
                 
@@ -12196,8 +12201,8 @@
                 
                 const rig = new Cat3D(el, opts);
                 if (rig.renderer) {
-                    this.map.set(key, rig);
-                    return rig;
+                this.map.set(key, rig);
+                return rig;
                 }
                 return null;
             },
