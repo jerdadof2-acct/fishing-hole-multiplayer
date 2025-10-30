@@ -413,15 +413,50 @@
         /* Vertical layout: cat on top, lake below */
         /* Removed side-by-side layout CSS */
 
+        /* Fishing deck inside lake container */
+        .fishing-deck {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 120px;
+            background: linear-gradient(135deg, #8b6f47 0%, #6b5438 50%, #5a4632 100%);
+            border: 2px solid rgba(139, 111, 71, 0.8);
+            border-radius: 8px 8px 0 0;
+            box-shadow: 
+                0 -4px 20px rgba(0, 0, 0, 0.3),
+                inset 0 2px 4px rgba(255, 255, 255, 0.1);
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none; /* Deck doesn't block interactions */
+        }
+        
+        .fishing-deck::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, 
+                rgba(160, 130, 90, 0.6) 0%, 
+                rgba(200, 170, 130, 0.8) 50%, 
+                rgba(160, 130, 90, 0.6) 100%);
+            border-radius: 8px 8px 0 0;
+        }
+        
         .fisherman-row {
             display: flex;
-            justify-content: space-around;
+            justify-content: center;
+            align-items: center;
             width: 100%;
-            max-width: 100%;
-            margin-bottom: 0;
-            padding: 0 20px;
-            flex-shrink: 0;
-            align-items: flex-end;
+            height: 100%;
+            padding: 10px;
+            position: relative;
+            z-index: 6;
         }
 
         .fishing-lake {
@@ -3214,11 +3249,14 @@
                 <!-- Center Game Area -->
                 <div class="center-area">
                     <div class="fishing-area">
-                        <!-- Vertical layout: Cat on top, lake below -->
-                        <div class="fisherman-row" id="fisherman-row">
-                            <!-- Fishermen will be added here -->
-                        </div>
+                        <!-- Lake with fishing deck inside -->
                         <div class="fishing-lake" id="fishing-lake">
+                            <!-- Fishing deck platform for cat -->
+                            <div class="fishing-deck" id="fishing-deck">
+                                <div class="fisherman-row" id="fisherman-row">
+                                    <!-- Fishermen will be added here -->
+                                </div>
+                            </div>
                             <div class="ripples" id="ripples"></div>
                             <div id="caustics-layer" aria-hidden="true"></div>
                             <!-- Realistic splash canvas (drawn above water surface) -->
@@ -6269,36 +6307,34 @@
                     mobileCastBtn.disabled = true;
                 }
 
-                // Simple casting: just place bobber directly in lake (straight down)
+                // Simple casting: cat is now inside lake on deck, so cast directly into water
                 // Use legacy 2D system which works well
                 if (window.USE_LEGACY_LAKE_LINE !== false) {
                     this.addFishingLine(0, true);
                 }
                 
-                // Also update Cat3D bobber if available (simple placement, no animation)
+                // Also update Cat3D bobber if available (cat is on deck, cast down into water)
                 const playerKey = window.safeKey ? window.safeKey(this.player.name) : this.player.name.toLowerCase();
                 const cat3D = window.CatRigs && window.CatRigs.map && window.CatRigs.map.has(playerKey) 
                     ? window.CatRigs.map.get(playerKey) 
                     : null;
                     
                 if (cat3D && cat3D.bobber) {
-                    // Place bobber directly below cat in 3D space (straight down cast)
+                    // Cat is on deck, cast bobber straight down into water
+                    // Position bobber below the deck in the water
+                    cat3D.bobber.position.set(0, -1.2, 1.8); // Below deck, forward a bit, in water
+                    cat3D.bobber.visible = true;
+                    cat3D.bobber.userData.bobbing = true;
+                    
+                    // Since everything is in same container now, overlay bobber positioning is simpler
                     const lakeEl = document.getElementById('fishing-lake');
-                    if (lakeEl) {
+                    if (lakeEl && cat3D._overlayBobber) {
                         const lakeRect = lakeEl.getBoundingClientRect();
-                        // Simple: bobber goes straight down from cat position
-                        // Position bobber in center of lake, slightly below surface
-                        cat3D.bobber.position.set(0, -0.8, 1.5); // Below cat, forward a bit, down
-                        cat3D.bobber.visible = true;
-                        cat3D.bobber.userData.bobbing = true;
-                        
-                        // Show overlay bobber in lake
-                        if (cat3D._overlayBobber) {
-                            cat3D._overlayBobber.style.display = 'block';
-                            // Place in center of lake
-                            cat3D._overlayBobber.style.left = (lakeRect.left + lakeRect.width / 2 - 6) + 'px';
-                            cat3D._overlayBobber.style.top = (lakeRect.top + lakeRect.height * 0.6 - 6) + 'px';
-                        }
+                        // Place bobber in water area (below deck position)
+                        // Deck is at bottom: 20px, so bobber goes above that in the water
+                        cat3D._overlayBobber.style.display = 'block';
+                        cat3D._overlayBobber.style.left = (lakeRect.left + lakeRect.width / 2 - 6) + 'px';
+                        cat3D._overlayBobber.style.top = (lakeRect.bottom - lakeRect.height * 0.35 - 6) + 'px'; // In water area
                     }
                 }
                 
