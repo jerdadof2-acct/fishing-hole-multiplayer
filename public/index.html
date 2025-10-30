@@ -11791,17 +11791,19 @@
                 }
                 
                 // Only draw line if both points are valid and visible
-                if (!isNaN(tipScreen.x) && !isNaN(tipScreen.y) && 
-                    !isNaN(bobX) && !isNaN(bobY) &&
-                    tipScreen.x > -1000 && tipScreen.x < 10000 &&
-                    tipScreen.y > -1000 && tipScreen.y < 10000) {
-                    
+                // Use more lenient bounds check since we're in the same container
+                const tipValid = !isNaN(tipScreen.x) && !isNaN(tipScreen.y) && 
+                    isFinite(tipScreen.x) && isFinite(tipScreen.y);
+                const bobValid = !isNaN(bobX) && !isNaN(bobY) &&
+                    isFinite(bobX) && isFinite(bobY);
+                
+                if (tipValid && bobValid) {
                     // Draw line from tipScreen -> bobX/bobY
                     const dx = bobX - tipScreen.x;
                     const dy = bobY - tipScreen.y;
                     const distance = Math.hypot(dx, dy);
                     
-                    if (distance > 1) { // Only draw if line has meaningful length
+                    if (distance > 0.5) { // Draw if line has any length
                         const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
                         
                         // Position and style the line
@@ -11811,20 +11813,31 @@
                         this._overlayLine.style.width = '2px';
                         this._overlayLine.style.height = distance + 'px';
                         this._overlayLine.style.transform = `rotate(${angleDeg}deg)`;
+                        this._overlayLine.style.transformOrigin = 'top center';
                         
                         // Position the bobber
                         this._overlayBobber.style.display = 'block';
                         this._overlayBobber.style.left = (bobX - 6) + 'px';
                         this._overlayBobber.style.top = (bobY - 6) + 'px';
                     } else {
-                        // Line too short or points overlap - hide
+                        // Line too short - but still show bobber if casting
+                        if (this._casting && this._overlayBobber) {
+                            this._overlayBobber.style.display = 'block';
+                            this._overlayBobber.style.left = (bobX - 6) + 'px';
+                            this._overlayBobber.style.top = (bobY - 6) + 'px';
+                        }
                         if (this._overlayLine) this._overlayLine.style.display = 'none';
-                        if (this._overlayBobber) this._overlayBobber.style.display = 'none';
                     }
                 } else {
-                    // Invalid coordinates - hide overlay
-                    if (this._overlayLine) this._overlayLine.style.display = 'none';
-                    if (this._overlayBobber) this._overlayBobber.style.display = 'none';
+                    // Invalid coordinates - but show bobber if casting
+                    if (this._casting && this._overlayBobber && bobValid) {
+                        this._overlayBobber.style.display = 'block';
+                        this._overlayBobber.style.left = (bobX - 6) + 'px';
+                        this._overlayBobber.style.top = (bobY - 6) + 'px';
+                    }
+                    // Only hide line, not bobber if casting
+                    if (this._overlayLine && !this._casting) this._overlayLine.style.display = 'none';
+                    if (this._overlayBobber && !this._casting) this._overlayBobber.style.display = 'none';
                 }
             }
             
