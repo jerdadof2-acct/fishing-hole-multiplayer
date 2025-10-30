@@ -8692,7 +8692,7 @@
                     <div class="new-fish-content">
                         <h2>🎉 NEW FISH!</h2>
                         <div class="new-fish-image-container">
-                            <img src="${fishImage}" alt="${fishData.name}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 100\\'%3E%3Ctext y=\\'.9em\\' font-size=\\'60\\'%3E🐟%3C/text%3E%3C/svg%3E';">
+                            <img class="new-fish-img" src="${fishImage}" alt="${fishData.name}">
                         </div>
                         <p><strong>${fishData.name}</strong></p>
                         <p>${fishData.rarity}</p>
@@ -8791,6 +8791,12 @@
                 
                 document.head.appendChild(style);
                 document.body.appendChild(banner);
+                const nfImg = banner.querySelector('.new-fish-img');
+                if (nfImg) {
+                    nfImg.addEventListener('error', () => {
+                        nfImg.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ctext y=\'.9em\' font-size=\'60\'%3E🐟%3C/text%3E%3C/svg%3E';
+                    }, { once: true });
+                }
                 
                 // Auto-remove after 5 seconds
                 setTimeout(() => {
@@ -8812,7 +8818,7 @@
                 const announcement = document.createElement('div');
                 announcement.className = 'global-announcement';
                 announcement.innerHTML = `
-                    <div class="announcement-content" style="color: ${color}; border-color: ${color}; box-shadow: 0 0 20px ${color}40;">
+                    <div class="announcement-content">
                         ${message}
                     </div>
                 `;
@@ -8864,6 +8870,13 @@
                 
                 document.head.appendChild(style);
                 document.body.appendChild(announcement);
+                // Apply dynamic colors via JS to avoid inline template CSS
+                const contentEl = announcement.querySelector('.announcement-content');
+                if (contentEl) {
+                    contentEl.style.color = String(color || '#64b5f6');
+                    contentEl.style.borderColor = String(color || '#64b5f6');
+                    contentEl.style.boxShadow = `0 0 20px ${String(color || '#64b5f6')}40`;
+                }
                 
                 // Auto-remove after 4 seconds
                 setTimeout(() => {
@@ -8897,7 +8910,7 @@
                             <div style="color: #64b5f6; font-size: 12px;">${fishData.rarity}</div>
                         </div>
                         <div class="fish-info-image">
-                            <img src="images/${fishData.name}.png" alt="${fishData.name}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 100\\'%3E%3Ctext y=\\'.9em\\' font-size=\\'60\\'%3E🐟%3C/text%3E%3C/svg%3E';">
+                            <img class="fish-info-img" src="images/${fishData.name}.png" alt="${fishData.name}">
                         </div>
                         <div class="fish-info-stats">
                             <div class="fish-stat"><strong>Weight:</strong> ${fishData.minWeight.toFixed(1)} - ${fishData.maxWeight.toFixed(1)} lbs</div>
@@ -8914,6 +8927,12 @@
                 `;
                 
                 document.body.appendChild(modal);
+                const fiImg = modal.querySelector('.fish-info-img');
+                if (fiImg) {
+                    fiImg.addEventListener('error', () => {
+                        fiImg.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ctext y=\'.9em\' font-size=\'60\'%3E🐟%3C/text%3E%3C/svg%3E';
+                    }, { once: true });
+                }
                 
                 // Add CSS
                 const style = document.createElement('style');
@@ -9860,13 +9879,12 @@
                     fishList.forEach(fish => {
                         const isCaught = this.player.caughtFish && this.player.caughtFish[fish.name];
                         const opacity = isCaught ? '1' : '0.3';
-                        const clickable = isCaught ? 'cursor: pointer; transition: transform 0.2s;' : '';
+                        const clickable = isCaught ? '1' : '0';
                         
                         html += `
-                            <div data-fish-name="${fish.name}" style="text-align: center; padding: 8px; background: rgba(15, 25, 40, 0.5); border-radius: 8px; opacity: ${opacity}; ${clickable}" ${isCaught ? 'onclick="game.showFishInfo(\'' + fish.name + '\')"' : ''}>
-                                <img src="images/${fish.name}.png" 
+                            <div data-fish-name="${fish.name}" data-clickable="${clickable}" data-opacity="${opacity}" style="text-align: center; padding: 8px; background: rgba(15, 25, 40, 0.5); border-radius: 8px;">
+                                <img class="fish-card-img" src="images/${fish.name}.png" 
                                      alt="${fish.name}" 
-                                     onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 100\\'%3E%3Ctext y=\\'.9em\\' font-size=\\'60\\'%3E🐟%3C/text%3E%3C/svg%3E';"
                                      style="width: 100%; aspect-ratio: 1; object-fit: contain;">
                                 <div style="font-size: 9px; color: #64b5f6; margin-top: 4px; word-break: break-word;">${fish.name}</div>
                                 ${!isCaught ? '<div style="font-size: 8px; color: #888;">???</div>' : ''}
@@ -9880,6 +9898,25 @@
                 }
                 
                 collectionGrid.innerHTML = html;
+                // Attach styles and click handlers for caught fish (avoid inline styles/onclick for lints)
+                collectionGrid.querySelectorAll('[data-fish-name]').forEach(el => {
+                    const name = el.getAttribute('data-fish-name');
+                    const op = el.getAttribute('data-opacity');
+                    if (op != null) el.style.opacity = op;
+                    if (el.getAttribute('data-clickable') === '1') {
+                        el.style.cursor = 'pointer';
+                        el.style.transition = 'transform 0.2s';
+                    }
+                    if (this.player.caughtFish && this.player.caughtFish[name]) {
+                        el.addEventListener('click', () => this.showFishInfo(name));
+                    }
+                });
+                // Attach image fallback handlers
+                collectionGrid.querySelectorAll('.fish-card-img').forEach(img => {
+                    img.addEventListener('error', () => {
+                        img.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ctext y=\'.9em\' font-size=\'60\'%3E🐟%3C/text%3E%3C/svg%3E';
+                    }, { once: true });
+                });
             }
 
             renderDesktopCollection() {
@@ -9905,10 +9942,11 @@
                     html += `<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px;">`;
                     fishList.forEach(fish => {
                         const isCaught = this.player.caughtFish && this.player.caughtFish[fish.name];
-                        const clickable = isCaught ? 'cursor: pointer; transition: transform 0.2s;' : '';
+                        const opacity = isCaught ? '1' : '0.3';
+                        const clickable = isCaught ? '1' : '0';
                         html += `
-                            <div data-fish-name="${fish.name}" style="text-align: center; padding: 6px; background: rgba(15, 25, 40, 0.5); border-radius: 6px; opacity: ${isCaught ? '1' : '0.3'}; ${clickable}" ${isCaught ? 'onclick="game.showFishInfo(\'' + fish.name + '\')"' : ''}>
-                                <img src="images/${fish.name}.png" alt="${fish.name}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 100\\'%3E%3Ctext y=\\'.9em\\' font-size=\\'60\\'%3E🐟%3C/text%3E%3C/svg%3E';" style="width: 100%; aspect-ratio: 1; object-fit: contain;">
+                            <div data-fish-name="${fish.name}" data-clickable="${clickable}" data-opacity="${opacity}" style="text-align: center; padding: 6px; background: rgba(15, 25, 40, 0.5); border-radius: 6px;">
+                                <img class="fish-card-img" src="images/${fish.name}.png" alt="${fish.name}" style="width: 100%; aspect-ratio: 1; object-fit: contain;">
                                 <div style="font-size: 8px; color: #64b5f6; margin-top: 2px;">${fish.name}</div>
                             </div>
                         `;
@@ -9917,6 +9955,28 @@
                 });
                 
                 container.innerHTML = html || '<div style="text-align: center; color: #888; padding: 20px;">Start fishing!</div>';
+                container.querySelectorAll('[data-fish-name]').forEach(el => {
+                    const op = el.getAttribute('data-opacity');
+                    if (op != null) el.style.opacity = op;
+                    if (el.getAttribute('data-clickable') === '1') {
+                        el.style.cursor = 'pointer';
+                        el.style.transition = 'transform 0.2s';
+                    }
+                    const name = el.getAttribute('data-fish-name');
+                    if (this.player.caughtFish && this.player.caughtFish[name]) {
+                        el.addEventListener('click', () => this.showFishInfo(name));
+                    }
+                });
+                container.querySelectorAll('.fish-card-img').forEach(img => {
+                    img.addEventListener('error', () => {
+                        img.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ctext y=\'.9em\' font-size=\'60\'%3E🐟%3C/text%3E%3C/svg%3E';
+                    }, { once: true });
+                });
+                container.querySelectorAll('.fish-card-img').forEach(img => {
+                    img.addEventListener('error', () => {
+                        img.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ctext y=\'.9em\' font-size=\'60\'%3E🐟%3C/text%3E%3C/svg%3E';
+                    }, { once: true });
+                });
             }
 
             renderDesktopStats() {
@@ -10211,7 +10271,7 @@
                     const ad = this.mockAds.desktop[Math.floor(Math.random() * this.mockAds.desktop.length)];
                     desktopAd.innerHTML = `
                         <a href="#" class="mock-ad" onclick="event.preventDefault(); game.handleAdClick('desktop-bottom'); return false;" style="display: block; text-decoration: none; color: inherit; width: 100%; height: 100%; min-height: 90px;">
-                            <div style="background: ${ad.bg}; border-radius: 6px; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; height: 100%; min-height: 90px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+                            <div class="mock-ad-inner" style="border-radius: 6px; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; height: 100%; min-height: 90px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
                                 <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
                                     <div style="font-size: 36px; line-height: 1;">${ad.logo}</div>
                                     <div style="color: white;">
@@ -10225,6 +10285,9 @@
                             </div>
                         </a>
                     `;
+                    // Apply dynamic background via JS
+                    const inner = desktopAd.querySelector('.mock-ad-inner');
+                    if (inner) inner.style.background = String(ad.bg || '#224');
                 }
 
                 // Rotate mobile ad (320x50 standard mobile banner)
@@ -10233,7 +10296,7 @@
                     const ad = this.mockAds.mobile[Math.floor(Math.random() * this.mockAds.mobile.length)];
                     mobileAd.innerHTML = `
                         <a href="#" class="mock-ad" onclick="event.preventDefault(); game.handleAdClick('mobile-bottom'); return false;" style="display: block; text-decoration: none; color: inherit; width: 100%; height: 50px;">
-                            <div style="background: ${ad.bg}; border-radius: 6px; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; height: 50px; max-height: 50px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); overflow: hidden; position: relative; top: 0;">
+                            <div class="mock-ad-inner" style="border-radius: 6px; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; height: 50px; max-height: 50px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); overflow: hidden; position: relative; top: 0;">
                                 <div style="display: flex; align-items: center; gap: 8px; flex: 1; color: white; height: 50px; line-height: 50px;">
                                     <div style="font-size: 18px; line-height: 50px; vertical-align: middle;">${ad.text.split('•')[0]}</div>
                                     <div style="font-size: 10px; opacity: 0.9; line-height: 50px; vertical-align: middle;">${ad.text.split('•')[1] || ''}</div>
@@ -10244,6 +10307,8 @@
                             </div>
                         </a>
                     `;
+                    const innerM = mobileAd.querySelector('.mock-ad-inner');
+                    if (innerM) innerM.style.background = String(ad.bg || '#224');
                 }
             }
 
