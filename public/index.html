@@ -11477,6 +11477,10 @@
                 this.#updateProcedurals();
                 
                 // Update fishing line to connect rod tip to bobber every frame
+                // Force update bobber world matrix before overlay projection if animating
+                if (this.bobber && !this.bobber.userData?.bobbing) {
+                    this.bobber.updateWorldMatrix(true, false);
+                }
                 this.#updateFishingLine();
                 
                 // Update bobber idle bobbing if active (buoyancy jiggle)
@@ -11533,12 +11537,25 @@
                 }
                 
                 // Get rod tip world position and project to screen
-                this.rodTipBone.updateWorldMatrix(true, false);
+                // Ensure world matrices are up to date
+                if (this.model) this.model.updateWorldMatrix(true, false);
+                if (this.rodTipBone) {
+                    this.rodTipBone.updateWorldMatrix(true, false);
+                }
                 const tipWorld = new THREE.Vector3();
-                this.rodTipBone.getWorldPosition(tipWorld);
+                if (this.rodTipBone) {
+                    this.rodTipBone.getWorldPosition(tipWorld);
+                } else {
+                    // Fallback: use bobber position if rod tip not found
+                    this.bobber.getWorldPosition(tipWorld);
+                }
                 const tipScreen = this.#projectToScreen(tipWorld);
                 
                 // Get bobber world position and project to screen
+                // Force update if not in scene hierarchy or animating
+                if (this.bobber.parent) {
+                    this.bobber.parent.updateWorldMatrix(true, false);
+                }
                 this.bobber.updateWorldMatrix(true, false);
                 const bobWorld = new THREE.Vector3();
                 this.bobber.getWorldPosition(bobWorld);
