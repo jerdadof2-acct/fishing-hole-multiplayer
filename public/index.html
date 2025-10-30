@@ -6907,29 +6907,73 @@
                 if (window.USE_LEGACY_LAKE_LINE) {
                     const lake = document.getElementById('fishing-lake');
                     const mobileLake = document.getElementById('mobile-fishing-lake');
-                
-                const isMobile = window.innerWidth <= 768;
-                const activeLake = isMobile ? mobileLake : lake;
-                
-                if (!activeLake) return;
-                
-                // Find and remove fishing lines for the specified player
-                const lines = activeLake.querySelectorAll('.fishing-line');
-                lines.forEach(line => {
-                    if (line.dataset.playerIndex === playerIndex.toString()) {
-                        // Remove associated splash if it exists
-                        const splashId = line.dataset.splashId;
-                        if (splashId) {
-                            const splash = document.getElementById(splashId);
-                            if (splash) {
-                                splash.remove();
+                    const isMobile = window.innerWidth <= 768;
+                    const activeLake = isMobile ? mobileLake : lake;
+                    
+                    if (activeLake) {
+                        // Find and remove fishing lines for the specified player
+                        const lines = activeLake.querySelectorAll('.fishing-line');
+                        lines.forEach(line => {
+                            if (line.dataset.playerIndex === playerIndex.toString()) {
+                                // Remove associated splash if it exists
+                                const splashId = line.dataset.splashId;
+                                if (splashId) {
+                                    const splash = document.getElementById(splashId);
+                                    if (splash) {
+                                        splash.remove();
+                                    }
+                                }
+                                
+                                // Remove the line itself
+                                line.remove();
                             }
-                        }
-                        
-                        // Remove the line itself
-                        line.remove();
+                        });
                     }
-                });
+                }
+                
+                // Always clear overlay elements (for player index 0)
+                if (playerIndex === 0) {
+                    const oLine = document.querySelector('.cat3d-fishing-line');
+                    const oBob = document.querySelector('.cat3d-bobber');
+                    if (oLine) {
+                        oLine.style.display = 'none';
+                        if (oLine._svg) {
+                            oLine._svg.remove();
+                            oLine._svg = null;
+                            oLine._path = null;
+                        }
+                    }
+                    if (oBob) {
+                        oBob.style.display = 'none';
+                        oBob.style.animation = '';
+                        oBob.style.transform = '';
+                        oBob.style.filter = '';
+                    }
+                    
+                    // Clean up Cat3D overlay if active
+                    const playerKey = window.safeKey ? window.safeKey(this.player.name) : this.player.name.toLowerCase();
+                    if (window.CatRigs && window.CatRigs.map && window.CatRigs.map.has(playerKey)) {
+                        const cat3D = window.CatRigs.map.get(playerKey);
+                        if (cat3D) {
+                            if (cat3D._overlayLine) {
+                                cat3D._overlayLine.style.display = 'none';
+                                if (cat3D._overlayLine._svg) {
+                                    cat3D._overlayLine._svg.remove();
+                                    cat3D._overlayLine._svg = null;
+                                    cat3D._overlayLine._path = null;
+                                }
+                            }
+                            if (cat3D._overlayBobber) {
+                                cat3D._overlayBobber.style.display = 'none';
+                                cat3D._overlayBobber.style.animation = '';
+                                cat3D._overlayBobber.style.transform = '';
+                                cat3D._overlayBobber.style.filter = '';
+                            }
+                            if (cat3D.bobber) cat3D.bobber.visible = false;
+                            if (cat3D.fishingLine) cat3D.fishingLine.visible = false;
+                        }
+                    }
+                }
             }
 
             calculateCatchChance() {
