@@ -6780,6 +6780,12 @@
             }
 
             addFishingLine(playerIndex, isCasting = false) {
+                // Guard: Skip legacy DOM line creation for local player (playerIndex 0)
+                // They use Cat3D overlay system instead
+                if (playerIndex === 0) {
+                    return null;
+                }
+                
                 const fishermanRow = document.getElementById('fisherman-row');
                 const lake = document.getElementById('fishing-lake');
                 const mobileFishermanRow = document.getElementById('mobile-fisherman-row');
@@ -11001,6 +11007,7 @@
                 this.envUrl   = opts.envUrl   || null; // '/assets/env/lake.hdr'
                 this.tint     = new THREE.Color(opts.furColor || '#c8a079');
                 this.scale    = opts.scale || 0.9;
+                this.isLocalPlayer = opts.isLocalPlayer || false; // Only local player uses overlay
                 
                 // Guard against double-mounts
                 if (container.__renderer || container.__mounted) {
@@ -11678,17 +11685,35 @@
                         const t = reelElapsed / reelDuration;
                         const eased = 1 - Math.pow(1 - t, 3); // Cubic ease-out
                         
-                        // Lerp bobber position toward rod tip
-                        this.bobber.position.lerpVectors(this._reelStartPos, tipWorld, eased);
+                        // Reel-in: lerp toward rod tip in 3D space (not straight vertical)
+                        const currentWorld = new THREE.Vector3();
+                        this.bobber.getWorldPosition(currentWorld);
+                        
+                        // Lerp in 3D world space toward rod tip
+                        currentWorld.lerp(tipWorld, Math.min(1, dt * 2.0)); // Smooth lerp toward tip
+                        
+                        // Convert back to local space
+                        if (this.bobber.parent) {
+                            this.bobber.position.copy(this.bobber.parent.worldToLocal(currentWorld));
+                        } else {
+                            this.bobber.position.copy(currentWorld);
+                        }
+                        
+                        // Mark as not bobbing once we start reeling
+                        this.bobber.userData.bobbing = false;
                         this.bobber.updateWorldMatrix(true, false);
                     } else {
-                        // Reel-in complete - hide bobber and overlay
-                        this.bobber.position.copy(tipWorld);
+                        // Reel-in complete - snap to rod tip and hide
+                        if (this.bobber.parent) {
+                            this.bobber.position.copy(this.bobber.parent.worldToLocal(tipWorld));
+                        } else {
+                            this.bobber.position.copy(tipWorld);
+                        }
                         this.bobber.visible = false;
                         this._reeling = false;
                         this._casting = false;
                         
-                        // Hide overlay elements
+                        // Hide overlay elements using instance references
                         if (this._overlayLine) this._overlayLine.style.display = 'none';
                         if (this._overlayBobber) this._overlayBobber.style.display = 'none';
                     }
@@ -11722,9 +11747,6 @@
                     }
                     this._firstRender = false;
                 }
-                
-                // Update fishing line (3D and 2D overlay) every frame - single consolidated call
-                this.#updateFishingLine();
 
                 this.renderer.render(this.scene, this.camera);
                 this.raf = requestAnimationFrame(this.#loop);
@@ -11745,7 +11767,12 @@
             
             // Update 2D overlay line connecting rod tip to bobber
             #update2DFishingLine(){
-                if (!this.bobber || !this.container) {
+                // Only local player uses overlay - bots/remote players skip
+                if (!this.isLocalPlayer) {
+                    return;
+                }
+                
+                if (!this.bobber || !this.container || !this.camera) {
                     return;
                 }
                 
@@ -11782,127 +11809,45 @@
                     if (this.bobber) this.bobber.visible = true;
                 }
                 
-                // Get rod tip world position and project to screen
                 // Ensure ALL world matrices are up to date (model -> handBone -> rodModel -> rodTipBone)
-                if (this.model) {
-                    this.model.updateWorldMatrix(true, false);
-                }
-                // Update rod model's world matrix if it exists
-                if (this.rodModel) {
-                    this.rodModel.updateWorldMatrix(true, false);
-                }
-                // Update rod tip bone's world matrix
-                if (this.rodTipBone) {
-                    this.rodTipBone.updateWorldMatrix(true, false);
-                }
+                if (this.model) this.model.updateWorldMatrix(true, false);
+                if (this.rodModel) this.rodModel.updateWorldMatrix(true, false);
+                if (this.rodTipBone) this.rodTipBone.updateWorldMatrix(true, false);
+                if (this.bobber?.parent) this.bobber.parent.updateWorldMatrix(true, false);
+                this.bobber?.updateWorldMatrix(true, false);
                 
                 const tipWorld = new THREE.Vector3();
-                if (this.rodTipBone) {
-                    this.rodTipBone.getWorldPosition(tipWorld);
-                    // Debug: log rod tip position occasionally
-                    if (this._debugCount === 0) {
-                        console.log('Cat3D: Rod tip world position:', tipWorld.x.toFixed(3), tipWorld.y.toFixed(3), tipWorld.z.toFixed(3));
-                    }
-                } else {
-                    // Fallback: use approximate hand position if rod tip not found
-                    console.warn('Cat3D: No rodTipBone found, using fallback position');
-                    if (this.model) {
-                        // Approximate hand/rod position
-                        const handPos = new THREE.Vector3(0.3, 0.5, 0.8);
-                        tipWorld.copy(handPos);
-                        this.model.localToWorld(tipWorld);
-                    } else {
-                        this.bobber.getWorldPosition(tipWorld);
-                    }
-                }
-                const tipScreen = this.#projectToScreen(tipWorld);
-                
-                // Get bobber world position and project to screen
-                // Force update if not in scene hierarchy or animating
-                if (this.bobber.parent) {
-                    this.bobber.parent.updateWorldMatrix(true, false);
-                }
-                this.bobber.updateWorldMatrix(true, false);
+                (this.rodTipBone || this.bobber).getWorldPosition(tipWorld);
                 const bobWorld = new THREE.Vector3();
                 this.bobber.getWorldPosition(bobWorld);
+                
+                const tipScreen = this.#projectToScreen(tipWorld);
                 const bobScreen = this.#projectToScreen(bobWorld);
                 
-                // Find lake container and clamp bobber to lake bounds if needed
+                // Clamp bobber to lake rect only when floating (post-cast)
                 const isMobile = window.innerWidth <= 768;
                 const lake = document.getElementById(isMobile ? 'mobile-fishing-lake' : 'fishing-lake');
-                if (!lake) return;
-                
-                const lakeRect = lake.getBoundingClientRect();
-                
-                // Debug first few frames - show actual numeric values (readable format)
-                // Always show first frame, then reduce frequency
-                if (!this._debugCount) this._debugCount = 0;
-                if (this._debugCount === 0) {
-                    console.group(`Cat3D Overlay Debug Frame ${this._debugCount}`);
-                    console.log('Rod Tip World:', `${tipWorld.x.toFixed(3)}, ${tipWorld.y.toFixed(3)}, ${tipWorld.z.toFixed(3)}`);
-                    console.log('Rod Tip Screen:', `${tipScreen.x.toFixed(1)}, ${tipScreen.y.toFixed(1)}`);
-                    console.log('Bobber World:', `${bobWorld.x.toFixed(3)}, ${bobWorld.y.toFixed(3)}, ${bobWorld.z.toFixed(3)}`);
-                    console.log('Bobber Screen:', `${bobScreen.x.toFixed(1)}, ${bobScreen.y.toFixed(1)}`);
-                    console.log('Distance (screen):', Math.hypot(bobScreen.x - tipScreen.x, bobScreen.y - tipScreen.y).toFixed(1), 'px');
-                    const containerRect = this.container.getBoundingClientRect();
-                    console.log('Cat Container:', `left:${containerRect.left.toFixed(1)} top:${containerRect.top.toFixed(1)} w:${containerRect.width.toFixed(1)} h:${containerRect.height.toFixed(1)}`);
-                    console.log('Lake Container:', `left:${lakeRect.left.toFixed(1)} top:${lakeRect.top.toFixed(1)} w:${lakeRect.width.toFixed(1)} h:${lakeRect.height.toFixed(1)}`);
-                    console.log('Bobber visible:', this.bobber.visible);
-                    console.log('Rod tip bone:', this.rodTipBone.name);
-                    console.log('shouldShow:', shouldShow, 'casting:', this._casting, 'reeling:', this._reeling);
-                    console.groupEnd();
-                    this._debugCount = 1; // Mark as processed but keep count for later checks
-                } else if (this._debugCount < 50 && this._debugCount % 10 === 0) {
-                    // Occasional updates after first frame
-                    console.log(`Cat3D Overlay Frame ${this._debugCount}: shouldShow:`, shouldShow, 'bobber.visible:', this.bobber.visible);
-                    this._debugCount++;
-                } else if (this._debugCount < 50) {
-                    this._debugCount++;
-                }
-                
-                // Use exact projected positions - no clamping during cast
-                // This ensures line connects properly from rod tip to bobber
+                const lakeRect = lake?.getBoundingClientRect();
                 let bobX = bobScreen.x;
                 let bobY = bobScreen.y;
-                
-                // Only clamp when bobber has landed AND NOT casting (is bobbing on water after cast completes)
-                if (this.bobber.userData?.bobbing && !this._casting) {
-                    // Bobber is floating - keep it visually in lake
+                if (lakeRect && this.bobber?.userData?.bobbing && !this._casting) {
                     bobX = Math.min(Math.max(bobScreen.x, lakeRect.left + 10), lakeRect.right - 10);
                     bobY = Math.min(Math.max(bobScreen.y, lakeRect.top + lakeRect.height * 0.4), lakeRect.bottom - 20);
                 }
-                // During cast, use exact projection so line follows bobber correctly
                 
-                // Always try to draw line if casting - be more lenient with validation
-                // Use more lenient bounds check since we're in the same container
-                const tipValid = !isNaN(tipScreen.x) && !isNaN(tipScreen.y) && 
-                    isFinite(tipScreen.x) && isFinite(tipScreen.y) &&
-                    Math.abs(tipScreen.x) < 10000 && Math.abs(tipScreen.y) < 10000;
-                const bobValid = !isNaN(bobX) && !isNaN(bobY) &&
-                    isFinite(bobX) && isFinite(bobY) &&
-                    Math.abs(bobX) < 10000 && Math.abs(bobY) < 10000;
-                
-                // Debug validation - always log first few times to diagnose
-                if (!this._validationLogged || this._validationLogged < 3) {
-                    if (!this._validationLogged) this._validationLogged = 0;
-                    console.log('Cat3D: Overlay validation - tipValid:', tipValid, 'bobValid:', bobValid, 'tipScreen:', tipScreen.x.toFixed(1), tipScreen.y.toFixed(1), 'bobX/Y:', bobX.toFixed(1), bobY.toFixed(1), 'shouldShow:', shouldShow, 'tipValid&&bobValid:', tipValid && bobValid);
-                    this._validationLogged++;
-                }
-                
-                // Always create overlay elements if they don't exist
+                // Create per-instance overlay elements if they don't exist
                 if (!this._overlayLine) {
                     this._overlayLine = document.createElement('div');
                     this._overlayLine.className = 'cat3d-fishing-line';
                     this._overlayLine.style.cssText = `
                         position: fixed;
                         pointer-events: none;
-                        z-index: 1000;
+                        z-index: 1100;
                         width: 2px;
                         background: linear-gradient(to bottom, rgba(204,204,204,0.9), rgba(204,204,204,0.6));
                         transform-origin: top center;
                     `;
                     document.body.appendChild(this._overlayLine);
-                    console.log('Cat3D: Created overlay line element');
                 }
                 if (!this._overlayBobber) {
                     this._overlayBobber = document.createElement('div');
@@ -11910,7 +11855,7 @@
                     this._overlayBobber.style.cssText = `
                         position: fixed;
                         pointer-events: none;
-                        z-index: 1001;
+                        z-index: 1101;
                         width: 12px;
                         height: 12px;
                         border-radius: 50%;
@@ -11918,113 +11863,38 @@
                         box-shadow: 0 2px 4px rgba(0,0,0,0.3);
                     `;
                     document.body.appendChild(this._overlayBobber);
-                    console.log('Cat3D: Created overlay bobber element');
                 }
                 
-                // ALWAYS draw if shouldShow is true, even if validation fails
-                if (shouldShow || (tipValid && bobValid)) {
-                    // Use valid coordinates or fallbacks if validation failed but shouldShow is true
-                    const finalTipX = tipValid ? tipScreen.x : (this.container?.getBoundingClientRect().left || 0) + 48;
-                    const finalTipY = tipValid ? tipScreen.y : (this.container?.getBoundingClientRect().top || 0) + 29;
-                    const finalBobX = bobValid ? bobX : bobScreen.x;
-                    const finalBobY = bobValid ? bobY : bobScreen.y;
-                    
-                    // Draw line from tipScreen -> bobX/bobY
-                    const dx = finalBobX - finalTipX;
-                    const dy = finalBobY - finalTipY;
-                    const distance = Math.hypot(dx, dy);
-                    
-                    // Always show line and bobber if bobber is visible or casting/reeling, regardless of distance
-                    if (shouldShow || distance > 0.5) {
-                        const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
-                        
-                        // Position and style the line - always show if shouldShow
-                        const lineHeight = Math.max(distance, 1);
-                        this._overlayLine.style.display = 'block';
-                        this._overlayLine.style.left = finalTipX + 'px';
-                        this._overlayLine.style.top = finalTipY + 'px';
-                        this._overlayLine.style.width = '2px';
-                        this._overlayLine.style.height = lineHeight + 'px';
-                        this._overlayLine.style.transform = `rotate(${angleDeg}deg)`;
-                        this._overlayLine.style.transformOrigin = 'top center';
-                        this._overlayLine.style.opacity = '1.0';
-                        this._overlayLine.style.visibility = 'visible';
-                        
-                        // Debug - verify element is in DOM and visible
-                        if (!this._drawLogged || this._drawLogged === 1) {
-                            console.log('Cat3D: Overlay line element:', {
-                                inDOM: document.body.contains(this._overlayLine),
-                                display: window.getComputedStyle(this._overlayLine).display,
-                                visibility: window.getComputedStyle(this._overlayLine).visibility,
-                                opacity: window.getComputedStyle(this._overlayLine).opacity,
-                                zIndex: window.getComputedStyle(this._overlayLine).zIndex,
-                                left: this._overlayLine.style.left,
-                                top: this._overlayLine.style.top,
-                                width: this._overlayLine.style.width,
-                                height: this._overlayLine.style.height
-                            });
-                        }
-                        
-                        // Position the bobber
-                        this._overlayBobber.style.display = 'block';
-                        this._overlayBobber.style.left = (finalBobX - 6) + 'px';
-                        this._overlayBobber.style.top = (finalBobY - 6) + 'px';
-                        this._overlayBobber.style.opacity = '1.0';
-                        this._overlayBobber.style.visibility = 'visible';
-                        
-                        // Debug - verify bobber element is in DOM and visible
-                        if (!this._drawLogged || this._drawLogged === 1) {
-                            console.log('Cat3D: Overlay bobber element:', {
-                                inDOM: document.body.contains(this._overlayBobber),
-                                display: window.getComputedStyle(this._overlayBobber).display,
-                                visibility: window.getComputedStyle(this._overlayBobber).visibility,
-                                opacity: window.getComputedStyle(this._overlayBobber).opacity,
-                                zIndex: window.getComputedStyle(this._overlayBobber).zIndex,
-                                left: this._overlayBobber.style.left,
-                                top: this._overlayBobber.style.top
-                            });
-                        }
-                        
-                        // Debug - log when drawing (first few times)
-                        if (!this._drawLogged || this._drawLogged < 3) {
-                            if (!this._drawLogged) this._drawLogged = 0;
-                            console.log('Cat3D: Drawing overlay line from rod tip:', finalTipX.toFixed(1), finalTipY.toFixed(1), 'to bobber:', finalBobX.toFixed(1), finalBobY.toFixed(1), 'distance:', distance.toFixed(1), 'shouldShow:', shouldShow, 'casting:', this._casting, 'reeling:', this._reeling, 'bobber.visible:', this.bobber.visible, 'tipValid:', tipValid, 'bobValid:', bobValid);
-                            this._drawLogged++;
-                        }
-                    } else {
-                        // Line too short - but still show bobber if shouldShow
-                        if (shouldShow && this._overlayBobber) {
-                            this._overlayBobber.style.display = 'block';
-                            this._overlayBobber.style.left = (bobX - 6) + 'px';
-                            this._overlayBobber.style.top = (bobY - 6) + 'px';
-                        } else {
-                            if (this._overlayLine) this._overlayLine.style.display = 'none';
-                            if (this._overlayBobber) this._overlayBobber.style.display = 'none';
-                        }
-                    }
-                } else {
-                    // Invalid coordinates - log debug info (always log on first frame or if shouldShow)
-                    if (shouldShow || this._debugCount === 0) {
-                        console.warn('Cat3D: Invalid overlay coordinates - tipValid:', tipValid, 'tipScreen:', tipScreen, 'bobValid:', bobValid, 'bobX/Y:', bobX, bobY, 'shouldShow:', shouldShow);
-                        this._debugCount = 1; // Prevent spam
-                    }
-                    // Show bobber if shouldShow even with invalid tip (bobber position might still be valid)
-                    if (shouldShow && this._overlayBobber && bobValid) {
-                        this._overlayBobber.style.display = 'block';
-                        this._overlayBobber.style.left = (bobX - 6) + 'px';
-                        this._overlayBobber.style.top = (bobY - 6) + 'px';
-                        // Try to show line from approximate position
-                        if (this._overlayLine && tipValid) {
-                            this._overlayLine.style.display = 'block';
-                            this._overlayLine.style.left = tipScreen.x + 'px';
-                            this._overlayLine.style.top = tipScreen.y + 'px';
-                        }
-                    } else {
-                        // Only hide if not shouldShow
-                        if (this._overlayLine && !shouldShow) this._overlayLine.style.display = 'none';
-                        if (this._overlayBobber && !shouldShow) this._overlayBobber.style.display = 'none';
-                    }
+                // Validate coordinates
+                const tipValid = !isNaN(tipScreen.x) && !isNaN(tipScreen.y) && 
+                    isFinite(tipScreen.x) && isFinite(tipScreen.y) &&
+                    Math.abs(tipScreen.x) < 10000 && Math.abs(tipScreen.y) < 10000;
+                const bobValid = !isNaN(bobX) && !isNaN(bobY) &&
+                    isFinite(bobX) && isFinite(bobY) &&
+                    Math.abs(bobX) < 10000 && Math.abs(bobY) < 10000;
+                
+                if (!tipValid || !bobValid) {
+                    return;
                 }
+                
+                // Draw line from tip to bobber
+                const dx = bobX - tipScreen.x;
+                const dy = bobY - tipScreen.y;
+                const distance = Math.hypot(dx, dy);
+                const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
+                
+                // Position and style the line
+                this._overlayLine.style.display = 'block';
+                this._overlayLine.style.left = tipScreen.x + 'px';
+                this._overlayLine.style.top = tipScreen.y + 'px';
+                this._overlayLine.style.width = '2px';
+                this._overlayLine.style.height = Math.max(distance, 1) + 'px';
+                this._overlayLine.style.transform = `rotate(${angleDeg}deg)`;
+                
+                // Position the bobber
+                this._overlayBobber.style.display = 'block';
+                this._overlayBobber.style.left = (bobX - 6) + 'px';
+                this._overlayBobber.style.top = (bobY - 6) + 'px';
             }
             
             #updateFishingLine(){
@@ -12053,6 +11923,10 @@
                     console.warn('Cat3D: Cannot animate cast - missing bobber, line, or rodTipBone');
                     return;
                 }
+                
+                // FORCE bobber visible and set casting flag at start
+                this.bobber.visible = true;
+                this._casting = true;
                 
                 console.log('Cat3D: Starting cast animation');
                 
@@ -12184,10 +12058,12 @@
                             splashSystem.spawnAt(this.bobber.position);
                         }
                         
-                        // Start idle bobbing
+                        // Start idle bobbing and clear casting flag
+                        this.bobber.visible = true;
                         this.bobber.userData.bobbing = true;
                         this.bobber.userData.bobPhase = 0;
                         this.bobber.userData.baseY = this.bobber.position.y;
+                        this._casting = false; // Cast complete, now floating
                     }
                 };
                 
@@ -12446,6 +12322,13 @@
                     return null;
                 }
                 
+                // Determine if this is the local player (only local player uses overlay)
+                const isLocalPlayer = (playerName === 'preview' || 
+                    (window.fishingHoleGame && window.fishingHoleGame.player && 
+                     window.fishingHoleGame.player.name === playerName));
+                
+                opts.isLocalPlayer = isLocalPlayer;
+                
                 const rig = new Cat3D(el, opts);
                 if (rig.renderer) {
                 this.map.set(key, rig);
@@ -12537,11 +12420,17 @@
             }
             
             const playerKey = window.safeKey(playerName);
+            // Determine if this is the local player (only local player uses overlay)
+            const isLocalPlayer = (playerName === 'preview' || 
+                (window.fishingHoleGame && window.fishingHoleGame.player && 
+                 window.fishingHoleGame.player.name === playerName));
+            
             const rig = window.CatRigs.mount(host, {
                 modelUrl: options.modelUrl || '/assets/glb/PZSNQ3IH66OXPUSBTYNAMD6EC.glb', // Real cat model
                 envUrl:   options.envUrl   || null,
                 furColor: options.furColor || '#c8a079',
-                scale:    options.scale    || 0.9
+                scale:    options.scale    || 0.9,
+                isLocalPlayer: isLocalPlayer
             });
             
             host.__mounting = false;
