@@ -911,6 +911,28 @@
             }
         }
 
+        /* Cat3D overlay fishing line (connects rod tip to bobber) */
+        .cat3d-fishing-line {
+            position: fixed;
+            pointer-events: none;
+            z-index: 1000;
+            background: linear-gradient(180deg, transparent 0%, rgba(200,200,200,0.8) 50%, transparent 100%);
+            border-left: 1px solid rgba(200, 200, 200, 0.9);
+            border-right: 1px solid rgba(200, 200, 200, 0.9);
+            transform-origin: top center;
+        }
+        
+        .cat3d-bobber {
+            position: fixed;
+            pointer-events: none;
+            z-index: 1001;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 40% 35%, #fff, #fff 30%, #f00 31%, #a00);
+            box-shadow: 0 0 8px rgba(255,0,0,.4);
+        }
+
         .fish-bite-splash {
             position: absolute;
             width: 80px;
