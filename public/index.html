@@ -11708,17 +11708,37 @@
                 }
                 
                 // Get rod tip world position and project to screen
-                // Ensure world matrices are up to date
-                if (this.model) this.model.updateWorldMatrix(true, false);
+                // Ensure ALL world matrices are up to date (model -> handBone -> rodModel -> rodTipBone)
+                if (this.model) {
+                    this.model.updateWorldMatrix(true, false);
+                }
+                // Update rod model's world matrix if it exists
+                if (this.rodModel) {
+                    this.rodModel.updateWorldMatrix(true, false);
+                }
+                // Update rod tip bone's world matrix
                 if (this.rodTipBone) {
                     this.rodTipBone.updateWorldMatrix(true, false);
                 }
+                
                 const tipWorld = new THREE.Vector3();
                 if (this.rodTipBone) {
                     this.rodTipBone.getWorldPosition(tipWorld);
+                    // Debug: log rod tip position occasionally
+                    if (this._debugCount === 0) {
+                        console.log('Cat3D: Rod tip world position:', tipWorld.x.toFixed(3), tipWorld.y.toFixed(3), tipWorld.z.toFixed(3));
+                    }
                 } else {
-                    // Fallback: use bobber position if rod tip not found
-                    this.bobber.getWorldPosition(tipWorld);
+                    // Fallback: use approximate hand position if rod tip not found
+                    console.warn('Cat3D: No rodTipBone found, using fallback position');
+                    if (this.model) {
+                        // Approximate hand/rod position
+                        const handPos = new THREE.Vector3(0.3, 0.5, 0.8);
+                        tipWorld.copy(handPos);
+                        this.model.localToWorld(tipWorld);
+                    } else {
+                        this.bobber.getWorldPosition(tipWorld);
+                    }
                 }
                 const tipScreen = this.#projectToScreen(tipWorld);
                 
@@ -11771,7 +11791,16 @@
                 }
                 // During cast, use exact projection so line follows bobber correctly
                 
-                // Create or update overlay line
+                // Always try to draw line if casting - be more lenient with validation
+                // Use more lenient bounds check since we're in the same container
+                const tipValid = !isNaN(tipScreen.x) && !isNaN(tipScreen.y) && 
+                    isFinite(tipScreen.x) && isFinite(tipScreen.y) &&
+                    Math.abs(tipScreen.x) < 10000 && Math.abs(tipScreen.y) < 10000;
+                const bobValid = !isNaN(bobX) && !isNaN(bobY) &&
+                    isFinite(bobX) && isFinite(bobY) &&
+                    Math.abs(bobX) < 10000 && Math.abs(bobY) < 10000;
+                
+                // Always create overlay elements if they don't exist
                 if (!this._overlayLine) {
                     this._overlayLine = document.createElement('div');
                     this._overlayLine.className = 'cat3d-fishing-line';
@@ -11780,12 +11809,11 @@
                         pointer-events: none;
                         z-index: 1000;
                         border-left: 2px solid #cccccc;
-                        transform-origin: top;
+                        transform-origin: top center;
+                        background: linear-gradient(to bottom, rgba(204,204,204,0.9), rgba(204,204,204,0.6));
                     `;
                     document.body.appendChild(this._overlayLine);
                 }
-                
-                // Create or update overlay bobber
                 if (!this._overlayBobber) {
                     this._overlayBobber = document.createElement('div');
                     this._overlayBobber.className = 'cat3d-bobber';
@@ -11796,18 +11824,11 @@
                         width: 12px;
                         height: 12px;
                         border-radius: 50%;
-                        background: #ff4444;
+                        background: radial-gradient(circle at 30% 30%, #ffffff, #ff4444);
                         box-shadow: 0 2px 4px rgba(0,0,0,0.3);
                     `;
                     document.body.appendChild(this._overlayBobber);
                 }
-                
-                // Only draw line if both points are valid and visible
-                // Use more lenient bounds check since we're in the same container
-                const tipValid = !isNaN(tipScreen.x) && !isNaN(tipScreen.y) && 
-                    isFinite(tipScreen.x) && isFinite(tipScreen.y);
-                const bobValid = !isNaN(bobX) && !isNaN(bobY) &&
-                    isFinite(bobX) && isFinite(bobY);
                 
                 if (tipValid && bobValid) {
                     // Draw line from tipScreen -> bobX/bobY
@@ -11815,41 +11836,62 @@
                     const dy = bobY - tipScreen.y;
                     const distance = Math.hypot(dx, dy);
                     
-                    if (distance > 0.5) { // Draw if line has any length
+                    // Always show line and bobber if casting, regardless of distance
+                    if (this._casting || distance > 0.5) {
                         const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
                         
-                        // Position and style the line
+                        // Position and style the line - always show if casting
                         this._overlayLine.style.display = 'block';
                         this._overlayLine.style.left = tipScreen.x + 'px';
                         this._overlayLine.style.top = tipScreen.y + 'px';
                         this._overlayLine.style.width = '2px';
-                        this._overlayLine.style.height = distance + 'px';
+                        this._overlayLine.style.height = Math.max(distance, 1) + 'px'; // Min 1px to avoid zero height
                         this._overlayLine.style.transform = `rotate(${angleDeg}deg)`;
                         this._overlayLine.style.transformOrigin = 'top center';
+                        this._overlayLine.style.opacity = '1.0';
                         
                         // Position the bobber
                         this._overlayBobber.style.display = 'block';
                         this._overlayBobber.style.left = (bobX - 6) + 'px';
                         this._overlayBobber.style.top = (bobY - 6) + 'px';
+                        this._overlayBobber.style.opacity = '1.0';
+                        
+                        // Debug on first frame
+                        if (this._debugCount === 0 && this._casting) {
+                            console.log('Cat3D: Drawing overlay line from rod tip:', tipScreen.x.toFixed(1), tipScreen.y.toFixed(1), 'to bobber:', bobX.toFixed(1), bobY.toFixed(1), 'distance:', distance.toFixed(1));
+                        }
                     } else {
                         // Line too short - but still show bobber if casting
                         if (this._casting && this._overlayBobber) {
                             this._overlayBobber.style.display = 'block';
                             this._overlayBobber.style.left = (bobX - 6) + 'px';
                             this._overlayBobber.style.top = (bobY - 6) + 'px';
+                        } else {
+                            if (this._overlayLine) this._overlayLine.style.display = 'none';
+                            if (this._overlayBobber) this._overlayBobber.style.display = 'none';
                         }
-                        if (this._overlayLine) this._overlayLine.style.display = 'none';
                     }
                 } else {
-                    // Invalid coordinates - but show bobber if casting
+                    // Invalid coordinates - log debug info
+                    if (this._casting && this._debugCount === 0) {
+                        console.warn('Cat3D: Invalid overlay coordinates - tipValid:', tipValid, 'tipScreen:', tipScreen, 'bobValid:', bobValid, 'bobX/Y:', bobX, bobY);
+                    }
+                    // Show bobber if casting even with invalid tip (bobber position might still be valid)
                     if (this._casting && this._overlayBobber && bobValid) {
                         this._overlayBobber.style.display = 'block';
                         this._overlayBobber.style.left = (bobX - 6) + 'px';
                         this._overlayBobber.style.top = (bobY - 6) + 'px';
+                        // Try to show line from approximate position
+                        if (this._overlayLine && tipValid) {
+                            this._overlayLine.style.display = 'block';
+                            this._overlayLine.style.left = tipScreen.x + 'px';
+                            this._overlayLine.style.top = tipScreen.y + 'px';
+                        }
+                    } else {
+                        // Only hide if not casting
+                        if (this._overlayLine && !this._casting) this._overlayLine.style.display = 'none';
+                        if (this._overlayBobber && !this._casting) this._overlayBobber.style.display = 'none';
                     }
-                    // Only hide line, not bobber if casting
-                    if (this._overlayLine && !this._casting) this._overlayLine.style.display = 'none';
-                    if (this._overlayBobber && !this._casting) this._overlayBobber.style.display = 'none';
                 }
             }
             
