@@ -10883,10 +10883,18 @@
         };
 
         // === GLOBAL SWITCHES ===
-        const USE_LEGACY_LAKE_LINE = false;  // Local player won't use legacy DOM line
-        const USE_OVERLAY_LINE = true;       // Use cross-container overlay line/bobber
-        window.USE_LEGACY_LAKE_LINE = USE_LEGACY_LAKE_LINE;
+        // Overlay on by default; legacy DOM line follows the inverse for fallback
+        const USE_OVERLAY_LINE = true;        // Use cross-container overlay line/bobber
+        const USE_LEGACY_LAKE_LINE = !USE_OVERLAY_LINE; // Fallback when overlay is off
         window.USE_OVERLAY_LINE = USE_OVERLAY_LINE;
+        window.USE_LEGACY_LAKE_LINE = USE_LEGACY_LAKE_LINE;
+
+        // Helper to toggle overlay at runtime and keep fallback in sync
+        window.setOverlayLineEnabled = function(enabled){
+            window.USE_OVERLAY_LINE = !!enabled;
+            window.USE_LEGACY_LAKE_LINE = !window.USE_OVERLAY_LINE;
+            console.log('Overlay line enabled:', window.USE_OVERLAY_LINE, 'Legacy DOM line enabled:', window.USE_LEGACY_LAKE_LINE);
+        };
 
         // Start the game
         const game = new FishingHoleMultiplayer();
