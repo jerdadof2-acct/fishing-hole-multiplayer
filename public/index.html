@@ -8692,7 +8692,7 @@
                     <div class="new-fish-content">
                         <h2>🎉 NEW FISH!</h2>
                         <div class="new-fish-image-container">
-                            <img class="new-fish-img" src="${fishImage}" alt="${fishData.name}">
+                            <img class="new-fish-img" alt="${fishData.name}">
                         </div>
                         <p><strong>${fishData.name}</strong></p>
                         <p>${fishData.rarity}</p>
@@ -8793,6 +8793,7 @@
                 document.body.appendChild(banner);
                 const nfImg = banner.querySelector('.new-fish-img');
                 if (nfImg) {
+                    nfImg.src = fishImage;
                     nfImg.addEventListener('error', () => {
                         nfImg.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ctext y=\'.9em\' font-size=\'60\'%3E🐟%3C/text%3E%3C/svg%3E';
                     }, { once: true });
@@ -8910,7 +8911,7 @@
                             <div style="color: #64b5f6; font-size: 12px;">${fishData.rarity}</div>
                         </div>
                         <div class="fish-info-image">
-                            <img class="fish-info-img" src="images/${fishData.name}.png" alt="${fishData.name}">
+                            <img class="fish-info-img" alt="${fishData.name}">
                         </div>
                         <div class="fish-info-stats">
                             <div class="fish-stat"><strong>Weight:</strong> ${fishData.minWeight.toFixed(1)} - ${fishData.maxWeight.toFixed(1)} lbs</div>
@@ -8929,6 +8930,7 @@
                 document.body.appendChild(modal);
                 const fiImg = modal.querySelector('.fish-info-img');
                 if (fiImg) {
+                    fiImg.src = `images/${fishData.name}.png`;
                     fiImg.addEventListener('error', () => {
                         fiImg.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ctext y=\'.9em\' font-size=\'60\'%3E🐟%3C/text%3E%3C/svg%3E';
                     }, { once: true });
@@ -9883,9 +9885,7 @@
                         
                         html += `
                             <div data-fish-name="${fish.name}" data-clickable="${clickable}" data-opacity="${opacity}" style="text-align: center; padding: 8px; background: rgba(15, 25, 40, 0.5); border-radius: 8px;">
-                                <img class="fish-card-img" src="images/${fish.name}.png" 
-                                     alt="${fish.name}" 
-                                     style="width: 100%; aspect-ratio: 1; object-fit: contain;">
+                                <img class="fish-card-img" alt="${fish.name}" style="width: 100%; aspect-ratio: 1; object-fit: contain;" data-fish-name="${fish.name}">
                                 <div style="font-size: 9px; color: #64b5f6; margin-top: 4px; word-break: break-word;">${fish.name}</div>
                                 ${!isCaught ? '<div style="font-size: 8px; color: #888;">???</div>' : ''}
                             </div>
@@ -9913,6 +9913,8 @@
                 });
                 // Attach image fallback handlers
                 collectionGrid.querySelectorAll('.fish-card-img').forEach(img => {
+                    const fname = img.getAttribute('data-fish-name') || img.closest('[data-fish-name]')?.getAttribute('data-fish-name');
+                    if (fname) img.src = `images/${fname}.png`;
                     img.addEventListener('error', () => {
                         img.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ctext y=\'.9em\' font-size=\'60\'%3E🐟%3C/text%3E%3C/svg%3E';
                     }, { once: true });
@@ -9946,7 +9948,7 @@
                         const clickable = isCaught ? '1' : '0';
                         html += `
                             <div data-fish-name="${fish.name}" data-clickable="${clickable}" data-opacity="${opacity}" style="text-align: center; padding: 6px; background: rgba(15, 25, 40, 0.5); border-radius: 6px;">
-                                <img class="fish-card-img" src="images/${fish.name}.png" alt="${fish.name}" style="width: 100%; aspect-ratio: 1; object-fit: contain;">
+                                <img class="fish-card-img" alt="${fish.name}" style="width: 100%; aspect-ratio: 1; object-fit: contain;" data-fish-name="${fish.name}">
                                 <div style="font-size: 8px; color: #64b5f6; margin-top: 2px;">${fish.name}</div>
                             </div>
                         `;
@@ -9968,6 +9970,8 @@
                     }
                 });
                 container.querySelectorAll('.fish-card-img').forEach(img => {
+                    const fname = img.getAttribute('data-fish-name') || img.closest('[data-fish-name]')?.getAttribute('data-fish-name');
+                    if (fname) img.src = `images/${fname}.png`;
                     img.addEventListener('error', () => {
                         img.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ctext y=\'.9em\' font-size=\'60\'%3E🐟%3C/text%3E%3C/svg%3E';
                     }, { once: true });
