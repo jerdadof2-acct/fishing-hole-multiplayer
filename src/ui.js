@@ -426,7 +426,7 @@ export class UI {
         const activities = this.friendData?.activities ?? [];
 
         if (!this.isOnline()) {
-            this.setFriendsPlaceholder('friends-activity', 'Connect to see your friends' trophy catches.');
+            this.setFriendsPlaceholder('friends-activity', "Connect to see your friends' trophy catches.");
             return;
         }
 
