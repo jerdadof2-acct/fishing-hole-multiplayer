@@ -15,6 +15,10 @@ export class UI {
         this.leaderboard = gameplaySystems?.leaderboard || null;
         this.fishCollection = gameplaySystems?.fishCollection || null;
         this.currentInventoryTab = 'collection';
+        this.api = game?.api || null;
+        this.friendData = { friends: [], pending: { sent: [], received: [] } };
+        this.friendDataLoaded = false;
+        this.friendMessageTimer = null;
     }
 
     init() {
@@ -128,7 +132,7 @@ export class UI {
         } else if (tab === 'friends') {
             gameArea?.classList.add('hidden');
             this.openModal('friends-modal');
-            this.renderFriends();
+            this.renderFriends(true);
         } else if (tab === 'leaderboard') {
             gameArea?.classList.add('hidden');
             this.openModal('leaderboard-modal');
@@ -199,124 +203,458 @@ export class UI {
     }
     
     initFriendsUI() {
+        this.renderFriendCode();
+
         const copyButton = document.getElementById('friends-copy-code');
         const addForm = document.getElementById('friends-add-form');
         const inputEl = document.getElementById('friends-add-input');
-        const messageEl = document.getElementById('friends-add-message');
-
-        const showMessage = (text, tone = 'info') => {
-            if (!messageEl) return;
-            messageEl.textContent = text;
-            messageEl.classList.remove('hidden');
-            if (tone === 'error') {
-                messageEl.classList.add('error');
-            } else {
-                messageEl.classList.remove('error');
-            }
-        };
+        const friendsListEl = document.getElementById('friends-list');
+        const pendingReceivedEl = document.getElementById('friends-pending-received');
+        const pendingSentEl = document.getElementById('friends-pending-sent');
 
         if (copyButton) {
             copyButton.addEventListener('click', async () => {
-                const code = document.getElementById('friends-player-code')?.textContent?.trim();
+                if (!this.isOnline()) {
+                    this.showFriendMessage('Go online to share your friend code.', 'error');
+                    return;
+                }
+
+                const code = this.player?.friendCode;
                 if (!code || code === '------') {
-                    showMessage('Set up your profile to receive a friend code.', 'error');
+                    this.showFriendMessage('Friend code unavailable. Try again in a moment.', 'error');
                     return;
                 }
 
                 try {
                     if (navigator.clipboard?.writeText) {
                         await navigator.clipboard.writeText(code);
-                        showMessage('Friend code copied to clipboard!');
+                        this.showFriendMessage('Friend code copied to clipboard!');
                     } else {
-                        showMessage('Clipboard unavailable. Tap and hold to copy manually.', 'error');
+                        this.showFriendMessage('Clipboard unavailable. Tap and hold to copy manually.', 'error');
                     }
                 } catch (error) {
                     console.warn('[UI] Failed to copy friend code:', error);
-                    showMessage('Copy failed. Tap and hold to copy manually.', 'error');
+                    this.showFriendMessage('Copy failed. Tap and hold to copy manually.', 'error');
                 }
             });
         }
 
         if (addForm) {
-            addForm.addEventListener('submit', (event) => {
+            addForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
-                const value = inputEl?.value.trim().toUpperCase();
 
-                if (!value) {
-                    showMessage('Enter a friend code to send a request.', 'error');
+                if (!this.isOnline()) {
+                    this.showFriendMessage('Connect to the clubhouse to send friend requests.', 'error');
                     return;
                 }
 
-                if (inputEl) {
-                    inputEl.value = '';
+                const code = inputEl?.value?.trim().toUpperCase();
+                if (!code) {
+                    this.showFriendMessage('Enter a friend code to send a request.', 'error');
+                    return;
                 }
 
-                showMessage('Friends system is coming soon! We\'ll notify you when requests go live.');
+                if (code === (this.player?.friendCode || '').toUpperCase()) {
+                    this.showFriendMessage('That is your own friend code.', 'error');
+                    return;
+                }
+
+                const submitButton = addForm.querySelector('button[type="submit"]');
+                if (submitButton) submitButton.disabled = true;
+
+                try {
+                    await this.handleSendFriendRequest(code);
+                } finally {
+                    if (submitButton) submitButton.disabled = false;
+                    if (inputEl) inputEl.value = '';
+                }
             });
         }
+
+        if (friendsListEl) {
+            friendsListEl.addEventListener('click', (event) => this.handleFriendsListClick(event));
+        }
+
+        if (pendingReceivedEl) {
+            pendingReceivedEl.addEventListener('click', (event) => this.handlePendingListClick(event));
+        }
+
+        if (pendingSentEl) {
+            pendingSentEl.addEventListener('click', (event) => this.handlePendingListClick(event));
+        }
     }
-    
+
     updatePlayerInfo() {
         if (!this.player) return;
         
         const nameEl = document.getElementById('player-name');
-        const friendCodeEl = document.getElementById('friends-player-code');
         const levelEl = document.getElementById('player-level');
         const moneyEl = document.getElementById('player-money');
         const expEl = document.getElementById('player-exp');
         const expBar = document.getElementById('exp-bar');
         
         if (nameEl) nameEl.textContent = this.player.name || 'Guest';
-        if (friendCodeEl) friendCodeEl.textContent = this.player.friendCode || '------';
         if (levelEl) levelEl.textContent = this.player.level;
         if (moneyEl) moneyEl.textContent = `$${this.player.money}`;
         
         if (expEl && expBar && this.player) {
-            // calculateExpForLevel returns cumulative experience needed to reach that level
-            // Level 1 = 100, Level 2 = 283, Level 3 = 520, etc.
-            // When player levels up, experience is deducted by the difference needed for next level
-            // So stored experience is the amount earned AFTER reaching current level
-            
             const expForCurrentLevel = this.player.calculateExpForLevel(this.player.level);
             const expForNextLevel = this.player.calculateExpForLevel(this.player.level + 1);
-            
-            // Experience needed to progress from current level to next level
             const expNeededForNext = expForNextLevel - expForCurrentLevel;
-            
-            // The player.experience is already the experience earned in the current level
-            // (it was deducted when they leveled up to this level)
-            // However, we need to handle cases where exp might be negative or exceed needed exp
             let currentExpInLevel = Math.max(0, this.player.experience);
-            
-            // Cap at exp needed for next level (shouldn't happen, but safety check)
+
             if (currentExpInLevel > expNeededForNext) {
                 currentExpInLevel = expNeededForNext;
             }
-            
+
             const expPercent = expNeededForNext > 0 ? (currentExpInLevel / expNeededForNext) * 100 : 0;
-            
+
             expEl.textContent = `${Math.floor(currentExpInLevel)}/${expNeededForNext}`;
             expBar.style.width = `${Math.min(100, Math.max(0, expPercent))}%`;
         }
+
+        this.renderFriendCode();
     }
     
-    renderFriends() {
+    async renderFriends(forceRefresh = false) {
+        this.renderFriendCode();
+
+        if (!this.isOnline()) {
+            this.renderFriendsOffline();
+            return;
+        }
+
+        if (forceRefresh || !this.friendDataLoaded) {
+            await this.refreshFriends(true);
+        } else {
+            this.renderFriendsLists();
+        }
+    }
+
+    async refreshFriends(force = false) {
+        if (!this.isOnline()) {
+            this.renderFriendsOffline();
+            return;
+        }
+
+        if (!force && this.friendDataLoaded) {
+            this.renderFriendsLists();
+            return;
+        }
+
+        this.setFriendsPlaceholder('friends-list', 'Loading friends...');
+        this.setFriendsPlaceholder('friends-pending-received', 'Loading requests...');
+        this.setFriendsPlaceholder('friends-pending-sent', 'Loading requests...');
+
+        try {
+            const [friendList, pending] = await Promise.all([
+                this.api.getFriends(),
+                this.api.getPendingRequests()
+            ]);
+
+            this.friendData = {
+                friends: Array.isArray(friendList) ? friendList : [],
+                pending: {
+                    sent: pending?.sent ?? [],
+                    received: pending?.received ?? []
+                }
+            };
+
+            this.friendDataLoaded = true;
+            this.renderFriendsLists();
+        } catch (error) {
+            console.warn('[UI] Failed to load friends:', error);
+            this.friendDataLoaded = false;
+            this.renderFriendsError(error);
+            this.showFriendMessage(error?.message || 'Failed to load friend data.', 'error');
+        }
+    }
+
+    renderFriendsLists() {
+        const friends = this.friendData?.friends ?? [];
+        const pending = this.friendData?.pending ?? { sent: [], received: [] };
+
+        this.renderFriendList(friends);
+        this.renderPendingList('friends-pending-received', pending.received, 'received');
+        this.renderPendingList('friends-pending-sent', pending.sent, 'sent');
+    }
+
+    renderFriendList(friends = []) {
+        const listEl = document.getElementById('friends-list');
+        if (!listEl) return;
+
+        if (!friends.length) {
+            this.setFriendsPlaceholder('friends-list', 'No friends yet. Share your code to build your crew!');
+            return;
+        }
+
+        listEl.classList.remove('friends-placeholder');
+        listEl.innerHTML = friends.map(friend => this.buildFriendEntry(friend)).join('');
+    }
+
+    renderPendingList(elementId, items = [], mode = 'received') {
+        const container = document.getElementById(elementId);
+        if (!container) return;
+
+        if (!items.length) {
+            this.setFriendsPlaceholder(elementId, 'No pending requests.');
+            return;
+        }
+
+        container.classList.remove('friends-placeholder');
+        container.innerHTML = items.map(item => this.buildPendingEntry(item, mode)).join('');
+    }
+
+    buildFriendEntry(friend) {
+        const id = this.safeAttr(friend?.id ?? '');
+        const name = this.safeText(friend?.username || 'Unknown angler');
+        const code = this.safeText(friend?.friend_code || '------');
+        const level = friend?.level ?? '-';
+        const lastActive = friend?.last_active ? this.formatRelativeTime(friend.last_active) : '';
+        const metaPieces = [`Level ${level}`];
+        if (lastActive) metaPieces.push(`Active ${lastActive}`);
+
+        return `
+            <div class="friends-entry" data-friend-id="${id}">
+                <div class="friends-entry-info">
+                    <span class="friends-entry-name">${name}</span>
+                    <span class="friends-entry-meta">Code ${code}${metaPieces.length ? ' · ' + metaPieces.join(' · ') : ''}</span>
+                </div>
+                <div class="friends-entry-actions">
+                    <button class="friend-action-button neutral" data-action="copy" data-code="${code}">Copy</button>
+                    <button class="friend-action-button decline" data-action="remove" data-id="${id}">Remove</button>
+                </div>
+            </div>
+        `;
+    }
+
+    buildPendingEntry(item, mode) {
+        const id = this.safeAttr(item?.id ?? '');
+        const name = this.safeText(item?.username || 'Unknown angler');
+        const code = this.safeText(item?.friend_code || '------');
+        const level = item?.level ?? '-';
+        const created = item?.created_at ? this.formatRelativeTime(item.created_at) : '';
+        const metaPieces = [`Level ${level}`];
+        if (created) metaPieces.push(created);
+
+        if (mode === 'received') {
+            return `
+                <div class="friends-entry" data-request-id="${id}">
+                    <div class="friends-entry-info">
+                        <span class="friends-entry-name">${name}</span>
+                        <span class="friends-entry-meta">Code ${code}${metaPieces.length ? ' · ' + metaPieces.join(' · ') : ''}</span>
+                    </div>
+                    <div class="friends-entry-actions">
+                        <button class="friend-action-button accept" data-action="accept" data-request-id="${id}">Accept</button>
+                        <button class="friend-action-button decline" data-action="decline" data-request-id="${id}">Decline</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="friends-entry" data-request-id="${id}">
+                <div class="friends-entry-info">
+                    <span class="friends-entry-name">${name}</span>
+                    <span class="friends-entry-meta">Code ${code}${metaPieces.length ? ' · ' + metaPieces.join(' · ') : ''}</span>
+                </div>
+                <div class="friends-entry-actions">
+                    <span class="friends-entry-meta">Pending</span>
+                </div>
+            </div>
+        `;
+    }
+
+    renderFriendsOffline() {
+        this.friendDataLoaded = false;
+        this.setFriendsPlaceholder('friends-list', 'Friends are only available while you are connected.');
+        this.setFriendsPlaceholder('friends-pending-received', 'No pending requests while offline.');
+        this.setFriendsPlaceholder('friends-pending-sent', 'No pending requests while offline.');
+    }
+
+    renderFriendsError(error) {
+        const message = error?.message || 'Unable to load friend data.';
+        this.setFriendsPlaceholder('friends-list', message);
+        this.setFriendsPlaceholder('friends-pending-received', message);
+        this.setFriendsPlaceholder('friends-pending-sent', message);
+    }
+
+    renderFriendCode() {
         const friendCodeEl = document.getElementById('friends-player-code');
-        if (friendCodeEl) {
-            const code = this.player?.friendCode || '------';
-            friendCodeEl.textContent = code;
+        if (!friendCodeEl) return;
+
+        if (!this.player) {
+            friendCodeEl.textContent = '------';
+            return;
         }
 
-        const inputEl = document.getElementById('friends-add-input');
-        if (inputEl) {
-            inputEl.value = '';
+        if (!this.isOnline()) {
+            friendCodeEl.textContent = this.player.friendCode || 'OFFLINE';
+            return;
         }
 
+        friendCodeEl.textContent = this.player.friendCode || '------';
+    }
+
+    isOnline() {
+        return Boolean(this.player?.userId && this.api);
+    }
+
+    showFriendMessage(message, tone = 'info', duration = 4000) {
         const messageEl = document.getElementById('friends-add-message');
-        if (messageEl) {
-            messageEl.textContent = '';
-            messageEl.classList.add('hidden');
+        if (!messageEl) return;
+
+        messageEl.textContent = message;
+        messageEl.classList.remove('hidden');
+        if (tone === 'error') {
+            messageEl.classList.add('error');
+        } else {
             messageEl.classList.remove('error');
+        }
+
+        if (this.friendMessageTimer) {
+            clearTimeout(this.friendMessageTimer);
+        }
+
+        if (duration > 0) {
+            this.friendMessageTimer = setTimeout(() => this.clearFriendMessage(), duration);
+        }
+    }
+
+    clearFriendMessage() {
+        const messageEl = document.getElementById('friends-add-message');
+        if (!messageEl) return;
+        messageEl.textContent = '';
+        messageEl.classList.add('hidden');
+        messageEl.classList.remove('error');
+        this.friendMessageTimer = null;
+    }
+
+    setFriendsPlaceholder(elementId, text) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+        element.classList.add('friends-placeholder');
+        element.innerHTML = `<p>${this.safeText(text)}</p>`;
+    }
+
+    safeText(value) {
+        if (value === null || value === undefined) return '';
+        return String(value).replace(/[&<>"']/g, (char) => {
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+            return map[char] || char;
+        });
+    }
+
+    safeAttr(value) {
+        if (value === null || value === undefined) return '';
+        return String(value).replace(/["'<>\s]/g, (char) => {
+            const map = { '"': '&quot;', "'": '&#39;', '<': '&lt;', '>': '&gt;', ' ': '%20' };
+            return map[char] || '';
+        });
+    }
+
+    formatRelativeTime(dateString) {
+        if (!dateString) return '';
+        const timestamp = new Date(dateString).getTime();
+        if (Number.isNaN(timestamp)) return '';
+
+        const diffMs = Date.now() - timestamp;
+        const diffMinutes = Math.round(diffMs / 60000);
+
+        if (diffMinutes < 1) return 'just now';
+        if (diffMinutes < 60) return `${diffMinutes} min${diffMinutes === 1 ? '' : 's'} ago`;
+
+        const diffHours = Math.round(diffMinutes / 60);
+        if (diffHours < 24) return `${diffHours} hr${diffHours === 1 ? '' : 's'} ago`;
+
+        const diffDays = Math.round(diffHours / 24);
+        return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+    }
+
+    async handleSendFriendRequest(code) {
+        try {
+            await this.api.sendFriendRequest(code);
+            this.showFriendMessage('Friend request sent!');
+            await this.refreshFriends(true);
+        } catch (error) {
+            const message = error?.message || 'Failed to send friend request.';
+            this.showFriendMessage(message, 'error');
+        }
+    }
+
+    async handleFriendsListClick(event) {
+        const target = event.target.closest('[data-action]');
+        if (!target) return;
+
+        const action = target.dataset.action;
+
+        if (action === 'copy') {
+            const code = target.dataset.code;
+            if (!code) return;
+            try {
+                if (navigator.clipboard?.writeText) {
+                    await navigator.clipboard.writeText(code);
+                    this.showFriendMessage('Friend code copied to clipboard!');
+                } else {
+                    this.showFriendMessage('Clipboard unavailable. Tap and hold to copy manually.', 'error');
+                }
+            } catch (error) {
+                console.warn('[UI] Failed to copy friend code:', error);
+                this.showFriendMessage('Copy failed. Tap and hold to copy manually.', 'error');
+            }
+            return;
+        }
+
+        if (action === 'remove') {
+            if (!this.isOnline()) {
+                this.showFriendMessage('Connect to remove friends.', 'error');
+                return;
+            }
+
+            const friendId = target.dataset.id;
+            if (!friendId) return;
+
+            try {
+                target.disabled = true;
+                await this.api.removeFriend(friendId);
+                this.showFriendMessage('Friend removed.');
+                await this.refreshFriends(true);
+            } catch (error) {
+                console.warn('[UI] Failed to remove friend:', error);
+                this.showFriendMessage(error?.message || 'Failed to remove friend.', 'error');
+            } finally {
+                target.disabled = false;
+            }
+        }
+    }
+
+    async handlePendingListClick(event) {
+        const target = event.target.closest('[data-action]');
+        if (!target || !this.isOnline()) return;
+
+        const action = target.dataset.action;
+        const requestId = target.dataset.requestId;
+        if (!requestId) return;
+
+        try {
+            target.disabled = true;
+            if (action === 'accept') {
+                await this.api.acceptFriendRequest(requestId);
+                this.showFriendMessage('Friend request accepted!');
+            } else if (action === 'decline') {
+                await this.api.declineFriendRequest(requestId);
+                this.showFriendMessage('Friend request declined.');
+            } else {
+                target.disabled = false;
+                return;
+            }
+
+            await this.refreshFriends(true);
+        } catch (error) {
+            console.warn('[UI] Failed to update request:', error);
+            this.showFriendMessage(error?.message || 'Failed to update request.', 'error');
+        } finally {
+            target.disabled = false;
         }
     }
     

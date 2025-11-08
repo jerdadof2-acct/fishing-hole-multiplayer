@@ -487,6 +487,103 @@ canvas {
     color: #ff6b6b;
 }
 
+.friends-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.friends-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(74, 144, 226, 0.3);
+    border-radius: 10px;
+    padding: 12px 14px;
+    gap: 10px;
+}
+
+.friends-entry-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.friends-entry-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.friends-entry-meta {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.friends-entry-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.friend-action-button {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: none;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.friend-action-button.accept {
+    background: rgba(46, 204, 113, 0.8);
+    color: #ffffff;
+}
+
+.friend-action-button.accept:hover {
+    background: rgba(46, 204, 113, 1);
+}
+
+.friend-action-button.decline {
+    background: rgba(231, 76, 60, 0.8);
+    color: #ffffff;
+}
+
+.friend-action-button.decline:hover {
+    background: rgba(231, 76, 60, 1);
+}
+
+.friend-action-button.neutral {
+    background: rgba(74, 144, 226, 0.6);
+    color: #ffffff;
+}
+
+.friend-action-button.neutral:hover {
+    background: rgba(74, 144, 226, 0.9);
+}
+
+.friends-pending-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.friends-pending-column {
+    flex: 1 1 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.friends-pending-column h4 {
+    margin: 0;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 .friends-placeholder {
     background: rgba(255, 255, 255, 0.05);
     border: 1px dashed rgba(255, 255, 255, 0.2);
