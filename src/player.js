@@ -90,15 +90,29 @@ export class Player {
     addExperience(exp, locations = null, tackleShop = null) {
         if (exp <= 0) return null;
         
+        const previousLevel = this.level;
         this.experience += exp;
-        const newUnlocks = this.checkLevelUp(locations, tackleShop);
+        const unlockResult = this.checkLevelUp(locations, tackleShop);
+        const leveledUp = this.level > previousLevel;
         
-        if (newUnlocks) {
+        if (unlockResult || leveledUp) {
             console.log(`[PLAYER] Leveled up to ${this.level}!`);
         }
         
         this.save();
-        return newUnlocks;
+
+        if (!leveledUp) {
+            return null;
+        }
+
+        const levelsGained = Math.max(1, this.level - previousLevel);
+
+        return {
+            type: 'level',
+            level: this.level,
+            levelsGained,
+            unlock: unlockResult || null
+        };
     }
     
     /**

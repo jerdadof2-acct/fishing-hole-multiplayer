@@ -219,7 +219,14 @@ export class API {
             body: JSON.stringify(catchData)
         });
     }
-    
+
+    async logLevelUp(level, levelsGained = 1) {
+        return this.request('/activities/level', {
+            method: 'POST',
+            body: JSON.stringify({ level, levelsGained })
+        });
+    }
+
     /**
      * Get friends' recent activities
      * @param {number} limit - Maximum number of activities

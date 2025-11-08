@@ -594,6 +594,64 @@ canvas {
     text-align: center;
 }
 
+.friends-activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.friends-activity-entry {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(74, 144, 226, 0.25);
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.friends-activity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.friends-activity-body {
+    font-size: 15px;
+    color: #ffffff;
+}
+
+.friends-activity-meta {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.friends-entry-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.friends-status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.friends-status-dot.online {
+    background: #2ecc71;
+    box-shadow: 0 0 6px rgba(46, 204, 113, 0.7);
+}
+
+.friends-status-dot.offline {
+    background: rgba(255, 99, 71, 0.7);
+    box-shadow: 0 0 6px rgba(255, 99, 71, 0.6);
+}
+
 .friends-list-section {
     margin-bottom: 10px;
 }

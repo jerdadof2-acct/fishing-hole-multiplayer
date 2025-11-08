@@ -16,7 +16,7 @@ export class UI {
         this.fishCollection = gameplaySystems?.fishCollection || null;
         this.currentInventoryTab = 'collection';
         this.api = game?.api || null;
-        this.friendData = { friends: [], pending: { sent: [], received: [] } };
+        this.friendData = { friends: [], pending: { sent: [], received: [] }, activities: [] };
         this.friendDataLoaded = false;
         this.friendMessageTimer = null;
     }
@@ -337,6 +337,12 @@ export class UI {
             return;
         }
 
+        if (!this.api) {
+            console.warn('[UI] No API instance available for friends refresh');
+            this.renderFriendsError(new Error('Friends API unavailable.'));
+            return;
+        }
+
         if (!force && this.friendDataLoaded) {
             this.renderFriendsLists();
             return;
@@ -347,9 +353,15 @@ export class UI {
         this.setFriendsPlaceholder('friends-pending-sent', 'Loading requests...');
 
         try {
-            const [friendList, pending] = await Promise.all([
+            const activityLimit = 20;
+            const activitiesPromise = this.api.getFriendActivities
+                ? this.api.getFriendActivities(activityLimit)
+                : Promise.resolve([]);
+
+            const [friendList, pending, activityList] = await Promise.all([
                 this.api.getFriends(),
-                this.api.getPendingRequests()
+                this.api.getPendingRequests(),
+                activitiesPromise
             ]);
 
             this.friendData = {
@@ -357,7 +369,8 @@ export class UI {
                 pending: {
                     sent: pending?.sent ?? [],
                     received: pending?.received ?? []
-                }
+                },
+                activities: Array.isArray(activityList) ? activityList : []
             };
 
             this.friendDataLoaded = true;
@@ -377,6 +390,7 @@ export class UI {
         this.renderFriendList(friends);
         this.renderPendingList('friends-pending-received', pending.received, 'received');
         this.renderPendingList('friends-pending-sent', pending.sent, 'sent');
+        this.renderFriendActivities();
     }
 
     renderFriendList(friends = []) {
@@ -405,20 +419,43 @@ export class UI {
         container.innerHTML = items.map(item => this.buildPendingEntry(item, mode)).join('');
     }
 
+    renderFriendActivities() {
+        const container = document.getElementById('friends-activity');
+        if (!container) return;
+
+        const activities = this.friendData?.activities ?? [];
+
+        if (!this.isOnline()) {
+            this.setFriendsPlaceholder('friends-activity', 'Connect to see your friends' trophy catches.');
+            return;
+        }
+
+        if (!activities.length) {
+            this.setFriendsPlaceholder('friends-activity', 'No big catches yet. Hook something legendary!');
+            return;
+        }
+
+        container.classList.remove('friends-placeholder');
+        container.innerHTML = activities.map(activity => this.buildActivityEntry(activity)).join('');
+    }
+
     buildFriendEntry(friend) {
         const id = this.safeAttr(friend?.id ?? '');
         const name = this.safeText(friend?.username || 'Unknown angler');
         const code = this.safeText(friend?.friend_code || '------');
         const level = friend?.level ?? '-';
-        const lastActive = friend?.last_active ? this.formatRelativeTime(friend.last_active) : '';
+        const statusInfo = this.getFriendStatus(friend);
         const metaPieces = [`Level ${level}`];
-        if (lastActive) metaPieces.push(`Active ${lastActive}`);
+        if (statusInfo.meta) metaPieces.push(statusInfo.meta);
 
         return `
             <div class="friends-entry" data-friend-id="${id}">
                 <div class="friends-entry-info">
                     <span class="friends-entry-name">${name}</span>
-                    <span class="friends-entry-meta">Code ${code}${metaPieces.length ? ' · ' + metaPieces.join(' · ') : ''}</span>
+                    <div class="friends-entry-status">
+                        <span class="friends-status-dot ${statusInfo.statusClass}"></span>
+                        <span class="friends-entry-meta">Code ${code}${metaPieces.length ? ' · ' + metaPieces.join(' · ') : ''}</span>
+                    </div>
                 </div>
                 <div class="friends-entry-actions">
                     <button class="friend-action-button neutral" data-action="copy" data-code="${code}">Copy</button>
@@ -467,9 +504,11 @@ export class UI {
 
     renderFriendsOffline() {
         this.friendDataLoaded = false;
+        this.renderFriendCode();
         this.setFriendsPlaceholder('friends-list', 'Friends are only available while you are connected.');
         this.setFriendsPlaceholder('friends-pending-received', 'No pending requests while offline.');
         this.setFriendsPlaceholder('friends-pending-sent', 'No pending requests while offline.');
+        this.setFriendsPlaceholder('friends-activity', 'Reconnect to see your friends' legendary catches.');
     }
 
     renderFriendsError(error) {
@@ -477,6 +516,7 @@ export class UI {
         this.setFriendsPlaceholder('friends-list', message);
         this.setFriendsPlaceholder('friends-pending-received', message);
         this.setFriendsPlaceholder('friends-pending-sent', message);
+        this.setFriendsPlaceholder('friends-activity', message);
     }
 
     renderFriendCode() {
@@ -1765,21 +1805,31 @@ export class UI {
     handleUnlocks(newUnlock) {
         if (!newUnlock || !this.player) return;
         
+        const isLevelPayload = newUnlock.type === 'level';
+        const unlockDetails = isLevelPayload ? newUnlock.unlock : newUnlock;
+        
         // Show level up popup near top of screen
-        this.showLevelUpPopup(newUnlock);
+        this.showLevelUpPopup(unlockDetails || newUnlock);
         
         // Check for achievement unlocks after level up
         this.evaluateAchievements('levelup');
         
-        // Update UI elements
-        if (newUnlock.type === 'location') {
-            const location = newUnlock.location;
-            // Update location selector to show new location
-            this.updateLocationSelector();
-        } else if (newUnlock.type === 'tackle') {
-            const tackle = newUnlock.tackle;
-            // Update shop display to show newly unlocked items
-            if (this.currentShopTab) {
+        if (this.isOnline() && this.api && isLevelPayload) {
+            const level = newUnlock.level ?? this.player.level;
+            const levelsGained = newUnlock.levelsGained ?? 1;
+            this.api.logLevelUp(level, levelsGained).catch(error => {
+                console.warn('[UI] Failed to log level up activity:', error);
+            });
+        }
+        
+        if (unlockDetails?.type === 'location') {
+            const location = unlockDetails.location;
+            if (location) {
+                this.updateLocationSelector();
+            }
+        } else if (unlockDetails?.type === 'tackle') {
+            const tackle = unlockDetails.tackle;
+            if (tackle && this.currentShopTab) {
                 this.renderShop(this.currentShopTab);
             }
         }
@@ -2428,6 +2478,80 @@ export class UI {
                 }
             }
         }
+    }
+
+    getFriendStatus(friend) {
+        if (!this.isOnline()) {
+            return { statusClass: 'offline', meta: 'Offline' };
+        }
+
+        const lastActive = friend?.last_active ? new Date(friend.last_active).getTime() : 0;
+        const now = Date.now();
+        const diff = now - lastActive;
+
+        const fiveMinutes = 5 * 60 * 1000;
+        if (!lastActive || diff > fiveMinutes) {
+            const meta = friend?.last_active ? `Active ${this.formatRelativeTime(friend.last_active)}` : 'Offline';
+            return { statusClass: 'offline', meta };
+        }
+
+        return { statusClass: 'online', meta: 'Online now' };
+    }
+
+    formatWeight(weight) {
+        if (weight === null || weight === undefined) return '';
+        const value = Number(weight);
+        if (Number.isNaN(value)) return '';
+        return `${value.toFixed(1)} lbs`;
+    }
+
+    buildActivityEntry(activity) {
+        if (!activity) return '';
+
+        const activityType = activity.fish_rarity || 'catch';
+        const username = this.safeText(activity.username || 'A friend');
+        const timestamp = activity.created_at ? this.formatRelativeTime(activity.created_at) : '';
+
+        if (activityType === 'LEVEL_UP') {
+            const level = this.formatInteger(activity.fish_weight);
+            const gain = this.formatInteger(activity.experience_gained);
+            const metaPieces = [];
+            if (gain) {
+                metaPieces.push(gain === 1 ? '1 level gained' : `${gain} levels gained`);
+            }
+
+            return `
+                <div class="friends-activity-entry">
+                    <div class="friends-activity-body">${username} reached Level ${level || '?'}! 🎉</div>
+                    <div class="friends-activity-meta">${metaPieces.join(' · ')}${metaPieces.length && timestamp ? ' · ' : ''}${timestamp}</div>
+                </div>
+            `;
+        }
+
+        const rarity = this.safeText(activity.fish_rarity || 'Unknown');
+        const name = this.safeText(activity.fish_name || 'a fish');
+        const weight = this.formatWeight(activity.fish_weight);
+        const location = this.safeText(activity.location_name || 'somewhere secret');
+        const metaPieces = [];
+        if (location) metaPieces.push(`at ${location}`);
+        const xp = activity.experience_gained;
+        if (typeof xp === 'number' && xp > 0) metaPieces.push(`+${xp} XP`);
+
+        const body = `${username} landed a ${rarity} ${name}${weight ? ` weighing ${weight}` : ''}!`;
+
+        return `
+            <div class="friends-activity-entry">
+                <div class="friends-activity-body">${body}</div>
+                <div class="friends-activity-meta">${metaPieces.join(' · ')}${metaPieces.length && timestamp ? ' · ' : ''}${timestamp}</div>
+            </div>
+        `;
+    }
+
+    formatInteger(value) {
+        if (value === null || value === undefined) return null;
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) return null;
+        return Math.round(parsed);
     }
 }
 

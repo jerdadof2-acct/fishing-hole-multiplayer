@@ -589,6 +589,34 @@ app.post('/api/activities/catch', authenticate, async (req, res) => {
     }
 });
 
+// Log a level-up (for activity feed)
+app.post('/api/activities/level', authenticate, async (req, res) => {
+    try {
+        if (!isValidUUID(req.userId)) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+
+        const { level, levelsGained } = req.body;
+        const numericLevel = Number(level);
+        const gain = Number(levelsGained) || 1;
+
+        if (!Number.isFinite(numericLevel) || numericLevel <= 0) {
+            return res.status(400).json({ error: 'Invalid level value' });
+        }
+
+        await pool.query(
+            `INSERT INTO friend_activities (player_id, fish_name, fish_weight, fish_rarity, location_name, experience_gained)
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [req.userId, 'Level Up', numericLevel, 'LEVEL_UP', null, gain]
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('[API] Log level-up error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Get friends' recent activities
 app.get('/api/activities/friends', authenticate, async (req, res) => {
     try {
