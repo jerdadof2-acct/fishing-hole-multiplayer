@@ -78,14 +78,16 @@ function setLocalPlayerData(data) {
 }
 
 async function handleOfflineMode(message) {
-    clearAuthStorage();
-
+    const existingAuth = getAuthStorage();
     let localData = getLocalPlayerData();
     let needsUsername =
-        !localData ||
-        !localData.name ||
-        localData.name.trim() === '' ||
-        localData.name === 'Guest';
+        (!existingAuth || !existingAuth.username) &&
+        (
+            !localData ||
+            !localData.name ||
+            localData.name.trim() === '' ||
+            localData.name === 'Guest'
+        );
 
     if (needsUsername) {
         const result = await promptForUsername({ offline: true });
@@ -95,9 +97,21 @@ async function handleOfflineMode(message) {
             localData.name = offlineUsername;
             localData.friendCode = localData.friendCode || 'OFFLINE';
             setLocalPlayerData(localData);
+            setAuthStorage({
+                userId: null,
+                username: offlineUsername,
+                friendCode: 'OFFLINE'
+            });
         }
-    } else if (!localData.friendCode) {
-        setLocalPlayerData({ friendCode: 'OFFLINE' });
+    } else {
+        if (existingAuth && !localData) {
+            setLocalPlayerData({
+                name: existingAuth.username,
+                friendCode: existingAuth.friendCode || 'OFFLINE'
+            });
+        } else if (localData && !localData.friendCode) {
+            setLocalPlayerData({ friendCode: existingAuth?.friendCode || 'OFFLINE' });
+        }
     }
 
     startOfflineGame(message);

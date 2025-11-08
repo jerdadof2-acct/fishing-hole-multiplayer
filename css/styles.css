@@ -45,7 +45,8 @@ canvas {
 /* UI Controls */
 #ui-controls {
     position: absolute;
-    bottom: 80px; /* Above tab bar */
+    bottom: 80px;
+    bottom: calc(80px + env(safe-area-inset-bottom)); /* Above tab bar */
     left: 50%;
     transform: translateX(-50%);
     display: flex;
@@ -266,7 +267,7 @@ canvas {
 
 /* Tab Bar */
 #tab-bar {
-    position: absolute;
+    position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
@@ -276,6 +277,7 @@ canvas {
     justify-content: space-between;
     gap: 6px;
     padding: 8px 10px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
     z-index: 150;
     backdrop-filter: blur(10px);
 }
@@ -865,6 +867,11 @@ canvas {
     .player-badge {
         min-width: 160px;
         padding: 8px 12px;
+    }
+
+    #tab-bar {
+        padding: 6px 8px;
+        padding-bottom: calc(6px + env(safe-area-inset-bottom));
     }
 
     .friends-content {
