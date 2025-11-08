@@ -44,21 +44,20 @@ canvas {
 
 /* UI Controls */
 #ui-controls {
-    position: absolute;
-    bottom: 110px;
-    bottom: calc(110px + env(safe-area-inset-bottom)); /* Above tab bar */
+    position: fixed;
     left: 50%;
+    bottom: calc(72px + env(safe-area-inset-bottom));
     transform: translateX(-50%);
     display: flex;
-    gap: 20px;
-    align-items: center;
-    z-index: 100;
+    flex-direction: row;
+    gap: 16px;
+    z-index: 120;
     pointer-events: auto;
 }
 
 .location-select {
-    padding: 15px 30px;
-    font-size: 16px;
+    padding: 14px 18px;
+    font-size: 15px;
     font-weight: bold;
     background: rgba(52, 152, 219, 0.9);
     color: white;
@@ -75,8 +74,8 @@ canvas {
     background-repeat: no-repeat;
     background-position: right 10px center;
     background-size: 20px;
-    padding-right: 45px;
-    min-width: 160px;
+    padding-right: 42px;
+    min-width: 150px;
     outline: none;
 }
 
@@ -101,7 +100,7 @@ canvas {
 }
 
 .control-button {
-    padding: 20px 40px;
+    padding: 18px 26px;
     font-size: 18px;
     font-weight: bold;
     background: rgba(74, 144, 226, 0.9);
@@ -870,8 +869,10 @@ canvas {
     }
 
     #ui-controls {
-        bottom: 130px;
-        bottom: calc(130px + env(safe-area-inset-bottom));
+        left: 50%;
+        bottom: calc(96px + env(safe-area-inset-bottom));
+        transform: translateX(-50%);
+        gap: 12px;
     }
 
     #tab-bar {
