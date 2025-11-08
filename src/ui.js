@@ -23,6 +23,7 @@ export class UI {
         this.friendMessageTimer = null;
         this.friendRefreshTimer = null;
         this.lastFriendSnapshot = { friends: new Map(), activities: new Set() };
+        this.affordableNotified = new Set();
     }
 
     init() {
@@ -471,6 +472,7 @@ export class UI {
         }
 
         this.renderFriendCode();
+        this.checkAffordableUpgrades();
     }
     
     async renderFriends(refresh = false) {
@@ -2786,6 +2788,49 @@ export class UI {
             friends: friendMap,
             activities: new Set((activities || []).map(a => a?.id).filter(Boolean))
         };
+    }
+
+    checkAffordableUpgrades() {
+        if (!this.player || !TackleShop) return;
+
+        const categories = Object.keys(TackleShop);
+        let notified = false;
+
+        for (const category of categories) {
+            const items = TackleShop[category] || [];
+            const owned = new Set(this.player.tackleUnlocks?.[category] || []);
+
+            for (const item of items) {
+                if (owned.has(item.id)) {
+                    continue;
+                }
+                if (typeof item.unlockLevel === 'number' && this.player.level < item.unlockLevel) {
+                    continue;
+                }
+                if (typeof item.cost === 'number' && this.player.money < item.cost) {
+                    continue;
+                }
+
+                const key = `${category}-${item.id}`;
+                if (this.affordableNotified.has(key)) {
+                    continue;
+                }
+
+                this.affordableNotified.add(key);
+                this.showToast({
+                    type: 'info',
+                    title: 'Upgrade available',
+                    body: `You can now purchase the ${item.name} in the shop.`
+                });
+
+                notified = true;
+                break;
+            }
+
+            if (notified) {
+                break;
+            }
+        }
     }
 
     getNotificationStack() {
