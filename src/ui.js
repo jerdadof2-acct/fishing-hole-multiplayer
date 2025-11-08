@@ -2745,16 +2745,21 @@ export class UI {
         const previousFriends = this.lastFriendSnapshot.friends;
 
         friendMap.forEach((friend, id) => {
-            if (!previousFriends.has(id)) return;
             const previous = previousFriends.get(id);
             const prevLevel = previous?.level ?? friend.level;
             const currentLevel = friend?.level ?? prevLevel;
+            if (!previousFriends.has(id)) {
+                this.lastFriendSnapshot.friends.set(id, friend);
+                return;
+            }
             if (currentLevel > prevLevel) {
                 const levelsGained = currentLevel - prevLevel;
                 this.showToast({
                     type: 'level-up',
                     title: `${friend.username || 'A friend'} leveled up!`,
-                    body: `Reached Level ${currentLevel}${levelsGained > 1 ? ` (+${levelsGained - 1})` : ''}`,
+                    body: levelsGained > 1
+                        ? `Jumped ${levelsGained} levels to reach ${currentLevel}.`
+                        : `Reached Level ${currentLevel}.`,
                     meta: 'Live update'
                 });
             }
