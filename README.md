@@ -1,198 +1,107 @@
 # Kitty Creek Fishing Club 🎣
 
-A 3D fishing simulation game built with Three.js featuring realistic fishing mechanics, player progression, and social features.
+A purrfect multiplayer fishing tournament game with physics-based fishing, deep progression, and soon-to-launch social features.
 
 ## 🎮 Game Features
 
-- **Realistic Fishing**: Physics-based casting, reeling, and fish fighting
-- **33 Fish Types**: Common to Trophy rarity fish with unique behaviors
-- **10 Locations**: Pond, River, Lake, and Ocean fishing spots
-- **Player Progression**: Level up, earn money, unlock gear and locations
-- **Tiered Achievements**: Multi-tier achievement system with rewards
-- **Tackle Shop**: Purchase rods, reels, lines, hooks, and baits
-- **Fish Collection**: Track all caught fish and view your collection
-- **Cloud Saves**: Username-based profiles synced to PostgreSQL via the Express backend
-- **Friends System**: Connect with friends and see their catches (backend ready)
+- 🐱 **Cat-Themed Competition** – Face lovable rivals like “Sly Sylvester” and “Tommy the Stray”
+- 🎣 **Realistic Fishing** – Physics-driven casting, reeling, and fish behavior across ponds, rivers, lakes, and oceans
+- 🏆 **Multiplayer Tournaments** – Fair-play events where mega fish can tip the scales (Railway-ready backend)
+- 📊 **Leaderboards & Progression** – Track biggest fish, level up through exponential XP tiers, and unlock new tackle
+- 💾 **Cloud Saves** – Username-based profiles persist via PostgreSQL when the backend is connected
+- 🤝 **Friends System (WIP)** – Share your friend code, manage requests, and view future crew activity in a dedicated tab
+- 🎧 **Immersive Polish** – Modern UI, cat sound effects, and animated environments powered by Three.js
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+ (for backend/friends system)
+- Node.js 18+
 - Modern web browser
-- PostgreSQL (optional, for friends system)
+- PostgreSQL (for cloud saves / Railway deployment)
 
 ### Installation
-
-1. **Clone the repository**
 ```bash
-git clone <repository-url>
+git clone https://github.com/jerdadof2-acct/fishing-hole-multiplayer.git
 cd "Kitty Creek"
-```
-
-2. **Install dependencies**
-```bash
 npm install
 ```
 
-3. **Start the server** (optional, for friends system)
+### Running Locally
 ```bash
+# Launch the backend API (Express + PostgreSQL)
+npm run dev
+
+# Production mode
 npm start
 ```
 
-4. **Open in browser**
-   - For local development: Open `index.html` directly
-   - For friends system: Navigate to `http://localhost:3000`
+Open `index.html` directly (or serve it) to play. The client checks `/api/health`; if the backend is unavailable it automatically falls back to offline/localStorage mode.
 
-## 🔐 Cloud Saves & Accounts
+## 🔐 Cloud Saves & Friend Codes
 
-- The game now prompts for a username the first time you launch it and stores that profile in PostgreSQL.
-- Progress (level, money, stats, fish collection) stays synced between sessions through the Express API.
-- By default the frontend talks to the same origin at `/api`; override this by setting `window.__API_BASE_URL__` before loading `src/bootstrap.js` or by adding `<meta name="kitty-creek-api-base" content="https://your-api.com/api">`.
-- Auth details are cached in `localStorage` (`kittyCreekAuth`) for seamless reloads; clearing it forces a new username prompt.
-- If the backend can’t be reached (for example during local testing), the game automatically falls back to offline mode and keeps using `localStorage` only.
+- On first launch, the game prompts for a username and registers it with the backend (when available).
+- Progress (level, stats, fish collection) syncs via `/api/players/*` endpoints.
+- By default the frontend targets `/api`; override with:
+  ```html
+  <script>
+    window.__API_BASE_URL__ = 'https://your-domain.railway.app/api';
+  </script>
+  ```
+  or `<meta name="kitty-creek-api-base" content="https://your-domain/api">`.
+- Offline play still tracks everything locally; the new Friends tab shows your friend code (or “OFFLINE” when disconnected) and includes copy/add affordances ready for backend integration.
 
 ## 📁 Project Structure
 
 ```
 Kitty Creek/
 ├── index.html              # Main entry point
-├── src/                    # Source code
-│   ├── main.js            # Core game systems & scene setup
-│   ├── bootstrap.js       # Account bootstrap and Game launcher
-│   ├── player.js          # Player system
-│   ├── fishing.js         # Fishing mechanics
-│   ├── fish.js            # Fish behavior
-│   ├── achievements.js    # Achievement system
-│   └── ...                # Other game systems
-├── server/                 # Backend (friends system)
-│   ├── index.js           # Express server
-│   └── schema.sql         # Database schema
-├── assets/                 # Game assets
-└── css/                    # Styles
+├── src/
+│   ├── bootstrap.js        # Auth bootstrap + offline fallback
+│   ├── main.js             # Core scene/game setup
+│   ├── player.js           # Player progression & sync
+│   ├── ui.js               # Tabs, modals, HUD, friends UI
+│   └── …                   # Fishing, physics, audio, etc.
+├── server/
+│   ├── index.js            # Express API (ESM)
+│   └── schema.sql          # PostgreSQL schema
+├── assets/                 # Audio, GLBs, textures, images
+└── css/styles.css          # Game styles
 ```
 
-## 🎯 Current Status
+## 🗺️ Mechanics Snapshot
 
-### ✅ Completed
-- Core fishing mechanics
-- Player progression system
-- Achievement system (tiered)
-- Location system
-- Tackle shop
-- Inventory system
-- Audio system
-- Friends system backend
+- **Progressive pacing** – Cast/wait timers scale from quick (Lv 1–5) to very deliberate (Lv 16+).
+- **Experience curve** – Exponential XP requirements (e.g., Lv 10→11: 5,000 XP; Lv 15→16: 20,000+).
+- **Economy** – Exponential pricing across rods, reels, lines, hooks, and baits ($0 → $100,000).
+- **Achievements & Collection** – Tiered achievements, 33 fish types, top-catch tracking, and instanced leaderboards.
+- **Upcoming** – Friends activity feed, live tournaments, extra locations, and real-time multiplayer hooks.
 
-### ⏳ In Progress
-- Friends system frontend
-- Bonus locations
-
-### 📋 Planned
-- Tournament system
-- Daily challenges
-- Additional features
-
-## 📚 Documentation
-
-- **PROJECT_DOCUMENTATION.md** - Complete project overview
-- **IMPLEMENTATION_STATUS.md** - Current implementation status
-- **FRIENDS_SYSTEM_DESIGN.md** - Friends system architecture
-- **BONUS_LOCATIONS_DESIGN.md** - Bonus locations design
-- **SETUP_INSTRUCTIONS.md** - Setup and deployment guide
-
-## 🛠️ Development
-
-### Running Locally
-```bash
-# Start backend server (friends system)
-npm start
-
-# Or run with auto-reload
-npm run dev
-```
-
-### Environment Variables
-Create a `.env` file:
+## 🛠️ Environment Variables
+Create `.env` (or configure Railway variables):
 ```env
-DATABASE_URL=postgresql://user:pass@localhost:5432/kitty_creek
+DATABASE_URL=postgresql://user:pass@host:port/dbname
 PORT=3000
 NODE_ENV=development
 ```
 
-## 🎣 How to Play
+## 📦 Deployment on Railway
 
-1. **Cast**: Click the CAST button to cast your line
-2. **Wait**: Watch for the bobber to tug
-3. **Set Hook**: Click SET HOOK when you see a tug
-4. **Fight**: Reel in the fish (hold or click rapidly)
-5. **Catch**: Land the fish and earn rewards!
+1. Create a Railway project and link this GitHub repo.
+2. Add a PostgreSQL service; Railway injects `DATABASE_URL`.
+3. Run the schema once:
+   ```bash
+   railway run psql $DATABASE_URL -f server/schema.sql
+   ```
+4. Set `window.__API_BASE_URL__` (or the meta tag) to your Railway URL so the client hits the correct `/api` origin.
 
-## 🏆 Achievements
+## 📚 Documentation
 
-Unlock achievements by:
-- Catching fish
-- Reaching levels
-- Earning money
-- Collecting rare fish
-- Unlocking locations
-- And more!
-
-Each achievement has multiple tiers with increasing rewards.
-
-## 👥 Friends System (Coming Soon)
-
-- Add friends with friend codes
-- See friends' catches and stats
-- View friends' fish collections
-- Get notified when friends catch rare fish
-
-## 🗺️ Locations
-
-Fish at different locations:
-- **Pond**: Easy fishing for beginners
-- **River**: Flowing waters with diverse fish
-- **Lake**: Deep waters with bigger fish
-- **Ocean**: Saltwater fishing with trophy fish
-
-## 🎣 Tackle Shop
-
-Purchase gear to improve your fishing:
-- **Rods**: Better catch rates and strength
-- **Reels**: Faster reeling speed
-- **Lines**: Stronger lines for big fish
-- **Hooks**: Longer timing windows
-- **Baits**: Better catch bonuses
-
-## 📊 Progression
-
-- **Level Up**: Gain experience by catching fish
-- **Earn Money**: Sell fish to buy better gear
-- **Unlock Locations**: New fishing spots at higher levels
-- **Complete Achievements**: Earn XP and money rewards
-
-## 🐛 Known Issues
-
-None currently. See IMPLEMENTATION_STATUS.md for details.
-
-## 🤝 Contributing
-
-This is a personal project. For suggestions or issues, please contact the maintainer.
+- `PROJECT_DOCUMENTATION.md` – Global overview
+- `IMPLEMENTATION_STATUS.md` – Progress tracker
+- `FRIENDS_SYSTEM_DESIGN.md` – Social systems spec
+- `.cursor/rules/*.mdc` – Detailed physics, data-flow, and progression notes
 
 ## 📝 License
 
-All rights reserved.
-
-## 🙏 Credits
-
-- Three.js for 3D graphics
-- Sound effects from various sources
-- Fish images and assets
-
----
-
-**Version**: 1.0
-**Last Updated**: 2024
-**Status**: Active Development
-
-
+Enjoy the game! Contributions welcome via pull requests or issues.
 

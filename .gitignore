@@ -7,33 +7,38 @@ yarn.lock
 .env
 .env.local
 .env.*.local
+.env.production
+
+# Logs
+logs/
+*.log
+npm-debug.log*
 
 # Build outputs
 dist/
 build/
-*.log
 
-# IDE
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS
+# OS files
 .DS_Store
 Thumbs.db
 
 # Railway
 .railway/
-
-# Temporary files
-*.tmp
-*.temp
-
-
-
-
-
-
-

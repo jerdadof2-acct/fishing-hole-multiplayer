@@ -10,35 +10,41 @@
 - Explain your OBSERVATIONS clearly, then provide REASONING to identify the exact issue. Add console logs when needed to gather more information.
 
 
-The core business logic is organized around water simulation and fishing mechanics, with three primary domains:
+The project implements a multiplayer fishing game with progression-based mechanics and tournament systems.
 
-## Water Simulation (Importance: 90/100)
-`src/water/waterMaterial.js`, `src/water/waterBodyTypes.js`
+Core Business Components:
 
-- Physically-based water rendering with distinct configurations for ponds, rivers, lakes, and oceans
-- Dynamic properties system controlling:
-  - Wave patterns and flow dynamics
-  - Depth-dependent color transitions
-  - Light absorption and turbidity
-  - Surface reflections based on water body type
+## Fishing Mechanics
+- Progressive difficulty system based on player levels
+- Four distinct timing tiers affecting gameplay complexity:
+  - Entry level (1-5): Quick catches 
+  - Intermediate (6-10): Moderate timing
+  - Advanced (11-15): Complex timing
+  - Expert (16+): Maximum challenge
 
-## Fishing Equipment Physics (Importance: 80/100)
-`src/fishing/rod.js`, `src/fishing/aimRod.js`
+## Economy Design
+- Seven-tier equipment progression model
+- Exponential pricing structure from free to premium ($100,000)
+- Strategic price points for player progression gates
 
-- Rod mechanics with spring-based tip animations
-- Tension-driven deformation system
-- Advanced positioning with 45° tilt mechanics
-- Quaternion-based orientation handling
-- Idle state micro-sway animations
+## Experience System
+- Four-tier progression model with exponential scaling
+- Custom XP thresholds designed for extended gameplay engagement
+- Milestone-based unlocks tied to level progression
 
-## Camera Control System (Importance: 70/100)
-`src/camera/cameraSpring.js`
+## Multiplayer Infrastructure
+- 8-player room system optimized for fishing competitions
+- Tournament-specific catch multipliers
+- Real-time achievement broadcasting
+- Live leaderboard system
 
-- Critically-damped spring following system
-- Water-level position constraints
-- Target tracking with customized damping
+## AI Competition
+- Themed bot system with personality-driven competitors
+- Dynamic difficulty scaling based on player progression
+- Competitive catch rate balancing
 
-The business logic emphasizes realistic water body simulation integrated with precise fishing equipment control, creating a physically authentic fishing experience through interconnected systems.
+Importance Score: 75/100
+This system represents a specialized implementation of fishing game mechanics with unique progression and multiplayer elements, though utilizing standard gaming patterns for core functionality.
 
 $END$
 

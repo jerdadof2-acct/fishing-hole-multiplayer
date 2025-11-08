@@ -1,0 +1,43 @@
+<svg width="192" height="192" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="96" cy="96" r="90" fill="#4a90e2" stroke="#2c5aa0" stroke-width="4"/>
+  
+  <!-- Cat head -->
+  <ellipse cx="96" cy="85" rx="35" ry="30" fill="#f2a65a"/>
+  
+  <!-- Cat ears -->
+  <path d="M70 70 L60 50 L80 65 Z" fill="#f2a65a"/>
+  <path d="M122 70 L132 50 L112 65 Z" fill="#f2a65a"/>
+  
+  <!-- Inner ears -->
+  <path d="M70 70 L65 60 L75 65 Z" fill="#d77f3f"/>
+  <path d="M122 70 L127 60 L117 65 Z" fill="#d77f3f"/>
+  
+  <!-- Eyes -->
+  <ellipse cx="85" cy="80" rx="4" ry="6" fill="#1e2a3a"/>
+  <ellipse cx="107" cy="80" rx="4" ry="6" fill="#1e2a3a"/>
+  
+  <!-- Nose -->
+  <ellipse cx="96" cy="90" rx="3" ry="2" fill="#ff8fa3"/>
+  
+  <!-- Mouth -->
+  <path d="M96 92 Q90 98 85 95" stroke="#3b2b2b" stroke-width="2" fill="none"/>
+  <path d="M96 92 Q102 98 107 95" stroke="#3b2b2b" stroke-width="2" fill="none"/>
+  
+  <!-- Whiskers -->
+  <line x1="60" y1="85" x2="75" y2="87" stroke="#2b2b2b" stroke-width="2"/>
+  <line x1="60" y1="90" x2="75" y2="90" stroke="#2b2b2b" stroke-width="2"/>
+  <line x1="132" y1="85" x2="117" y2="87" stroke="#2b2b2b" stroke-width="2"/>
+  <line x1="132" y1="90" x2="117" y2="90" stroke="#2b2b2b" stroke-width="2"/>
+  
+  <!-- Fishing rod -->
+  <line x1="130" y1="40" x2="160" y2="20" stroke="#8b4513" stroke-width="3"/>
+  <line x1="160" y1="20" x2="170" y2="10" stroke="#654321" stroke-width="2"/>
+  
+  <!-- Fishing line -->
+  <line x1="160" y1="20" x2="150" y2="60" stroke="#666" stroke-width="1"/>
+  
+  <!-- Fish -->
+  <ellipse cx="150" cy="60" rx="8" ry="4" fill="#ff6b6b"/>
+  <path d="M158 60 L165 55 L165 65 Z" fill="#ff6b6b"/>
+</svg>
