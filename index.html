@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Kitty Creek">
+    <meta name="theme-color" content="#4a90e2">
+    
+    <title>Kitty Creek Fishing Club</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="assets/icons/icon.svg">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="loading">Loading...</div>
+        
+        <!-- Ad Banner -->
+        <div id="ad-banner" class="hidden">
+            <div class="ad-banner-content">
+                <!-- Ad banner will be inserted here by ad network -->
+                <div class="ad-placeholder">Ad Banner</div>
+            </div>
+        </div>
+        
+        <!-- Player HUD -->
+        <div id="player-info" class="hidden">
+            <div class="player-badge">
+                <div class="player-name-row">
+                    <span id="player-name" class="player-name">Guest</span>
+                    <span class="player-level-chip">Lv <span id="player-level">1</span></span>
+                </div>
+                <div class="player-stat-line">
+                    <span class="player-money-label">💰 <span id="player-money">$100</span></span>
+                    <span class="player-exp-label" id="player-exp">0/100</span>
+                </div>
+                <div id="exp-bar-container">
+                    <div id="exp-bar" class="exp-bar"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Game Area -->
+        <div id="game-area" class="hidden">
+            <div id="ui-controls">
+                <select id="location-select" class="location-select">
+                    <!-- Populated dynamically with unlocked locations -->
+                </select>
+                <button id="cast-button" class="control-button">CAST</button>
+            </div>
+        </div>
+        
+        <!-- Tab Bar -->
+        <div id="tab-bar" class="hidden">
+            <button class="tab-button active" data-tab="game">
+                <span class="tab-icon">🎣</span>
+                <span class="tab-label">Game</span>
+            </button>
+            <button class="tab-button" data-tab="shop">
+                <span class="tab-icon">🛒</span>
+                <span class="tab-label">Shop</span>
+            </button>
+            <button class="tab-button" data-tab="inventory">
+                <span class="tab-icon">📦</span>
+                <span class="tab-label">Inventory</span>
+            </button>
+            <button class="tab-button" data-tab="friends">
+                <span class="tab-icon">🤝</span>
+                <span class="tab-label">Friends</span>
+            </button>
+            <button class="tab-button" data-tab="leaderboard">
+                <span class="tab-icon">🏆</span>
+                <span class="tab-label">Leaderboard</span>
+            </button>
+        </div>
+        
+        <!-- Shop Modal -->
+        <div id="shop-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Tackle Shop</h2>
+                    <button class="modal-close" data-modal="shop-modal">&times;</button>
+                </div>
+                <div class="shop-tabs">
+                    <button class="shop-tab active" data-shop-tab="rods">Rods</button>
+                    <button class="shop-tab" data-shop-tab="reels">Reels</button>
+                    <button class="shop-tab" data-shop-tab="lines">Lines</button>
+                    <button class="shop-tab" data-shop-tab="hooks">Hooks</button>
+                    <button class="shop-tab" data-shop-tab="baits">Baits</button>
+                </div>
+                <div id="shop-items" class="shop-items"></div>
+            </div>
+        </div>
+        
+        <!-- Inventory Modal -->
+        <div id="inventory-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Inventory</h2>
+                    <button class="modal-close" data-modal="inventory-modal">&times;</button>
+                </div>
+                <div class="inventory-tabs">
+                    <button class="inventory-tab active" data-inventory-tab="collection">Collection</button>
+                    <button class="inventory-tab" data-inventory-tab="achievements">Achievements</button>
+                    <button class="inventory-tab" data-inventory-tab="settings">Settings</button>
+                </div>
+                <div id="inventory-content" class="inventory-content"></div>
+            </div>
+        </div>
+        
+        <!-- Leaderboard Modal -->
+        <div id="leaderboard-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Leaderboard</h2>
+                    <button class="modal-close" data-modal="leaderboard-modal">&times;</button>
+                </div>
+                <div class="leaderboard-tabs">
+                    <button class="leaderboard-tab active" data-leaderboard-tab="local">Local Top 10</button>
+                    <button class="leaderboard-tab" data-leaderboard-tab="global">Global</button>
+                </div>
+                <div id="leaderboard-content" class="leaderboard-content"></div>
+            </div>
+        </div>
+
+        <!-- Friends Modal -->
+        <div id="friends-modal" class="modal hidden">
+            <div class="modal-content friends-modal">
+                <div class="modal-header">
+                    <h2>Friends</h2>
+                    <button class="modal-close" data-modal="friends-modal">&times;</button>
+                </div>
+                <div class="friends-content">
+                    <section class="friends-section">
+                        <h3>Your Friend Code</h3>
+                        <div class="friend-code-card">
+                            <span id="friends-player-code">------</span>
+                            <button id="friends-copy-code" class="friend-copy-button">Copy</button>
+                        </div>
+                        <p class="friends-tip">Share this code so friends can add you to their Kitty Creek crew.</p>
+                    </section>
+                    <section class="friends-section">
+                        <h3>Add a Friend</h3>
+                        <form id="friends-add-form" class="friends-add-form">
+                            <input type="text" id="friends-add-input" class="friends-input" placeholder="Enter friend code" maxlength="8" autocomplete="off">
+                            <button type="submit" class="friends-submit-button">Send Request</button>
+                        </form>
+                        <p id="friends-add-message" class="friends-message hidden"></p>
+                    </section>
+                    <section class="friends-section friends-list-section">
+                        <h3>Your Friends</h3>
+                        <div id="friends-list" class="friends-placeholder">
+                            Friends system coming soon! You'll see your crew here once the clubhouse opens.
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+
+        <!-- Username Modal -->
+        <div id="username-modal" class="modal hidden">
+            <div class="modal-content username-modal">
+                <div class="modal-header">
+                    <h2>Welcome to Kitty Creek</h2>
+                </div>
+                <div class="modal-body">
+                    <p id="username-helper" class="modal-helper-text">
+                        Pick a username so we can save your progress in the Kitty Creek clubhouse.
+                    </p>
+                    <form id="username-form" class="username-form">
+                        <input
+                            type="text"
+                            id="username-input"
+                            class="username-input"
+                            placeholder="FisherCat42"
+                            maxlength="20"
+                            autocomplete="off"
+                            required
+                        />
+                        <button type="submit" id="username-submit" class="username-submit">
+                            Create Profile
+                        </button>
+                    </form>
+                    <p id="username-error" class="username-error hidden"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Three.js from CDN -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script type="module" src="src/bootstrap.js"></script>
+</body>
+</html>
+

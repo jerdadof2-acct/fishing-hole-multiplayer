@@ -1,0 +1,18 @@
+[
+  {
+    "fileName": "main-overview.mdc",
+    "description": "Complete system overview detailing the physics-based fishing game architecture, core components, and their interactions"
+  },
+  {
+    "fileName": "physics-algorithms.mdc",
+    "description": "Detailed documentation of the custom physics algorithms including rope/line physics, casting trajectories, and water surface interactions"
+  },
+  {
+    "fileName": "component-dataflow.mdc",
+    "description": "Comprehensive documentation of data flow between fishing mechanics, water physics, and fish behavior systems including state management"
+  },
+  {
+    "fileName": "fish-behavior-model.mdc",
+    "description": "Details of the fish AI model including spawning logic, movement patterns, and catch probability calculations"
+  }
+]
