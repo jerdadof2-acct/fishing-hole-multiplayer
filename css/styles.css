@@ -45,8 +45,8 @@ canvas {
 /* UI Controls */
 #ui-controls {
     position: absolute;
-    bottom: 80px;
-    bottom: calc(80px + env(safe-area-inset-bottom)); /* Above tab bar */
+    bottom: 110px;
+    bottom: calc(110px + env(safe-area-inset-bottom)); /* Above tab bar */
     left: 50%;
     transform: translateX(-50%);
     display: flex;
@@ -867,6 +867,11 @@ canvas {
     .player-badge {
         min-width: 160px;
         padding: 8px 12px;
+    }
+
+    #ui-controls {
+        bottom: 130px;
+        bottom: calc(130px + env(safe-area-inset-bottom));
     }
 
     #tab-bar {
