@@ -508,7 +508,7 @@ export class UI {
         this.setFriendsPlaceholder('friends-list', 'Friends are only available while you are connected.');
         this.setFriendsPlaceholder('friends-pending-received', 'No pending requests while offline.');
         this.setFriendsPlaceholder('friends-pending-sent', 'No pending requests while offline.');
-        this.setFriendsPlaceholder('friends-activity', 'Reconnect to see your friends' legendary catches.');
+        this.setFriendsPlaceholder('friends-activity', "Reconnect to see your friends' legendary catches.");
     }
 
     renderFriendsError(error) {
