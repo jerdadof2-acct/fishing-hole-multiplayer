@@ -1046,6 +1046,20 @@ canvas {
     .friends-submit-button {
         width: 100%;
     }
+
+    #notification-stack {
+        left: 50%;
+        right: auto;
+        top: auto;
+        bottom: calc(110px + env(safe-area-inset-bottom));
+        transform: translateX(-50%);
+        align-items: center;
+    }
+
+    .notification-toast {
+        width: 90vw;
+        max-width: 360px;
+    }
 }
 
 /* Popup animations */
@@ -1068,6 +1082,28 @@ canvas {
     to {
         opacity: 0;
         transform: translateX(-50%) translateY(-20px);
+    }
+}
+
+@keyframes notificationFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes notificationFadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
     }
 }
 

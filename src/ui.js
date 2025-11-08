@@ -19,6 +19,8 @@ export class UI {
         this.friendData = { friends: [], pending: { sent: [], received: [] }, activities: [] };
         this.friendDataLoaded = false;
         this.friendMessageTimer = null;
+        this.friendRefreshTimer = null;
+        this.lastFriendSnapshot = { friends: new Map(), activities: new Set() };
     }
 
     init() {
@@ -137,6 +139,11 @@ export class UI {
             gameArea?.classList.add('hidden');
             this.openModal('leaderboard-modal');
             this.renderLeaderboard('local'); // Default to local top 10
+        }
+
+        if (this.friendRefreshTimer) {
+            clearInterval(this.friendRefreshTimer);
+            this.friendRefreshTimer = null;
         }
     }
     
@@ -316,7 +323,7 @@ export class UI {
         this.renderFriendCode();
     }
     
-    async renderFriends(forceRefresh = false) {
+    async renderFriends(refresh = false) {
         this.renderFriendCode();
 
         if (!this.isOnline()) {
@@ -324,10 +331,18 @@ export class UI {
             return;
         }
 
-        if (forceRefresh || !this.friendDataLoaded) {
-            await this.refreshFriends(true);
+        if (refresh || !this.friendDataLoaded) {
+            this.refreshFriends(true);
         } else {
             this.renderFriendsLists();
+        }
+
+        if (!this.friendRefreshTimer && this.isOnline()) {
+            this.friendRefreshTimer = setInterval(() => {
+                if (this.isOnline()) {
+                    this.refreshFriends(true);
+                }
+            }, 15000);
         }
     }
 
@@ -363,6 +378,8 @@ export class UI {
                 this.api.getPendingRequests(),
                 activitiesPromise
             ]);
+
+            this.detectFriendNotifications(friendList, activityList);
 
             this.friendData = {
                 friends: Array.isArray(friendList) ? friendList : [],
@@ -2552,6 +2569,89 @@ export class UI {
         const parsed = Number(value);
         if (!Number.isFinite(parsed)) return null;
         return Math.round(parsed);
+    }
+
+    detectFriendNotifications(friends = [], activities = []) {
+        const stack = this.getNotificationStack();
+        if (!stack) return;
+
+        const friendMap = new Map();
+        friends.forEach(friend => {
+            if (friend?.id) {
+                friendMap.set(friend.id, friend);
+            }
+        });
+
+        const previousFriends = this.lastFriendSnapshot.friends;
+
+        friendMap.forEach((friend, id) => {
+            if (!previousFriends.has(id)) return;
+            const previous = previousFriends.get(id);
+            const prevLevel = previous?.level ?? friend.level;
+            const currentLevel = friend?.level ?? prevLevel;
+            if (currentLevel > prevLevel) {
+                const levelsGained = currentLevel - prevLevel;
+                this.showNotification({
+                    type: 'level-up',
+                    title: `${friend.username || 'A friend'} leveled up!`,
+                    body: `Reached Level ${currentLevel}${levelsGained > 1 ? ` (+${levelsGained - 1})` : ''}`,
+                    meta: 'Live update'
+                });
+            }
+        });
+
+        const activitySet = this.lastFriendSnapshot.activities;
+        activities.forEach(activity => {
+            if (!activity?.id) return;
+            if (!activitySet.has(activity.id)) {
+                const rarity = activity.fish_rarity;
+                if (rarity === 'LEVEL_UP') {
+                    this.showNotification({
+                        type: 'level-up',
+                        title: `${activity.username || 'A friend'} leveled up!`,
+                        body: `Now level ${this.formatInteger(activity.fish_weight) || ''}`,
+                        meta: this.formatRelativeTime(activity.created_at)
+                    });
+                } else {
+                    const weight = this.formatWeight(activity.fish_weight);
+                    this.showNotification({
+                        type: 'catch',
+                        title: `${activity.username || 'A friend'} caught a ${rarity} ${activity.fish_name || ''}!`,
+                        body: `${weight ? `${weight} · ` : ''}${activity.location_name || 'Unknown lake'}`,
+                        meta: this.formatRelativeTime(activity.created_at)
+                    });
+                }
+            }
+        });
+
+        this.lastFriendSnapshot = {
+            friends: friendMap,
+            activities: new Set((activities || []).map(a => a?.id).filter(Boolean))
+        };
+    }
+
+    getNotificationStack() {
+        return document.getElementById('notification-stack');
+    }
+
+    showNotification({ type = 'info', title = '', body = '', meta = '' }) {
+        const stack = this.getNotificationStack();
+        if (!stack) return;
+
+        const toast = document.createElement('div');
+        toast.className = `notification-toast ${type}`;
+        toast.innerHTML = `
+            <div class="notification-title">${this.safeText(title)}</div>
+            <div class="notification-body">${this.safeText(body)}</div>
+            ${meta ? `<div class="notification-meta">${this.safeText(meta)}</div>` : ''}
+        `;
+
+        stack.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.animation = 'notificationFadeOut 0.25s ease-in forwards';
+            setTimeout(() => toast.remove(), 250);
+        }, 5000);
     }
 }
 
