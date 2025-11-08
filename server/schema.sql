@@ -41,6 +41,18 @@ CREATE TABLE IF NOT EXISTS friend_activities (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Global leaderboard (best catch per player)
+CREATE TABLE IF NOT EXISTS leaderboard_catches (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    player_id UUID REFERENCES players(id) ON DELETE CASCADE UNIQUE,
+    username TEXT NOT NULL,
+    fish_name TEXT NOT NULL,
+    fish_weight DECIMAL(10, 2) NOT NULL,
+    location_name TEXT,
+    recorded_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Player fish collections (sync from game)
 CREATE TABLE IF NOT EXISTS player_collections (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -55,6 +67,8 @@ CREATE INDEX IF NOT EXISTS idx_friendships_player2 ON friendships(player2_id);
 CREATE INDEX IF NOT EXISTS idx_friendships_status ON friendships(status);
 CREATE INDEX IF NOT EXISTS idx_friend_activities_player ON friend_activities(player_id);
 CREATE INDEX IF NOT EXISTS idx_friend_activities_created ON friend_activities(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_catches_weight ON leaderboard_catches(fish_weight DESC);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_catches_recorded ON leaderboard_catches(recorded_at DESC);
 CREATE INDEX IF NOT EXISTS idx_players_friend_code ON players(friend_code);
 CREATE INDEX IF NOT EXISTS idx_players_username ON players(username);
 CREATE INDEX IF NOT EXISTS idx_player_collections_player ON player_collections(player_id);
@@ -73,6 +87,9 @@ CREATE TRIGGER update_players_updated_at BEFORE UPDATE ON players
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_player_collections_updated_at BEFORE UPDATE ON player_collections
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_leaderboard_catches_updated_at BEFORE UPDATE ON leaderboard_catches
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 

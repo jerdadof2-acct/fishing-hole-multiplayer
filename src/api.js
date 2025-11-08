@@ -227,6 +227,17 @@ export class API {
         });
     }
 
+    async logLeaderboardCatch(catchData) {
+        return this.request('/leaderboard/catch', {
+            method: 'POST',
+            body: JSON.stringify(catchData)
+        });
+    }
+
+    async getGlobalLeaderboard(limit = 20) {
+        return this.request(`/leaderboard/global?limit=${limit}`);
+    }
+
     /**
      * Get friends' recent activities
      * @param {number} limit - Maximum number of activities

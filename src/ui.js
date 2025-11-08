@@ -16,6 +16,8 @@ export class UI {
         this.fishCollection = gameplaySystems?.fishCollection || null;
         this.currentInventoryTab = 'collection';
         this.api = game?.api || null;
+        this.globalLeaderboardCache = { entries: [], fetchedAt: 0 };
+        this.activeLeaderboardTab = 'local';
         this.friendData = { friends: [], pending: { sent: [], received: [] }, activities: [] };
         this.friendDataLoaded = false;
         this.friendMessageTimer = null;
@@ -145,6 +147,154 @@ export class UI {
             clearInterval(this.friendRefreshTimer);
             this.friendRefreshTimer = null;
         }
+    }
+
+    async renderGlobalLeaderboardSection(force = false) {
+        const leaderboardContent = document.getElementById('leaderboard-content');
+        if (!leaderboardContent) return;
+
+        const loadingMessage = '<p style="text-align: center; color: rgba(255,255,255,0.6); padding: 30px;">Loading global leaderboard...</p>';
+
+        if (!this.isOnline() || !this.api) {
+            this.renderGlobalLeaderboardFallback(leaderboardContent);
+            return;
+        }
+
+        if (force) {
+            this.globalLeaderboardCache.fetchedAt = 0;
+        }
+
+        leaderboardContent.innerHTML = loadingMessage;
+
+        try {
+            const entries = await this.refreshGlobalLeaderboard();
+
+            if (!entries || entries.length === 0) {
+                leaderboardContent.innerHTML = '<p style="text-align: center; color: rgba(255,255,255,0.6); padding: 40px;">No catches have been logged yet. Be the first to catch a monster!</p>';
+                return;
+            }
+
+            leaderboardContent.innerHTML = this.buildGlobalLeaderboardMarkup(entries);
+        } catch (error) {
+            console.error('[UI] Failed to load global leaderboard:', error);
+            this.renderGlobalLeaderboardFallback(leaderboardContent, error);
+        }
+    }
+
+    renderGlobalLeaderboardFallback(container, error = null) {
+        const leaderboardData = this.leaderboard.getLeaderboardData(this.player.name);
+        const { top10, playerEntry, playerRank } = leaderboardData;
+
+        if (top10.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: rgba(255,255,255,0.5); padding: 40px;">No catches yet.</p>';
+            return;
+        }
+
+        let html = top10.map((entry, index) => {
+            const isPlayer = entry.playerName === this.player.name;
+            return `
+                <div class="leaderboard-entry ${isPlayer ? 'player-entry' : ''}">
+                    <div class="leaderboard-rank">#${index + 1}</div>
+                    <div class="leaderboard-info">
+                        <div class="leaderboard-player">${entry.playerName}</div>
+                        <div class="leaderboard-fish">${entry.fishName}</div>
+                    </div>
+                    <div class="leaderboard-weight">${entry.weight.toFixed(2)} lbs</div>
+                </div>
+            `;
+        }).join('');
+
+        if (playerRank === -1 && playerEntry) {
+            html += `
+                <div class="leaderboard-entry player-entry" style="margin-top: 20px; border-top: 2px solid #4a90e2; padding-top: 20px;">
+                    <div class="leaderboard-rank">...</div>
+                    <div class="leaderboard-info">
+                        <div class="leaderboard-player">${playerEntry.playerName} (You)</div>
+                        <div class="leaderboard-fish">${playerEntry.fishName}</div>
+                    </div>
+                    <div class="leaderboard-weight">${playerEntry.weight.toFixed(2)} lbs</div>
+                </div>
+            `;
+        }
+
+        if (error) {
+            html = `<div class="friends-placeholder error">Live leaderboard unavailable. Showing your local catches instead.<br>${this.safeText(error.message || '')}</div>` + html;
+        }
+
+        container.innerHTML = html;
+    }
+
+    async refreshGlobalLeaderboard() {
+        if (!this.api || !this.isOnline()) {
+            return this.getLocalGlobalLeaderboardEntries();
+        }
+
+        const now = Date.now();
+        const cacheAge = now - this.globalLeaderboardCache.fetchedAt;
+
+        if (this.globalLeaderboardCache.entries.length > 0 && cacheAge < 15000) {
+            return this.globalLeaderboardCache.entries;
+        }
+
+        try {
+            const response = await this.api.getGlobalLeaderboard(50);
+            const entries = Array.isArray(response) ? response : [];
+            this.globalLeaderboardCache = {
+                entries,
+                fetchedAt: now
+            };
+            return entries;
+        } catch (error) {
+            console.error('[UI] Global leaderboard fetch error:', error);
+            if (this.globalLeaderboardCache.entries.length > 0) {
+                return this.globalLeaderboardCache.entries;
+            }
+            return this.getLocalGlobalLeaderboardEntries();
+        }
+    }
+
+    getLocalGlobalLeaderboardEntries() {
+        if (!this.leaderboard) return [];
+        const leaderboardData = this.leaderboard.getLeaderboardData(this.player.name);
+        const { top10 } = leaderboardData;
+
+        return (top10 || []).map((entry) => ({
+            player_id: null,
+            username: entry.playerName,
+            fish_name: entry.fishName,
+            fish_weight: entry.weight,
+            location_name: null,
+            recorded_at: entry.timestamp ? new Date(entry.timestamp).toISOString() : null,
+            _local: true
+        }));
+    }
+
+    buildGlobalLeaderboardMarkup(entries) {
+        const highlightId = this.player?.userId || null;
+        const highlightName = this.player?.name || null;
+
+        return entries.map((entry, index) => {
+            const username = this.safeText(entry.username || 'Unknown angler');
+            const fishName = this.safeText(entry.fish_name || 'Mystery Fish');
+            const location = this.safeText(entry.location_name || '???');
+            const weightValue = Number(entry.fish_weight) || 0;
+            const weightText = weightValue > 0 ? `${weightValue.toFixed(2)} lbs` : '--';
+            const recorded = entry.recorded_at ? this.formatRelativeTime(entry.recorded_at) : '';
+            const isPlayer = (highlightId && entry.player_id === highlightId) ||
+                (!highlightId && highlightName && username === highlightName);
+
+            return `
+                <div class="leaderboard-entry ${isPlayer ? 'player-entry' : ''}">
+                    <div class="leaderboard-rank">#${index + 1}</div>
+                    <div class="leaderboard-info">
+                        <div class="leaderboard-player">${username}</div>
+                        <div class="leaderboard-fish">${fishName}${location !== '???' ? ` · ${location}` : ''}</div>
+                        ${recorded ? `<div class="leaderboard-meta">Caught ${recorded}</div>` : ''}
+                    </div>
+                    <div class="leaderboard-weight">${weightText}</div>
+                </div>
+            `;
+        }).join('');
     }
     
     initModals() {
@@ -976,10 +1126,12 @@ export class UI {
     
     renderLeaderboard(tab) {
         if (!this.leaderboard || !this.player) return;
-        
+
+        this.activeLeaderboardTab = tab;
+
         const leaderboardContent = document.getElementById('leaderboard-content');
         if (!leaderboardContent) return;
-        
+
         if (tab === 'local') {
             const top10 = this.inventory.getTop10();
             if (top10.length === 0) {
@@ -1001,42 +1153,7 @@ export class UI {
                 leaderboardContent.innerHTML = html;
             }
         } else if (tab === 'global') {
-            const leaderboardData = this.leaderboard.getLeaderboardData(this.player.name);
-            const { top10, playerEntry, playerRank } = leaderboardData;
-            
-            let html = '';
-            if (top10.length === 0) {
-                html = '<p style="text-align: center; color: rgba(255,255,255,0.5); padding: 40px;">No catches yet.</p>';
-        } else {
-                html = top10.map((entry, index) => {
-                    const isPlayer = entry.playerName === this.player.name;
-                    return `
-                        <div class="leaderboard-entry ${isPlayer ? 'player-entry' : ''}">
-                            <div class="leaderboard-rank">#${index + 1}</div>
-                            <div class="leaderboard-info">
-                                <div class="leaderboard-player">${entry.playerName}</div>
-                                <div class="leaderboard-fish">${entry.fishName}</div>
-                            </div>
-                            <div class="leaderboard-weight">${entry.weight.toFixed(2)} lbs</div>
-                        </div>
-                    `;
-                }).join('');
-                
-                // Add player entry if not in top 10
-                if (playerRank === -1 && playerEntry) {
-                    html += `
-                        <div class="leaderboard-entry player-entry" style="margin-top: 20px; border-top: 2px solid #4a90e2; padding-top: 20px;">
-                            <div class="leaderboard-rank">...</div>
-                            <div class="leaderboard-info">
-                                <div class="leaderboard-player">${playerEntry.playerName} (You)</div>
-                                <div class="leaderboard-fish">${playerEntry.fishName}</div>
-                            </div>
-                            <div class="leaderboard-weight">${playerEntry.weight.toFixed(2)} lbs</div>
-                        </div>
-                    `;
-                }
-            }
-            leaderboardContent.innerHTML = html;
+            this.renderGlobalLeaderboardSection();
         }
     }
     
@@ -1557,6 +1674,34 @@ export class UI {
                 locationId,
                 timestamp: Date.now()
             });
+
+            if (this.api && this.isOnline()) {
+                const currentLocation = this.game?.locations?.getCurrentLocation?.();
+                const locationName = currentLocation?.name || null;
+
+                this.api.logCatch({
+                    fishName: species,
+                    fishWeight: weight,
+                    fishRarity: fishData.rarity,
+                    locationName,
+                    experienceGained: experience
+                }).catch(error => {
+                    console.warn('[UI] Failed to log catch activity:', error);
+                });
+
+                this.api.logLeaderboardCatch({
+                    fishName: species,
+                    fishWeight: weight,
+                    locationName
+                }).then(() => {
+                    this.globalLeaderboardCache.fetchedAt = 0;
+                    if (this.activeLeaderboardTab === 'global') {
+                        this.renderGlobalLeaderboardSection(true);
+                    }
+                }).catch(error => {
+                    console.warn('[UI] Failed to update leaderboard catch:', error);
+                });
+            }
             
             // Update top 10 biggest fish in player
             this.player.top10BiggestFish = this.inventory.getTop10();

@@ -3,6 +3,20 @@ import { api } from './api.js';
 
 const AUTH_STORAGE_KEY = 'kittyCreekAuth';
 
+function registerServiceWorker() {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+        return;
+    }
+
+    navigator.serviceWorker.register('/service-worker.js')
+        .then(registration => {
+            console.log('[BOOTSTRAP] Service worker registered:', registration.scope);
+        })
+        .catch(error => {
+            console.warn('[BOOTSTRAP] Service worker registration failed:', error);
+        });
+}
+
 function getAuthStorage() {
     try {
         const stored = localStorage.getItem(AUTH_STORAGE_KEY);
@@ -267,6 +281,7 @@ async function promptForUsername(options = {}) {
 }
 
 async function bootstrapGame() {
+    registerServiceWorker();
     toggleLoading(true, 'Connecting to Kitty Creek...');
 
     const health = await api.healthCheck();

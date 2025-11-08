@@ -617,6 +617,108 @@ app.post('/api/activities/level', authenticate, async (req, res) => {
     }
 });
 
+// ==================== Leaderboard Routes ====================
+
+// Record or update a player's best catch for the global leaderboard
+app.post('/api/leaderboard/catch', authenticate, async (req, res) => {
+    try {
+        if (!isValidUUID(req.userId)) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+
+        const { fishName, fishWeight, locationName } = req.body;
+
+        if (!fishName || typeof fishName !== 'string' || fishName.trim().length === 0) {
+            return res.status(400).json({ error: 'Fish name is required' });
+        }
+
+        const weight = Number(fishWeight);
+        if (!Number.isFinite(weight) || weight <= 0) {
+            return res.status(400).json({ error: 'Fish weight must be a positive number' });
+        }
+
+        const playerResult = await pool.query(
+            'SELECT username FROM players WHERE id = $1',
+            [req.userId]
+        );
+
+        if (playerResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Player not found' });
+        }
+
+        const username = playerResult.rows[0].username;
+        const location = locationName && typeof locationName === 'string' && locationName.trim().length > 0
+            ? locationName.trim()
+            : null;
+
+        await pool.query(
+            `INSERT INTO leaderboard_catches (player_id, username, fish_name, fish_weight, location_name)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (player_id) DO UPDATE SET
+                 username = EXCLUDED.username,
+                 fish_name = CASE 
+                     WHEN EXCLUDED.fish_weight > leaderboard_catches.fish_weight THEN EXCLUDED.fish_name
+                     ELSE leaderboard_catches.fish_name
+                 END,
+                 fish_weight = GREATEST(leaderboard_catches.fish_weight, EXCLUDED.fish_weight),
+                 location_name = CASE 
+                     WHEN EXCLUDED.fish_weight > leaderboard_catches.fish_weight THEN EXCLUDED.location_name
+                     ELSE leaderboard_catches.location_name
+                 END,
+                 recorded_at = CASE 
+                     WHEN EXCLUDED.fish_weight > leaderboard_catches.fish_weight THEN NOW()
+                     ELSE leaderboard_catches.recorded_at
+                 END,
+                 updated_at = NOW()`,
+            [req.userId, username, fishName.trim(), weight, location]
+        );
+
+        await pool.query(
+            `UPDATE players
+             SET biggest_catch = GREATEST(COALESCE(biggest_catch, 0), $2),
+                 last_active = NOW()
+             WHERE id = $1`,
+            [req.userId, weight]
+        );
+
+        const bestResult = await pool.query(
+            `SELECT player_id, username, fish_name, fish_weight, location_name, recorded_at
+             FROM leaderboard_catches
+             WHERE player_id = $1`,
+            [req.userId]
+        );
+
+        res.json({ success: true, bestCatch: bestResult.rows[0] });
+    } catch (error) {
+        console.error('[API] Leaderboard catch error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get global leaderboard (top catches across all players)
+app.get('/api/leaderboard/global', authenticate, async (req, res) => {
+    try {
+        if (!isValidUUID(req.userId)) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+
+        const limit = Math.min(Number(req.query.limit) || 20, 100);
+
+        const result = await pool.query(
+            `SELECT lc.player_id, lc.username, lc.fish_name, lc.fish_weight, lc.location_name, lc.recorded_at
+             FROM leaderboard_catches lc
+             ORDER BY lc.fish_weight DESC, lc.recorded_at ASC
+             LIMIT $1`,
+            [limit]
+        );
+
+        res.json(result.rows);
+    } catch (error) {
+        console.error('[API] Leaderboard fetch error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Get friends' recent activities
 app.get('/api/activities/friends', authenticate, async (req, res) => {
     try {
