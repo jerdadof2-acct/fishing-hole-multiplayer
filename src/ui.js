@@ -2752,6 +2752,14 @@ export class UI {
                 this.lastFriendSnapshot.friends.set(id, friend);
                 return;
             }
+            if (previous?.last_activity_id && friend?.last_activity_id && previous.last_activity_id === friend.last_activity_id) {
+                this.lastFriendSnapshot.friends.set(id, friend);
+                return;
+            }
+            if (!previousFriends.has(id)) {
+                this.lastFriendSnapshot.friends.set(id, friend);
+                return;
+            }
             if (currentLevel > prevLevel) {
                 const levelsGained = currentLevel - prevLevel;
                 this.showToast({
