@@ -103,6 +103,21 @@ export class Game {
             
             // Initialize location system
             this.locations = new Locations();
+            if (this.player) {
+                const savedIndex = typeof this.player.currentLocationIndex === 'number'
+                    ? this.player.currentLocationIndex
+                    : 0;
+                const unlocked = Array.isArray(this.player.locationUnlocks)
+                    ? this.player.locationUnlocks
+                    : [];
+                if (unlocked.includes(savedIndex)) {
+                    this.locations.setCurrentLocation(savedIndex);
+                } else if (unlocked.length > 0) {
+                    this.locations.setCurrentLocation(unlocked[0]);
+                    this.player.currentLocationIndex = unlocked[0];
+                    this.player.save({ skipSync: true });
+                }
+            }
             const currentLocation = this.locations.getCurrentLocation();
             console.log('[LOCATIONS] Current location:', currentLocation.name, 'Water type:', currentLocation.waterBodyType, 'Platform:', currentLocation.platformType);
             

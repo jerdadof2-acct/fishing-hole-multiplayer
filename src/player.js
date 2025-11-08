@@ -34,6 +34,9 @@ export class Player {
             baits: [0]      // Basic Bait
         };
         
+        // Last visited location
+        this.currentLocationIndex = 0;
+        
         // Current gear
         this.gear = {
             rod: 'Basic Rod',
@@ -366,7 +369,8 @@ export class Player {
                 top10BiggestFish: this.top10BiggestFish,
                 caughtFish: this.caughtFish,
                 caughtFishCollection: this.caughtFishCollection,
-                achievements: this.achievements
+                achievements: this.achievements,
+                currentLocationIndex: this.currentLocationIndex
             };
             
             if (this.userId) {
@@ -541,6 +545,9 @@ export class Player {
                 this.top10BiggestFish = playerData.top10BiggestFish || [];
                 this.caughtFish = playerData.caughtFish || {};
                 this.caughtFishCollection = playerData.caughtFishCollection || {};
+                if (typeof playerData.currentLocationIndex === 'number') {
+                    this.currentLocationIndex = playerData.currentLocationIndex;
+                }
                 // Migrate old array-based achievements to object-based
                 if (Array.isArray(playerData.achievements)) {
                     const oldAchievements = playerData.achievements;

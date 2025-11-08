@@ -1213,7 +1213,11 @@ export class UI {
         
         // Check if player can afford the location
         if (this.player.money < location.cost) {
-            this.showNotification(`Not enough money! Need $${location.cost}`, '#ff0000', 3000);
+            this.showToast({
+                type: 'error',
+                title: 'Not enough money',
+                body: `You need $${location.cost} to travel.`
+            });
             return;
         }
         
@@ -1228,10 +1232,19 @@ export class UI {
             this.updatePlayerInfo();
         }
         
+        if (this.player) {
+            this.player.currentLocationIndex = locationIndex;
+            this.player.save({ skipSync: true });
+        }
+        
         // Update location selector to show current selection
         this.updateLocationSelector();
         
-        this.showNotification(`Traveled to ${location.name}`, '#00ffff', 2000);
+        this.showToast({
+            type: 'info',
+            title: 'Location updated',
+            body: `Now fishing at ${location.name}.`
+        });
     }
 
     handleCastOrSetHook() {
@@ -2068,7 +2081,7 @@ export class UI {
         }, 5000);
     }
     
-    showNotification(message, color = '#00ffff', duration = 3000) {
+    showBannerNotification(message, color = '#00ffff', duration = 3000) {
         const notification = document.createElement('div');
         notification.style.cssText = `
             position: fixed;
@@ -2435,7 +2448,7 @@ export class UI {
         this.renderInventory('collection'); // Reset to collection tab
         
         // Show success message
-        this.showNotification('Progress reset! Starting fresh...', '#4ade80', 3000);
+        this.showBannerNotification('Progress reset! Starting fresh...', '#4ade80', 3000);
         
         console.log('[UI] All progress reset - game restarted');
     }
@@ -2617,10 +2630,10 @@ export class UI {
                     if (expReward > 0) rewardText.push(`+${expReward} XP`);
                     if (moneyReward > 0) rewardText.push(`+$${moneyReward}`);
                     const rewardStr = rewardText.length > 0 ? ` (${rewardText.join(', ')})` : '';
-                    this.showNotification(`Achievement unlocked: ${name}${tierText}!${rewardStr}`, '#ffd700', 5000);
+                    this.showBannerNotification(`Achievement unlocked: ${name}${tierText}!${rewardStr}`, '#ffd700', 5000);
                 } else {
                     const tierText = unlock.maxTier > 1 ? ` (Tier ${tier})` : '';
-                    this.showNotification(`Achievement unlocked: ${name}${tierText}!`, '#ffd700', 4500);
+                    this.showBannerNotification(`Achievement unlocked: ${name}${tierText}!`, '#ffd700', 4500);
                 }
             }
         });
@@ -2736,7 +2749,7 @@ export class UI {
             const currentLevel = friend?.level ?? prevLevel;
             if (currentLevel > prevLevel) {
                 const levelsGained = currentLevel - prevLevel;
-                this.showNotification({
+                this.showToast({
                     type: 'level-up',
                     title: `${friend.username || 'A friend'} leveled up!`,
                     body: `Reached Level ${currentLevel}${levelsGained > 1 ? ` (+${levelsGained - 1})` : ''}`,
@@ -2751,7 +2764,7 @@ export class UI {
             if (!activitySet.has(activity.id)) {
                 const rarity = activity.fish_rarity;
                 if (rarity === 'LEVEL_UP') {
-                    this.showNotification({
+                    this.showToast({
                         type: 'level-up',
                         title: `${activity.username || 'A friend'} leveled up!`,
                         body: `Now level ${this.formatInteger(activity.fish_weight) || ''}`,
@@ -2759,7 +2772,7 @@ export class UI {
                     });
                 } else {
                     const weight = this.formatWeight(activity.fish_weight);
-                    this.showNotification({
+                    this.showToast({
                         type: 'catch',
                         title: `${activity.username || 'A friend'} caught a ${rarity} ${activity.fish_name || ''}!`,
                         body: `${weight ? `${weight} · ` : ''}${activity.location_name || 'Unknown lake'}`,
@@ -2779,7 +2792,7 @@ export class UI {
         return document.getElementById('notification-stack');
     }
 
-    showNotification({ type = 'info', title = '', body = '', meta = '' }) {
+    showToast({ type = 'info', title = '', body = '', meta = '' }) {
         const stack = this.getNotificationStack();
         if (!stack) return;
 
