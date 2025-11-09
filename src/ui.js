@@ -1191,46 +1191,46 @@ export class UI {
         if (actionTarget) {
             const action = actionTarget.dataset.action;
 
-            if (action === 'copy') {
+        if (action === 'copy') {
                 event.preventDefault();
                 event.stopPropagation();
                 const code = actionTarget.dataset.code;
-                if (!code) return;
-                try {
-                    if (navigator.clipboard?.writeText) {
-                        await navigator.clipboard.writeText(code);
-                        this.showFriendMessage('Friend code copied to clipboard!');
-                    } else {
-                        this.showFriendMessage('Clipboard unavailable. Tap and hold to copy manually.', 'error');
-                    }
-                } catch (error) {
-                    console.warn('[UI] Failed to copy friend code:', error);
-                    this.showFriendMessage('Copy failed. Tap and hold to copy manually.', 'error');
+            if (!code) return;
+            try {
+                if (navigator.clipboard?.writeText) {
+                    await navigator.clipboard.writeText(code);
+                    this.showFriendMessage('Friend code copied to clipboard!');
+                } else {
+                    this.showFriendMessage('Clipboard unavailable. Tap and hold to copy manually.', 'error');
                 }
-                return;
+            } catch (error) {
+                console.warn('[UI] Failed to copy friend code:', error);
+                this.showFriendMessage('Copy failed. Tap and hold to copy manually.', 'error');
             }
+            return;
+        }
 
-            if (action === 'remove') {
+        if (action === 'remove') {
                 event.preventDefault();
                 event.stopPropagation();
 
-                if (!this.isOnline()) {
-                    this.showFriendMessage('Connect to remove friends.', 'error');
-                    return;
-                }
+            if (!this.isOnline()) {
+                this.showFriendMessage('Connect to remove friends.', 'error');
+                return;
+            }
 
                 const friendId = actionTarget.dataset.id;
-                if (!friendId) return;
+            if (!friendId) return;
 
-                try {
+            try {
                     actionTarget.disabled = true;
-                    await this.api.removeFriend(friendId);
-                    this.showFriendMessage('Friend removed.');
-                    await this.refreshFriends(true);
-                } catch (error) {
-                    console.warn('[UI] Failed to remove friend:', error);
-                    this.showFriendMessage(error?.message || 'Failed to remove friend.', 'error');
-                } finally {
+                await this.api.removeFriend(friendId);
+                this.showFriendMessage('Friend removed.');
+                await this.refreshFriends(true);
+            } catch (error) {
+                console.warn('[UI] Failed to remove friend:', error);
+                this.showFriendMessage(error?.message || 'Failed to remove friend.', 'error');
+            } finally {
                     actionTarget.disabled = false;
                 }
                 return;
@@ -1657,7 +1657,8 @@ export class UI {
 
     handleCastOrSetHook() {
         const castButton = document.getElementById('cast-button');
-        
+        const currentState = castButton?.getAttribute('data-state');
+
         if (!this.fishing) {
             console.error('Fishing system not available');
             return;
@@ -1666,6 +1667,10 @@ export class UI {
         // Check if we're setting hook (after bite)
         if (this.waitingForBite && this.biteStrikeTime) {
             this.handleSetHook();
+            return;
+        }
+
+        if (currentState === 'waiting' || currentState === 'fighting') {
             return;
         }
         
@@ -1689,6 +1694,7 @@ export class UI {
         
         castButton.disabled = true;
         castButton.textContent = 'WAITING...'; // Change to WAITING immediately after cast
+        castButton.setAttribute('data-state', 'waiting');
         
         // Call fishing cast
         try {
@@ -1697,6 +1703,7 @@ export class UI {
             console.error('Error in cast:', error);
             castButton.disabled = false;
             castButton.textContent = 'CAST';
+            castButton.removeAttribute('data-state');
             return;
         }
         
@@ -1794,6 +1801,7 @@ export class UI {
         castButton.textContent = 'SET HOOK!';
         castButton.disabled = false;
         castButton.style.background = 'rgba(255, 100, 100, 0.9)'; // Red for urgency
+        castButton.setAttribute('data-state', 'set-hook');
     }
     
     handleSetHook() {
@@ -1838,6 +1846,7 @@ export class UI {
                     castButton.disabled = true;
                     castButton.textContent = 'FIGHTING...';
                     castButton.style.background = '';
+                    castButton.setAttribute('data-state', 'fighting');
                     
                     // Hook fish and start fight
             if (this.fishing.bobber && this.fishing.bobber.visible) {
@@ -1846,9 +1855,9 @@ export class UI {
                         // Hook the fish (starts fight)
                         this.fish.hook();
                         // Set fishing state for fight
-                    this.fishing.setFishOnLine(true);
-                    this.fishing.isReeling = true; // Start reeling/fighting
-                    console.log('[UI] Fish hooked, fight begins!');
+                        this.fishing.setFishOnLine(true);
+                        this.fishing.isReeling = true; // Start reeling/fighting
+                        console.log('[UI] Fish hooked, fight begins!');
                     
                     if (this.fishing) {
                         this.fishing.lastReactionTimeMs = reactionTime;
@@ -3078,297 +3087,4 @@ export class UI {
                     // Show notification with tier and rewards
                     const tierText = unlock.maxTier > 1 ? ` (Tier ${tier})` : '';
                     const rewardText = [];
-                    if (expReward > 0) rewardText.push(`+${expReward} XP`);
-                    if (moneyReward > 0) rewardText.push(`+$${moneyReward}`);
-                    const rewardStr = rewardText.length > 0 ? ` (${rewardText.join(', ')})` : '';
-                    this.showBannerNotification(`Achievement unlocked: ${name}${tierText}!${rewardStr}`, '#ffd700', 5000);
-                } else {
-                    const tierText = unlock.maxTier > 1 ? ` (Tier ${tier})` : '';
-                    this.showBannerNotification(`Achievement unlocked: ${name}${tierText}!`, '#ffd700', 4500);
-                }
-            }
-        });
-
-        if (updated) {
-            this.player.save();
-            
-            // Update player info to show new experience/money
-            if (totalExpReward > 0 || totalMoneyReward > 0) {
-                this.updatePlayerInfo();
-            }
-            
-            if (this.currentInventoryTab === 'achievements') {
-                const container = document.getElementById('inventory-content');
-                if (container) {
-                    this.renderAchievementsTab(container);
-                }
-            }
-        }
-    }
-
-    getFriendStatus(friend) {
-        if (!this.isOnline()) {
-            return { statusClass: 'offline', meta: 'Offline' };
-        }
-
-        const lastActive = friend?.last_active ? new Date(friend.last_active).getTime() : 0;
-        const now = Date.now();
-        const diff = now - lastActive;
-
-        const fiveMinutes = 5 * 60 * 1000;
-        if (!lastActive || diff > fiveMinutes) {
-            const meta = friend?.last_active ? `Active ${this.formatRelativeTime(friend.last_active)}` : 'Offline';
-            return { statusClass: 'offline', meta };
-        }
-
-        return { statusClass: 'online', meta: 'Online now' };
-    }
-
-    formatWeight(weight) {
-        if (weight === null || weight === undefined) return '';
-        const value = Number(weight);
-        if (Number.isNaN(value)) return '';
-        return `${value.toFixed(1)} lbs`;
-    }
-
-    buildActivityEntry(activity) {
-        if (!activity) return '';
-
-        const activityType = activity.fish_rarity || 'catch';
-        const username = this.safeText(activity.username || 'A friend');
-        const timestamp = activity.created_at ? this.formatRelativeTime(activity.created_at) : '';
-
-        if (activityType === 'LEVEL_UP') {
-            const level = this.formatInteger(activity.fish_weight);
-            const gain = this.formatInteger(activity.experience_gained);
-            const metaPieces = [];
-            if (gain) {
-                metaPieces.push(gain === 1 ? '1 level gained' : `${gain} levels gained`);
-            }
-
-            return `
-                <div class="friends-activity-entry">
-                    <div class="friends-activity-body">${username} reached Level ${level || '?'}! 🎉</div>
-                    <div class="friends-activity-meta">${metaPieces.join(' · ')}${metaPieces.length && timestamp ? ' · ' : ''}${timestamp}</div>
-                </div>
-            `;
-        }
-
-        const rarity = this.safeText(activity.fish_rarity || 'Unknown');
-        const name = this.safeText(activity.fish_name || 'a fish');
-        const weight = this.formatWeight(activity.fish_weight);
-        const location = this.safeText(activity.location_name || 'somewhere secret');
-        const metaPieces = [];
-        if (location) metaPieces.push(`at ${location}`);
-        const xp = activity.experience_gained;
-        if (typeof xp === 'number' && xp > 0) metaPieces.push(`+${xp} XP`);
-
-        const body = `${username} landed a ${rarity} ${name}${weight ? ` weighing ${weight}` : ''}!`;
-
-        return `
-            <div class="friends-activity-entry">
-                <div class="friends-activity-body">${body}</div>
-                <div class="friends-activity-meta">${metaPieces.join(' · ')}${metaPieces.length && timestamp ? ' · ' : ''}${timestamp}</div>
-            </div>
-        `;
-    }
-
-    formatInteger(value) {
-        if (value === null || value === undefined) return null;
-        const parsed = Number(value);
-        if (!Number.isFinite(parsed)) return null;
-        return Math.round(parsed);
-    }
-
-    detectFriendNotifications(friends = [], activities = []) {
-        const stack = this.getNotificationStack();
-        if (!stack) return;
-
-        const friendMap = new Map();
-        friends.forEach(friend => {
-            if (friend?.id) {
-                friendMap.set(friend.id, friend);
-            }
-        });
-
-        const previousFriends = this.lastFriendSnapshot.friends;
-
-        friendMap.forEach((friend, id) => {
-            const previous = previousFriends.get(id);
-            const prevLevel = previous?.level ?? friend.level;
-            const currentLevel = friend?.level ?? prevLevel;
-            if (!previousFriends.has(id)) {
-                this.lastFriendSnapshot.friends.set(id, friend);
-                const storedLevel = this.notificationState.friendLevels[id] ?? friend.level ?? 0;
-                this.notificationState.friendLevels[id] = Math.max(storedLevel, friend.level ?? storedLevel);
-                return;
-            }
-            const storedLevel = this.notificationState.friendLevels[id] ?? prevLevel;
-            if (currentLevel > storedLevel) {
-                const levelsGained = currentLevel - storedLevel;
-                this.showToast({
-                    type: 'level-up',
-                    title: `${friend.username || 'A friend'} leveled up!`,
-                    body: levelsGained > 1
-                        ? `Jumped ${levelsGained} levels to reach ${currentLevel}.`
-                        : `Reached Level ${currentLevel}.`,
-                    meta: 'Live update'
-                });
-                this.notificationState.friendLevels[id] = currentLevel;
-            } else {
-                this.notificationState.friendLevels[id] = Math.max(storedLevel, currentLevel);
-            }
-        });
-
-        const activitySet = this.lastFriendSnapshot.activities;
-        activities.forEach(activity => {
-            if (!activity?.id) return;
-            if (!activitySet.has(activity.id)) {
-                if (this.notificationState.activityIds.has(activity.id)) {
-                    return;
-                }
-                const rarity = activity.fish_rarity;
-                if (rarity === 'LEVEL_UP') {
-                    this.showToast({
-                        type: 'level-up',
-                        title: `${activity.username || 'A friend'} leveled up!`,
-                        body: `Now level ${this.formatInteger(activity.fish_weight) || ''}`,
-                        meta: this.formatRelativeTime(activity.created_at)
-                    });
-                } else {
-                    const weight = this.formatWeight(activity.fish_weight);
-                    this.showToast({
-                        type: 'catch',
-                        title: `${activity.username || 'A friend'} caught a ${rarity} ${activity.fish_name || ''}!`,
-                        body: `${weight ? `${weight} · ` : ''}${activity.location_name || 'Unknown lake'}`,
-                        meta: this.formatRelativeTime(activity.created_at)
-                    });
-                }
-                this.notificationState.activityIds.add(activity.id);
-            }
-        });
-
-        this.lastFriendSnapshot = {
-            friends: friendMap,
-            activities: new Set((activities || []).map(a => a?.id).filter(Boolean))
-        };
-        this.pruneNotificationState();
-        this.saveNotificationState();
-    }
-
-    checkAffordableUpgrades() {
-        if (!this.player || !TackleShop) return;
-
-        const categories = Object.keys(TackleShop);
-        let notified = false;
-
-        for (const category of categories) {
-            const items = TackleShop[category] || [];
-            const owned = new Set(this.player.tackleUnlocks?.[category] || []);
-
-            for (const item of items) {
-                if (owned.has(item.id)) {
-                    continue;
-                }
-                if (typeof item.unlockLevel === 'number' && this.player.level < item.unlockLevel) {
-                    continue;
-                }
-                if (typeof item.cost === 'number' && this.player.money < item.cost) {
-                    continue;
-                }
-
-                const key = `${category}-${item.id}`;
-                if (this.affordableNotified.has(key)) {
-                    continue;
-                }
-
-                this.affordableNotified.add(key);
-                this.showToast({
-                    type: 'info',
-                    title: 'Upgrade available',
-                    body: `You can now purchase the ${item.name} in the shop.`
-                });
-
-                notified = true;
-                break;
-            }
-
-            if (notified) {
-                break;
-            }
-        }
-    }
-
-    getNotificationStack() {
-        return document.getElementById('notification-stack');
-    }
-
-    loadNotificationState() {
-        const defaultState = {
-            friendLevels: {},
-            activityIds: []
-        };
-        try {
-            const raw = localStorage.getItem('kittyCreekFriendNotifications');
-            if (!raw) {
-                return {
-                    friendLevels: {},
-                    activityIds: new Set()
-                };
-            }
-            const parsed = JSON.parse(raw);
-            return {
-                friendLevels: parsed.friendLevels || {},
-                activityIds: new Set(Array.isArray(parsed.activityIds) ? parsed.activityIds : [])
-            };
-        } catch (error) {
-            console.warn('[UI] Failed to load friend notification state:', error);
-            return {
-                friendLevels: {},
-                activityIds: new Set()
-            };
-        }
-    }
-
-    saveNotificationState() {
-        try {
-            const serialized = JSON.stringify({
-                friendLevels: this.notificationState.friendLevels || {},
-                activityIds: Array.from(this.notificationState.activityIds || [])
-            });
-            localStorage.setItem('kittyCreekFriendNotifications', serialized);
-        } catch (error) {
-            console.warn('[UI] Failed to save friend notification state:', error);
-        }
-    }
-
-    pruneNotificationState() {
-        // Limit stored activity IDs to avoid unbounded growth
-        const maxActivities = 200;
-        if (this.notificationState.activityIds.size > maxActivities) {
-            const trimmed = Array.from(this.notificationState.activityIds).slice(-maxActivities);
-            this.notificationState.activityIds = new Set(trimmed);
-        }
-    }
-
-    showToast({ type = 'info', title = '', body = '', meta = '' }) {
-        const stack = this.getNotificationStack();
-        if (!stack) return;
-
-        const toast = document.createElement('div');
-        toast.className = `notification-toast ${type}`;
-        toast.innerHTML = `
-            <div class="notification-title">${this.safeText(title)}</div>
-            <div class="notification-body">${this.safeText(body)}</div>
-            ${meta ? `<div class="notification-meta">${this.safeText(meta)}</div>` : ''}
-        `;
-
-        stack.appendChild(toast);
-
-        setTimeout(() => {
-            toast.style.animation = 'notificationFadeOut 0.25s ease-in forwards';
-            setTimeout(() => toast.remove(), 250);
-        }, 5000);
-    }
-}
-
+                    if (expReward > 0) rewardText.push(`
