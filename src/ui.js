@@ -781,6 +781,81 @@ export class UI {
         container.innerHTML = activities.map(activity => this.buildActivityEntry(activity)).join('');
     }
 
+    buildActivityEntry(activity) {
+        const fallback = `
+            <div class="friends-activity-entry">
+                <div class="friends-activity-body">Something cool happened with a friend.</div>
+            </div>
+        `;
+
+        if (!activity || typeof activity !== 'object') {
+            return fallback;
+        }
+
+        const type = activity.type || activity.activity_type || '';
+        const angler = this.safeText(
+            activity.display_name ||
+            activity.username ||
+            activity.player_name ||
+            'A friend'
+        );
+
+        const createdAt = activity.created_at || activity.timestamp || activity.time || null;
+        const relativeTime = createdAt ? this.formatRelativeTime(createdAt) : '';
+
+        let title = '';
+        let metaPieces = [];
+        let body = '';
+
+        if ((type && type.toLowerCase() === 'level') || activity.level || activity.new_level) {
+            const level = activity.level ?? activity.new_level ?? activity.target_level ?? '?';
+            const levelsGained = activity.levels_gained ?? activity.levelsGained ?? null;
+            title = `${angler} leveled up!`;
+
+            if (levelsGained && Number.isFinite(Number(levelsGained))) {
+                metaPieces.push(`+${Number(levelsGained)} level${Number(levelsGained) === 1 ? '' : 's'}`);
+            }
+            metaPieces.push(`Now level ${this.safeText(level)}`);
+            body = activity.message
+                ? this.safeText(activity.message)
+                : 'They are climbing the Kitty Creek ranks.';
+        } else {
+            const fishName = this.safeText(activity.fish_name || activity.fishName || 'a fish');
+            const weightValue = Number(activity.fish_weight ?? activity.weight ?? activity.maxWeight);
+            const weightText = Number.isFinite(weightValue) ? `${weightValue.toFixed(2)} lbs` : null;
+            const rarity = activity.fish_rarity || activity.rarity || null;
+            const location = activity.location_name || activity.location || activity.spot || null;
+
+            title = `${angler} caught ${fishName}!`;
+
+            if (weightText) metaPieces.push(weightText);
+            if (rarity && rarity !== 'Common') metaPieces.push(this.safeText(rarity));
+            if (location) metaPieces.push(this.safeText(location));
+
+            body = activity.message
+                ? this.safeText(activity.message)
+                : 'The catch turned the creek into a splash zone.';
+        }
+
+        if (!title) {
+            title = `${angler} made a splash!`;
+        }
+
+        if (relativeTime) {
+            metaPieces.push(relativeTime);
+        }
+
+        return `
+            <div class="friends-activity-entry">
+                <div class="friends-activity-header">
+                    <span>${title}</span>
+                    ${metaPieces.length ? `<span class="friends-activity-meta">${metaPieces.join(' · ')}</span>` : ''}
+                </div>
+                <div class="friends-activity-body">${body}</div>
+            </div>
+        `;
+    }
+
     buildFriendEntry(friend) {
         const id = this.safeAttr(friend?.id ?? '');
         const name = this.safeText(friend?.username || 'Unknown angler');
