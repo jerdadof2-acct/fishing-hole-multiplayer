@@ -14,6 +14,10 @@ body {
     touch-action: none;
 }
 
+:root {
+    --ad-height: 60px;
+}
+
 /* Game Container */
 #game-container {
     width: 100vw;
@@ -162,7 +166,7 @@ canvas {
 
 .ad-banner-content {
     width: 100%;
-    min-height: 50px;
+    min-height: var(--ad-height);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -171,7 +175,7 @@ canvas {
 
 .ad-rotator {
     width: min(760px, 96%);
-    min-height: 50px;
+    min-height: var(--ad-height);
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -304,6 +308,10 @@ canvas {
 }
 
 @media (max-width: 520px) {
+    :root {
+        --ad-height: 50px;
+    }
+
     .ad-card {
         padding: 6px 10px;
         min-height: 44px;
@@ -323,7 +331,7 @@ canvas {
 /* Player HUD */
 #player-info {
     position: absolute;
-    top: calc(66px + env(safe-area-inset-top, 0));
+    top: calc(var(--ad-height) + env(safe-area-inset-top, 0) + 14px);
     left: 16px;
     z-index: 170;
     pointer-events: none;
