@@ -73,7 +73,7 @@ export const ACHIEVEMENTS = [
         getValue: (player) => player.totalCaught,
         unit: 'fish',
         tiers: [
-            { target: 1, reward: { experience: 50, money: 25 } }
+            { target: 1, reward: { experience: 25, money: 50 } }
         ]
     },
     {
@@ -83,14 +83,14 @@ export const ACHIEVEMENTS = [
         getValue: (player) => player.totalCaught,
         unit: 'fish',
         tiers: [
-            { target: 10, reward: { experience: 75, money: 50 } },
-            { target: 50, reward: { experience: 200, money: 100 } },
-            { target: 100, reward: { experience: 400, money: 200 } },
-            { target: 250, reward: { experience: 600, money: 300 } },
-            { target: 500, reward: { experience: 1000, money: 500 } },
-            { target: 1000, reward: { experience: 2000, money: 1000 } },
-            { target: 2500, reward: { experience: 4000, money: 2000 } },
-            { target: 5000, reward: { experience: 8000, money: 4000 } }
+            { target: 10, reward: { experience: 40, money: 75 } },
+            { target: 50, reward: { experience: 90, money: 125 } },
+            { target: 100, reward: { experience: 140, money: 200 } },
+            { target: 250, reward: { experience: 220, money: 350 } },
+            { target: 500, reward: { experience: 320, money: 500 } },
+            { target: 1000, reward: { experience: 450, money: 750 } },
+            { target: 2500, reward: { experience: 650, money: 1200 } },
+            { target: 5000, reward: { experience: 900, money: 2000 } }
         ]
     },
     {
@@ -100,14 +100,14 @@ export const ACHIEVEMENTS = [
         getValue: (player) => player.biggestCatch,
         unit: 'lbs',
         tiers: [
-            { target: 5, reward: { experience: 100, money: 50 } },
-            { target: 10, reward: { experience: 200, money: 100 } },
-            { target: 15, reward: { experience: 350, money: 175 } },
-            { target: 20, reward: { experience: 500, money: 250 } },
-            { target: 30, reward: { experience: 750, money: 375 } },
-            { target: 50, reward: { experience: 1500, money: 750 } },
-            { target: 75, reward: { experience: 2500, money: 1250 } },
-            { target: 100, reward: { experience: 5000, money: 2500 } }
+            { target: 5, reward: { experience: 60, money: 80 } },
+            { target: 10, reward: { experience: 90, money: 140 } },
+            { target: 15, reward: { experience: 130, money: 220 } },
+            { target: 20, reward: { experience: 170, money: 320 } },
+            { target: 30, reward: { experience: 230, money: 450 } },
+            { target: 50, reward: { experience: 320, money: 650 } },
+            { target: 75, reward: { experience: 420, money: 900 } },
+            { target: 100, reward: { experience: 550, money: 1300 } }
         ]
     },
     {
@@ -117,14 +117,14 @@ export const ACHIEVEMENTS = [
         getValue: (player) => player.level,
         unit: 'level',
         tiers: [
-            { target: 5, reward: { experience: 150, money: 75 } },
-            { target: 10, reward: { experience: 300, money: 150 } },
-            { target: 15, reward: { experience: 500, money: 250 } },
-            { target: 20, reward: { experience: 750, money: 375 } },
-            { target: 25, reward: { experience: 1000, money: 500 } },
-            { target: 30, reward: { experience: 1500, money: 750 } },
-            { target: 40, reward: { experience: 2500, money: 1250 } },
-            { target: 50, reward: { experience: 5000, money: 2500 } }
+            { target: 5, reward: { experience: 120, money: 150 } },
+            { target: 10, reward: { experience: 170, money: 200 } },
+            { target: 15, reward: { experience: 230, money: 275 } },
+            { target: 20, reward: { experience: 290, money: 350 } },
+            { target: 25, reward: { experience: 360, money: 450 } },
+            { target: 30, reward: { experience: 440, money: 575 } },
+            { target: 40, reward: { experience: 550, money: 750 } },
+            { target: 50, reward: { experience: 700, money: 1000 } }
         ]
     },
     {
@@ -135,14 +135,14 @@ export const ACHIEVEMENTS = [
         unit: '$',
         prefix: '$',
         tiers: [
-            { target: 500, reward: { experience: 50, money: 25 } },
-            { target: 1000, reward: { experience: 100, money: 50 } },
-            { target: 2500, reward: { experience: 200, money: 100 } },
-            { target: 5000, reward: { experience: 400, money: 200 } },
-            { target: 10000, reward: { experience: 800, money: 400 } },
-            { target: 25000, reward: { experience: 1500, money: 750 } },
-            { target: 50000, reward: { experience: 3000, money: 1500 } },
-            { target: 100000, reward: { experience: 6000, money: 3000 } }
+            { target: 500, reward: { experience: 40, money: 80 } },
+            { target: 1000, reward: { experience: 70, money: 150 } },
+            { target: 2500, reward: { experience: 120, money: 250 } },
+            { target: 5000, reward: { experience: 180, money: 400 } },
+            { target: 10000, reward: { experience: 250, money: 600 } },
+            { target: 25000, reward: { experience: 340, money: 900 } },
+            { target: 50000, reward: { experience: 460, money: 1400 } },
+            { target: 100000, reward: { experience: 600, money: 2200 } }
         ]
     },
     {
@@ -152,14 +152,14 @@ export const ACHIEVEMENTS = [
         getValue: (player) => getRareCatchCount(player),
         unit: 'fish',
         tiers: [
-            { target: 5, reward: { experience: 150, money: 75 } },
-            { target: 10, reward: { experience: 250, money: 125 } },
-            { target: 20, reward: { experience: 350, money: 175 } },
-            { target: 50, reward: { experience: 600, money: 300 } },
-            { target: 100, reward: { experience: 1000, money: 500 } },
-            { target: 250, reward: { experience: 2000, money: 1000 } },
-            { target: 500, reward: { experience: 4000, money: 2000 } },
-            { target: 1000, reward: { experience: 8000, money: 4000 } }
+            { target: 5, reward: { experience: 110, money: 160 } },
+            { target: 10, reward: { experience: 160, money: 240 } },
+            { target: 20, reward: { experience: 210, money: 320 } },
+            { target: 50, reward: { experience: 280, money: 450 } },
+            { target: 100, reward: { experience: 360, money: 650 } },
+            { target: 250, reward: { experience: 460, money: 900 } },
+            { target: 500, reward: { experience: 580, money: 1300 } },
+            { target: 1000, reward: { experience: 720, money: 1800 } }
         ]
     },
     {
@@ -169,13 +169,13 @@ export const ACHIEVEMENTS = [
         getValue: (player) => getLegendaryCatchCount(player),
         unit: 'fish',
         tiers: [
-            { target: 1, reward: { experience: 500, money: 250 } },
-            { target: 3, reward: { experience: 1000, money: 500 } },
-            { target: 5, reward: { experience: 1500, money: 750 } },
-            { target: 10, reward: { experience: 2500, money: 1250 } },
-            { target: 25, reward: { experience: 5000, money: 2500 } },
-            { target: 50, reward: { experience: 10000, money: 5000 } },
-            { target: 100, reward: { experience: 20000, money: 10000 } }
+            { target: 1, reward: { experience: 180, money: 400 } },
+            { target: 3, reward: { experience: 240, money: 600 } },
+            { target: 5, reward: { experience: 320, money: 850 } },
+            { target: 10, reward: { experience: 420, money: 1200 } },
+            { target: 25, reward: { experience: 520, money: 1700 } },
+            { target: 50, reward: { experience: 640, money: 2400 } },
+            { target: 100, reward: { experience: 780, money: 3200 } }
         ]
     },
     {
@@ -185,13 +185,13 @@ export const ACHIEVEMENTS = [
         getValue: (player) => getGearCount(player),
         unit: 'pieces',
         tiers: [
-            { target: 5, reward: { experience: 100, money: 50 } },
-            { target: 10, reward: { experience: 200, money: 100 } },
-            { target: 15, reward: { experience: 350, money: 175 } },
-            { target: 20, reward: { experience: 500, money: 250 } },
-            { target: 30, reward: { experience: 750, money: 375 } },
-            { target: 40, reward: { experience: 1000, money: 500 } },
-            { target: 50, reward: { experience: 1500, money: 750 } }
+            { target: 5, reward: { experience: 70, money: 120 } },
+            { target: 10, reward: { experience: 110, money: 180 } },
+            { target: 15, reward: { experience: 160, money: 260 } },
+            { target: 20, reward: { experience: 210, money: 340 } },
+            { target: 30, reward: { experience: 280, money: 450 } },
+            { target: 40, reward: { experience: 360, money: 600 } },
+            { target: 50, reward: { experience: 450, money: 800 } }
         ]
     },
     {
@@ -201,12 +201,12 @@ export const ACHIEVEMENTS = [
         getValue: (player, context) => player.locationUnlocks?.length || 0,
         unit: 'locations',
         tiers: [
-            { target: 3, reward: { experience: 150, money: 75 } },
-            { target: 5, reward: { experience: 300, money: 150 } },
-            { target: 8, reward: { experience: 500, money: 250 } },
-            { target: 10, reward: { experience: 750, money: 375 } },
-            { target: 12, reward: { experience: 1000, money: 500 } },
-            { target: 15, reward: { experience: 1500, money: 750 } }
+            { target: 3, reward: { experience: 120, money: 150 } },
+            { target: 5, reward: { experience: 160, money: 220 } },
+            { target: 8, reward: { experience: 210, money: 310 } },
+            { target: 10, reward: { experience: 260, money: 400 } },
+            { target: 12, reward: { experience: 320, money: 520 } },
+            { target: 15, reward: { experience: 390, money: 680 } }
         ]
     },
     {
@@ -216,12 +216,12 @@ export const ACHIEVEMENTS = [
         getValue: (player, context) => getUnlockedFishCount(player),
         unit: 'fish',
         tiers: [
-            { target: 5, reward: { experience: 100, money: 50 } },
-            { target: 10, reward: { experience: 200, money: 100 } },
-            { target: 17, reward: { experience: 400, money: 200 } }, // Half (33/2 = 16.5, rounded up)
-            { target: 25, reward: { experience: 600, money: 300 } },
-            { target: 30, reward: { experience: 800, money: 400 } },
-            { target: 33, reward: { experience: 1000, money: 500 } } // Complete
+            { target: 5, reward: { experience: 70, money: 100 } },
+            { target: 10, reward: { experience: 110, money: 170 } },
+            { target: 17, reward: { experience: 160, money: 240 } }, // Half (33/2 = 16.5, rounded up)
+            { target: 25, reward: { experience: 210, money: 340 } },
+            { target: 30, reward: { experience: 270, money: 450 } },
+            { target: 33, reward: { experience: 330, money: 600 } } // Complete
         ]
     },
     {
@@ -231,14 +231,14 @@ export const ACHIEVEMENTS = [
         getValue: (player) => getTop10BagWeight(player),
         unit: 'lbs',
         tiers: [
-            { target: 25, reward: { experience: 200, money: 100 } },
-            { target: 50, reward: { experience: 300, money: 150 } },
-            { target: 100, reward: { experience: 500, money: 250 } },
-            { target: 200, reward: { experience: 1000, money: 500 } },
-            { target: 300, reward: { experience: 1500, money: 750 } },
-            { target: 500, reward: { experience: 3000, money: 1500 } },
-            { target: 750, reward: { experience: 5000, money: 2500 } },
-            { target: 1000, reward: { experience: 10000, money: 5000 } }
+            { target: 25, reward: { experience: 110, money: 160 } },
+            { target: 50, reward: { experience: 150, money: 240 } },
+            { target: 100, reward: { experience: 200, money: 350 } },
+            { target: 200, reward: { experience: 260, money: 520 } },
+            { target: 300, reward: { experience: 330, money: 700 } },
+            { target: 500, reward: { experience: 420, money: 950 } },
+            { target: 750, reward: { experience: 520, money: 1300 } },
+            { target: 1000, reward: { experience: 640, money: 1800 } }
         ]
     }
 ];

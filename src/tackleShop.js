@@ -131,6 +131,9 @@ export function purchase(player, category, itemId) {
     // Purchase
     if (player.spendMoney(item.cost)) {
         player.tackleUnlocks[category].push(itemId);
+        if (player.tackleNotified && Array.isArray(player.tackleNotified[category])) {
+            player.tackleNotified[category] = player.tackleNotified[category].filter(id => id !== itemId);
+        }
         player.save();
         return { success: true, message: `Purchased ${item.name}` };
     }

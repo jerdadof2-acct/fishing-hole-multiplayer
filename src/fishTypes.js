@@ -5,49 +5,49 @@
 
 export const FishTypes = [
     // Common (0-4)
-    { id: 0, name: 'Minnow', rarity: 'Common', minWeight: 0.1, maxWeight: 0.5, value: 5, experience: 1, season: 'All' },
-    { id: 1, name: 'Sunfish', rarity: 'Common', minWeight: 0.3, maxWeight: 1.2, value: 8, experience: 2, season: 'All' },
-    { id: 2, name: 'Bass', rarity: 'Common', minWeight: 1.0, maxWeight: 5.0, value: 15, experience: 5, season: 'All' },
-    { id: 3, name: 'Perch', rarity: 'Common', minWeight: 0.5, maxWeight: 2.0, value: 12, experience: 3, season: 'All' },
-    { id: 4, name: 'Crappie', rarity: 'Common', minWeight: 0.8, maxWeight: 3.0, value: 18, experience: 4, season: 'All' },
+    { id: 0, name: 'Minnow', rarity: 'Common', minWeight: 0.1, maxWeight: 0.5, value: 5, experience: 4, season: 'All' },
+    { id: 1, name: 'Sunfish', rarity: 'Common', minWeight: 0.3, maxWeight: 1.2, value: 8, experience: 6, season: 'All' },
+    { id: 2, name: 'Bass', rarity: 'Common', minWeight: 1.0, maxWeight: 5.0, value: 15, experience: 9, season: 'All' },
+    { id: 3, name: 'Perch', rarity: 'Common', minWeight: 0.5, maxWeight: 2.0, value: 12, experience: 7, season: 'All' },
+    { id: 4, name: 'Crappie', rarity: 'Common', minWeight: 0.8, maxWeight: 3.0, value: 18, experience: 8, season: 'All' },
     
     // Uncommon (5-9)
-    { id: 5, name: 'Trout', rarity: 'Uncommon', minWeight: 0.5, maxWeight: 3.0, value: 25, experience: 10, season: 'Spring/Fall' },
-    { id: 6, name: 'Pike', rarity: 'Uncommon', minWeight: 2.0, maxWeight: 8.0, value: 40, experience: 15, season: 'All' },
-    { id: 7, name: 'Walleye', rarity: 'Uncommon', minWeight: 1.5, maxWeight: 6.0, value: 35, experience: 12, season: 'Spring/Fall' },
-    { id: 8, name: 'Muskie', rarity: 'Uncommon', minWeight: 5.0, maxWeight: 15.0, value: 60, experience: 20, season: 'All' },
-    { id: 9, name: 'Carp', rarity: 'Uncommon', minWeight: 3.0, maxWeight: 20.0, value: 30, experience: 8, season: 'All' },
+    { id: 5, name: 'Trout', rarity: 'Uncommon', minWeight: 0.5, maxWeight: 3.0, value: 25, experience: 14, season: 'Spring/Fall' },
+    { id: 6, name: 'Pike', rarity: 'Uncommon', minWeight: 2.0, maxWeight: 8.0, value: 40, experience: 18, season: 'All' },
+    { id: 7, name: 'Walleye', rarity: 'Uncommon', minWeight: 1.5, maxWeight: 6.0, value: 35, experience: 16, season: 'Spring/Fall' },
+    { id: 8, name: 'Muskie', rarity: 'Uncommon', minWeight: 5.0, maxWeight: 15.0, value: 60, experience: 22, season: 'All' },
+    { id: 9, name: 'Carp', rarity: 'Uncommon', minWeight: 3.0, maxWeight: 20.0, value: 30, experience: 13, season: 'All' },
     
     // Rare (10-14)
-    { id: 10, name: 'Salmon', rarity: 'Rare', minWeight: 8.0, maxWeight: 25.0, value: 80, experience: 25, season: 'Fall' },
-    { id: 11, name: 'Catfish', rarity: 'Rare', minWeight: 5.0, maxWeight: 30.0, value: 70, experience: 22, season: 'All' },
-    { id: 12, name: 'Sturgeon', rarity: 'Rare', minWeight: 20.0, maxWeight: 50.0, value: 120, experience: 35, season: 'All' },
-    { id: 13, name: 'Marlin', rarity: 'Rare', minWeight: 50.0, maxWeight: 200.0, value: 200, experience: 50, season: 'All' },
-    { id: 14, name: 'Tuna', rarity: 'Rare', minWeight: 30.0, maxWeight: 150.0, value: 150, experience: 40, season: 'All' },
+    { id: 10, name: 'Salmon', rarity: 'Rare', minWeight: 8.0, maxWeight: 25.0, value: 80, experience: 28, season: 'Fall' },
+    { id: 11, name: 'Catfish', rarity: 'Rare', minWeight: 5.0, maxWeight: 30.0, value: 70, experience: 26, season: 'All' },
+    { id: 12, name: 'Sturgeon', rarity: 'Rare', minWeight: 20.0, maxWeight: 50.0, value: 120, experience: 34, season: 'All' },
+    { id: 13, name: 'Marlin', rarity: 'Rare', minWeight: 50.0, maxWeight: 200.0, value: 200, experience: 42, season: 'All' },
+    { id: 14, name: 'Tuna', rarity: 'Rare', minWeight: 30.0, maxWeight: 150.0, value: 150, experience: 38, season: 'All' },
     
     // Epic (15-19)
-    { id: 15, name: 'Crystal Bass', rarity: 'Epic', minWeight: 10.0, maxWeight: 35.0, value: 300, experience: 60, season: 'All' },
-    { id: 16, name: 'Golden Trout', rarity: 'Epic', minWeight: 5.0, maxWeight: 20.0, value: 250, experience: 55, season: 'Spring' },
-    { id: 17, name: 'Ice Pike', rarity: 'Epic', minWeight: 15.0, maxWeight: 40.0, value: 350, experience: 65, season: 'Winter' },
-    { id: 18, name: 'Shadow Catfish', rarity: 'Epic', minWeight: 25.0, maxWeight: 60.0, value: 400, experience: 70, season: 'All' },
-    { id: 19, name: 'Abyssal Eel', rarity: 'Epic', minWeight: 30.0, maxWeight: 80.0, value: 500, experience: 80, season: 'All' },
+    { id: 15, name: 'Crystal Bass', rarity: 'Epic', minWeight: 10.0, maxWeight: 35.0, value: 300, experience: 46, season: 'All' },
+    { id: 16, name: 'Golden Trout', rarity: 'Epic', minWeight: 5.0, maxWeight: 20.0, value: 250, experience: 44, season: 'Spring' },
+    { id: 17, name: 'Ice Pike', rarity: 'Epic', minWeight: 15.0, maxWeight: 40.0, value: 350, experience: 50, season: 'Winter' },
+    { id: 18, name: 'Shadow Catfish', rarity: 'Epic', minWeight: 25.0, maxWeight: 60.0, value: 400, experience: 54, season: 'All' },
+    { id: 19, name: 'Abyssal Eel', rarity: 'Epic', minWeight: 30.0, maxWeight: 80.0, value: 500, experience: 58, season: 'All' },
     
     // Legendary (20-24)
-    { id: 20, name: 'Ancient Sturgeon', rarity: 'Legendary', minWeight: 100.0, maxWeight: 300.0, value: 1000, experience: 150, season: 'All' },
-    { id: 21, name: 'Leviathan', rarity: 'Legendary', minWeight: 200.0, maxWeight: 500.0, value: 2000, experience: 200, season: 'All' },
-    { id: 22, name: 'Phoenix Fish', rarity: 'Legendary', minWeight: 50.0, maxWeight: 150.0, value: 1500, experience: 180, season: 'All' },
-    { id: 23, name: 'Dragon Carp', rarity: 'Legendary', minWeight: 80.0, maxWeight: 200.0, value: 1800, experience: 190, season: 'All' },
-    { id: 24, name: 'Tournament King', rarity: 'Legendary', minWeight: 60.0, maxWeight: 120.0, value: 1200, experience: 160, season: 'All' },
+    { id: 20, name: 'Ancient Sturgeon', rarity: 'Legendary', minWeight: 100.0, maxWeight: 300.0, value: 1000, experience: 70, season: 'All' },
+    { id: 21, name: 'Leviathan', rarity: 'Legendary', minWeight: 200.0, maxWeight: 500.0, value: 2000, experience: 80, season: 'All' },
+    { id: 22, name: 'Phoenix Fish', rarity: 'Legendary', minWeight: 50.0, maxWeight: 150.0, value: 1500, experience: 74, season: 'All' },
+    { id: 23, name: 'Dragon Carp', rarity: 'Legendary', minWeight: 80.0, maxWeight: 200.0, value: 1800, experience: 76, season: 'All' },
+    { id: 24, name: 'Tournament King', rarity: 'Legendary', minWeight: 60.0, maxWeight: 120.0, value: 1200, experience: 72, season: 'All' },
     
     // Trophy (25-32)
-    { id: 25, name: 'Trophy Bass', rarity: 'Trophy', minWeight: 20.0, maxWeight: 50.0, value: 500, experience: 100, season: 'All' },
-    { id: 26, name: 'Trophy Pike', rarity: 'Trophy', minWeight: 30.0, maxWeight: 70.0, value: 600, experience: 110, season: 'All' },
-    { id: 27, name: 'Trophy Salmon', rarity: 'Trophy', minWeight: 40.0, maxWeight: 80.0, value: 700, experience: 120, season: 'Fall' },
-    { id: 28, name: 'Trophy Marlin', rarity: 'Trophy', minWeight: 100.0, maxWeight: 300.0, value: 1000, experience: 150, season: 'All' },
-    { id: 29, name: 'Trophy Tuna', rarity: 'Trophy', minWeight: 80.0, maxWeight: 200.0, value: 800, experience: 130, season: 'All' },
-    { id: 30, name: 'Trophy Sturgeon', rarity: 'Trophy', minWeight: 150.0, maxWeight: 400.0, value: 1200, experience: 170, season: 'All' },
-    { id: 31, name: 'Trophy Catfish', rarity: 'Trophy', minWeight: 60.0, maxWeight: 150.0, value: 900, experience: 140, season: 'All' },
-    { id: 32, name: 'Trophy King', rarity: 'Trophy', minWeight: 200.0, maxWeight: 500.0, value: 1500, experience: 200, season: 'All' }
+    { id: 25, name: 'Trophy Bass', rarity: 'Trophy', minWeight: 20.0, maxWeight: 50.0, value: 500, experience: 84, season: 'All' },
+    { id: 26, name: 'Trophy Pike', rarity: 'Trophy', minWeight: 30.0, maxWeight: 70.0, value: 600, experience: 88, season: 'All' },
+    { id: 27, name: 'Trophy Salmon', rarity: 'Trophy', minWeight: 40.0, maxWeight: 80.0, value: 700, experience: 92, season: 'Fall' },
+    { id: 28, name: 'Trophy Marlin', rarity: 'Trophy', minWeight: 100.0, maxWeight: 300.0, value: 1000, experience: 98, season: 'All' },
+    { id: 29, name: 'Trophy Tuna', rarity: 'Trophy', minWeight: 80.0, maxWeight: 200.0, value: 800, experience: 94, season: 'All' },
+    { id: 30, name: 'Trophy Sturgeon', rarity: 'Trophy', minWeight: 150.0, maxWeight: 400.0, value: 1200, experience: 104, season: 'All' },
+    { id: 31, name: 'Trophy Catfish', rarity: 'Trophy', minWeight: 60.0, maxWeight: 150.0, value: 900, experience: 90, season: 'All' },
+    { id: 32, name: 'Trophy King', rarity: 'Trophy', minWeight: 200.0, maxWeight: 500.0, value: 1500, experience: 110, season: 'All' }
 ];
 
 // Fish facts database
@@ -122,9 +122,14 @@ export function getRandomFishForLocation(fishIds) {
     // Calculate random weight within range
     const weight = fishType.minWeight + Math.random() * (fishType.maxWeight - fishType.minWeight);
     
+    const roundedWeight = parseFloat(weight.toFixed(2));
+    const weightBonus = Math.max(0, (roundedWeight - fishType.minWeight) * 0.8);
+    const experience = Math.round(fishType.experience + weightBonus);
+
     return {
         ...fishType,
-        weight: parseFloat(weight.toFixed(2))
+        weight: roundedWeight,
+        experience
     };
 }
 

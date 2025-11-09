@@ -33,6 +33,13 @@ export class Player {
             hooks: [0],     // Basic Hook
             baits: [0]      // Basic Bait
         };
+        this.tackleNotified = {
+            rods: [],
+            reels: [],
+            lines: [],
+            hooks: [],
+            baits: []
+        };
         
         // Last visited location
         this.currentLocationIndex = 0;
@@ -66,10 +73,12 @@ export class Player {
 
         // Load from localStorage if available
         this.load();
+        this.normalizeTackleState();
 
         // Apply server data if provided
         if (initialData) {
             this.applyServerData(initialData);
+            this.normalizeTackleState();
         }
     }
     
@@ -79,8 +88,12 @@ export class Player {
      * @returns {number} Experience needed
      */
     calculateExpForLevel(level) {
-        // Exponential progression: 100 * level^1.5
-        return Math.floor(100 * Math.pow(level, 1.5));
+        // Progressive curve: smooth ramp through mid game, steeper late game
+        // Base cost: 120 * level^1.6 plus linear tail weight for higher levels
+        const base = 120 * Math.pow(level, 1.6);
+        const linear = 40 * level;
+        const lateGameBoost = level >= 15 ? 200 * Math.pow(level - 14, 1.35) : 0;
+        return Math.floor(base + linear + lateGameBoost);
     }
     
     /**
@@ -210,17 +223,20 @@ export class Player {
             const categories = ['rods', 'reels', 'lines', 'hooks', 'baits'];
             
             for (const category of categories) {
-                if (tackleShop[category] && Array.isArray(this.tackleUnlocks[category])) {
-                    // Sort by unlock level to get the lowest level item first
+                const ownedList = this.tackleUnlocks[category];
+                const notifiedList = this.tackleNotified[category];
+
+                if (tackleShop[category] && Array.isArray(ownedList)) {
                     const availableItems = tackleShop[category]
-                        .filter(item => !this.tackleUnlocks[category].includes(item.id) && this.level >= item.unlockLevel)
-                        .sort((a, b) => a.unlockLevel - b.unlockLevel);
-                    
+                        .filter(item => this.level >= item.unlockLevel)
+                        .sort((a, b) => a.unlockLevel - b.unlockLevel)
+                        .filter(item => !ownedList.includes(item.id) && !notifiedList.includes(item.id));
+
                     if (availableItems.length > 0) {
-                        const item = availableItems[0]; // Get first available item
-                        this.tackleUnlocks[category].push(item.id);
-                        console.log(`[PLAYER] Tackle unlocked: ${item.name} (Level ${item.unlockLevel})`);
+                        const item = availableItems[0];
+                        this.tackleNotified[category].push(item.id);
                         this.save();
+                        console.log(`[PLAYER] Tackle available for purchase: ${item.name} (Level ${item.unlockLevel})`);
                         return {
                             type: 'tackle',
                             tackle: {
@@ -363,7 +379,8 @@ export class Player {
                 totalWeight: this.totalWeight,
                 biggestCatch: this.biggestCatch,
                 locationUnlocks: this.locationUnlocks,
-                tackleUnlocks: this.tackleUnlocks,
+            tackleUnlocks: this.tackleUnlocks,
+            tackleNotified: this.tackleNotified,
                 gear: this.gear,
                 recentCatches: this.recentCatches,
                 top10BiggestFish: this.top10BiggestFish,
@@ -540,6 +557,7 @@ export class Player {
                 this.biggestCatch = playerData.biggestCatch || 0;
                 this.locationUnlocks = playerData.locationUnlocks || this.locationUnlocks;
                 this.tackleUnlocks = playerData.tackleUnlocks || this.tackleUnlocks;
+                this.tackleNotified = playerData.tackleNotified || this.tackleNotified;
                 this.gear = { ...this.gear, ...(playerData.gear || {}) };
                 this.recentCatches = playerData.recentCatches || [];
                 this.top10BiggestFish = playerData.top10BiggestFish || [];
@@ -566,6 +584,7 @@ export class Player {
                     this.friendCode = playerData.friendCode;
                 }
                 
+                this.normalizeTackleState();
                 console.log('[PLAYER] Data loaded');
             }
         } catch (error) {
@@ -576,6 +595,7 @@ export class Player {
                 if (backupData) {
                     const playerData = JSON.parse(backupData);
                     Object.assign(this, playerData);
+                    this.normalizeTackleState();
                     console.log('[PLAYER] Loaded from backup');
                 }
             } catch (backupError) {
@@ -602,6 +622,24 @@ export class Player {
             gear: this.gear,
             collectionStats: this.getCollectionStats()
         };
+    }
+
+    normalizeTackleState() {
+        if (!this.tackleUnlocks || typeof this.tackleUnlocks !== 'object') {
+            this.tackleUnlocks = { rods: [], reels: [], lines: [], hooks: [], baits: [] };
+        }
+        if (!this.tackleNotified || typeof this.tackleNotified !== 'object') {
+            this.tackleNotified = { rods: [], reels: [], lines: [], hooks: [], baits: [] };
+        }
+
+        const categories = ['rods', 'reels', 'lines', 'hooks', 'baits'];
+        categories.forEach(category => {
+            const owned = this.tackleUnlocks[category];
+            const notified = this.tackleNotified[category];
+
+            this.tackleUnlocks[category] = Array.isArray(owned) ? Array.from(new Set(owned)) : [];
+            this.tackleNotified[category] = Array.isArray(notified) ? Array.from(new Set(notified)) : [];
+        });
     }
 }
 
