@@ -28,6 +28,9 @@ export class UI {
         this.affordableNotified = new Set();
         this.notificationState = this.loadNotificationState();
         this.playerCatchCache = { entries: [], fetchedAt: 0 };
+        this.friendDetailCache = new Map();
+        this.activeFriendId = null;
+        this.totalFishTypes = null;
     }
 
     init() {
@@ -561,6 +564,7 @@ export class UI {
         const pending = this.friendData?.pending ?? { sent: [], received: [] };
 
         this.renderFriendList(friends);
+        this.syncFriendDetailState(friends);
         this.renderPendingList('friends-pending-received', pending.received, 'received');
         this.renderPendingList('friends-pending-sent', pending.sent, 'sent');
         this.renderFriendActivities();
@@ -572,11 +576,154 @@ export class UI {
 
         if (!friends.length) {
             this.setFriendsPlaceholder('friends-list', 'No friends yet. Share your code to build your crew!');
+            this.activeFriendId = null;
+            this.setFriendDetailMessage('Add a friend to view their collection.');
             return;
         }
 
         listEl.classList.remove('friends-placeholder');
         listEl.innerHTML = friends.map(friend => this.buildFriendEntry(friend)).join('');
+        if (this.activeFriendId) {
+            this.highlightFriendEntry(this.activeFriendId);
+        }
+    }
+
+    syncFriendDetailState(friends = []) {
+        if (!friends.length) {
+            this.activeFriendId = null;
+            return;
+        }
+
+        if (this.activeFriendId && friends.some(friend => friend.id === this.activeFriendId)) {
+            this.highlightFriendEntry(this.activeFriendId);
+        } else {
+            this.activeFriendId = null;
+            this.setFriendDetailMessage('Select a friend to view their collection.');
+        }
+    }
+
+    getFriendById(friendId) {
+        return this.friendData?.friends?.find(friend => friend.id === friendId) || null;
+    }
+
+    highlightFriendEntry(friendId) {
+        const listEl = document.getElementById('friends-list');
+        if (!listEl) return;
+        listEl.querySelectorAll('.friends-entry').forEach(entry => {
+            entry.classList.toggle('active', friendId && entry.dataset.friendId === friendId);
+        });
+    }
+
+    setFriendDetailMessage(message) {
+        const section = document.getElementById('friends-detail-section');
+        if (section) {
+            section.classList.remove('hidden');
+        }
+        this.setFriendsPlaceholder('friends-detail-content', message);
+        const detailContent = document.getElementById('friends-detail-content');
+        if (detailContent) {
+            detailContent.classList.add('friends-detail-placeholder');
+        }
+    }
+
+    async selectFriendEntry(friendId) {
+        if (!friendId) return;
+
+        this.activeFriendId = friendId;
+        this.highlightFriendEntry(friendId);
+
+        if (!this.isOnline()) {
+            this.setFriendDetailMessage('Connect to view friend collections.');
+            return;
+        }
+
+        const detailContent = document.getElementById('friends-detail-content');
+        if (!detailContent) return;
+
+        this.setFriendDetailMessage('Fetching collection...');
+
+        try {
+            let cacheEntry = this.friendDetailCache.get(friendId);
+            const cacheFresh = cacheEntry && (Date.now() - cacheEntry.fetchedAt) < 60000;
+
+            if (!cacheFresh) {
+                const data = await this.api.getFriendCollection(friendId);
+                cacheEntry = { data, fetchedAt: Date.now() };
+                this.friendDetailCache.set(friendId, cacheEntry);
+            }
+
+            if (this.totalFishTypes === null) {
+                try {
+                    const { FishTypes } = await import('./fishTypes.js');
+                    if (Array.isArray(FishTypes)) {
+                        this.totalFishTypes = FishTypes.length;
+                    }
+                } catch (error) {
+                    console.warn('[UI] Failed to load fish types:', error);
+                    this.totalFishTypes = 33;
+                }
+            }
+
+            detailContent.classList.remove('friends-placeholder');
+            this.renderFriendDetail(cacheEntry.data, this.getFriendById(friendId));
+        } catch (error) {
+            console.warn('[UI] Failed to load friend collection:', error);
+            this.setFriendDetailMessage(error?.message || 'Unable to load collection.');
+        }
+    }
+
+    renderFriendDetail(data = {}, friendMeta = null) {
+        const detailContent = document.getElementById('friends-detail-content');
+        if (!detailContent) return;
+
+        detailContent.classList.remove('friends-placeholder', 'friends-detail-placeholder');
+
+        const caughtFish = data.caughtFish || {};
+        const totals = data.totals || {};
+        const uniqueFish = totals.uniqueFish ?? Object.values(caughtFish).filter(entry => entry && entry.caught !== false).length;
+        const totalCatches = totals.totalCatches ?? Object.values(caughtFish).reduce((sum, entry) => sum + (entry?.count || 0), 0);
+        const totalSpecies = this.totalFishTypes ?? 0;
+
+        const displayName = this.safeText(friendMeta?.display_name || data.displayName || friendMeta?.username || data.username || 'Angler');
+        const level = friendMeta?.level ?? data.level ?? '-';
+
+        const summaryPieces = [];
+        summaryPieces.push(`Level ${level}`);
+        if (totalSpecies > 0) {
+            summaryPieces.push(`${uniqueFish}/${totalSpecies} species`);
+        } else {
+            summaryPieces.push(`${uniqueFish} species`);
+        }
+        summaryPieces.push(`${totalCatches} total catch${totalCatches === 1 ? '' : 'es'}`);
+
+        const topFish = Array.isArray(data.topFish) ? [...data.topFish] : [];
+        topFish.sort((a, b) => (Number(b?.maxWeight) || 0) - (Number(a?.maxWeight) || 0));
+
+        const gridHtml = topFish.length
+            ? topFish.map(entry => {
+                const fishName = this.safeText(entry.fishName || 'Unknown fish');
+                const weight = Number(entry.maxWeight);
+                const weightText = Number.isFinite(weight) ? `${weight.toFixed(2)} lbs` : '--';
+                return `
+                    <div class="friends-detail-row">
+                        <span class="friends-detail-fish">${fishName}</span>
+                        <span class="friends-detail-weight">${weightText}</span>
+                    </div>
+                `;
+            }).join('')
+            : '<div class="friends-detail-empty">No catches recorded yet.</div>';
+
+        detailContent.innerHTML = `
+            <div class="friends-detail-header">
+                <div>
+                    <div class="friends-detail-name">${displayName}</div>
+                    <div class="friends-detail-meta">${summaryPieces.join(' · ')}</div>
+                </div>
+            </div>
+            <div class="friends-detail-grid">
+                ${gridHtml}
+            </div>
+        `;
     }
 
     renderPendingList(elementId, items = [], mode = 'received') {
@@ -682,6 +829,9 @@ export class UI {
         this.setFriendsPlaceholder('friends-pending-received', 'No pending requests while offline.');
         this.setFriendsPlaceholder('friends-pending-sent', 'No pending requests while offline.');
         this.setFriendsPlaceholder('friends-activity', "Reconnect to see your friends' legendary catches.");
+        this.friendDetailCache.clear();
+        this.activeFriendId = null;
+        this.setFriendDetailMessage('Connect to view friend collections.');
     }
 
     renderFriendsError(error) {
@@ -690,6 +840,7 @@ export class UI {
         this.setFriendsPlaceholder('friends-pending-received', message);
         this.setFriendsPlaceholder('friends-pending-sent', message);
         this.setFriendsPlaceholder('friends-activity', message);
+        this.setFriendDetailMessage('Friend collections unavailable right now.');
     }
 
     async renderLocalLeaderboard() {
@@ -1036,49 +1187,62 @@ export class UI {
     }
 
     async handleFriendsListClick(event) {
-        const target = event.target.closest('[data-action]');
-        if (!target) return;
+        const actionTarget = event.target.closest('[data-action]');
+        if (actionTarget) {
+            const action = actionTarget.dataset.action;
 
-        const action = target.dataset.action;
-
-        if (action === 'copy') {
-            const code = target.dataset.code;
-            if (!code) return;
-            try {
-                if (navigator.clipboard?.writeText) {
-                    await navigator.clipboard.writeText(code);
-                    this.showFriendMessage('Friend code copied to clipboard!');
-                } else {
-                    this.showFriendMessage('Clipboard unavailable. Tap and hold to copy manually.', 'error');
+            if (action === 'copy') {
+                event.preventDefault();
+                event.stopPropagation();
+                const code = actionTarget.dataset.code;
+                if (!code) return;
+                try {
+                    if (navigator.clipboard?.writeText) {
+                        await navigator.clipboard.writeText(code);
+                        this.showFriendMessage('Friend code copied to clipboard!');
+                    } else {
+                        this.showFriendMessage('Clipboard unavailable. Tap and hold to copy manually.', 'error');
+                    }
+                } catch (error) {
+                    console.warn('[UI] Failed to copy friend code:', error);
+                    this.showFriendMessage('Copy failed. Tap and hold to copy manually.', 'error');
                 }
-            } catch (error) {
-                console.warn('[UI] Failed to copy friend code:', error);
-                this.showFriendMessage('Copy failed. Tap and hold to copy manually.', 'error');
-            }
-            return;
-        }
-
-        if (action === 'remove') {
-            if (!this.isOnline()) {
-                this.showFriendMessage('Connect to remove friends.', 'error');
                 return;
             }
 
-            const friendId = target.dataset.id;
-            if (!friendId) return;
+            if (action === 'remove') {
+                event.preventDefault();
+                event.stopPropagation();
 
-            try {
-                target.disabled = true;
-                await this.api.removeFriend(friendId);
-                this.showFriendMessage('Friend removed.');
-                await this.refreshFriends(true);
-            } catch (error) {
-                console.warn('[UI] Failed to remove friend:', error);
-                this.showFriendMessage(error?.message || 'Failed to remove friend.', 'error');
-            } finally {
-                target.disabled = false;
+                if (!this.isOnline()) {
+                    this.showFriendMessage('Connect to remove friends.', 'error');
+                    return;
+                }
+
+                const friendId = actionTarget.dataset.id;
+                if (!friendId) return;
+
+                try {
+                    actionTarget.disabled = true;
+                    await this.api.removeFriend(friendId);
+                    this.showFriendMessage('Friend removed.');
+                    await this.refreshFriends(true);
+                } catch (error) {
+                    console.warn('[UI] Failed to remove friend:', error);
+                    this.showFriendMessage(error?.message || 'Failed to remove friend.', 'error');
+                } finally {
+                    actionTarget.disabled = false;
+                }
+                return;
             }
         }
+
+        const entry = event.target.closest('.friends-entry');
+        if (!entry) return;
+        const friendId = entry.dataset.friendId;
+        if (!friendId) return;
+
+        await this.selectFriendEntry(friendId);
     }
 
     async handlePendingListClick(event) {

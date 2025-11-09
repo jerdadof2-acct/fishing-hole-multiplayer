@@ -559,6 +559,87 @@ app.delete('/api/friends/:friendId', authenticate, async (req, res) => {
     }
 });
 
+// Get friend collection summary
+app.get('/api/friends/:friendId/collection', authenticate, async (req, res) => {
+    try {
+        if (!isValidUUID(req.userId)) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+
+        const { friendId } = req.params;
+        if (!isValidUUID(friendId)) {
+            return res.status(400).json({ error: 'Invalid friend ID' });
+        }
+
+        const friendResult = await pool.query(
+            `SELECT id, username, display_name, level FROM players WHERE id = $1`,
+            [friendId]
+        );
+
+        if (friendResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Friend not found' });
+        }
+
+        const friend = friendResult.rows[0];
+        const isSelf = friendId === req.userId;
+
+        if (!isSelf) {
+            const relationResult = await pool.query(
+                `SELECT status FROM friendships
+                 WHERE (player1_id = $1 AND player2_id = $2)
+                    OR (player1_id = $2 AND player2_id = $1)`,
+                [req.userId, friendId]
+            );
+
+            if (relationResult.rows.length === 0 || relationResult.rows[0].status !== 'accepted') {
+                return res.status(403).json({ error: 'Friendship not found' });
+            }
+        }
+
+        const collectionResult = await pool.query(
+            `SELECT caught_fish FROM player_collections WHERE player_id = $1`,
+            [friendId]
+        );
+
+        const caughtFish = collectionResult.rows[0]?.caught_fish || {};
+        const topFishResult = await pool.query(
+            `SELECT fish_name, MAX(fish_weight) AS max_weight
+             FROM player_catches
+             WHERE player_id = $1
+             GROUP BY fish_name
+             ORDER BY MAX(fish_weight) DESC`,
+            [friendId]
+        );
+
+        const topFish = topFishResult.rows
+            .filter(row => row.fish_name)
+            .map(row => ({
+                fishName: row.fish_name,
+                maxWeight: row.max_weight !== null ? Number(row.max_weight) : null
+            }));
+
+        const caughtEntries = Object.values(caughtFish);
+        const uniqueFish = caughtEntries.filter(entry => entry && entry.caught !== false).length;
+        const totalCatches = caughtEntries.reduce((sum, entry) => sum + (entry?.count || 0), 0);
+
+        res.json({
+            playerId: friend.id,
+            username: friend.username,
+            displayName: friend.display_name,
+            level: friend.level,
+            caughtFish,
+            topFish,
+            totals: {
+                uniqueFish,
+                totalCatches
+            }
+        });
+    } catch (error) {
+        console.error('[API] Friend collection error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // ==================== Activity Routes ====================
 
 // Log a catch (for activity feed)

@@ -604,6 +604,12 @@ canvas {
     border-radius: 8px;
     padding: 10px 12px;
     gap: 8px;
+    cursor: pointer;
+}
+
+.friends-entry.active {
+    border-color: rgba(106, 168, 255, 0.85);
+    background: rgba(74, 144, 226, 0.18);
 }
 
 .friends-entry-info {
@@ -684,6 +690,84 @@ canvas {
     color: rgba(255, 255, 255, 0.7);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+.friends-detail-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.friends-detail-placeholder {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
+    padding: 6px 4px;
+}
+
+.friends-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.friends-detail-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.friends-detail-meta {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.friends-detail-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.friends-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid rgba(74, 144, 226, 0.25);
+    border-radius: 6px;
+    padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.friends-detail-fish {
+    font-size: 13px;
+    font-weight: 500;
+    color: #e9f4ff;
+}
+
+.friends-detail-weight {
+    font-size: 13px;
+    font-weight: 600;
+    color: #9ac7ff;
+}
+
+.friends-detail-empty {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
+    padding: 6px 0;
+}
+
+.friends-detail-loading,
+.friends-detail-error {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 6px 0;
+}
+
+.friends-detail-error {
+    color: #ff8585;
 }
 
 .friends-placeholder {

@@ -205,6 +205,10 @@ export class API {
             method: 'DELETE'
         });
     }
+
+    async getFriendCollection(friendId) {
+        return this.request(`/friends/${friendId}/collection`);
+    }
     
     // ==================== Activity Methods ====================
     
