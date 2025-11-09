@@ -2418,6 +2418,10 @@ export class UI {
     }
     
     resetAllProgress() {
+        const preservedName = this.player?.name && this.player.name.trim() !== '' ? this.player.name : 'Guest';
+        const preservedFriendCode = this.player?.friendCode || null;
+        const preservedUserId = this.player?.userId || null;
+
         // Clear all localStorage data
         localStorage.removeItem('kittyCreekPlayer');
         localStorage.removeItem('kittyCreekPlayer_backup');
@@ -2431,7 +2435,7 @@ export class UI {
         // Reset all game systems to initial state
         if (this.player) {
             // Reset player to defaults
-            this.player.name = 'Guest';
+            this.player.name = preservedName;
             this.player.level = 1;
             this.player.experience = 0;
             this.player.money = 100;
@@ -2446,6 +2450,13 @@ export class UI {
                 hooks: [0],
                 baits: [0]
             };
+            this.player.tackleNotified = {
+                rods: [],
+                reels: [],
+                lines: [],
+                hooks: [],
+                baits: []
+            };
             this.player.gear = {
                 rod: 'Basic Rod',
                 reel: 'Basic Reel',
@@ -2459,7 +2470,7 @@ export class UI {
                 patience: 50,
                 strength: 50
             };
-            this.player.achievements = [];
+            this.player.achievements = {};
             this.player.recentCatches = [];
             this.player.top10BiggestFish = [];
             this.player.caughtFish = {};
@@ -2470,6 +2481,15 @@ export class UI {
                 fall: { caught: 0, biggest: 0 },
                 winter: { caught: 0, biggest: 0 }
             };
+            if (preservedFriendCode) {
+                this.player.friendCode = preservedFriendCode;
+            }
+            if (preservedUserId) {
+                this.player.userId = preservedUserId;
+            }
+            if (typeof this.player.normalizeTackleState === 'function') {
+                this.player.normalizeTackleState();
+            }
             this.player.save();
         }
         
