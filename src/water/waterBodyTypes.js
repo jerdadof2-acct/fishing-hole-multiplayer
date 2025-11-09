@@ -20,7 +20,9 @@ export const WaterBodyTypes = {
         sparkleStrength: 0.2,                     // Less sparkle (smaller surface)
         waveScale: 0.8,                          // Smaller waves (pond-specific)
         waveSpeed: 1.5,                          // Slower waves (pond-specific)
-        waveAmplitude: 0.04                      // Small wave amplitude (pond-specific)
+        waveAmplitude: 0.04,                     // Small wave amplitude (pond-specific)
+        windScroll1: new THREE.Vector2(0.02, 0.01),
+        windScroll2: new THREE.Vector2(-0.01, 0.015)
     },
     
     RIVER: {
@@ -39,7 +41,9 @@ export const WaterBodyTypes = {
         waveAmplitude: 0.08,                      // Medium wave amplitude (river-specific)
         flowDirection: new THREE.Vector2(-1, 0),  // Flow left to right (negative X = screen left to screen right)
         flowSpeed: 1.5,                          // Flow speed for visual effect
-        hasFlow: true                             // River has flow direction
+        hasFlow: true,                            // River has flow direction
+        windScroll1: new THREE.Vector2(-0.06, 0.0),
+        windScroll2: new THREE.Vector2(0.035, 0.012)
     },
     
     LAKE: {
@@ -55,7 +59,9 @@ export const WaterBodyTypes = {
         sparkleStrength: 0.3,                    // Good sparkle
         waveScale: 1.1,                          // Normal waves (lake-specific, default)
         waveSpeed: 2.0,                          // Normal wave speed (lake-specific, default)
-        waveAmplitude: 0.07                      // Normal wave amplitude (lake-specific, default)
+        waveAmplitude: 0.07,                     // Normal wave amplitude (lake-specific, default)
+        windScroll1: new THREE.Vector2(0.025, 0.012),
+        windScroll2: new THREE.Vector2(-0.012, 0.018)
     },
     
     OCEAN: {
@@ -71,7 +77,9 @@ export const WaterBodyTypes = {
         sparkleStrength: 0.35,                   // Strong sparkle (large surface)
         waveScale: 2.5,                          // Much bigger waves (ocean-specific)
         waveSpeed: 3.0,                          // Faster waves (ocean-specific)
-        waveAmplitude: 0.15                      // Larger wave amplitude (ocean-specific)
+        waveAmplitude: 0.15,                     // Larger wave amplitude (ocean-specific)
+        windScroll1: new THREE.Vector2(0.035, 0.018),
+        windScroll2: new THREE.Vector2(-0.02, 0.026)
     }
 };
 

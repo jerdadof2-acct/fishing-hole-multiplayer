@@ -357,6 +357,19 @@ export class Water2Lake {
         console.log('[RIVER] Dock post particles created:', totalParticles, 'particles, visible:', this.dockPostParticles.visible);
     }
     
+    applyWindScrollUniforms(material) {
+        if (!material || !material.uniforms) {
+            return;
+        }
+        const { windScroll1, windScroll2 } = this.waterBodyConfig || {};
+        if (windScroll1 && material.uniforms.uScroll1) {
+            material.uniforms.uScroll1.value.copy(windScroll1);
+        }
+        if (windScroll2 && material.uniforms.uScroll2) {
+            material.uniforms.uScroll2.value.copy(windScroll2);
+        }
+    }
+    
     /**
      * Change water body type (e.g., 'POND', 'RIVER', 'LAKE', 'OCEAN')
      */
@@ -393,19 +406,7 @@ export class Water2Lake {
                 material.uniforms.uFlowDirection.value.copy(flowDir);
                 material.uniforms.uFlowSpeed.value = this.waterBodyConfig.flowSpeed || 1.5;
                 
-                // Align normal map scrolls with flow direction for stronger left-right visual
-                // Make the normal maps scroll in the flow direction instead of diagonally
-                material.uniforms.uScroll1.value.set(
-                    0.15 * flowDir.x,
-                    0.15 * flowDir.y
-                );
-                material.uniforms.uScroll2.value.set(
-                    -0.07 * flowDir.x,
-                    0.11 * flowDir.y
-                );
-                
-                // Boost flow speed and wave amplitude for stronger river effect
-                material.uniforms.uFlowSpeed.value = 2.2; // Increased from 1.5
+                // Boost wave amplitude for stronger river effect
                 if (material.uniforms.waveAmplitude) {
                     material.uniforms.waveAmplitude.value *= 1.15; // Small boost to moving terms
                 }
@@ -413,6 +414,7 @@ export class Water2Lake {
                 material.uniforms.uFlowDirection.value.set(0, 0);
                 material.uniforms.uFlowSpeed.value = 0.0;
             }
+            this.applyWindScrollUniforms(material);
             
             // Show/hide and update river particles based on water body type
             if (this.riverParticles) {
@@ -575,19 +577,7 @@ export class Water2Lake {
         if (this.waterBodyConfig.hasFlow && this.waterBodyConfig.flowDirection) {
             const flowDir = this.waterBodyConfig.flowDirection;
             waterMaterial.uniforms.uFlowDirection.value.copy(flowDir);
-            waterMaterial.uniforms.uFlowSpeed.value = this.waterBodyConfig.flowSpeed || 2.2; // Increased flow speed
-            
-            // Align normal map scrolls with flow direction for stronger left-right visual (RIVER ONLY)
-            // Make the normal maps scroll in the flow direction instead of diagonally
-            waterMaterial.uniforms.uScroll1.value.set(
-                0.15 * flowDir.x,
-                0.15 * flowDir.y
-            );
-            waterMaterial.uniforms.uScroll2.value.set(
-                -0.07 * flowDir.x,
-                0.11 * flowDir.y
-            );
-            
+            waterMaterial.uniforms.uFlowSpeed.value = this.waterBodyConfig.flowSpeed || 1.5;
             // Boost wave amplitude for stronger river effect (RIVER ONLY)
             if (waterMaterial.uniforms.waveAmplitude) {
                 waterMaterial.uniforms.waveAmplitude.value *= 1.15;
@@ -598,6 +588,7 @@ export class Water2Lake {
             waterMaterial.uniforms.uFlowSpeed.value = 0.0;
             // Keep default scroll values from makeWaterMaterial (diagonal, works great for lakes/oceans)
         }
+        this.applyWindScrollUniforms(waterMaterial);
         
         // Create procedural cloud texture for reflections
         const cloudTexture = this.createProceduralCloudTexture();

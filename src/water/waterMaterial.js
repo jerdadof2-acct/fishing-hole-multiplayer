@@ -40,8 +40,8 @@ export function makeWaterMaterial({
     uTurbidity: { value: turbidity },
     uAbsorption: { value: absorption },
     uOpacity: { value: opacity },
-    uScroll1: { value: new THREE.Vector2(0.07, 0.03) },
-    uScroll2: { value: new THREE.Vector2(-0.03, 0.05) },
+    uScroll1: { value: new THREE.Vector2(0.035, 0.02) },
+    uScroll2: { value: new THREE.Vector2(-0.02, 0.03) },
     uUVScale1: { value: 4.0 },
     uUVScale2: { value: 8.0 },
     uFlowDirection: { value: new THREE.Vector2(0, 0) },  // River flow direction (0,0 = no flow)
