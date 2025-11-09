@@ -15,6 +15,7 @@ export class UI {
         this.leaderboard = gameplaySystems?.leaderboard || null;
         this.fishCollection = gameplaySystems?.fishCollection || null;
         this.currentInventoryTab = 'collection';
+        this.currentShopTab = 'rods';
         this.api = game?.api || null;
         this.globalLeaderboardCache = { entries: [], fetchedAt: 0 };
         this.speedLeaderboardCache = { entries: [], fetchedAt: 0 };
@@ -1113,6 +1114,11 @@ export class UI {
     renderShop(category) {
         if (!this.player) return;
         
+        this.currentShopTab = category;
+        document.querySelectorAll('.shop-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.shopTab === category);
+        });
+        
         import('./tackleShop.js').then(({ TackleShop, getTackleByCategory, purchase, equip, canAfford, canUnlock }) => {
             const shopItems = document.getElementById('shop-items');
             if (!shopItems) return;
@@ -1231,6 +1237,9 @@ export class UI {
         if (!inventoryContent) return;
         
         this.currentInventoryTab = tab;
+        document.querySelectorAll('.inventory-tab').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.inventoryTab === tab);
+        });
         
         if (tab === 'top10') {
             const top10 = this.inventory.getTop10();
@@ -1376,6 +1385,10 @@ export class UI {
 
         const leaderboardContent = document.getElementById('leaderboard-content');
         if (!leaderboardContent) return;
+
+        document.querySelectorAll('.leaderboard-tab').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.leaderboardTab === tab);
+        });
 
         if (tab === 'local') {
             this.renderLocalLeaderboard().catch(error => {
