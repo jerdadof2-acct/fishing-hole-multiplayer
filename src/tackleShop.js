@@ -164,6 +164,9 @@ export function equip(player, category, itemId) {
     // Equip
     const gearKey = category.slice(0, -1); // Remove 's' from category (rods -> rod)
     player.gear[gearKey] = item.name;
+    if (typeof player.recalculateStats === 'function') {
+        player.recalculateStats();
+    }
     player.save();
     
     return { success: true, message: `Equipped ${item.name}` };

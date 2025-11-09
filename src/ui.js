@@ -2025,6 +2025,7 @@ export class UI {
         castButton.textContent = 'CAST';
         castButton.disabled = false;
         castButton.style.background = '';
+        castButton.removeAttribute('data-state');
         
         // Reset fishing state
         if (this.fishing) {
@@ -2173,6 +2174,7 @@ export class UI {
             castButton.disabled = false;
             castButton.textContent = 'CAST';
             castButton.style.background = '';
+            castButton.removeAttribute('data-state');
         }, 500);
         
         // Get fish data

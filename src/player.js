@@ -1,7 +1,53 @@
+import { TackleShop, getTackleByName } from './tackleShop.js';
+
 /**
  * Player State Management System
  * Handles player stats, progression, unlocks, and save/load
  */
+
+const STAT_BASELINE = 50;
+const GEAR_CATEGORY_KEYS = {
+    rods: 'rod',
+    reels: 'reel',
+    lines: 'line',
+    hooks: 'hook',
+    baits: 'bait'
+};
+
+const GEAR_RANGES = buildGearRanges();
+
+function buildGearRanges() {
+    const ranges = {};
+    for (const [category, items] of Object.entries(TackleShop || {})) {
+        ranges[category] = {};
+        items.forEach(item => {
+            Object.entries(item).forEach(([key, value]) => {
+                if (typeof value !== 'number') return;
+                if (!ranges[category][key]) {
+                    ranges[category][key] = { min: value, max: value };
+                } else {
+                    ranges[category][key].min = Math.min(ranges[category][key].min, value);
+                    ranges[category][key].max = Math.max(ranges[category][key].max, value);
+                }
+            });
+        });
+    }
+    return ranges;
+}
+
+function normalizeStatValue(category, attribute, value, invert = false) {
+    if (typeof value !== 'number') return 0;
+    const range = GEAR_RANGES?.[category]?.[attribute];
+    if (!range) return 0;
+    const { min, max } = range;
+    if (max === min) return 0;
+    let normalized = (value - min) / (max - min);
+    normalized = Math.max(0, Math.min(1, normalized));
+    if (invert) {
+        normalized = 1 - normalized;
+    }
+    return normalized;
+}
 
 export class Player {
     constructor(initialData = null) {
@@ -74,6 +120,7 @@ export class Player {
         // Load from localStorage if available
         this.load();
         this.normalizeTackleState();
+        this.recalculateStats();
 
         // Apply server data if provided
         if (initialData) {
@@ -497,6 +544,7 @@ export class Player {
             this.userId = userId;
         }
 
+        this.recalculateStats(stats && typeof stats === 'object' ? stats : null);
         this.save({ skipSync: true });
     }
 
@@ -641,6 +689,66 @@ export class Player {
             this.tackleUnlocks[category] = Array.isArray(owned) ? Array.from(new Set(owned)) : [];
             this.tackleNotified[category] = Array.isArray(notified) ? Array.from(new Set(notified)) : [];
         });
+    }
+
+    getEquippedItem(category) {
+        const gearKey = GEAR_CATEGORY_KEYS[category];
+        if (!gearKey) return null;
+        const equippedName = this.gear?.[gearKey];
+        return getTackleByName(category, equippedName) || (TackleShop?.[category]?.[0] ?? null);
+    }
+
+    recalculateStats(baseStats = null) {
+        const baseline = {
+            accuracy: Number.isFinite(baseStats?.accuracy) ? baseStats.accuracy : STAT_BASELINE,
+            luck: Number.isFinite(baseStats?.luck) ? baseStats.luck : STAT_BASELINE,
+            patience: Number.isFinite(baseStats?.patience) ? baseStats.patience : STAT_BASELINE,
+            strength: Number.isFinite(baseStats?.strength) ? baseStats.strength : STAT_BASELINE
+        };
+
+        const stats = { ...baseline };
+        const equipped = {
+            rods: this.getEquippedItem('rods'),
+            reels: this.getEquippedItem('reels'),
+            lines: this.getEquippedItem('lines'),
+            hooks: this.getEquippedItem('hooks'),
+            baits: this.getEquippedItem('baits')
+        };
+
+        const apply = (statKey, category, attribute, weight, options = {}) => {
+            const item = equipped[category];
+            if (!item || typeof item[attribute] !== 'number') return;
+            const normalized = normalizeStatValue(category, attribute, item[attribute], options.invert);
+            stats[statKey] += normalized * weight;
+        };
+
+        // Strength: rod strength, line strength, hook catch bonus
+        apply('strength', 'rods', 'strength', 25);
+        apply('strength', 'lines', 'strength', 15);
+        apply('strength', 'hooks', 'catchBonus', 10);
+
+        // Accuracy: reel smoothness, hook timing window, line visibility (lower visibility helps, so invert)
+        apply('accuracy', 'reels', 'smoothness', 20);
+        apply('accuracy', 'hooks', 'timingWindow', 15);
+        apply('accuracy', 'lines', 'visibility', 10, { invert: true });
+
+        // Luck: bait catch bonus, rod catch bonus, hook catch bonus
+        apply('luck', 'baits', 'catchBonus', 20);
+        apply('luck', 'rods', 'catchBonus', 15);
+        apply('luck', 'hooks', 'catchBonus', 10);
+
+        // Patience: bait durability, hook timing window, reel speed bonus (slower reels encourage patience, invert)
+        apply('patience', 'baits', 'durability', 20);
+        apply('patience', 'hooks', 'timingWindow', 15);
+        apply('patience', 'reels', 'speedBonus', 10, { invert: true });
+
+        Object.keys(stats).forEach(key => {
+            const value = Math.round(Math.max(20, Math.min(100, stats[key])));
+            stats[key] = value;
+        });
+
+        this.stats = stats;
+        return stats;
     }
 }
 
