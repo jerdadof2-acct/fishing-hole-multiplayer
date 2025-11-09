@@ -403,14 +403,9 @@ export class Platform {
         
         // Gunwale "cap" - L-cap that overlaps both hull and deck
         const gunwaleMaterial = new THREE.MeshStandardMaterial({
-            color: 0x9aa2ad, // Lighter grey tone
-            roughness: 0.55,
-            metalness: 0.08
-        });
-        const gunwaleTopMaterial = new THREE.MeshStandardMaterial({
-            color: 0x2f3238, // Dark cap along top edge
-            roughness: 0.45,
-            metalness: 0.1
+            color: 0x5a3a1a, // Darker wood
+            roughness: 0.6,
+            metalness: 0.05
         });
         
         const gunwaleHeight = 1.3;       // Taller - increased to 1.3
@@ -467,32 +462,6 @@ export class Platform {
         backRail.castShadow = true;
         backRail.receiveShadow = true;
         boatGroup.add(backRail);
-
-        // Add darker cap strips along the top edge of each rail
-        const topCapHeight = Math.min(0.18, gunwaleHeight * 0.22);
-        const sideTopGeom = new THREE.BoxGeometry(railThick * 1.04, topCapHeight, sideLen * 0.995);
-        const frontTopGeom = new THREE.BoxGeometry(foreAftLen * 0.995, topCapHeight, railThick * 1.04);
-        const topY = railY + gunwaleHeight * 0.5 - topCapHeight * 0.5;
-
-        const leftTopCap = new THREE.Mesh(sideTopGeom, gunwaleTopMaterial);
-        leftTopCap.position.set(leftRail.position.x, topY, 0);
-        leftTopCap.castShadow = false;
-        boatGroup.add(leftTopCap);
-
-        const rightTopCap = new THREE.Mesh(sideTopGeom, gunwaleTopMaterial);
-        rightTopCap.position.set(rightRail.position.x, topY, 0);
-        rightTopCap.castShadow = false;
-        boatGroup.add(rightTopCap);
-
-        const frontTopCap = new THREE.Mesh(frontTopGeom, gunwaleTopMaterial);
-        frontTopCap.position.set(0, topY, frontRail.position.z);
-        frontTopCap.castShadow = false;
-        boatGroup.add(frontTopCap);
-
-        const backTopCap = new THREE.Mesh(frontTopGeom, gunwaleTopMaterial);
-        backTopCap.position.set(0, topY, backRail.position.z);
-        backTopCap.castShadow = false;
-        boatGroup.add(backTopCap);
         
         // Inner coaming lip (vertical strip just inside rail so gunwale & deck look bonded)
         const coamH = gunwaleHeight * 0.65;
