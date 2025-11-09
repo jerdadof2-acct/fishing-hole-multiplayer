@@ -855,7 +855,10 @@ export class Platform {
         const gunwaleTopMaterial = new THREE.MeshStandardMaterial({
             color: 0x2f3238, // Dark cap along very top
             roughness: 0.45,
-            metalness: 0.1
+            metalness: 0.1,
+            polygonOffset: true,
+            polygonOffsetFactor: -1,
+            polygonOffsetUnits: -1
         });
         
         const gunwaleHeight = 2.6;  // Increased to 2.6
@@ -912,10 +915,10 @@ export class Platform {
         boatGroup.add(backRail);
 
         // Add darker top caps to emphasize rail edge
-        const topCapHeight = Math.min(0.22, gunwaleHeight * 0.18);
-        const sideTopGeom = new THREE.BoxGeometry(railThick * 1.02, topCapHeight, sideLen * 0.995);
-        const foreAftTopGeom = new THREE.BoxGeometry(foreAftLen * 0.995, topCapHeight, railThick * 1.02);
-        const topY = railY + gunwaleHeight * 0.5 - topCapHeight * 0.5;
+        const topCapHeight = Math.min(0.16, gunwaleHeight * 0.14);
+        const sideTopGeom = new THREE.BoxGeometry(railThick * 0.94, topCapHeight, sideLen * 0.97);
+        const foreAftTopGeom = new THREE.BoxGeometry(foreAftLen * 0.97, topCapHeight, railThick * 0.94);
+        const topY = railY + gunwaleHeight * 0.5 - topCapHeight * 0.5 + 0.008;
 
         const leftTopCap = new THREE.Mesh(sideTopGeom, gunwaleTopMaterial);
         leftTopCap.position.set(leftRail.position.x, topY, 0);
