@@ -413,6 +413,32 @@ canvas {
     font-weight: 600;
 }
 
+.tab-badge {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #ff6b6b;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+    line-height: 1;
+}
+
+.tab-badge.hidden {
+    display: none;
+}
+
+.friends-tab-badge-dot {
+    width: 10px;
+    height: 10px;
+    padding: 0;
+}
+
 /* Modals */
 .modal {
     position: fixed;
@@ -629,6 +655,21 @@ canvas {
     color: rgba(255, 255, 255, 0.6);
 }
 
+.friends-entry-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.friends-entry-stat {
+    background: rgba(255, 255, 255, 0.07);
+    border-radius: 6px;
+    padding: 2px 6px;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.85);
+}
+
 .friends-entry-actions {
     display: flex;
     gap: 8px;
@@ -720,6 +761,26 @@ canvas {
 .friends-detail-meta {
     font-size: 12px;
     color: rgba(255, 255, 255, 0.65);
+}
+
+.friends-detail-meta.secondary {
+    margin-top: 4px;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.friends-detail-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 8px 0;
+}
+
+.friends-detail-stat {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 12px;
+    color: #e9f4ff;
 }
 
 .friends-detail-grid {

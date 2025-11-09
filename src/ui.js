@@ -521,6 +521,8 @@ export class UI {
             return;
         }
 
+        const wasLoaded = this.friendDataLoaded;
+
         if (!force && this.friendDataLoaded) {
             this.renderFriendsLists();
             return;
@@ -542,8 +544,6 @@ export class UI {
                 activitiesPromise
             ]);
 
-            this.detectFriendNotifications(friendList, activityList);
-
             this.friendData = {
                 friends: Array.isArray(friendList) ? friendList : [],
                 pending: {
@@ -555,6 +555,7 @@ export class UI {
 
             this.friendDataLoaded = true;
             this.renderFriendsLists();
+            this.detectFriendNotifications(friendList, this.friendData.pending, activityList, wasLoaded);
         } catch (error) {
             console.warn('[UI] Failed to load friends:', error);
             this.friendDataLoaded = false;
@@ -690,6 +691,9 @@ export class UI {
 
         const displayName = this.safeText(friendMeta?.display_name || data.displayName || friendMeta?.username || data.username || 'Angler');
         const level = friendMeta?.level ?? data.level ?? '-';
+        const friendCode = this.safeText(friendMeta?.friend_code || data.friendCode || '');
+        const biggestCatchRaw = friendMeta?.biggest_catch ?? data.biggestCatch ?? null;
+        const biggestCatchText = Number.isFinite(Number(biggestCatchRaw)) ? `${Number(biggestCatchRaw).toFixed(2)} lbs` : null;
 
         const summaryPieces = [];
         summaryPieces.push(`Level ${level}`);
@@ -699,6 +703,18 @@ export class UI {
             summaryPieces.push(`${uniqueFish} species`);
         }
         summaryPieces.push(`${totalCatches} total catch${totalCatches === 1 ? '' : 'es'}`);
+
+        const secondaryPieces = [];
+        if (friendCode) secondaryPieces.push(`Code ${friendCode}`);
+        if (biggestCatchText) secondaryPieces.push(`Biggest ${biggestCatchText}`);
+
+        const statsSource = friendMeta?.player_stats ?? data.player_stats;
+        const stats = this.parsePlayerStats(statsSource);
+        const statEntries = [];
+        if (stats.accuracy !== undefined) statEntries.push({ label: 'Accuracy', value: stats.accuracy });
+        if (stats.luck !== undefined) statEntries.push({ label: 'Luck', value: stats.luck });
+        if (stats.patience !== undefined) statEntries.push({ label: 'Patience', value: stats.patience });
+        if (stats.strength !== undefined) statEntries.push({ label: 'Strength', value: stats.strength });
 
         const topFish = Array.isArray(data.topFish) ? [...data.topFish] : [];
         topFish.sort((a, b) => (Number(b?.maxWeight) || 0) - (Number(a?.maxWeight) || 0));
@@ -722,8 +738,10 @@ export class UI {
                 <div>
                     <div class="friends-detail-name">${displayName}</div>
                     <div class="friends-detail-meta">${summaryPieces.join(' · ')}</div>
+                    ${secondaryPieces.length ? `<div class="friends-detail-meta secondary">${secondaryPieces.join(' · ')}</div>` : ''}
                 </div>
             </div>
+            ${statEntries.length ? `<div class="friends-detail-stats">${statEntries.map(stat => `<span class="friends-detail-stat">${stat.label}: ${stat.value}</span>`).join('')}</div>` : ''}
             <div class="friends-detail-grid">
                 ${gridHtml}
             </div>
@@ -772,6 +790,23 @@ export class UI {
         const metaPieces = [`Level ${level}`];
         if (statusInfo.meta) metaPieces.push(statusInfo.meta);
 
+        const stats = this.parsePlayerStats(friend?.player_stats);
+        const statChips = [];
+        if (stats.accuracy !== undefined) statChips.push(`🎯 ${stats.accuracy}`);
+        if (stats.luck !== undefined) statChips.push(`🍀 ${stats.luck}`);
+        if (stats.patience !== undefined) statChips.push(`🧘 ${stats.patience}`);
+        if (stats.strength !== undefined) statChips.push(`💪 ${stats.strength}`);
+
+        const totalCaught = friend?.total_caught;
+        const biggestCatch = friend?.biggest_catch;
+        const extraPieces = [];
+        if (Number.isFinite(Number(biggestCatch))) {
+            extraPieces.push(`Biggest ${Number(biggestCatch).toFixed(2)} lbs`);
+        }
+        if (Number.isFinite(Number(totalCaught))) {
+            extraPieces.push(`${Number(totalCaught)} caught`);
+        }
+
         return `
             <div class="friends-entry" data-friend-id="${id}">
                 <div class="friends-entry-info">
@@ -780,6 +815,8 @@ export class UI {
                         <span class="friends-status-dot ${statusInfo.statusClass}"></span>
                         <span class="friends-entry-meta">Code ${code}${metaPieces.length ? ' · ' + metaPieces.join(' · ') : ''}</span>
                     </div>
+                    ${extraPieces.length ? `<div class="friends-entry-meta">${extraPieces.join(' · ')}</div>` : ''}
+                    ${statChips.length ? `<div class="friends-entry-stats">${statChips.map(stat => `<span class="friends-entry-stat">${stat}</span>`).join('')}</div>` : ''}
                 </div>
                 <div class="friends-entry-actions">
                     <button class="friend-action-button neutral" data-action="copy" data-code="${code}">Copy</button>
@@ -3134,12 +3171,151 @@ export class UI {
         }
     }
 
-    detectFriendNotifications(friendList = [], activityList = []) {
-        // Notification badges are currently disabled; placeholder kept to avoid runtime errors.
-        // We could restore per-friend indicators here in the future.
+    detectFriendNotifications(friendList = [], pending = { sent: [], received: [] }, activityList = [], wasLoaded = false) {
+        if (!this.lastFriendSnapshot) {
+            this.lastFriendSnapshot = { friends: new Map(), activities: new Set() };
+        }
+
+        const pendingCount = Array.isArray(pending?.received) ? pending.received.length : 0;
+        const badge = document.querySelector('.friends-tab-badge');
+
+        const previousActivitySet = this.lastFriendSnapshot.activities || new Set();
+        const currentActivityIds = new Set();
+        const newActivities = [];
+
+        activityList.forEach(activity => {
+            if (!activity || !activity.id) return;
+            currentActivityIds.add(activity.id);
+            if (wasLoaded && !previousActivitySet.has(activity.id)) {
+                newActivities.push(activity);
+            }
+        });
+
+        this.lastFriendSnapshot.activities = currentActivityIds;
+
+        if (wasLoaded && newActivities.length > 0) {
+            const maxToShow = 3;
+            newActivities.slice(0, maxToShow).forEach(activity => {
+                const angler = this.safeText(activity.username || 'A friend');
+                const fishName = this.safeText(activity.fish_name || 'a fish');
+                const weight = activity.fish_weight ? `${Number(activity.fish_weight).toFixed(2)} lbs` : null;
+                const rarity = activity.fish_rarity && activity.fish_rarity !== 'Common' ? activity.fish_rarity : null;
+                const location = activity.location_name ? this.safeText(activity.location_name) : null;
+
+                const bodyLines = [];
+                if (weight) bodyLines.push(`Weight: ${weight}`);
+                if (rarity) bodyLines.push(`Rarity: ${rarity}`);
+                if (location) bodyLines.push(`Location: ${location}`);
+
+                this.showToast({
+                    type: 'info',
+                    title: `${angler} caught ${fishName}!`,
+                    body: bodyLines.join('\n')
+                });
+            });
+
+            if (newActivities.length > maxToShow) {
+                this.showToast({
+                    type: 'info',
+                    title: 'More friend catches',
+                    body: `+${newActivities.length - maxToShow} more friends hooked big fish!`
+                });
+            }
+        }
+
+        let badgeText = '';
+        let showBadge = false;
+
+        if (pendingCount > 0) {
+            badgeText = pendingCount > 9 ? '9+' : `${pendingCount}`;
+            showBadge = true;
+        } else if (newActivities.length > 0) {
+            badgeText = '•';
+            showBadge = true;
+        }
+
+        if (badge) {
+            if (showBadge) {
+                badge.textContent = badgeText;
+                badge.classList.remove('hidden');
+                if (badgeText === '•') {
+                    badge.classList.add('friends-tab-badge-dot');
+                } else {
+                    badge.classList.remove('friends-tab-badge-dot');
+                }
+            } else {
+                badge.textContent = '';
+                badge.classList.add('hidden');
+                badge.classList.remove('friends-tab-badge-dot');
+            }
+        }
+
+        const friendSnapshotMap = new Map();
+        friendList.forEach(friend => {
+            if (friend?.id) {
+                friendSnapshotMap.set(friend.id, {
+                    last_active: friend.last_active,
+                    total_caught: friend.total_caught,
+                    biggest_catch: friend.biggest_catch
+                });
+            }
+        });
+        this.lastFriendSnapshot.friends = friendSnapshotMap;
+
         this.friendData.notifications = {
-            friends: friendList.length,
-            activities: activityList.length
+            pending: pendingCount,
+            newActivities: newActivities.map(a => a.id),
+            lastUpdated: Date.now()
         };
+    }
+
+    getFriendStatus(friend) {
+        const lastActive = friend?.last_active ? new Date(friend.last_active).getTime() : null;
+        const now = Date.now();
+        const ONLINE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+
+        let statusClass = 'offline';
+        let meta = '';
+
+        if (lastActive) {
+            const diff = now - lastActive;
+            if (diff < ONLINE_THRESHOLD_MS) {
+                statusClass = 'online';
+                meta = 'Online now';
+            } else {
+                const minutes = Math.round(diff / 60000);
+                if (minutes < 60) {
+                    meta = `Last seen ${minutes} min${minutes === 1 ? '' : 's'} ago`;
+                } else {
+                    const hours = Math.round(minutes / 60);
+                    if (hours < 24) {
+                        meta = `Last seen ${hours} hr${hours === 1 ? '' : 's'} ago`;
+                    } else {
+                        const days = Math.round(hours / 24);
+                        meta = `Last seen ${days} day${days === 1 ? '' : 's'} ago`;
+                    }
+                }
+            }
+        } else {
+            meta = 'Last seen unknown';
+        }
+
+        return { statusClass, meta };
+    }
+
+    parsePlayerStats(rawStats) {
+        if (!rawStats) return {};
+        if (typeof rawStats === 'string') {
+            try {
+                return JSON.parse(rawStats);
+            } catch (error) {
+                console.warn('[UI] Failed to parse player stats JSON:', error);
+                return {};
+            }
+        }
+        if (typeof rawStats === 'object') {
+            return { ...rawStats };
+        }
+        return {};
     }
  }
