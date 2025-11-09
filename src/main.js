@@ -342,7 +342,6 @@ export class Game {
             
             // Hide loading, show UI
             document.getElementById('loading').classList.add('hidden');
-            document.getElementById('ad-banner').classList.remove('hidden');
             document.getElementById('player-info').classList.remove('hidden');
             document.getElementById('game-area').classList.remove('hidden');
             document.getElementById('tab-bar').classList.remove('hidden');

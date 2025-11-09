@@ -62,6 +62,7 @@ const ADS = [
 ];
 
 const ROTATION_MS = 8000;
+const ADS_ENABLED = false;
 
 let currentIndex = 0;
 let rotationTimer = null;
@@ -116,7 +117,23 @@ export function initAdRotator() {
     const banner = document.getElementById('ad-banner');
     const bannerContent = banner?.querySelector('.ad-banner-content');
 
-    if (!banner || !bannerContent || ADS.length === 0) {
+    if (!banner) {
+        return;
+    }
+
+    if (!ADS_ENABLED) {
+        stopRotation();
+        banner.classList.add('hidden');
+        bannerContent?.classList.remove('ad-banner-error');
+        if (bannerContent) {
+            bannerContent.innerHTML = '';
+        }
+        return;
+    }
+
+    if (!bannerContent || ADS.length === 0) {
+        banner.classList.add('hidden');
+        stopRotation();
         return;
     }
 

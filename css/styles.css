@@ -14,10 +14,6 @@ body {
     touch-action: none;
 }
 
-:root {
-    --ad-height: 60px;
-}
-
 /* Game Container */
 #game-container {
     width: 100vw;
@@ -173,14 +169,19 @@ canvas {
     padding: 6px 8px;
 }
 
-.ad-rotator {
-    width: min(760px, 96%);
-    min-height: var(--ad-height);
+.ad-placeholder {
+    width: 100%;
+    height: 50px;
+    background: rgba(74, 144, 226, 0.2);
+    border: 2px dashed rgba(74, 144, 226, 0.5);
+    border-radius: 8px;
     display: flex;
-    align-items: stretch;
+    align-items: center;
     justify-content: center;
-    position: relative;
-    transition: opacity 0.4s ease, transform 0.4s ease;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .ad-card {
@@ -220,8 +221,6 @@ canvas {
 
 .ad-badge {
     font-size: 10px;
-.ad-subheadline {
-    font-size: 12px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 1.2px;
@@ -284,21 +283,6 @@ canvas {
     top: -32px;
     right: -26px;
     z-index: 0;
-}
-
-.ad-placeholder {
-    width: 100%;
-    height: 50px;
-    background: rgba(74, 144, 226, 0.2);
-    border: 2px dashed rgba(74, 144, 226, 0.5);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 14px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
 }
 
 .ad-rotator:focus-visible,
