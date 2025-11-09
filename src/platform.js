@@ -848,8 +848,13 @@ export class Platform {
         
         // Gunwale "cap" - L-cap with chunkier proportions for large boat
         const gunwaleMaterial = new THREE.MeshStandardMaterial({
-            color: 0x34495e, // Slightly lighter than hull
-            roughness: 0.5,
+            color: 0x9aa2ad, // Light grey for gunwale body
+            roughness: 0.55,
+            metalness: 0.08
+        });
+        const gunwaleTopMaterial = new THREE.MeshStandardMaterial({
+            color: 0x2f3238, // Dark cap along very top
+            roughness: 0.45,
             metalness: 0.1
         });
         
@@ -905,6 +910,32 @@ export class Platform {
         backRail.castShadow = true;
         backRail.receiveShadow = true;
         boatGroup.add(backRail);
+
+        // Add darker top caps to emphasize rail edge
+        const topCapHeight = Math.min(0.22, gunwaleHeight * 0.18);
+        const sideTopGeom = new THREE.BoxGeometry(railThick * 1.02, topCapHeight, sideLen * 0.995);
+        const foreAftTopGeom = new THREE.BoxGeometry(foreAftLen * 0.995, topCapHeight, railThick * 1.02);
+        const topY = railY + gunwaleHeight * 0.5 - topCapHeight * 0.5;
+
+        const leftTopCap = new THREE.Mesh(sideTopGeom, gunwaleTopMaterial);
+        leftTopCap.position.set(leftRail.position.x, topY, 0);
+        leftTopCap.castShadow = false;
+        boatGroup.add(leftTopCap);
+
+        const rightTopCap = new THREE.Mesh(sideTopGeom, gunwaleTopMaterial);
+        rightTopCap.position.set(rightRail.position.x, topY, 0);
+        rightTopCap.castShadow = false;
+        boatGroup.add(rightTopCap);
+
+        const frontTopCap = new THREE.Mesh(foreAftTopGeom, gunwaleTopMaterial);
+        frontTopCap.position.set(0, topY, frontRail.position.z);
+        frontTopCap.castShadow = false;
+        boatGroup.add(frontTopCap);
+
+        const backTopCap = new THREE.Mesh(foreAftTopGeom, gunwaleTopMaterial);
+        backTopCap.position.set(0, topY, backRail.position.z);
+        backTopCap.castShadow = false;
+        boatGroup.add(backTopCap);
         
         // Inner coaming lip (chunkier for large boat)
         const coamH = gunwaleHeight * 0.65;
