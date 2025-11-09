@@ -5,25 +5,25 @@
 
 export const FishTypes = [
     // Common (0-4)
-    { id: 0, name: 'Minnow', rarity: 'Common', minWeight: 0.1, maxWeight: 0.5, value: 5, experience: 4, season: 'All' },
-    { id: 1, name: 'Sunfish', rarity: 'Common', minWeight: 0.3, maxWeight: 1.2, value: 8, experience: 6, season: 'All' },
-    { id: 2, name: 'Bass', rarity: 'Common', minWeight: 1.0, maxWeight: 5.0, value: 15, experience: 9, season: 'All' },
-    { id: 3, name: 'Perch', rarity: 'Common', minWeight: 0.5, maxWeight: 2.0, value: 12, experience: 7, season: 'All' },
-    { id: 4, name: 'Crappie', rarity: 'Common', minWeight: 0.8, maxWeight: 3.0, value: 18, experience: 8, season: 'All' },
+    { id: 0, name: 'Minnow', rarity: 'Common', minWeight: 0.1, maxWeight: 0.5, recordWeight: 0.6, value: 5, experience: 4, season: 'All' },
+    { id: 1, name: 'Sunfish', rarity: 'Common', minWeight: 0.3, maxWeight: 1.2, recordWeight: 4.5, value: 8, experience: 6, season: 'All' },
+    { id: 2, name: 'Bass', rarity: 'Common', minWeight: 1.0, maxWeight: 5.0, recordWeight: 22.5, value: 15, experience: 9, season: 'All' },
+    { id: 3, name: 'Perch', rarity: 'Common', minWeight: 0.5, maxWeight: 2.0, recordWeight: 4.8, value: 12, experience: 7, season: 'All' },
+    { id: 4, name: 'Crappie', rarity: 'Common', minWeight: 0.8, maxWeight: 3.0, recordWeight: 6.0, value: 18, experience: 8, season: 'All' },
     
     // Uncommon (5-9)
-    { id: 5, name: 'Trout', rarity: 'Uncommon', minWeight: 0.5, maxWeight: 3.0, value: 25, experience: 14, season: 'Spring/Fall' },
-    { id: 6, name: 'Pike', rarity: 'Uncommon', minWeight: 2.0, maxWeight: 8.0, value: 40, experience: 18, season: 'All' },
-    { id: 7, name: 'Walleye', rarity: 'Uncommon', minWeight: 1.5, maxWeight: 6.0, value: 35, experience: 16, season: 'Spring/Fall' },
-    { id: 8, name: 'Muskie', rarity: 'Uncommon', minWeight: 5.0, maxWeight: 15.0, value: 60, experience: 22, season: 'All' },
-    { id: 9, name: 'Carp', rarity: 'Uncommon', minWeight: 3.0, maxWeight: 20.0, value: 30, experience: 13, season: 'All' },
+    { id: 5, name: 'Trout', rarity: 'Uncommon', minWeight: 0.5, maxWeight: 3.0, recordWeight: 50.0, value: 25, experience: 14, season: 'Spring/Fall' },
+    { id: 6, name: 'Pike', rarity: 'Uncommon', minWeight: 2.0, maxWeight: 8.0, recordWeight: 55.0, value: 40, experience: 18, season: 'All' },
+    { id: 7, name: 'Walleye', rarity: 'Uncommon', minWeight: 1.5, maxWeight: 6.0, recordWeight: 25.0, value: 35, experience: 16, season: 'Spring/Fall' },
+    { id: 8, name: 'Muskie', rarity: 'Uncommon', minWeight: 5.0, maxWeight: 15.0, recordWeight: 70.0, value: 60, experience: 22, season: 'All' },
+    { id: 9, name: 'Carp', rarity: 'Uncommon', minWeight: 3.0, maxWeight: 20.0, recordWeight: 110.0, value: 30, experience: 13, season: 'All' },
     
     // Rare (10-14)
-    { id: 10, name: 'Salmon', rarity: 'Rare', minWeight: 8.0, maxWeight: 25.0, value: 80, experience: 28, season: 'Fall' },
-    { id: 11, name: 'Catfish', rarity: 'Rare', minWeight: 5.0, maxWeight: 30.0, value: 70, experience: 26, season: 'All' },
-    { id: 12, name: 'Sturgeon', rarity: 'Rare', minWeight: 20.0, maxWeight: 50.0, value: 120, experience: 34, season: 'All' },
-    { id: 13, name: 'Marlin', rarity: 'Rare', minWeight: 50.0, maxWeight: 200.0, value: 200, experience: 42, season: 'All' },
-    { id: 14, name: 'Tuna', rarity: 'Rare', minWeight: 30.0, maxWeight: 150.0, value: 150, experience: 38, season: 'All' },
+    { id: 10, name: 'Salmon', rarity: 'Rare', minWeight: 8.0, maxWeight: 25.0, recordWeight: 130.0, value: 80, experience: 28, season: 'Fall' },
+    { id: 11, name: 'Catfish', rarity: 'Rare', minWeight: 5.0, maxWeight: 30.0, recordWeight: 150.0, value: 70, experience: 26, season: 'All' },
+    { id: 12, name: 'Sturgeon', rarity: 'Rare', minWeight: 20.0, maxWeight: 50.0, recordWeight: 500.0, value: 120, experience: 34, season: 'All' },
+    { id: 13, name: 'Marlin', rarity: 'Rare', minWeight: 50.0, maxWeight: 200.0, recordWeight: 1400.0, value: 200, experience: 42, season: 'All' },
+    { id: 14, name: 'Tuna', rarity: 'Rare', minWeight: 30.0, maxWeight: 150.0, recordWeight: 1500.0, value: 150, experience: 38, season: 'All' },
     
     // Epic (15-19)
     { id: 15, name: 'Crystal Bass', rarity: 'Epic', minWeight: 10.0, maxWeight: 35.0, value: 300, experience: 46, season: 'All' },
@@ -127,10 +127,11 @@ export function getRandomFishForLocation(fishIds, options = {}) {
     }
     
     // Calculate random weight within range
+    const hardCap = fishType.recordWeight ?? fishType.maxWeight;
     const boostPerLevel = aggressiveScaling ? 0.2 : 0.08;
     const maxExtraMultiplier = aggressiveScaling ? 0.9 : 0.5;
     const extraMultiplier = Math.min(levelBoost * boostPerLevel, maxExtraMultiplier);
-    const extendedMax = fishType.maxWeight * (1 + extraMultiplier);
+    const extendedMax = Math.min(hardCap, fishType.maxWeight * (1 + extraMultiplier));
     
     const exponentBase = aggressiveScaling ? 1.3 : 1.45;
     const exponentReduction = Math.min(levelBoost * (aggressiveScaling ? 0.22 : 0.12), 0.9);
@@ -152,7 +153,7 @@ export function getRandomFishForLocation(fishIds, options = {}) {
         }
     }
     
-    weight = Math.min(Math.max(weight, fishType.minWeight), extendedMax);
+    weight = Math.min(Math.max(weight, fishType.minWeight), hardCap);
     
     const roundedWeight = parseFloat(weight.toFixed(2));
     const weightBonus = Math.max(0, (roundedWeight - fishType.minWeight) * 0.8);

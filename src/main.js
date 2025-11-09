@@ -155,7 +155,6 @@ export class Game {
             
             // Set up fishing system with temp rod FIRST (before rod attachment)
             this.fishing = new Fishing(this.scene, this.cat, this.water, rodTip);
-            // Expose game reference to fishing for location access
             this.fishing.game = this;
             await this.fishing.init();
             console.log('Fishing system initialized');

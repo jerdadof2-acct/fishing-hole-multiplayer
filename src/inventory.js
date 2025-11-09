@@ -15,7 +15,7 @@ export class Inventory {
      * @param {Object} catchData - {fishName, weight, fishId, value, experience, timestamp}
      */
     addCatch(catchData) {
-        const { fishName, weight, fishId, value, experience } = catchData;
+        const { fishName, weight, fishId, value, experience, reactionTimeMs = null } = catchData;
         const timestamp = catchData.timestamp || Date.now();
         
         // Add to recent catches (keep last 10)
@@ -25,6 +25,7 @@ export class Inventory {
             fishId,
             value,
             experience,
+            reactionTimeMs,
             timestamp
         });
         

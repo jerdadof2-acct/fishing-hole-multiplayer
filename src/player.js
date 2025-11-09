@@ -287,7 +287,7 @@ export class Player {
      * @returns {Object|null} New unlocks object if leveled up, null otherwise
      */
     addCatch(catchData, locations = null, tackleShop = null) {
-        const { fishName, weight, fishId, value, experience } = catchData;
+        const { fishName, weight, fishId, value, experience, reactionTimeMs = null } = catchData;
         
         // Update totals
         this.totalCaught++;
@@ -304,6 +304,7 @@ export class Player {
             fishId,
             value,
             experience,
+            reactionTimeMs,
             timestamp: Date.now()
         });
         

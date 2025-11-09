@@ -235,7 +235,11 @@ export class Fish {
         
         // Log catch
         if (this.currentFish) {
-            console.log(`Caught: ${this.currentFish.species} - ${this.currentFish.weight.toFixed(2)} lbs`);
+            let reactionLog = '';
+            if (typeof this.fishing?.lastReactionTimeMs === 'number') {
+                reactionLog = ` (reaction ${this.fishing.lastReactionTimeMs} ms)`;
+            }
+            console.log(`Caught: ${this.currentFish.species} - ${this.currentFish.weight.toFixed(2)} lbs${reactionLog}`);
         }
         
         // Trigger big splash at bobber position when fish is caught (visual only - no sound)

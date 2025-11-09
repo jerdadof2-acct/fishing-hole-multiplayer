@@ -694,6 +694,14 @@ export class UI {
         const leaderboardContent = document.getElementById('leaderboard-content');
         if (!leaderboardContent) return;
 
+        const wrapSection = (title, bodyHtml, subtitle = '') => `
+            <div style="margin-bottom: 28px;">
+                <h3 style="font-size: 20px; font-weight: 700; color: #f5f5f5; margin: 0 0 6px;">${title}</h3>
+                ${subtitle ? `<p style="margin: 0 0 14px; color: rgba(255,255,255,0.65); font-size: 13px;">${subtitle}</p>` : ''}
+                ${bodyHtml}
+            </div>
+        `;
+
         if (this.isOnline() && this.api && this.player?.userId) {
             const now = Date.now();
             const cacheAge = now - this.playerCatchCache.fetchedAt;
@@ -734,30 +742,74 @@ export class UI {
                 `;
             }).join('');
 
-            leaderboardContent.innerHTML = html;
+            const weightSection = wrapSection('🏆 Heaviest Hauls', html || '<p style="color: rgba(255,255,255,0.6); text-align: center;">No catches logged yet. Cast a line!</p>');
+            const speedSection = this.buildSpeedBoardSection();
+            leaderboardContent.innerHTML = weightSection + speedSection;
             return;
         }
 
         // Offline fallback (local inventory)
         const top10 = this.inventory.getTop10();
-        if (top10.length === 0) {
-            leaderboardContent.innerHTML = '<p style="text-align: center; color: rgba(255,255,255,0.5); padding: 40px;">No catches yet. Go fishing!</p>';
-        } else {
-            const html = top10.map((fishCatch, index) => {
+        const weightHtml = top10.length === 0
+            ? '<p style="text-align: center; color: rgba(255,255,255,0.5); padding: 40px;">No catches yet. Go fishing!</p>'
+            : top10.map((fishCatch, index) => {
                 const date = new Date(fishCatch.timestamp);
                 return `
                     <div class="leaderboard-entry">
                         <div class="leaderboard-rank">#${index + 1}</div>
                         <div class="leaderboard-info">
-                            <div class="leaderboard-player">${fishCatch.fishName}</div>
+                            <div class="leaderboard-player">${this.safeText(fishCatch.fishName)}</div>
                             <div class="leaderboard-fish">${date.toLocaleDateString()}</div>
                         </div>
                         <div class="leaderboard-weight">${fishCatch.weight.toFixed(2)} lbs</div>
                     </div>
                 `;
             }).join('');
-            leaderboardContent.innerHTML = html;
+
+        const weightSection = wrapSection('🏆 Heaviest Hauls', weightHtml);
+        const speedSection = this.buildSpeedBoardSection();
+        leaderboardContent.innerHTML = weightSection + speedSection;
+    }
+
+    buildSpeedBoardSection() {
+        if (!this.leaderboard) {
+            return '';
         }
+
+        const entries = this.leaderboard.getSpeedBoardTop();
+        const playerBest = this.player ? this.leaderboard.getPlayerBestReaction(this.player.name) : null;
+
+        const body = entries.length
+            ? entries.map((entry, index) => {
+                const fishLabel = entry.fishName ? `Hooked a ${this.safeText(entry.fishName)}${entry.weight ? ` (${Number(entry.weight).toFixed(2)} lbs)` : ''}` : 'Hooked a mystery fish';
+                const timestampText = entry.timestamp ? new Date(entry.timestamp).toLocaleDateString() : '';
+                return `
+                    <div class="leaderboard-entry">
+                        <div class="leaderboard-rank">#${index + 1}</div>
+                        <div class="leaderboard-info">
+                            <div class="leaderboard-player">${this.safeText(entry.playerName)}</div>
+                            <div class="leaderboard-fish">${fishLabel}${timestampText ? ` · ${timestampText}` : ''}</div>
+                        </div>
+                        <div class="leaderboard-weight">${entry.reactionTimeMs}<span style="font-size: 11px; margin-left: 3px; text-transform: uppercase; color: rgba(255,255,255,0.7);">ms</span></div>
+                    </div>
+                `;
+            }).join('')
+            : '<p style="text-align: center; color: rgba(255,255,255,0.55); padding: 36px 20px;">No lightning-fast hooks yet. Nail that perfect snap to claim the crown!</p>';
+
+        const playerNote = playerBest
+            ? `<div style="margin-top: 10px; padding: 10px 14px; border-radius: 10px; background: rgba(100, 181, 246, 0.18); color: #e3f2fd;">Your quickest hook: <strong>${playerBest.reactionTimeMs} ms</strong>. Keep those paws ready!</div>`
+            : '';
+
+        return `
+            <div style="margin-top: 12px; padding: 18px 0 6px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <h3 style="font-size: 20px; font-weight: 700; color: #f5f5f5; margin: 0 0 6px;">⚡ Speed Board</h3>
+                <p style="margin: 0 0 14px; color: rgba(255,255,255,0.65); font-size: 13px;">
+                    Fastest reaction times when the bobber dunks—these cats set hooks before the splash settles.
+                </p>
+                ${body}
+                ${playerNote}
+            </div>
+        `;
     }
 
     renderFriendCode() {
@@ -1496,9 +1548,13 @@ export class UI {
                         // Hook the fish (starts fight)
                         this.fish.hook();
                         // Set fishing state for fight
-                        this.fishing.setFishOnLine(true);
-                        this.fishing.isReeling = true; // Start reeling/fighting
-                        console.log('[UI] Fish hooked, fight begins!');
+                    this.fishing.setFishOnLine(true);
+                    this.fishing.isReeling = true; // Start reeling/fighting
+                    console.log('[UI] Fish hooked, fight begins!');
+                    
+                    if (this.fishing) {
+                        this.fishing.lastReactionTimeMs = reactionTime;
+                    }
                     }
             } else {
                     // MISS!
@@ -1706,6 +1762,10 @@ export class UI {
         // Record catch in gameplay systems
         if (this.player && this.inventory && this.leaderboard && this.fishCollection) {
             const { species, weight, fishId, value, experience } = fishData;
+            const rawReaction = this.fishing?.lastReactionTimeMs;
+            const reactionTimeMs = typeof rawReaction === 'number' && Number.isFinite(rawReaction)
+                ? Math.max(0, Math.round(rawReaction))
+                : null;
             
             // Check if first catch of this fish
             const isFirstCatch = this.fishCollection.unlockFish(fishId);
@@ -1716,7 +1776,8 @@ export class UI {
                 weight,
                 fishId,
                 value,
-                experience
+                experience,
+                reactionTimeMs
             }, this.game?.locations, TackleShop);
             
             // Handle unlock if player leveled up (single unlock per level)
@@ -1731,6 +1792,7 @@ export class UI {
                 fishId,
                 value,
                 experience,
+                reactionTimeMs,
                 timestamp: Date.now()
             });
             this.inventory.save();
@@ -1742,6 +1804,7 @@ export class UI {
                 playerName: this.player.name,
                 fishName: species,
                 weight,
+                reactionTimeMs,
                 locationId,
                 timestamp: Date.now()
             });
@@ -1797,6 +1860,10 @@ export class UI {
             setTimeout(() => {
                 this.showFishCatchPopup();
             }, 1900);
+        }
+
+        if (this.fishing) {
+            this.fishing.lastReactionTimeMs = null;
         }
     }
     

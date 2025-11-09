@@ -8,6 +8,8 @@ export class Leaderboard {
         // Structure: { locationId: [{playerName, fishName, weight, timestamp}], global: [...] }
         this.leaderboards = {};
         this.global = [];
+        this.speedBoard = [];
+        this.speedBoardMap = {};
         
         this.load();
     }
@@ -17,7 +19,7 @@ export class Leaderboard {
      * @param {Object} catchData - {playerName, fishName, weight, locationId, timestamp}
      */
     addCatch(catchData) {
-        const { playerName, fishName, weight, locationId, timestamp } = catchData;
+        const { playerName, fishName, weight, locationId, timestamp, reactionTimeMs } = catchData;
         const catchEntry = {
             playerName,
             fishName,
@@ -48,8 +50,43 @@ export class Leaderboard {
         if (this.global.length > 10) {
             this.global = this.global.slice(0, 10);
         }
+
+        if (typeof reactionTimeMs === 'number' && Number.isFinite(reactionTimeMs)) {
+            this.updateSpeedBoard({
+                playerName,
+                fishName,
+                weight,
+                reactionTimeMs: Math.max(0, Math.round(reactionTimeMs)),
+                timestamp: catchEntry.timestamp
+            });
+        }
         
         this.save();
+    }
+
+    updateSpeedBoard(entry) {
+        if (!this.speedBoardMap) {
+            this.speedBoardMap = {};
+        }
+        
+        const currentBest = this.speedBoardMap[entry.playerName];
+        if (currentBest && currentBest.reactionTimeMs <= entry.reactionTimeMs) {
+            return;
+        }
+        
+        this.speedBoardMap[entry.playerName] = entry;
+        this.rebuildSpeedBoard();
+    }
+
+    rebuildSpeedBoard() {
+        const values = Object.values(this.speedBoardMap || {});
+        values.sort((a, b) => {
+            if (a.reactionTimeMs !== b.reactionTimeMs) {
+                return a.reactionTimeMs - b.reactionTimeMs;
+            }
+            return (a.timestamp || 0) - (b.timestamp || 0);
+        });
+        this.speedBoard = values.slice(0, 10);
     }
     
     /**
@@ -67,6 +104,31 @@ export class Leaderboard {
      */
     getGlobalTop10() {
         return this.global.slice(0, 10);
+    }
+
+    /**
+     * Get fastest reaction leaderboard
+     * @param {number} limit
+     * @returns {Array} Speed board entries
+     */
+    getSpeedBoardTop(limit = 10) {
+        if (!this.speedBoard || this.speedBoard.length === 0) {
+            if (this.speedBoardMap) {
+                this.rebuildSpeedBoard();
+            }
+        }
+        if (!this.speedBoard || this.speedBoard.length === 0) return [];
+        return this.speedBoard.slice(0, limit);
+    }
+
+    /**
+     * Get player's personal best reaction time
+     * @param {string} playerName
+     * @returns {Object|null}
+     */
+    getPlayerBestReaction(playerName) {
+        if (!this.speedBoardMap) return null;
+        return this.speedBoardMap[playerName] || null;
     }
     
     /**
@@ -153,7 +215,9 @@ export class Leaderboard {
         try {
             const leaderboardData = {
                 leaderboards: this.leaderboards,
-                global: this.global
+                global: this.global,
+                speedBoard: this.speedBoard,
+                speedBoardMap: this.speedBoardMap
             };
             
             localStorage.setItem('kittyCreekLeaderboard', JSON.stringify(leaderboardData));
@@ -177,6 +241,9 @@ export class Leaderboard {
                 
                 this.leaderboards = leaderboardData.leaderboards || {};
                 this.global = leaderboardData.global || [];
+                this.speedBoard = leaderboardData.speedBoard || [];
+                this.speedBoardMap = leaderboardData.speedBoardMap || this.rebuildSpeedBoardMapFromArray(this.speedBoard);
+                this.rebuildSpeedBoard();
             }
         } catch (error) {
             console.error('[LEADERBOARD] Failed to load:', error);
@@ -187,11 +254,27 @@ export class Leaderboard {
                     const leaderboardData = JSON.parse(backupData);
                     this.leaderboards = leaderboardData.leaderboards || {};
                     this.global = leaderboardData.global || [];
+                    this.speedBoard = leaderboardData.speedBoard || [];
+                    this.speedBoardMap = leaderboardData.speedBoardMap || this.rebuildSpeedBoardMapFromArray(this.speedBoard);
+                    this.rebuildSpeedBoard();
                 }
             } catch (backupError) {
                 console.error('[LEADERBOARD] Backup load also failed:', backupError);
             }
         }
+    }
+
+    rebuildSpeedBoardMapFromArray(array = []) {
+        const map = {};
+        array.forEach(entry => {
+            if (entry && entry.playerName !== undefined) {
+                const existing = map[entry.playerName];
+                if (!existing || entry.reactionTimeMs < existing.reactionTimeMs) {
+                    map[entry.playerName] = entry;
+                }
+            }
+        });
+        return map;
     }
 }
 
