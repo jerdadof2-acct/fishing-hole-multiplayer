@@ -1,60 +1,54 @@
 const ADS = [
     {
         id: 'aqua-sense',
-        badge: 'New Release',
-        headline: 'AquaSense Hydration Tracker Bottle',
-        subheadline: 'Smart bottle that syncs with Kitty Creek to keep your angler hydrated all day.',
-        cta: 'Preorder for $39',
+        label: 'New gear',
+        headline: 'AquaSense smart bottle',
+        tagline: 'Hydration reminders for long fishing days.',
         emoji: '💧',
         url: 'https://example.com/kit-cc/aquasense',
         gradient: 'linear-gradient(135deg, #38bdf8 0%, #0ea5e9 55%, #1e3a8a 100%)'
     },
     {
         id: 'whisker-wave',
-        badge: 'Just Dropped',
-        headline: 'WhiskerWave Casting Drone',
-        subheadline: 'Drone-assisted precision casting. Perfect for trophy hunters chasing legendary fish.',
-        cta: 'See it in action',
+        label: 'Pro tip',
+        headline: 'WhiskerWave casting drone',
+        tagline: 'Drop baits perfectly every time.',
         emoji: '🚁',
         url: 'https://example.com/kit-cc/whiskerwave',
         gradient: 'linear-gradient(135deg, #c084fc 0%, #a855f7 55%, #7c3aed 100%)'
     },
     {
         id: 'luminous-line',
-        badge: 'Limited Run',
-        headline: 'Luminous Line Pro Kit',
-        subheadline: 'Night-glow braided line with adaptive tension sensors for late-night expeditions.',
-        cta: 'Grab the bundle',
+        label: 'Night kit',
+        headline: 'Luminous Line pro spool',
+        tagline: 'Glow braid with tension alerts.',
         emoji: '🌙',
         url: 'https://example.com/kit-cc/luminousline',
         gradient: 'linear-gradient(135deg, #facc15 0%, #f59e0b 55%, #b45309 100%)'
     },
     {
         id: 'catnap-chair',
-        badge: 'Comfort Pick',
-        headline: 'CatNap Ergonomic Dock Chair',
-        subheadline: 'Foldable chair with lumbar support, insulated mug holder, and purring massage mode.',
-        cta: 'Upgrade your dock',
+        label: 'Comfort pick',
+        headline: 'CatNap dock chair',
+        tagline: 'Built-in warmer and purr massage.',
         emoji: '🪑',
         url: 'https://example.com/kit-cc/catnap',
         gradient: 'linear-gradient(135deg, #4ade80 0%, #22c55e 55%, #15803d 100%)'
     },
     {
         id: 'tidal-tunes',
-        badge: 'Staff Favorite',
-        headline: 'Tidal Tunes Waterproof Speaker',
-        subheadline: 'Immersive 360° audio with adaptive wave-sync lighting for your fishing sessions.',
-        cta: 'Listen now',
+        label: 'Boat vibes',
+        headline: 'Tidal Tunes speaker',
+        tagline: '360° sound that syncs with waves.',
         emoji: '🔊',
         url: 'https://example.com/kit-cc/tidaltunes',
         gradient: 'linear-gradient(135deg, #38bdf8 0%, #818cf8 55%, #312e81 100%)'
     },
     {
         id: 'bait-bistro',
-        badge: 'Seasonal',
-        headline: 'Bait Bistro Craft Snack Box',
-        subheadline: 'Chef-crafted trail mix for anglers. Sweet, savory, and bait-safe—cat approved!',
-        cta: 'Subscribe & save',
+        label: 'Snack box',
+        headline: 'Bait Bistro trail mix',
+        tagline: 'Fuel for anglers, safe for bait.',
         emoji: '🍱',
         url: 'https://example.com/kit-cc/baitbistro',
         gradient: 'linear-gradient(135deg, #fb7185 0%, #f43f5e 55%, #be123c 100%)'
@@ -62,10 +56,26 @@ const ADS = [
 ];
 
 const ROTATION_MS = 8000;
-const ADS_ENABLED = false;
+const DEFAULT_ADS_ENABLED = true;
 
 let currentIndex = 0;
 let rotationTimer = null;
+
+function getAdsEnabled() {
+    if (typeof window !== 'undefined' && typeof window.__KITTY_CREEK_ADS_ENABLED__ === 'boolean') {
+        return window.__KITTY_CREEK_ADS_ENABLED__;
+    }
+    return DEFAULT_ADS_ENABLED;
+}
+
+function createPlaceholder() {
+    const placeholder = document.createElement('div');
+    placeholder.className = 'ad-placeholder';
+    placeholder.innerHTML = `
+        <span>Ad space 320×50</span>
+    `;
+    return placeholder;
+}
 
 function createAdElement(ad) {
     const wrapper = document.createElement('a');
@@ -76,14 +86,12 @@ function createAdElement(ad) {
     wrapper.style.background = ad.gradient;
 
     wrapper.innerHTML = `
-        <span class="ad-accent"></span>
+        <div class="ad-icon" aria-hidden="true">${ad.emoji}</div>
         <div class="ad-copy">
-            <span class="ad-badge">${ad.badge}</span>
+            <span class="ad-label">${ad.label}</span>
             <span class="ad-headline">${ad.headline}</span>
-            <span class="ad-subheadline">${ad.subheadline}</span>
-            <span class="ad-cta">Learn more →</span>
+            ${ad.tagline ? `<span class="ad-tagline">${ad.tagline}</span>` : ''}
         </div>
-        <div class="ad-artwork" aria-hidden="true">${ad.emoji}</div>
     `;
 
     return wrapper;
@@ -117,23 +125,18 @@ export function initAdRotator() {
     const banner = document.getElementById('ad-banner');
     const bannerContent = banner?.querySelector('.ad-banner-content');
 
-    if (!banner) {
+    if (!banner || !bannerContent) {
         return;
     }
 
-    if (!ADS_ENABLED) {
-        stopRotation();
-        banner.classList.add('hidden');
-        bannerContent?.classList.remove('ad-banner-error');
-        if (bannerContent) {
-            bannerContent.innerHTML = '';
-        }
-        return;
-    }
+    banner.classList.remove('hidden');
+    bannerContent.innerHTML = '';
+    stopRotation();
 
-    if (!bannerContent || ADS.length === 0) {
-        banner.classList.add('hidden');
-        stopRotation();
+    const adsEnabled = getAdsEnabled() && ADS.length > 0;
+
+    if (!adsEnabled) {
+        bannerContent.appendChild(createPlaceholder());
         return;
     }
 
