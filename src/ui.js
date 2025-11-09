@@ -3087,4 +3087,46 @@ export class UI {
                     // Show notification with tier and rewards
                     const tierText = unlock.maxTier > 1 ? ` (Tier ${tier})` : '';
                     const rewardText = [];
-                    if (expReward > 0) rewardText.push(`
+                    if (expReward > 0) {
+                        rewardText.push(`${expReward} XP`);
+                    }
+                    if (moneyReward > 0) {
+                        rewardText.push(`$${moneyReward.toLocaleString()}`);
+                    }
+
+                    const descriptionLine = description ? description : '';
+                    const rewardsLine = rewardText.length ? `Rewards: ${rewardText.join(' • ')}` : '';
+                    const bodyLines = [descriptionLine, rewardsLine].filter(Boolean).join('\n');
+
+                    this.showToast({
+                        type: 'success',
+                        title: `Achievement Unlocked${tierText}`,
+                        body: bodyLines || name
+                    });
+                }
+            }
+        });
+
+        if (updated) {
+            this.player.save();
+            if (this.currentInventoryTab === 'achievements') {
+                const inventoryContent = document.getElementById('inventory-content');
+                if (inventoryContent) {
+                    this.renderAchievementsTab(inventoryContent);
+                }
+            }
+        }
+
+        if (totalExpReward > 0 || totalMoneyReward > 0) {
+            const summaryParts = [];
+            if (totalExpReward > 0) summaryParts.push(`+${totalExpReward} XP`);
+            if (totalMoneyReward > 0) summaryParts.push(`+$${totalMoneyReward.toLocaleString()}`);
+
+            this.showToast({
+                type: 'success',
+                title: 'Achievement rewards collected',
+                body: summaryParts.join(' • ')
+            });
+        }
+    }
+ }
