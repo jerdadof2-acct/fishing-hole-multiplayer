@@ -26,7 +26,11 @@ export class UI {
         this.friendRefreshTimer = null;
         this.lastFriendSnapshot = { friends: new Map(), activities: new Set() };
         this.affordableNotified = new Set();
-        this.notificationState = this.loadNotificationState();
+        this.notificationState = {
+            lastMessage: null,
+            lastType: null,
+            timestamp: 0
+        };
         this.playerCatchCache = { entries: [], fetchedAt: 0 };
         this.friendDetailCache = new Map();
         this.activeFriendId = null;
