@@ -681,6 +681,12 @@ app.post('/api/leaderboard/catch', authenticate, async (req, res) => {
             [req.userId, weight]
         );
 
+        await pool.query(
+            `INSERT INTO player_catches (player_id, fish_name, fish_weight, location_name)
+             VALUES ($1, $2, $3, $4)`,
+            [req.userId, fishName.trim(), weight, location]
+        );
+
         const bestResult = await pool.query(
             `SELECT player_id, username, fish_name, fish_weight, location_name, recorded_at
              FROM leaderboard_catches
@@ -715,6 +721,37 @@ app.get('/api/leaderboard/global', authenticate, async (req, res) => {
         res.json(result.rows);
     } catch (error) {
         console.error('[API] Leaderboard fetch error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get a player's catch history (top catches)
+app.get('/api/players/:playerId/catches', authenticate, async (req, res) => {
+    try {
+        const { playerId } = req.params;
+        if (!isValidUUID(playerId) || !isValidUUID(req.userId)) {
+            return res.status(400).json({ error: 'Invalid player ID' });
+        }
+
+        const limit = Math.min(Number(req.query.limit) || 50, 200);
+
+        // Ensure requester is the player
+        if (playerId !== req.userId) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
+
+        const result = await pool.query(
+            `SELECT id, fish_name, fish_weight, location_name, created_at
+             FROM player_catches
+             WHERE player_id = $1
+             ORDER BY fish_weight DESC, created_at DESC
+             LIMIT $2`,
+            [playerId, limit]
+        );
+
+        res.json(result.rows);
+    } catch (error) {
+        console.error('[API] Get player catches error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

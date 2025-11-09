@@ -53,6 +53,16 @@ CREATE TABLE IF NOT EXISTS leaderboard_catches (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Player catch history (all catches by player)
+CREATE TABLE IF NOT EXISTS player_catches (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    player_id UUID REFERENCES players(id) ON DELETE CASCADE,
+    fish_name TEXT NOT NULL,
+    fish_weight DECIMAL(10, 2) NOT NULL,
+    location_name TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Player fish collections (sync from game)
 CREATE TABLE IF NOT EXISTS player_collections (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -69,6 +79,8 @@ CREATE INDEX IF NOT EXISTS idx_friend_activities_player ON friend_activities(pla
 CREATE INDEX IF NOT EXISTS idx_friend_activities_created ON friend_activities(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_leaderboard_catches_weight ON leaderboard_catches(fish_weight DESC);
 CREATE INDEX IF NOT EXISTS idx_leaderboard_catches_recorded ON leaderboard_catches(recorded_at DESC);
+CREATE INDEX IF NOT EXISTS idx_player_catches_player ON player_catches(player_id);
+CREATE INDEX IF NOT EXISTS idx_player_catches_weight ON player_catches(fish_weight DESC);
 CREATE INDEX IF NOT EXISTS idx_players_friend_code ON players(friend_code);
 CREATE INDEX IF NOT EXISTS idx_players_username ON players(username);
 CREATE INDEX IF NOT EXISTS idx_player_collections_player ON player_collections(player_id);

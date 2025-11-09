@@ -238,6 +238,13 @@ export class API {
         return this.request(`/leaderboard/global?limit=${limit}`);
     }
 
+    async getPlayerCatches(limit = 50) {
+        if (!this.userId) {
+            throw new Error('User ID not set');
+        }
+        return this.request(`/players/${this.userId}/catches?limit=${limit}`);
+    }
+
     /**
      * Get friends' recent activities
      * @param {number} limit - Maximum number of activities
