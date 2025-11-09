@@ -483,7 +483,7 @@ export class UI {
         }
 
         this.renderFriendCode();
-        this.checkAffordableUpgrades();
+        // Upgrade highlighting disabled for now
     }
     
     async renderFriends(refresh = false) {
