@@ -17,6 +17,7 @@ export class UI {
         this.currentInventoryTab = 'collection';
         this.api = game?.api || null;
         this.globalLeaderboardCache = { entries: [], fetchedAt: 0 };
+        this.speedLeaderboardCache = { entries: [], fetchedAt: 0 };
         this.activeLeaderboardTab = 'local';
         this.friendData = { friends: [], pending: { sent: [], received: [] }, activities: [] };
         this.friendDataLoaded = false;
@@ -742,9 +743,12 @@ export class UI {
                 `;
             }).join('');
 
-            const weightSection = wrapSection('🏆 Heaviest Hauls', html || '<p style="color: rgba(255,255,255,0.6); text-align: center;">No catches logged yet. Cast a line!</p>');
-            const speedSection = this.buildSpeedBoardSection();
-            leaderboardContent.innerHTML = weightSection + speedSection;
+            const weightSection = wrapSection(
+                '🏆 Heaviest Hauls',
+                html || '<p style="color: rgba(255,255,255,0.6); text-align: center;">No catches logged yet. Cast a line!</p>',
+                'Local catches live on this device.'
+            );
+            leaderboardContent.innerHTML = weightSection;
             return;
         }
 
@@ -766,50 +770,165 @@ export class UI {
                 `;
             }).join('');
 
-        const weightSection = wrapSection('🏆 Heaviest Hauls', weightHtml);
-        const speedSection = this.buildSpeedBoardSection();
-        leaderboardContent.innerHTML = weightSection + speedSection;
+        const weightSection = wrapSection(
+            '🏆 Heaviest Hauls',
+            weightHtml,
+            'These catches are stored locally. Sync online to share the bragging rights.'
+        );
+        leaderboardContent.innerHTML = weightSection;
     }
 
-    buildSpeedBoardSection() {
-        if (!this.leaderboard) {
-            return '';
-        }
-
-        const entries = this.leaderboard.getSpeedBoardTop();
-        const playerBest = this.player ? this.leaderboard.getPlayerBestReaction(this.player.name) : null;
+    buildSpeedBoardMarkup({ entries = [], title = '⚡ Speed Board', subtitle = '', playerBest = null, emptyMessage = null } = {}) {
+        const defaultEmpty = emptyMessage || 'No lightning-fast hooks yet. Nail that perfect snap to claim the crown!';
 
         const body = entries.length
             ? entries.map((entry, index) => {
-                const fishLabel = entry.fishName ? `Hooked a ${this.safeText(entry.fishName)}${entry.weight ? ` (${Number(entry.weight).toFixed(2)} lbs)` : ''}` : 'Hooked a mystery fish';
+                const playerName = this.safeText(entry.playerName || 'Unknown angler');
+                const fishName = entry.fishName ? this.safeText(entry.fishName) : null;
+                const weightText = entry.weight !== undefined && entry.weight !== null
+                    ? ` (${Number(entry.weight).toFixed(2)} lbs)`
+                    : '';
+                const location = entry.locationName ? this.safeText(entry.locationName) : null;
                 const timestampText = entry.timestamp ? new Date(entry.timestamp).toLocaleDateString() : '';
+                const reaction = Number(entry.reactionTimeMs);
+                const reactionText = Number.isFinite(reaction) ? reaction : '--';
+                const isPlayer = (this.player?.userId && entry.playerId === this.player.userId) ||
+                    (!this.player?.userId && this.player?.name && playerName === this.player.name);
+                const fishLabelParts = [];
+                if (fishName) {
+                    fishLabelParts.push(`Hooked a ${fishName}${weightText}`);
+                }
+                if (location) {
+                    fishLabelParts.push(location);
+                }
+                if (timestampText) {
+                    fishLabelParts.push(timestampText);
+                }
+                const metaLine = fishLabelParts.length ? fishLabelParts.join(' · ') : 'Hooked something mysterious';
+
                 return `
-                    <div class="leaderboard-entry">
+                    <div class="leaderboard-entry ${isPlayer ? 'player-entry' : ''}">
                         <div class="leaderboard-rank">#${index + 1}</div>
                         <div class="leaderboard-info">
-                            <div class="leaderboard-player">${this.safeText(entry.playerName)}</div>
-                            <div class="leaderboard-fish">${fishLabel}${timestampText ? ` · ${timestampText}` : ''}</div>
+                            <div class="leaderboard-player">${playerName}</div>
+                            <div class="leaderboard-fish">${metaLine}</div>
                         </div>
-                        <div class="leaderboard-weight">${entry.reactionTimeMs}<span style="font-size: 11px; margin-left: 3px; text-transform: uppercase; color: rgba(255,255,255,0.7);">ms</span></div>
+                        <div class="leaderboard-weight">${reactionText}<span style="font-size: 11px; margin-left: 3px; text-transform: uppercase; color: rgba(255,255,255,0.7);">ms</span></div>
                     </div>
                 `;
             }).join('')
-            : '<p style="text-align: center; color: rgba(255,255,255,0.55); padding: 36px 20px;">No lightning-fast hooks yet. Nail that perfect snap to claim the crown!</p>';
+            : `<p style="text-align: center; color: rgba(255,255,255,0.55); padding: 36px 20px;">${this.safeText(defaultEmpty)}</p>`;
 
-        const playerNote = playerBest
-            ? `<div style="margin-top: 10px; padding: 10px 14px; border-radius: 10px; background: rgba(100, 181, 246, 0.18); color: #e3f2fd;">Your quickest hook: <strong>${playerBest.reactionTimeMs} ms</strong>. Keep those paws ready!</div>`
+        const note = playerBest && Number.isFinite(Number(playerBest.reactionTimeMs))
+            ? `<div style="margin-top: 10px; padding: 10px 14px; border-radius: 10px; background: rgba(100, 181, 246, 0.18); color: #e3f2fd;">Your quickest hook: <strong>${Number(playerBest.reactionTimeMs)} ms</strong>. Keep those paws ready!</div>`
             : '';
 
         return `
-            <div style="margin-top: 12px; padding: 18px 0 6px; border-top: 1px solid rgba(255,255,255,0.1);">
-                <h3 style="font-size: 20px; font-weight: 700; color: #f5f5f5; margin: 0 0 6px;">⚡ Speed Board</h3>
-                <p style="margin: 0 0 14px; color: rgba(255,255,255,0.65); font-size: 13px;">
-                    Fastest reaction times when the bobber dunks—these cats set hooks before the splash settles.
-                </p>
+            <div style="padding: 6px 0;">
+                <h3 style="font-size: 20px; font-weight: 700; color: #f5f5f5; margin: 0 0 6px;">${title}</h3>
+                ${subtitle ? `<p style="margin: 0 0 14px; color: rgba(255,255,255,0.65); font-size: 13px;">${this.safeText(subtitle)}</p>` : ''}
                 ${body}
-                ${playerNote}
+                ${note}
             </div>
         `;
+    }
+
+    async renderSpeedLeaderboard(forceRefresh = false) {
+        const leaderboardContent = document.getElementById('leaderboard-content');
+        if (!leaderboardContent) return;
+
+        const loadingMessage = '<p style="text-align: center; color: rgba(255,255,255,0.6); padding: 30px;">Checking who has the quickest paws...</p>';
+        leaderboardContent.innerHTML = loadingMessage;
+
+        const localEntries = this.getLocalSpeedLeaderboardEntries();
+        const localPlayerBest = this.player ? this.leaderboard?.getPlayerBestReaction(this.player.name) : null;
+
+        if (!this.isOnline() || !this.api) {
+            leaderboardContent.innerHTML = this.buildSpeedBoardMarkup({
+                entries: localEntries,
+                subtitle: 'Local-only sprint times. Connect online to enter the global dash.',
+                playerBest: localPlayerBest
+            });
+            return;
+        }
+
+        try {
+            const entries = await this.refreshSpeedLeaderboard(forceRefresh);
+            const mapped = entries.map(entry => ({
+                playerId: entry.player_id || null,
+                playerName: entry.username || 'Unknown angler',
+                fishName: entry.fish_name || null,
+                weight: entry.fish_weight !== undefined ? Number(entry.fish_weight) : null,
+                locationName: entry.location_name || null,
+                reactionTimeMs: entry.reaction_time_ms !== undefined ? Number(entry.reaction_time_ms) : null,
+                timestamp: entry.created_at || null
+            }));
+
+            const playerBest = mapped.find(entry => {
+                if (this.player?.userId && entry.playerId) {
+                    return entry.playerId === this.player.userId;
+                }
+                if (!this.player?.userId && this.player?.name) {
+                    return entry.playerName === this.player.name;
+                }
+                return false;
+            }) || localPlayerBest;
+
+            leaderboardContent.innerHTML = this.buildSpeedBoardMarkup({
+                entries: mapped,
+                subtitle: 'Global lightning-hook rankings. Snap fast, brag often.',
+                playerBest,
+                emptyMessage: 'No hooks on record yet. Be the first to set the water on fire!'
+            });
+        } catch (error) {
+            console.warn('[UI] Failed to render speed leaderboard:', error);
+            const fallbackMarkup = this.buildSpeedBoardMarkup({
+                entries: localEntries,
+                subtitle: 'Showing local data (speed board server unavailable).',
+                playerBest: localPlayerBest
+            });
+            leaderboardContent.innerHTML = `<div class="friends-placeholder error" style="margin-bottom: 16px;">Live speed board unavailable.<br>${this.safeText(error.message || '')}</div>${fallbackMarkup}`;
+        }
+    }
+
+    async refreshSpeedLeaderboard(forceRefresh = false) {
+        if (!this.api || !this.isOnline()) {
+            return this.getLocalSpeedLeaderboardEntriesRaw();
+        }
+
+        const now = Date.now();
+        if (!forceRefresh) {
+            const cacheAge = now - this.speedLeaderboardCache.fetchedAt;
+            if (this.speedLeaderboardCache.entries.length > 0 && cacheAge < 15000) {
+                return this.speedLeaderboardCache.entries;
+            }
+        }
+
+        const entries = await this.api.getSpeedLeaderboard(50);
+        const normalized = Array.isArray(entries) ? entries : [];
+        this.speedLeaderboardCache = {
+            entries: normalized,
+            fetchedAt: now
+        };
+        return normalized;
+    }
+
+    getLocalSpeedLeaderboardEntriesRaw() {
+        if (!this.leaderboard) return [];
+        return this.leaderboard.getSpeedBoardTop();
+    }
+
+    getLocalSpeedLeaderboardEntries() {
+        const raw = this.getLocalSpeedLeaderboardEntriesRaw();
+        return raw.map(entry => ({
+            playerId: null,
+            playerName: entry.playerName,
+            fishName: entry.fishName,
+            weight: entry.weight,
+            locationName: entry.locationName || null,
+            reactionTimeMs: entry.reactionTimeMs,
+            timestamp: entry.timestamp || null
+        }));
     }
 
     renderFriendCode() {
@@ -1264,6 +1383,8 @@ export class UI {
             });
         } else if (tab === 'global') {
             this.renderGlobalLeaderboardSection();
+        } else if (tab === 'speed') {
+            this.renderSpeedLeaderboard();
         }
     }
     
@@ -1818,7 +1939,8 @@ export class UI {
                     fishWeight: weight,
                     fishRarity: fishData.rarity,
                     locationName,
-                    experienceGained: experience
+                    experienceGained: experience,
+                    reactionTimeMs
                 }).catch(error => {
                     console.warn('[UI] Failed to log catch activity:', error);
                 });
@@ -1826,11 +1948,15 @@ export class UI {
                 this.api.logLeaderboardCatch({
                     fishName: species,
                     fishWeight: weight,
-                    locationName
+                    locationName,
+                    reactionTimeMs
                 }).then(() => {
                     this.globalLeaderboardCache.fetchedAt = 0;
+                    this.speedLeaderboardCache.fetchedAt = 0;
                     if (this.activeLeaderboardTab === 'global') {
                         this.renderGlobalLeaderboardSection(true);
+                    } else if (this.activeLeaderboardTab === 'speed') {
+                        this.renderSpeedLeaderboard(true);
                     }
                 }).catch(error => {
                     console.warn('[UI] Failed to update leaderboard catch:', error);

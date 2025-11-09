@@ -238,6 +238,10 @@ export class API {
         return this.request(`/leaderboard/global?limit=${limit}`);
     }
 
+    async getSpeedLeaderboard(limit = 20) {
+        return this.request(`/leaderboard/speed?limit=${limit}`);
+    }
+
     async getPlayerCatches(limit = 50) {
         if (!this.userId) {
             throw new Error('User ID not set');

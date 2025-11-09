@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS leaderboard_catches (
     fish_name TEXT NOT NULL,
     fish_weight DECIMAL(10, 2) NOT NULL,
     location_name TEXT,
+    reaction_time_ms INTEGER,
     recorded_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -60,6 +61,7 @@ CREATE TABLE IF NOT EXISTS player_catches (
     fish_name TEXT NOT NULL,
     fish_weight DECIMAL(10, 2) NOT NULL,
     location_name TEXT,
+    reaction_time_ms INTEGER,
     created_at TIMESTAMP DEFAULT NOW()
 );
 

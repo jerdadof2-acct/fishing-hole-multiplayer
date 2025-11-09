@@ -626,7 +626,7 @@ app.post('/api/leaderboard/catch', authenticate, async (req, res) => {
             return res.status(400).json({ error: 'Invalid user ID' });
         }
 
-        const { fishName, fishWeight, locationName } = req.body;
+        const { fishName, fishWeight, locationName, reactionTimeMs } = req.body;
 
         if (!fishName || typeof fishName !== 'string' || fishName.trim().length === 0) {
             return res.status(400).json({ error: 'Fish name is required' });
@@ -651,9 +651,17 @@ app.post('/api/leaderboard/catch', authenticate, async (req, res) => {
             ? locationName.trim()
             : null;
 
+        let reactionTime = null;
+        if (reactionTimeMs !== undefined && reactionTimeMs !== null) {
+            const parsedReaction = Number(reactionTimeMs);
+            if (Number.isFinite(parsedReaction) && parsedReaction >= 0) {
+                reactionTime = Math.round(parsedReaction);
+            }
+        }
+
         await pool.query(
-            `INSERT INTO leaderboard_catches (player_id, username, fish_name, fish_weight, location_name)
-             VALUES ($1, $2, $3, $4, $5)
+            `INSERT INTO leaderboard_catches (player_id, username, fish_name, fish_weight, location_name, reaction_time_ms)
+             VALUES ($1, $2, $3, $4, $5, $6)
              ON CONFLICT (player_id) DO UPDATE SET
                  username = EXCLUDED.username,
                  fish_name = CASE 
@@ -665,12 +673,18 @@ app.post('/api/leaderboard/catch', authenticate, async (req, res) => {
                      WHEN EXCLUDED.fish_weight > leaderboard_catches.fish_weight THEN EXCLUDED.location_name
                      ELSE leaderboard_catches.location_name
                  END,
+                 reaction_time_ms = CASE
+                     WHEN EXCLUDED.reaction_time_ms IS NULL THEN leaderboard_catches.reaction_time_ms
+                     WHEN leaderboard_catches.reaction_time_ms IS NULL THEN EXCLUDED.reaction_time_ms
+                     WHEN EXCLUDED.fish_weight > leaderboard_catches.fish_weight THEN EXCLUDED.reaction_time_ms
+                     ELSE LEAST(leaderboard_catches.reaction_time_ms, EXCLUDED.reaction_time_ms)
+                 END,
                  recorded_at = CASE 
                      WHEN EXCLUDED.fish_weight > leaderboard_catches.fish_weight THEN NOW()
                      ELSE leaderboard_catches.recorded_at
                  END,
                  updated_at = NOW()`,
-            [req.userId, username, fishName.trim(), weight, location]
+            [req.userId, username, fishName.trim(), weight, location, reactionTime]
         );
 
         await pool.query(
@@ -682,13 +696,13 @@ app.post('/api/leaderboard/catch', authenticate, async (req, res) => {
         );
 
         await pool.query(
-            `INSERT INTO player_catches (player_id, fish_name, fish_weight, location_name)
-             VALUES ($1, $2, $3, $4)`,
-            [req.userId, fishName.trim(), weight, location]
+            `INSERT INTO player_catches (player_id, fish_name, fish_weight, location_name, reaction_time_ms)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [req.userId, fishName.trim(), weight, location, reactionTime]
         );
 
         const bestResult = await pool.query(
-            `SELECT player_id, username, fish_name, fish_weight, location_name, recorded_at
+            `SELECT player_id, username, fish_name, fish_weight, location_name, reaction_time_ms, recorded_at
              FROM leaderboard_catches
              WHERE player_id = $1`,
             [req.userId]
@@ -725,6 +739,48 @@ app.get('/api/leaderboard/global', authenticate, async (req, res) => {
     }
 });
 
+// Get global speed leaderboard (fastest hook reactions)
+app.get('/api/leaderboard/speed', authenticate, async (req, res) => {
+    try {
+        if (!isValidUUID(req.userId)) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+
+        const limit = Math.min(Number(req.query.limit) || 20, 100);
+
+        const result = await pool.query(
+            `WITH best_reactions AS (
+                SELECT
+                    pc.player_id,
+                    p.username,
+                    pc.fish_name,
+                    pc.fish_weight,
+                    pc.location_name,
+                    pc.reaction_time_ms,
+                    pc.created_at,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY pc.player_id
+                        ORDER BY pc.reaction_time_ms ASC, pc.created_at ASC
+                    ) AS rn
+                FROM player_catches pc
+                JOIN players p ON pc.player_id = p.id
+                WHERE pc.reaction_time_ms IS NOT NULL
+            )
+            SELECT player_id, username, fish_name, fish_weight, location_name, reaction_time_ms, created_at
+            FROM best_reactions
+            WHERE rn = 1
+            ORDER BY reaction_time_ms ASC, created_at ASC
+            LIMIT $1`,
+            [limit]
+        );
+
+        res.json(result.rows);
+    } catch (error) {
+        console.error('[API] Speed leaderboard fetch error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Get a player's catch history (top catches)
 app.get('/api/players/:playerId/catches', authenticate, async (req, res) => {
     try {
@@ -741,7 +797,7 @@ app.get('/api/players/:playerId/catches', authenticate, async (req, res) => {
         }
 
         const result = await pool.query(
-            `SELECT id, fish_name, fish_weight, location_name, created_at
+            `SELECT id, fish_name, fish_weight, location_name, reaction_time_ms, created_at
              FROM player_catches
              WHERE player_id = $1
              ORDER BY fish_weight DESC, created_at DESC
