@@ -3133,4 +3133,13 @@ export class UI {
             });
         }
     }
+
+    detectFriendNotifications(friendList = [], activityList = []) {
+        // Notification badges are currently disabled; placeholder kept to avoid runtime errors.
+        // We could restore per-friend indicators here in the future.
+        this.friendData.notifications = {
+            friends: friendList.length,
+            activities: activityList.length
+        };
+    }
  }
