@@ -162,7 +162,7 @@ canvas {
 
 .ad-banner-content {
     width: 100%;
-    min-height: 60px;
+    min-height: 54px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -171,7 +171,7 @@ canvas {
 
 .ad-rotator {
     width: min(760px, 96%);
-    min-height: 60px;
+    min-height: 54px;
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -188,7 +188,7 @@ canvas {
     padding: 10px 18px;
     border-radius: 12px;
     width: 100%;
-    min-height: 58px;
+    min-height: 52px;
     text-decoration: none;
     color: inherit;
     background: linear-gradient(135deg, rgba(74, 144, 226, 0.9), rgba(30, 60, 114, 0.95));
@@ -216,6 +216,8 @@ canvas {
 
 .ad-badge {
     font-size: 11px;
+.ad-subheadline {
+    font-size: 12px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 1.2px;
@@ -303,17 +305,17 @@ canvas {
 
 @media (max-width: 520px) {
     .ad-card {
-        flex-direction: row;
-        gap: 10px;
-        padding: 10px 12px;
+        padding: 8px 12px;
+        min-height: 48px;
     }
 
     .ad-artwork {
         align-self: center;
-        font-size: 26px;
+        font-size: 24px;
     }
 
     .ad-subheadline {
+        font-size: 11px;
         max-width: 100%;
     }
 }
