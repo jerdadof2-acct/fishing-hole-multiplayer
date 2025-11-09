@@ -1835,6 +1835,9 @@ export class UI {
             <div style="font-size: 28px; font-weight: bold; margin-bottom: 15px; color: ${sizeColor};">
                 ${weight.toFixed(2)} lbs
             </div>
+            <div style="font-size: 16px; margin-bottom: 8px; color: #c4d9ff;">
+                +${Math.floor(fishData.experience || 0)} XP
+            </div>
             <button id="popup-close-btn" style="
                 margin-top: 20px;
                 padding: 10px 30px;
