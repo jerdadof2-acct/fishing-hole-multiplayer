@@ -24,6 +24,7 @@ export class UI {
         this.friendRefreshTimer = null;
         this.lastFriendSnapshot = { friends: new Map(), activities: new Set() };
         this.affordableNotified = new Set();
+        this.notificationState = this.loadNotificationState();
     }
 
     init() {
@@ -2750,18 +2751,13 @@ export class UI {
             const currentLevel = friend?.level ?? prevLevel;
             if (!previousFriends.has(id)) {
                 this.lastFriendSnapshot.friends.set(id, friend);
+                const storedLevel = this.notificationState.friendLevels[id] ?? friend.level ?? 0;
+                this.notificationState.friendLevels[id] = Math.max(storedLevel, friend.level ?? storedLevel);
                 return;
             }
-            if (previous?.last_activity_id && friend?.last_activity_id && previous.last_activity_id === friend.last_activity_id) {
-                this.lastFriendSnapshot.friends.set(id, friend);
-                return;
-            }
-            if (!previousFriends.has(id)) {
-                this.lastFriendSnapshot.friends.set(id, friend);
-                return;
-            }
-            if (currentLevel > prevLevel) {
-                const levelsGained = currentLevel - prevLevel;
+            const storedLevel = this.notificationState.friendLevels[id] ?? prevLevel;
+            if (currentLevel > storedLevel) {
+                const levelsGained = currentLevel - storedLevel;
                 this.showToast({
                     type: 'level-up',
                     title: `${friend.username || 'A friend'} leveled up!`,
@@ -2770,6 +2766,9 @@ export class UI {
                         : `Reached Level ${currentLevel}.`,
                     meta: 'Live update'
                 });
+                this.notificationState.friendLevels[id] = currentLevel;
+            } else {
+                this.notificationState.friendLevels[id] = Math.max(storedLevel, currentLevel);
             }
         });
 
@@ -2777,6 +2776,9 @@ export class UI {
         activities.forEach(activity => {
             if (!activity?.id) return;
             if (!activitySet.has(activity.id)) {
+                if (this.notificationState.activityIds.has(activity.id)) {
+                    return;
+                }
                 const rarity = activity.fish_rarity;
                 if (rarity === 'LEVEL_UP') {
                     this.showToast({
@@ -2794,6 +2796,7 @@ export class UI {
                         meta: this.formatRelativeTime(activity.created_at)
                     });
                 }
+                this.notificationState.activityIds.add(activity.id);
             }
         });
 
@@ -2801,6 +2804,8 @@ export class UI {
             friends: friendMap,
             activities: new Set((activities || []).map(a => a?.id).filter(Boolean))
         };
+        this.pruneNotificationState();
+        this.saveNotificationState();
     }
 
     checkAffordableUpgrades() {
@@ -2848,6 +2853,54 @@ export class UI {
 
     getNotificationStack() {
         return document.getElementById('notification-stack');
+    }
+
+    loadNotificationState() {
+        const defaultState = {
+            friendLevels: {},
+            activityIds: []
+        };
+        try {
+            const raw = localStorage.getItem('kittyCreekFriendNotifications');
+            if (!raw) {
+                return {
+                    friendLevels: {},
+                    activityIds: new Set()
+                };
+            }
+            const parsed = JSON.parse(raw);
+            return {
+                friendLevels: parsed.friendLevels || {},
+                activityIds: new Set(Array.isArray(parsed.activityIds) ? parsed.activityIds : [])
+            };
+        } catch (error) {
+            console.warn('[UI] Failed to load friend notification state:', error);
+            return {
+                friendLevels: {},
+                activityIds: new Set()
+            };
+        }
+    }
+
+    saveNotificationState() {
+        try {
+            const serialized = JSON.stringify({
+                friendLevels: this.notificationState.friendLevels || {},
+                activityIds: Array.from(this.notificationState.activityIds || [])
+            });
+            localStorage.setItem('kittyCreekFriendNotifications', serialized);
+        } catch (error) {
+            console.warn('[UI] Failed to save friend notification state:', error);
+        }
+    }
+
+    pruneNotificationState() {
+        // Limit stored activity IDs to avoid unbounded growth
+        const maxActivities = 200;
+        if (this.notificationState.activityIds.size > maxActivities) {
+            const trimmed = Array.from(this.notificationState.activityIds).slice(-maxActivities);
+            this.notificationState.activityIds = new Set(trimmed);
+        }
     }
 
     showToast({ type = 'info', title = '', body = '', meta = '' }) {
