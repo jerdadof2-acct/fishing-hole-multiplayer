@@ -1,5 +1,6 @@
 import Game from './main.js';
 import { api } from './api.js';
+import { initAdRotator } from './ads.js';
 
 const AUTH_STORAGE_KEY = 'kittyCreekAuth';
 
@@ -282,6 +283,7 @@ async function promptForUsername(options = {}) {
 
 async function bootstrapGame() {
     registerServiceWorker();
+    initAdRotator();
     toggleLoading(true, 'Connecting to Kitty Creek...');
 
     const health = await api.healthCheck();
