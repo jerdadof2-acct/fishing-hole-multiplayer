@@ -101,11 +101,18 @@ export function getFishTypeById(id) {
  * @param {Array<number>} fishIds - Array of fish IDs available at location
  * @returns {Object} Fish type with random weight
  */
-export function getRandomFishForLocation(fishIds) {
+export function getRandomFishForLocation(fishIds, options = {}) {
     if (!fishIds || fishIds.length === 0) {
         // Default to common fish if no fish array
         fishIds = [0, 1, 2];
     }
+    const { playerLevel = 1, location = null } = options;
+    const levelBoost = Math.max(0, playerLevel - 1);
+    const unlockLevel = typeof location?.unlockLevel === 'number' ? location.unlockLevel : null;
+    const waterBodyType = location?.waterBodyType || null;
+    const earlyGameLocation = unlockLevel !== null ? unlockLevel <= 5 : false;
+    const smallWaterBody = waterBodyType === 'POND' || waterBodyType === 'RIVER';
+    const aggressiveScaling = earlyGameLocation || smallWaterBody;
     
     // Select random fish from available fish
     const randomFishId = fishIds[Math.floor(Math.random() * fishIds.length)];
@@ -120,7 +127,32 @@ export function getRandomFishForLocation(fishIds) {
     }
     
     // Calculate random weight within range
-    const weight = fishType.minWeight + Math.random() * (fishType.maxWeight - fishType.minWeight);
+    const boostPerLevel = aggressiveScaling ? 0.2 : 0.08;
+    const maxExtraMultiplier = aggressiveScaling ? 0.9 : 0.5;
+    const extraMultiplier = Math.min(levelBoost * boostPerLevel, maxExtraMultiplier);
+    const extendedMax = fishType.maxWeight * (1 + extraMultiplier);
+    
+    const exponentBase = aggressiveScaling ? 1.3 : 1.45;
+    const exponentReduction = Math.min(levelBoost * (aggressiveScaling ? 0.22 : 0.12), 0.9);
+    const exponent = Math.max(0.35, exponentBase - exponentReduction);
+    const biasedRoll = Math.pow(Math.random(), exponent);
+    let weight = fishType.minWeight + biasedRoll * (extendedMax - fishType.minWeight);
+    
+    const smallCatchBaseChance = aggressiveScaling ? 0.25 : 0.2;
+    const smallCatchChance = Math.max(0.05, smallCatchBaseChance - levelBoost * 0.04);
+    if (Math.random() < smallCatchChance) {
+        const legacyRoll = Math.random();
+        weight = fishType.minWeight + legacyRoll * (fishType.maxWeight - fishType.minWeight);
+    } else {
+        const bonusChance = Math.min(levelBoost * (aggressiveScaling ? 0.12 : 0.06), aggressiveScaling ? 0.6 : 0.35);
+        if (Math.random() < bonusChance) {
+            const bonusRoll = Math.pow(Math.random(), 0.4);
+            const bonusWeight = fishType.maxWeight + bonusRoll * (extendedMax - fishType.maxWeight);
+            weight = Math.max(weight, bonusWeight);
+        }
+    }
+    
+    weight = Math.min(Math.max(weight, fishType.minWeight), extendedMax);
     
     const roundedWeight = parseFloat(weight.toFixed(2));
     const weightBonus = Math.max(0, (roundedWeight - fishType.minWeight) * 0.8);

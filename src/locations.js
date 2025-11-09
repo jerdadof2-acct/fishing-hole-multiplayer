@@ -6,14 +6,14 @@ export class Locations {
     constructor() {
         // Initial locations from reference file with water body type and platform mappings
         this.locations = [
-            // POND locations (use dock) - Lake Shore uses pond style
+            // POND locations (use dock) - starter pond uses dock
             {
-                name: 'Lake Shore',
+                name: 'Willow Pond',
                 difficulty: 'Easy',
                 fish: [0, 1, 2],
                 cost: 0,
                 unlockLevel: 1,
-                description: 'Perfect for beginners',
+                description: 'Quiet freshwater pond perfect for beginners',
                 waterBodyType: 'POND',
                 platformType: 'DOCK'
             },
@@ -117,7 +117,7 @@ export class Locations {
             }
         ];
         
-        this.currentLocationIndex = 0; // Default to first location (Lake Shore - uses POND/DOCK)
+        this.currentLocationIndex = 0; // Default to first location (Willow Pond - uses POND/DOCK)
     }
     
     /**

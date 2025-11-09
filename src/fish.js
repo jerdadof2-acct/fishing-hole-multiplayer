@@ -139,6 +139,7 @@ export class Fish {
             // Try multiple ways to access game/locations
             let availableFishIds = [0, 1, 2]; // Default to common fish
             let locations = null;
+            let currentLocation = null;
             
             // Try to get locations from fishing.game, window.game, or fishing reference
             if (this.fishing?.game?.locations) {
@@ -148,14 +149,22 @@ export class Fish {
             }
             
             if (locations) {
-                const currentLocation = locations.getCurrentLocation();
+                currentLocation = locations.getCurrentLocation();
                 if (currentLocation && currentLocation.fish) {
                     availableFishIds = currentLocation.fish;
                 }
             }
             
+            const playerLevel =
+                this.fishing?.game?.player?.level ??
+                window.game?.player?.level ??
+                1;
+            
             // Get random fish from location using fishTypes
-            const fishData = getRandomFishForLocation(availableFishIds);
+            const fishData = getRandomFishForLocation(availableFishIds, {
+                playerLevel,
+                location: currentLocation
+            });
             
             this.currentFish = {
                 id: fishData.id,
@@ -550,6 +559,7 @@ export class Fish {
             // Try multiple ways to access game/locations
             let availableFishIds = [0, 1, 2]; // Default to common fish
             let locations = null;
+            let currentLocation = null;
             
             // Try to get locations from fishing.game, window.game, or fishing reference
             if (this.fishing?.game?.locations) {
@@ -559,14 +569,22 @@ export class Fish {
             }
             
             if (locations) {
-                const currentLocation = locations.getCurrentLocation();
+                currentLocation = locations.getCurrentLocation();
                 if (currentLocation && currentLocation.fish) {
                     availableFishIds = currentLocation.fish;
                 }
             }
             
+            const playerLevel =
+                this.fishing?.game?.player?.level ??
+                window.game?.player?.level ??
+                1;
+            
             // Get random fish from location using fishTypes
-            const fishData = getRandomFishForLocation(availableFishIds);
+            const fishData = getRandomFishForLocation(availableFishIds, {
+                playerLevel,
+                location: currentLocation
+            });
             
             this.currentFish = {
                 id: fishData.id,
