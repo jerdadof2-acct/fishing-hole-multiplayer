@@ -1,12 +1,13 @@
 {
-  "name": "kitty-creek-fishing-club",
+  "name": "halleys-big-catch",
   "version": "1.0.0",
-  "description": "Kitty Creek Fishing Club - A multiplayer fishing game with friends system",
+  "description": "Halley's Big Catch - A multiplayer fishing game with friends system",
   "type": "module",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
+    "db:schema": "node server/run-schema.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -21,6 +22,7 @@
   "license": "MIT",
   "dependencies": {
     "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
     "express": "^4.18.2",
     "pg": "^8.11.3"
   },

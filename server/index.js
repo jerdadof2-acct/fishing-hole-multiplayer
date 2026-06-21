@@ -1,8 +1,9 @@
 /**
- * Kitty Creek Friends System Backend Server
+ * Halley's Big Catch Friends System Backend Server
  * Express.js server with PostgreSQL integration
  */
 
+import dotenv from 'dotenv';
 import express from 'express';
 import { Pool } from 'pg';
 import cors from 'cors';
@@ -13,14 +14,24 @@ import crypto from 'crypto';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+dotenv.config({ path: path.join(__dirname, '.env') });
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
+function getDatabaseSsl(connectionString) {
+    if (!connectionString) return false;
+    if (connectionString.includes('localhost') || connectionString.includes('127.0.0.1')) {
+        return false;
+    }
+    return { rejectUnauthorized: false };
+}
+
 // PostgreSQL connection pool
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('railway') ? { rejectUnauthorized: false } : false
+    ssl: getDatabaseSsl(process.env.DATABASE_URL)
 });
 
 // Middleware
@@ -936,7 +947,7 @@ app.get('/api/health', async (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`[SERVER] Kitty Creek Friends API running on port ${PORT}`);
+    console.log(`[SERVER] Halley's Big Catch Friends API running on port ${PORT}`);
     console.log(`[SERVER] Environment: ${NODE_ENV}`);
 });
 
