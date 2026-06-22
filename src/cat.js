@@ -2258,6 +2258,22 @@ export class Cat {
     getModel() {
         return this.catAnchor || this.model;
     }
+
+    /** Meshes used for tap / poke raycasts on Halley. */
+    getTapTargets() {
+        const root = this.catAnchor || this.model;
+        const meshes = [];
+        if (!root) {
+            return meshes;
+        }
+        root.updateMatrixWorld(true);
+        root.traverse((child) => {
+            if (child.isMesh) {
+                meshes.push(child);
+            }
+        });
+        return meshes;
+    }
     
     /**
      * Get the cat's saved position (not affected by bone attachments)

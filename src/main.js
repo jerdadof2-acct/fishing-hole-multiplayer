@@ -15,6 +15,8 @@ import { buildLakeMask } from './buildLakeMask.js';
 import { SoundManager } from './sound.js';
 import { addWaterParticles } from './effects/waterParticles.js';
 import { Sfx } from './audio/sfx.js';
+import { Voiceover } from './audio/voiceover.js';
+import { VOICEOVER_TAP_COOLDOWN_MS } from './config/voiceover.js';
 import { Player } from './player.js';
 import { Inventory } from './inventory.js';
 import { Leaderboard } from './leaderboard.js';
@@ -76,7 +78,126 @@ export class Game {
         document.getElementById('tab-bar')?.classList.remove('hidden');
 
         this.setupActivityTracking();
+        this.setupCatTap();
         this.animate();
+    }
+
+    showCatBark(text) {
+        const bubble = document.getElementById('cat-bark-bubble');
+        const canvas = this.scene?.renderer?.domElement;
+        const camera = this.scene?.camera;
+        if (!bubble || !canvas || !camera || !this.cat) {
+            return;
+        }
+
+        const anchor = this.cat.getModel?.();
+        const headPos = this.cat.getHeadWorldPosition?.()
+            || (anchor ? anchor.getWorldPosition(new THREE.Vector3()) : null);
+        if (!headPos) {
+            return;
+        }
+
+        const projected = headPos.clone().project(camera);
+        const rect = canvas.getBoundingClientRect();
+        const x = (projected.x * 0.5 + 0.5) * rect.width + rect.left;
+        const y = (-projected.y * 0.5 + 0.5) * rect.height + rect.top;
+
+        bubble.textContent = text;
+        bubble.style.left = `${x}px`;
+        bubble.style.top = `${y}px`;
+        bubble.classList.remove('hidden');
+        bubble.classList.add('visible');
+
+        if (this._catBarkTimer) {
+            clearTimeout(this._catBarkTimer);
+        }
+        this._catBarkTimer = window.setTimeout(() => {
+            bubble.classList.remove('visible');
+            bubble.classList.add('hidden');
+        }, 1600);
+    }
+
+    isCatTapAllowed() {
+        if (!this._revealed || !this.cat || !this.fishing || !this.ui) {
+            return false;
+        }
+
+        const prologue = document.getElementById('story-prologue');
+        if (prologue && !prologue.classList.contains('hidden')) {
+            return false;
+        }
+
+        const activeTab = document.querySelector('.tab-button.active')?.getAttribute('data-tab');
+        if (activeTab && activeTab !== 'game') {
+            return false;
+        }
+
+        if (document.querySelector('.modal:not(.hidden)')) {
+            return false;
+        }
+
+        if (this.fishing.isCasting || this.fishing.isReeling || this.fishing.fishOnLine) {
+            return false;
+        }
+
+        const castButton = document.getElementById('cast-button');
+        const castState = castButton?.getAttribute('data-state');
+        if (castState === 'waiting' || castState === 'set-hook' || castState === 'fighting') {
+            return false;
+        }
+
+        return true;
+    }
+
+    setupCatTap() {
+        const canvas = this.scene?.renderer?.domElement;
+        if (!canvas || this._catTapBound) {
+            return;
+        }
+        this._catTapBound = true;
+
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+        let lastTapMs = 0;
+
+        const onPointerDown = (event) => {
+            if (!this.isCatTapAllowed()) {
+                return;
+            }
+            if (event.target !== canvas) {
+                return;
+            }
+
+            const now = performance.now();
+            if (now - lastTapMs < VOICEOVER_TAP_COOLDOWN_MS) {
+                return;
+            }
+
+            const rect = canvas.getBoundingClientRect();
+            pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            const targets = this.cat.getTapTargets?.() || [];
+            if (!targets.length) {
+                return;
+            }
+
+            raycaster.setFromCamera(pointer, this.scene.camera);
+            const hits = raycaster.intersectObjects(targets, false);
+            if (!hits.length) {
+                return;
+            }
+
+            lastTapMs = now;
+            this.markActivity();
+
+            this.voiceover?.playRandom('tap', {
+                onSpeak: (text) => this.showCatBark(text)
+            });
+        };
+
+        canvas.addEventListener('pointerdown', onPointerDown);
+        this._catTapCleanup = () => canvas.removeEventListener('pointerdown', onPointerDown);
     }
 
     async init() {
@@ -249,6 +370,7 @@ export class Game {
             
             // Initialize Sfx system with camera
             this.sfx = new Sfx(this.scene.camera);
+            this.voiceover = new Voiceover(this.sfx);
             
             // Clear any cached old reel sounds first (in case of hot reload)
             if (this.sfx.cache) {
