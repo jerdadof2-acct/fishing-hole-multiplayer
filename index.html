@@ -11,7 +11,8 @@
     
     <title>Halley's Big Catch</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/svg+xml" href="assets/icons/icon.svg">
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -234,14 +235,12 @@
                 <p class="prologue-credits-hint">A long time ago, on a lake not so far away…</p>
             </div>
 
-            <div id="prologue-title-phase" class="prologue-title-phase hidden">
+            <div id="prologue-title-phase" class="prologue-title-phase hidden" aria-label="Tap anywhere to enter the game">
                 <div class="prologue-title-frame">
-                    <img id="prologue-title-image" class="prologue-title-image" alt="" />
+                    <img id="prologue-title-image" class="prologue-title-image" alt="Halley's Big Catch — Adventure awaits" />
                     <div class="prologue-title-vignette" aria-hidden="true"></div>
                 </div>
-                <button type="button" id="prologue-enter-button" class="prologue-enter-button hidden">
-                    Enter Halley's Big Catch
-                </button>
+                <p id="prologue-tap-hint" class="prologue-tap-hint hidden">Tap anywhere to cast off</p>
             </div>
 
             <div class="prologue-speed-controls" aria-label="Prologue scroll speed (for voiceover sync)">

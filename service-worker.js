@@ -1,4 +1,4 @@
-const CACHE_PREFIX = 'kitty-creek-media';
+const CACHE_PREFIX = 'halleys-big-catch-media';
 const CACHE_VERSION = 'v1';
 const CACHE_NAME = `${CACHE_PREFIX}-${CACHE_VERSION}`;
 
@@ -14,7 +14,9 @@ const MEDIA_ASSETS = [
     'assets/audio/water-splashing-202979.mp3',
 
     // Textures & icons
-    'assets/icons/icon.svg',
+    'assets/icons/icon-192.png',
+    'assets/icons/icon-512.png',
+    'images/halley-splash.png',
     'assets/textures/caustics_loop.jpg',
     'assets/textures/particle.png',
     'assets/textures/waterNormals1.jpg',

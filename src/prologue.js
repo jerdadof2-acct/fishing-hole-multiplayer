@@ -56,7 +56,7 @@ export function markPrologueSeenForVersion() {
 }
 
 /**
- * Full-screen cinematic prologue: scrolling story → title logo → Enter.
+ * Full-screen cinematic prologue: scrolling story → splash art → tap anywhere to enter.
  * @param {{
  *   scrollSpeedMultiplier?: number,
  *   waitForReady?: () => Promise<unknown>,
@@ -70,10 +70,10 @@ export function playStoryPrologue(options = {}) {
     const titlePhase = document.getElementById('prologue-title-phase');
     const creditsInner = document.getElementById('prologue-credits-inner');
     const speedLabel = document.getElementById('prologue-speed-label');
-    const enterButton = document.getElementById('prologue-enter-button');
+    const tapHint = document.getElementById('prologue-tap-hint');
     const loadHint = document.getElementById('prologue-load-hint');
 
-    if (!overlay || !creditsPhase || !titlePhase || !creditsInner || !enterButton) {
+    if (!overlay || !creditsPhase || !titlePhase || !creditsInner) {
         console.warn('[PROLOGUE] Missing DOM — skipping prologue');
         return Promise.resolve();
     }
@@ -86,6 +86,7 @@ export function playStoryPrologue(options = {}) {
     let scrollY = 0;
     let lastTs = 0;
     let done = false;
+    let canEnter = false;
 
     const loading = document.getElementById('loading');
     if (loading) {
@@ -99,7 +100,7 @@ export function playStoryPrologue(options = {}) {
     const titleImg = document.getElementById('prologue-title-image');
     if (titleImg) {
         titleImg.src = PROLOGUE_ENTRANCE_IMAGE;
-        titleImg.alt = "Halley's Big Catch — Halley the fisher cat";
+        titleImg.alt = "Halley's Big Catch — Adventure awaits";
     }
 
     const slowerBtn = document.getElementById('prologue-slower');
@@ -149,14 +150,19 @@ export function playStoryPrologue(options = {}) {
             document.removeEventListener('keydown', onKeyDown);
             slowerBtn?.removeEventListener('click', onSlower);
             fasterBtn?.removeEventListener('click', onFaster);
-            enterButton.removeEventListener('click', onEnter);
+            overlay.removeEventListener('click', onOverlayTap);
+            overlay.classList.remove('can-enter');
+            overlay.removeAttribute('role');
+            overlay.removeAttribute('tabindex');
             overlay.classList.add('hidden');
             overlay.classList.remove('is-title-phase', 'is-fading');
             creditsPhase.classList.remove('hidden');
             titlePhase.classList.add('hidden');
-            enterButton.classList.add('hidden');
-            enterButton.disabled = false;
-            enterButton.textContent = "Enter Halley's Big Catch";
+            tapHint?.classList.add('hidden');
+            if (tapHint) {
+                tapHint.textContent = 'Tap anywhere to cast off';
+            }
+            canEnter = false;
             creditsInner.style.transform = '';
             loadHint?.classList.add('hidden');
         };
@@ -169,19 +175,40 @@ export function playStoryPrologue(options = {}) {
         };
 
         const onEnter = async () => {
+            if (!canEnter) return;
+
             if (options.waitForReady) {
-                enterButton.disabled = true;
-                enterButton.textContent = 'Preparing the lake…';
+                canEnter = false;
+                if (tapHint) {
+                    tapHint.textContent = 'Preparing the lake…';
+                    tapHint.classList.remove('hidden');
+                }
                 try {
                     await options.waitForReady();
                 } catch (error) {
                     console.error('[PROLOGUE] Game failed to load:', error);
-                    enterButton.disabled = false;
-                    enterButton.textContent = 'Loading failed — tap to retry';
+                    canEnter = true;
+                    if (tapHint) {
+                        tapHint.textContent = 'Loading failed — tap to retry';
+                    }
                     return;
                 }
             }
             finish();
+        };
+
+        const enableEnter = () => {
+            canEnter = true;
+            overlay.classList.add('can-enter');
+            overlay.setAttribute('role', 'button');
+            overlay.setAttribute('tabindex', '0');
+            tapHint?.classList.remove('hidden');
+        };
+
+        const onOverlayTap = (event) => {
+            if (phase !== 'title' || !canEnter) return;
+            if (event.target.closest('.prologue-speed-controls')) return;
+            onEnter();
         };
 
         const goToTitlePhase = () => {
@@ -200,10 +227,7 @@ export function playStoryPrologue(options = {}) {
                 titlePhase.classList.remove('hidden');
                 updateLoadHint();
 
-                enterTimer = window.setTimeout(() => {
-                    enterButton.classList.remove('hidden');
-                    enterButton.focus();
-                }, PROLOGUE_ENTER_BUTTON_DELAY_SEC * 1000);
+                enterTimer = window.setTimeout(enableEnter, PROLOGUE_ENTER_BUTTON_DELAY_SEC * 1000);
             }, PROLOGUE_PHASE_FADE_MS);
         };
 
@@ -233,7 +257,7 @@ export function playStoryPrologue(options = {}) {
         };
 
         const onKeyDown = (event) => {
-            if (event.key === 'Enter' && phase === 'title' && !enterButton.classList.contains('hidden')) {
+            if (event.key === 'Enter' && phase === 'title' && canEnter) {
                 event.preventDefault();
                 onEnter();
                 return;
@@ -252,16 +276,17 @@ export function playStoryPrologue(options = {}) {
             }
         };
 
-        enterButton.addEventListener('click', onEnter);
+        overlay.addEventListener('click', onOverlayTap);
         slowerBtn?.addEventListener('click', onSlower);
         fasterBtn?.addEventListener('click', onFaster);
         document.addEventListener('keydown', onKeyDown);
 
         phase = 'credits';
-        overlay.classList.remove('hidden', 'is-title-phase', 'is-fading');
+        overlay.classList.remove('hidden', 'is-title-phase', 'is-fading', 'can-enter');
         creditsPhase.classList.remove('hidden');
         titlePhase.classList.add('hidden');
-        enterButton.classList.add('hidden');
+        tapHint?.classList.add('hidden');
+        canEnter = false;
         updateSpeedLabel();
         updateLoadHint();
         loadPollId = window.setInterval(updateLoadHint, 350);
@@ -280,7 +305,7 @@ export function playStoryPrologue(options = {}) {
 
 /**
  * Replay the opening story from in-game (e.g. Inventory → Settings).
- * Game may already be loaded; Enter returns to gameplay.
+ * Game may already be loaded; tap anywhere returns to gameplay.
  */
 export async function replayStoryPrologue() {
     const game = typeof window !== 'undefined' ? window.game : null;
