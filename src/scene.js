@@ -82,16 +82,33 @@ export class Scene {
 
         // Create camera (will be configured by Camera class)
         const container = document.getElementById('game-container');
-        const aspect = container.clientWidth / container.clientHeight;
+        const width = Math.max(container?.clientWidth || window.innerWidth || 1, 1);
+        const height = Math.max(container?.clientHeight || window.innerHeight || 1, 1);
+        const aspect = width / height;
         this.camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
-        
+
+        const isMobile = typeof navigator !== 'undefined'
+            && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const shadowMapSize = isMobile ? 1024 : 2048;
+        if (this.directionalLight?.shadow?.mapSize) {
+            this.directionalLight.shadow.mapSize.set(shadowMapSize, shadowMapSize);
+        }
+
         // Create renderer
-        this.renderer = new THREE.WebGLRenderer({ 
-            antialias: true, 
-            powerPreference: 'high-performance' 
-        });
-        this.renderer.setSize(container.clientWidth, container.clientHeight);
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        let renderer;
+        try {
+            renderer = new THREE.WebGLRenderer({
+                antialias: !isMobile,
+                powerPreference: isMobile ? 'default' : 'high-performance',
+                failIfMajorPerformanceCaveat: false
+            });
+        } catch (error) {
+            console.error('[SCENE] WebGL renderer failed:', error);
+            throw new Error('This device does not support WebGL. Try updating your browser.');
+        }
+        this.renderer = renderer;
+        this.renderer.setSize(width, height);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2));
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -106,10 +123,11 @@ export class Scene {
 
     onWindowResize() {
         const container = document.getElementById('game-container');
-        const aspect = container.clientWidth / container.clientHeight;
-        this.camera.aspect = aspect;
+        const width = Math.max(container?.clientWidth || window.innerWidth || 1, 1);
+        const height = Math.max(container?.clientHeight || window.innerHeight || 1, 1);
+        this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
-        this.renderer.setSize(container.clientWidth, container.clientHeight);
+        this.renderer.setSize(width, height);
     }
 
     render() {

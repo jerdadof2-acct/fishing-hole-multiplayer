@@ -319,12 +319,22 @@ async function promptForUsername(options = {}) {
 }
 
 async function bootstrapGame() {
+    try {
+        await bootstrapGameInner();
+    } catch (error) {
+        console.error('[BOOTSTRAP] Fatal bootstrap error:', error);
+        loadingProgress.suppress(false);
+        loadingProgress.fail('Loading failed. Refresh the page or try again on Wi‑Fi.');
+    }
+}
+
+async function bootstrapGameInner() {
     registerServiceWorker();
     initAdRotator();
     loadingProgress.show('Connecting to Halley\'s Big Catch...');
     loadingProgress.update(2, 'Connecting to server...');
 
-    const health = await api.healthCheck();
+    const health = await api.healthCheck(10000);
     if (!health || health.status !== 'ok') {
         console.warn('[BOOTSTRAP] Health check failed, starting offline mode.', health?.message);
         await handleOfflineMode(health?.message);

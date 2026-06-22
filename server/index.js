@@ -41,8 +41,19 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Serve static files (game files)
-app.use(express.static(path.join(__dirname, '..')));
+// Serve static files (game files) — avoid stale HTML/JS on mobile browsers
+app.use(express.static(path.join(__dirname, '..'), {
+    setHeaders(res, filePath) {
+        const normalized = filePath.replace(/\\/g, '/');
+        if (
+            normalized.endsWith('.html')
+            || normalized.includes('/src/')
+            || normalized.endsWith('/service-worker.js')
+        ) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        }
+    }
+}));
 
 // Helper: Generate friend code (6-8 alphanumeric, uppercase)
 function generateFriendCode() {

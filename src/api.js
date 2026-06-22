@@ -268,11 +268,31 @@ export class API {
      * Health check
      * @returns {Promise<Object>} Health status
      */
-    async healthCheck() {
+    async healthCheck(timeoutMs = 10000) {
         try {
-            return await this.request('/health');
+            const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+            const timer = controller
+                ? setTimeout(() => controller.abort(), timeoutMs)
+                : null;
+
+            const headers = { 'Content-Type': 'application/json' };
+            const response = await fetch(`${this.baseURL}/health`, {
+                headers,
+                signal: controller?.signal
+            });
+
+            if (timer) clearTimeout(timer);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            return await response.json();
         } catch (error) {
-            return { status: 'error', message: error.message };
+            const message = error?.name === 'AbortError'
+                ? 'Server timed out — starting offline mode'
+                : error.message;
+            return { status: 'error', message };
         }
     }
 }
