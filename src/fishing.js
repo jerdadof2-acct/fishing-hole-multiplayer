@@ -787,9 +787,21 @@ export class Fishing {
         }
     }
 
+    syncCatAnimation() {
+        const cat = this.cat;
+        if (!cat?.useGlbAnimations) return;
+
+        if (this.isCasting) {
+            cat.ensureThrowAnimation?.();
+        } else if (this.isReeling) {
+            cat.ensureReelingAnimation?.();
+        }
+    }
+
     update(delta) {
         this.updateStarlightMode();
         this.updateStarlightEffect(delta);
+        this.syncCatAnimation();
         if (this.starfishCelebration?.active) {
             this.starfishCelebration.timer += delta;
             if (this.starfishCelebration.timer >= this.starfishCelebration.duration) {
@@ -993,10 +1005,7 @@ export class Fishing {
             // Check if cast completed
             if (t >= 1) {
                 this.isCasting = false;
-                if (!this.isReeling) {
-                    this.cat?.playIdle?.();
-                }
-                
+
                 if (this.rope && this.rope.rope.length > 0) {
                     // Get tip and bobber positions
                     const rodTip = this.getRodTip();
@@ -1760,8 +1769,12 @@ export class Fishing {
 
     reel() {
         console.log('[FISHING] reel() called, isReeling:', this.isReeling, 'bobber.visible:', this.bobber?.visible, 'fishOnLine:', this.fishOnLine);
-        if (this.isReeling || !this.bobber.visible) {
-            console.log('[FISHING] reel() early return - isReeling:', this.isReeling, 'bobber.visible:', this.bobber?.visible);
+        if (!this.bobber.visible) {
+            console.log('[FISHING] reel() early return - bobber not visible');
+            return;
+        }
+        if (this.isReeling) {
+            this.cat?.ensureReelingAnimation?.();
             return;
         }
         

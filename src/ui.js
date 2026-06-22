@@ -2124,6 +2124,7 @@ export class UI {
                         // Set fishing state for fight
                         this.fishing.setFishOnLine(true);
                         this.fishing.isReeling = true; // Start reeling/fighting
+                        this.fishing.cat?.ensureReelingAnimation?.();
                         console.log('[UI] Fish hooked, fight begins!');
                     
                     if (this.fishing) {
@@ -2155,6 +2156,7 @@ export class UI {
                 this.fish.hook();
             this.fishing.setFishOnLine(true);
                 this.fishing.isReeling = true;
+                this.fishing.cat?.ensureReelingAnimation?.();
             }
         });
     }

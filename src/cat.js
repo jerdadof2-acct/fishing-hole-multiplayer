@@ -56,6 +56,7 @@ export class Cat {
         this.rodMesh = null;
         this.catAnchor = null;
         this.feetYOffset = 0;
+        this._holdReelingAfterThrow = false;
     }
 
     async load() {
@@ -190,24 +191,29 @@ export class Cat {
             return null;
         }
 
+        const current = this._currentAction;
         if (
-            this._currentAction?.getClip() === clip &&
-            this._currentAction.isRunning() &&
-            loop === THREE.LoopRepeat
+            current?.getClip() === clip &&
+            current.isRunning() &&
+            !current.paused
         ) {
-            return this._currentAction;
+            return current;
         }
 
         const next = this.mixer.clipAction(clip);
+        const prev = this._currentAction;
+
         next.reset();
         next.setLoop(loop, loop === THREE.LoopOnce ? 1 : Infinity);
         next.clampWhenFinished = true;
+        next.setEffectiveTimeScale(1);
+        next.setEffectiveWeight(1);
+        next.enabled = true;
 
-        if (this._currentAction && this._currentAction !== next) {
-            this._currentAction.crossFadeTo(next, fade, false);
-        } else {
-            next.fadeIn(fade).play();
+        if (prev && prev !== next) {
+            prev.fadeOut(fade);
         }
+        next.fadeIn(fade).play();
 
         this._currentAction = next;
 
@@ -232,12 +238,40 @@ export class Cat {
     playThrow(onFinished = null) {
         return this.playClip('Throw', {
             loop: THREE.LoopOnce,
-            onFinished: onFinished || (() => this.playIdle())
+            fade: 0.08,
+            onFinished: onFinished || (() => {
+                if (!this._holdReelingAfterThrow) {
+                    this.playIdle();
+                }
+            })
         });
     }
 
     playReeling() {
-        return this.playClip('Reeling', { loop: THREE.LoopRepeat });
+        this._holdReelingAfterThrow = false;
+        return this.playClip('Reeling', { loop: THREE.LoopRepeat, fade: 0.12 });
+    }
+
+    ensureThrowAnimation() {
+        if (!this.useGlbAnimations) return null;
+        const clip = this.animationClips['Throw'];
+        const current = this._currentAction;
+        if (clip && current?.getClip() === clip && current.isRunning() && !current.paused) {
+            return current;
+        }
+        this._holdReelingAfterThrow = false;
+        return this.playThrow();
+    }
+
+    ensureReelingAnimation() {
+        if (!this.useGlbAnimations) return null;
+        const clip = this.animationClips['Reeling'];
+        const current = this._currentAction;
+        if (clip && current?.getClip() === clip && current.isRunning() && !current.paused) {
+            return current;
+        }
+        this._holdReelingAfterThrow = true;
+        return this.playReeling();
     }
 
     playBigCatch(onFinished = null) {
