@@ -348,10 +348,15 @@ export class Platform {
         smallBackWall.castShadow = true;
         smallBackWall.receiveShadow = true;
         boatGroup.add(smallBackWall);
+
+        // Gunwale rail span (computed early — transom/bow must match rail width)
+        const hullOuterEdge = boatWidth * 0.42 + 0.03;
+        const railThick = 0.08;
+        const railCenterX = hullOuterEdge - 0.04 - railThick * 0.5;
         
         // Transom (back of boat - vertical, properly attached)
         // Align transom with shortened side rails - it should be inside the back rail
-        const transomWidth = Math.min(boatWidth * 0.85, smallBottomWidth - 0.05);
+        const transomWidth = Math.min(boatWidth * 0.85, railCenterX * 2 - 0.05);
         const transomGeometry = new THREE.BoxGeometry(transomWidth, hullHeight * 0.7, 0.12);
         transomGeometry.name = 'largeBoat-transomGeometry';
         const transom = new THREE.Mesh(transomGeometry, hullMaterial);
@@ -386,7 +391,6 @@ export class Platform {
         
         // Deck (sunken into hull to create boat interior)
         // Use PlaneGeometry for seamless rendering to prevent visible seams
-        const hullOuterEdge = boatWidth * 0.42 + 0.03; // Hull center plus half side thickness
         const deckWidth = Math.max(0.1, hullOuterEdge * 2 - 0.3); // Slight margin to stay inside hull
         const deckLength = Math.max(0.2, smallBottomLength - 0.002);
         
@@ -432,8 +436,7 @@ export class Platform {
         const gunwaleHeight = 1.1;       // Slightly taller for defined edge
         const gunwaleOut = 0.0;           // No outward overhang - align exactly with hull
         const gunwaleIn = 0.06;           // Inward overhang above the deck
-        const railThick = 0.08;           // Slimmer gunwale profile to avoid board silhouette
-        const railCenterX = hullOuterEdge - 0.04 - railThick * 0.5; // Keep rails inside hull line
+        // railThick and railCenterX defined above for transom/bow alignment
         
         // Sides (left/right) - shorten them to leave room for front/back rails
         const sideLen = boatLength * 0.88; // Shortened from 0.95 to leave gap for front/back rails
