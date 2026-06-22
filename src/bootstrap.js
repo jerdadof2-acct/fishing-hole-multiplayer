@@ -2,7 +2,11 @@ import Game from './main.js';
 import { api } from './api.js';
 import { initAdRotator } from './ads.js';
 import { loadingProgress } from './loadingProgress.js';
-import { maybePlayStoryPrologue } from './prologue.js';
+import {
+    markPrologueSeenForVersion,
+    playStoryPrologue,
+    shouldPlayStoryPrologue
+} from './prologue.js';
 
 const AUTH_STORAGE_KEY = 'kittyCreekAuth';
 
@@ -46,17 +50,47 @@ function clearAuthStorage() {
     }
 }
 
-function startOfflineGame(reason) {
+async function startOfflineGame(reason) {
     console.warn('[BOOTSTRAP] API unavailable. Starting offline mode.', reason || '');
     loadingProgress.update(12, 'Offline mode — loading local save data...');
+    api.setUserId(null);
+    return launchGame({});
+}
+
+async function launchGame(gameOptions) {
+    const playPrologue = shouldPlayStoryPrologue();
+
+    if (playPrologue) {
+        loadingProgress.suppress(true);
+        loadingProgress.update(18, 'Loading Halley\'s Big Catch…');
+    } else {
+        loadingProgress.update(18, 'Starting the lake...');
+    }
 
     const modal = document.getElementById('username-modal');
     if (modal) {
         modal.classList.add('hidden');
     }
 
-    api.setUserId(null);
-    window.game = new Game({});
+    const game = new Game({
+        ...gameOptions,
+        deferReveal: playPrologue
+    });
+    window.game = game;
+
+    if (playPrologue) {
+        await playStoryPrologue({
+            waitForReady: () => game.ready,
+            onLoadProgress: () => loadingProgress.getPercent()
+        });
+        markPrologueSeenForVersion();
+        loadingProgress.suppress(false);
+        game.reveal();
+        return game;
+    }
+
+    await game.ready;
+    return game;
 }
 
 function getLocalPlayerData() {
@@ -106,7 +140,6 @@ async function handleOfflineMode(message) {
                 username: offlineUsername,
                 friendCode: 'OFFLINE'
             });
-            await maybePlayStoryPrologue(true);
         }
     } else {
         if (existingAuth && !localData) {
@@ -119,7 +152,7 @@ async function handleOfflineMode(message) {
         }
     }
 
-    startOfflineGame(message);
+    await startOfflineGame(message);
 }
 
 async function fetchPlayerState(userId) {
@@ -320,7 +353,6 @@ async function bootstrapGame() {
             auth = result.auth;
             profile = result.profile;
             collection = result.collection;
-            await maybePlayStoryPrologue(true);
         }
 
         const playerContext = {
@@ -331,16 +363,12 @@ async function bootstrapGame() {
 
         api.setUserId(playerContext.userId);
 
-        const gameOptions = {
+        await launchGame({
             api,
             playerContext,
             playerData: profile,
             fishCollection: collection
-        };
-
-        loadingProgress.update(18, 'Starting the lake...');
-
-        window.game = new Game(gameOptions);
+        });
     } catch (error) {
         console.error('[BOOTSTRAP] Failed to start online mode, falling back to offline.', error);
         await handleOfflineMode(error?.message);

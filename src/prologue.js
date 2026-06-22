@@ -2,14 +2,16 @@ import {
     PROLOGUE_BASE_SCROLL_PX_PER_SEC,
     PROLOGUE_ENTER_BUTTON_DELAY_SEC,
     PROLOGUE_ENTRANCE_IMAGE,
+    PROLOGUE_GAME_VERSION,
     PROLOGUE_PHASE_FADE_MS,
     PROLOGUE_SCROLL_SPEED_MAX,
     PROLOGUE_SCROLL_SPEED_MIN,
     PROLOGUE_SCROLL_SPEED_STEP,
-    PROLOGUE_SEEN_STORAGE_KEY,
     PROLOGUE_SPEED_STORAGE_KEY,
-    PROLOGUE_STORY_PARAGRAPHS
+    PROLOGUE_STORY_PARAGRAPHS,
+    PROLOGUE_VERSION_STORAGE_KEY
 } from './config/prologue.js';
+import { loadingProgress } from './loadingProgress.js';
 
 function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
@@ -35,9 +37,30 @@ function saveScrollMultiplier(multiplier) {
     }
 }
 
+/** True when this build's prologue has not been shown yet (replay on each PROLOGUE_GAME_VERSION bump). */
+export function shouldPlayStoryPrologue() {
+    try {
+        return localStorage.getItem(PROLOGUE_VERSION_STORAGE_KEY) !== PROLOGUE_GAME_VERSION;
+    } catch {
+        return true;
+    }
+}
+
+export function markPrologueSeenForVersion() {
+    try {
+        localStorage.setItem(PROLOGUE_VERSION_STORAGE_KEY, PROLOGUE_GAME_VERSION);
+    } catch {
+        /* ignore */
+    }
+}
+
 /**
  * Full-screen cinematic prologue: scrolling story → title logo → Enter.
- * @param {{ scrollSpeedMultiplier?: number }} options
+ * @param {{
+ *   scrollSpeedMultiplier?: number,
+ *   waitForReady?: () => Promise<unknown>,
+ *   onLoadProgress?: (percent: number) => void
+ * }} options
  * @returns {Promise<void>}
  */
 export function playStoryPrologue(options = {}) {
@@ -47,6 +70,7 @@ export function playStoryPrologue(options = {}) {
     const creditsInner = document.getElementById('prologue-credits-inner');
     const speedLabel = document.getElementById('prologue-speed-label');
     const enterButton = document.getElementById('prologue-enter-button');
+    const loadHint = document.getElementById('prologue-load-hint');
 
     if (!overlay || !creditsPhase || !titlePhase || !creditsInner || !enterButton) {
         console.warn('[PROLOGUE] Missing DOM — skipping prologue');
@@ -56,6 +80,7 @@ export function playStoryPrologue(options = {}) {
     let scrollMultiplier = options.scrollSpeedMultiplier ?? loadSavedScrollMultiplier();
     let rafId = null;
     let enterTimer = null;
+    let loadPollId = null;
     let phase = 'credits';
     let scrollY = 0;
     let lastTs = 0;
@@ -85,6 +110,18 @@ export function playStoryPrologue(options = {}) {
         }
     };
 
+    const updateLoadHint = () => {
+        if (!loadHint) return;
+        const pct = Math.round(options.onLoadProgress?.() ?? loadingProgress.getPercent());
+        if (pct > 0 && pct < 100) {
+            loadHint.textContent = `Loading game resources… ${pct}%`;
+            loadHint.classList.remove('hidden');
+        } else if (pct >= 100) {
+            loadHint.textContent = 'Ready to cast!';
+            loadHint.classList.remove('hidden');
+        }
+    };
+
     const setScrollMultiplier = (next) => {
         scrollMultiplier = clamp(next, PROLOGUE_SCROLL_SPEED_MIN, PROLOGUE_SCROLL_SPEED_MAX);
         saveScrollMultiplier(scrollMultiplier);
@@ -104,6 +141,10 @@ export function playStoryPrologue(options = {}) {
                 clearTimeout(enterTimer);
                 enterTimer = null;
             }
+            if (loadPollId) {
+                clearInterval(loadPollId);
+                loadPollId = null;
+            }
             document.removeEventListener('keydown', onKeyDown);
             slowerBtn?.removeEventListener('click', onSlower);
             fasterBtn?.removeEventListener('click', onFaster);
@@ -113,7 +154,10 @@ export function playStoryPrologue(options = {}) {
             creditsPhase.classList.remove('hidden');
             titlePhase.classList.add('hidden');
             enterButton.classList.add('hidden');
+            enterButton.disabled = false;
+            enterButton.textContent = "Enter Halley's Big Catch";
             creditsInner.style.transform = '';
+            loadHint?.classList.add('hidden');
         };
 
         const finish = () => {
@@ -123,7 +167,21 @@ export function playStoryPrologue(options = {}) {
             resolve();
         };
 
-        const onEnter = () => finish();
+        const onEnter = async () => {
+            if (options.waitForReady) {
+                enterButton.disabled = true;
+                enterButton.textContent = 'Preparing the lake…';
+                try {
+                    await options.waitForReady();
+                } catch (error) {
+                    console.error('[PROLOGUE] Game failed to load:', error);
+                    enterButton.disabled = false;
+                    enterButton.textContent = 'Loading failed — tap to retry';
+                    return;
+                }
+            }
+            finish();
+        };
 
         const goToTitlePhase = () => {
             if (phase !== 'credits') return;
@@ -139,6 +197,7 @@ export function playStoryPrologue(options = {}) {
                 overlay.classList.add('is-title-phase');
                 creditsPhase.classList.add('hidden');
                 titlePhase.classList.remove('hidden');
+                updateLoadHint();
 
                 enterTimer = window.setTimeout(() => {
                     enterButton.classList.remove('hidden');
@@ -175,7 +234,7 @@ export function playStoryPrologue(options = {}) {
         const onKeyDown = (event) => {
             if (event.key === 'Enter' && phase === 'title' && !enterButton.classList.contains('hidden')) {
                 event.preventDefault();
-                finish();
+                onEnter();
                 return;
             }
             if (event.key === ' ' || event.key === 'Spacebar') {
@@ -203,6 +262,8 @@ export function playStoryPrologue(options = {}) {
         titlePhase.classList.add('hidden');
         enterButton.classList.add('hidden');
         updateSpeedLabel();
+        updateLoadHint();
+        loadPollId = window.setInterval(updateLoadHint, 350);
 
         const viewport = creditsPhase.querySelector('.prologue-credits-viewport');
         const viewportH = viewport?.clientHeight || window.innerHeight;
@@ -214,28 +275,4 @@ export function playStoryPrologue(options = {}) {
             rafId = requestAnimationFrame(tick);
         });
     });
-}
-
-export function hasSeenPrologue() {
-    try {
-        return localStorage.getItem(PROLOGUE_SEEN_STORAGE_KEY) === '1';
-    } catch {
-        return false;
-    }
-}
-
-export function markPrologueSeen() {
-    try {
-        localStorage.setItem(PROLOGUE_SEEN_STORAGE_KEY, '1');
-    } catch {
-        /* ignore */
-    }
-}
-
-export async function maybePlayStoryPrologue(isNewPlayer) {
-    if (!isNewPlayer || hasSeenPrologue()) {
-        return;
-    }
-    await playStoryPrologue();
-    markPrologueSeen();
 }

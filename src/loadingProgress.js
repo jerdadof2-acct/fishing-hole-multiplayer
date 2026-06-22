@@ -9,6 +9,7 @@ class LoadingProgress {
         this.percentEl = null;
         this.percent = 0;
         this._bound = false;
+        this._suppressed = false;
     }
 
     bind() {
@@ -27,9 +28,18 @@ class LoadingProgress {
         this._bound = true;
     }
 
+    /** When true, progress updates internally but the loading screen stays hidden (e.g. during prologue). */
+    suppress(shouldSuppress = true) {
+        this._suppressed = !!shouldSuppress;
+    }
+
+    getPercent() {
+        return this.percent;
+    }
+
     show(message = 'Loading...') {
         this.bind();
-        if (!this.root) return;
+        if (!this.root || this._suppressed) return;
 
         this.percent = 0;
         this.root.classList.remove('hidden', 'is-error');
@@ -38,11 +48,16 @@ class LoadingProgress {
 
     update(percent, message) {
         this.bind();
+        const next = Math.max(this.percent, Math.min(100, percent));
+        if (this._suppressed) {
+            this.percent = next;
+            return;
+        }
+
         if (!this.root || this.root.classList.contains('hidden')) {
             this.show(message || 'Loading...');
         }
 
-        const next = Math.max(this.percent, Math.min(100, percent));
         this._render(next, message);
     }
 
@@ -51,6 +66,11 @@ class LoadingProgress {
         if (!this.root) return;
 
         this._render(100, 'Ready!');
+        if (this._suppressed) {
+            this.percent = 100;
+            return;
+        }
+
         window.setTimeout(() => {
             this.root.classList.add('hidden');
         }, 250);
@@ -58,6 +78,7 @@ class LoadingProgress {
 
     fail(message = 'Loading failed. Please refresh.') {
         this.bind();
+        this.suppress(false);
         if (!this.root) return;
 
         this.root.classList.remove('hidden');

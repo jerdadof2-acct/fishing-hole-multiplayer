@@ -60,8 +60,23 @@ export class Game {
         this.idlePortraitDelaySec = IDLE_PORTRAIT_DELAY_SEC;
         this.lastActivityTime = performance.now();
         this._portraitIdleActive = false;
-        
-        this.init();
+        this.deferReveal = options.deferReveal === true;
+        this._revealed = false;
+        this.ready = this.init();
+    }
+
+    reveal() {
+        if (this._revealed) return;
+        this._revealed = true;
+
+        loadingProgress.suppress(false);
+        loadingProgress.hide();
+        document.getElementById('player-info')?.classList.remove('hidden');
+        document.getElementById('game-area')?.classList.remove('hidden');
+        document.getElementById('tab-bar')?.classList.remove('hidden');
+
+        this.setupActivityTracking();
+        this.animate();
     }
 
     async init() {
@@ -305,20 +320,18 @@ export class Game {
             if (this.fishCollection) {
                 this.fishCollection.enableSync();
             }
-            
-            loadingProgress.hide();
-            document.getElementById('player-info').classList.remove('hidden');
-            document.getElementById('game-area').classList.remove('hidden');
-            document.getElementById('tab-bar').classList.remove('hidden');
-            
-            this.setupActivityTracking();
-            
-            // Start render loop
-            this.animate();
+
+            if (this.deferReveal) {
+                return;
+            }
+
+            this.reveal();
             
         } catch (error) {
             console.error('Failed to initialize game:', error);
+            loadingProgress.suppress(false);
             loadingProgress.fail('Loading failed. Please refresh and try again.');
+            throw error;
         }
     }
 
