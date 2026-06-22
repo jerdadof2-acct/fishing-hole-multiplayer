@@ -174,16 +174,13 @@ export class Cat {
         });
     }
 
-    playIdle() {
-        if (this._currentAction) {
-            this._currentAction.fadeOut(0.15);
-            this._currentAction = null;
-        }
-        if (this.mixer) {
-            this.mixer.stopAllAction();
-        }
-        this.resetToBindPose();
-        return null;
+    updateSkeleton() {
+        if (!this.model) return;
+        this.model.traverse((child) => {
+            if (child.isSkinnedMesh?.skeleton) {
+                child.skeleton.update();
+            }
+        });
     }
 
     playClip(name, { loop = THREE.LoopRepeat, fade = 0.2, onFinished = null } = {}) {
@@ -191,6 +188,14 @@ export class Cat {
         if (!this.mixer || !clip) {
             console.warn('[CAT] Animation not found:', name);
             return null;
+        }
+
+        if (
+            this._currentAction?.getClip() === clip &&
+            this._currentAction.isRunning() &&
+            loop === THREE.LoopRepeat
+        ) {
+            return this._currentAction;
         }
 
         const next = this.mixer.clipAction(clip);
@@ -265,29 +270,50 @@ export class Cat {
             return;
         }
 
-        const geometry = this.rodMesh.geometry;
-        if (!geometry.boundingBox) {
-            geometry.computeBoundingBox();
-        }
-
-        const box = geometry.boundingBox;
-        const size = box.getSize(new THREE.Vector3());
-        const center = box.getCenter(new THREE.Vector3());
-        const tipLocal = center.clone();
-
-        if (size.y >= size.x && size.y >= size.z) {
-            tipLocal.y = box.max.y;
-        } else if (size.z >= size.x) {
-            tipLocal.z = box.max.z;
-        } else {
-            tipLocal.x = box.max.x;
-        }
-
         this.rodTipMarker = new THREE.Object3D();
         this.rodTipMarker.name = 'RodTipMarker';
-        this.rodTipMarker.position.copy(tipLocal);
-        this.rodMesh.add(this.rodTipMarker);
-        console.log('[CAT] Rod tip marker attached to fishing rod mesh');
+        console.log('[CAT] Rod tip marker created for animated rod mesh');
+    }
+
+    updateRodTipMarker() {
+        if (!this.rodMesh || !this.rodTipMarker) return;
+
+        const anchor = this.catAnchor || this.model;
+        this.updateSkeleton();
+        this.rodMesh.updateWorldMatrix(true, false);
+
+        const box = new THREE.Box3().setFromObject(this.rodMesh);
+        if (box.isEmpty()) return;
+
+        const anchorPos = new THREE.Vector3();
+        anchor.getWorldPosition(anchorPos);
+        const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(anchor.quaternion).normalize();
+
+        const { min, max } = box;
+        let bestCorner = null;
+        let bestProj = -Infinity;
+
+        for (const x of [min.x, max.x]) {
+            for (const y of [min.y, max.y]) {
+                for (const z of [min.z, max.z]) {
+                    const corner = new THREE.Vector3(x, y, z);
+                    const proj = corner.clone().sub(anchorPos).dot(forward);
+                    if (proj > bestProj) {
+                        bestProj = proj;
+                        bestCorner = corner;
+                    }
+                }
+            }
+        }
+
+        if (!bestCorner) return;
+
+        if (this.rodTipMarker.parent !== anchor) {
+            this.rodTipMarker.parent?.remove(this.rodTipMarker);
+            anchor.add(this.rodTipMarker);
+        }
+
+        this.rodTipMarker.position.copy(anchor.worldToLocal(bestCorner));
     }
 
     getRodTip() {
@@ -2149,9 +2175,10 @@ export class Cat {
                     }
                     
                     if (this.useGlbAnimations) {
-                        if (this.mixer && this._currentAction) {
+                        if (this.mixer) {
                             this.mixer.update(delta);
                         }
+                        this.updateRodTipMarker();
 
                         anchor.rotation.x = 0;
                         anchor.rotation.z = 0;

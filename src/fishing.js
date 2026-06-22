@@ -796,8 +796,10 @@ export class Fishing {
                 this.starfishCelebration.active = false;
             }
         }
-        // Update rod tip world position first
-        if (this.rodModel && this.rodTipBone) {
+        // Update rod tip world position first (GLB cat: tip tracks animated rod each frame)
+        if (this.cat?.updateRodTipMarker) {
+            this.cat.updateRodTipMarker();
+        } else if (this.rodModel && this.rodTipBone) {
             this.cat.getModel().updateMatrixWorld(true);
             this.rodModel.updateMatrixWorld(true);
             this.rodTipBone.updateMatrixWorld(true);
@@ -991,6 +993,9 @@ export class Fishing {
             // Check if cast completed
             if (t >= 1) {
                 this.isCasting = false;
+                if (!this.isReeling) {
+                    this.cat?.playIdle?.();
+                }
                 
                 if (this.rope && this.rope.rope.length > 0) {
                     // Get tip and bobber positions
@@ -2127,7 +2132,7 @@ export class Fishing {
                 // Reeling complete - fish caught
                 // Stop reel sound immediately
                 this.isReeling = false;
-                this.cat?.playIdle?.();
+                // Big Catch animation is triggered from fish.js startCelebrate — don't override with idle
                 this._reelSoundTimer = 0; // Reset reel sound timer immediately
                 
                 // Stop all active reel sounds immediately
@@ -2290,12 +2295,16 @@ export class Fishing {
     }
 
     getRodTipPosition() {
+        if (this.cat?.updateRodTipMarker) {
+            this.cat.updateRodTipMarker();
+        }
         const rodTipWorld = new THREE.Vector3();
         if (this.tempRodTip) {
             return this.tempRodTip.getWorldPosition(new THREE.Vector3());
         }
         if (this.rodTipBone) {
             this.cat?.getModel()?.updateMatrixWorld(true);
+            this.cat?.catAnchor?.updateMatrixWorld(true);
             this.rodTipBone.updateMatrixWorld(true);
             this.rodTipBone.getWorldPosition(rodTipWorld);
         }
