@@ -86,7 +86,7 @@ export class Locations {
             {
                 name: 'Trophy Waters',
                 difficulty: 'Expert',
-                fish: [25, 26, 27, 28, 29, 30, 31, 32],
+                fish: [33],
                 cost: 500,
                 unlockLevel: 15,
                 description: 'Trophy fish paradise',
@@ -102,6 +102,19 @@ export class Locations {
                 description: 'Bottomless depths',
                 waterBodyType: 'OCEAN',
                 platformType: 'LARGE_BOAT'
+            },
+
+            // Celestial finale — unlocked after all ten hidden relics forge the Starlight Lure
+            {
+                name: 'Celestial Depths',
+                difficulty: 'Legendary',
+                fish: [25, 26, 27, 28, 29, 30, 31, 32],
+                cost: 0,
+                unlockLevel: 1,
+                description: 'A star-lit abyss where ocean and sky become one',
+                waterBodyType: 'CELESTIAL',
+                platformType: 'LARGE_BOAT',
+                requiresStarlightLure: true
             },
             
             // POND locations (use dock) - Added at end

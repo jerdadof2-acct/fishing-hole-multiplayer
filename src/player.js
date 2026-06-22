@@ -1,4 +1,5 @@
 import { TackleShop, getTackleByName } from './tackleShop.js';
+import { CELESTIAL_DEPTHS_LOCATION_INDEX, STARLIGHT_LURE_BAIT_ID } from './config/hiddenRelics.js';
 
 /**
  * Player State Management System
@@ -71,7 +72,7 @@ export class Player {
         this.biggestCatch = 0;
         
         // Unlocks
-        this.locationUnlocks = [0, 1]; // Start with first two locations
+        this.locationUnlocks = [0, 1]; // Starter pond and river
         this.tackleUnlocks = {
             rods: [0],      // Basic Rod
             reels: [0],     // Basic Reel
@@ -109,6 +110,10 @@ export class Player {
 
         // Achievements tracking (object: {achievementId: tier})
         this.achievements = {};
+
+        // Story relics (hidden items from each region)
+        this.hiddenRelicsCollected = [];
+        this.starlightLureCrafted = false;
 
         // Server sync context
         this.api = null;
@@ -338,10 +343,12 @@ export class Player {
         
         // Update totals
         this.totalCaught++;
-        this.totalWeight += weight;
-        
-        if (weight > this.biggestCatch) {
-            this.biggestCatch = weight;
+        const recordWeight = typeof weight === 'number' && Number.isFinite(weight) && weight > 0;
+        if (recordWeight) {
+            this.totalWeight += weight;
+            if (weight > this.biggestCatch) {
+                this.biggestCatch = weight;
+            }
         }
         
         // Add to recent catches (keep last 10)
@@ -435,7 +442,9 @@ export class Player {
                 caughtFish: this.caughtFish,
                 caughtFishCollection: this.caughtFishCollection,
                 achievements: this.achievements,
-                currentLocationIndex: this.currentLocationIndex
+                currentLocationIndex: this.currentLocationIndex,
+                hiddenRelicsCollected: this.hiddenRelicsCollected,
+                starlightLureCrafted: this.starlightLureCrafted
             };
             
             if (this.userId) {
@@ -626,6 +635,11 @@ export class Player {
                     this.achievements = playerData.achievements || {};
                 }
 
+                this.hiddenRelicsCollected = Array.isArray(playerData.hiddenRelicsCollected)
+                    ? playerData.hiddenRelicsCollected
+                    : [];
+                this.starlightLureCrafted = playerData.starlightLureCrafted === true;
+
                 if (playerData.userId) {
                     this.userId = playerData.userId;
                 }
@@ -634,6 +648,7 @@ export class Player {
                 }
                 
                 this.normalizeTackleState();
+                this.syncStoryUnlocks();
                 console.log('[PLAYER] Data loaded');
             }
         } catch (error) {
@@ -671,6 +686,45 @@ export class Player {
             gear: this.gear,
             collectionStats: this.getCollectionStats()
         };
+    }
+
+    hasHiddenRelic(relicId) {
+        return Array.isArray(this.hiddenRelicsCollected) && this.hiddenRelicsCollected.includes(relicId);
+    }
+
+    hasAllHiddenRelics() {
+        return Array.isArray(this.hiddenRelicsCollected) && this.hiddenRelicsCollected.length >= 10;
+    }
+
+    unlockStarlightLure() {
+        if (!this.tackleUnlocks?.baits) return;
+        if (!this.tackleUnlocks.baits.includes(STARLIGHT_LURE_BAIT_ID)) {
+            this.tackleUnlocks.baits.push(STARLIGHT_LURE_BAIT_ID);
+        }
+        if (this.tackleNotified?.baits) {
+            this.tackleNotified.baits = this.tackleNotified.baits.filter(
+                (id) => id !== STARLIGHT_LURE_BAIT_ID
+            );
+        }
+    }
+
+    /** Gate Celestial Depths and Starlight Lure behind story relic progress. */
+    syncStoryUnlocks() {
+        const celestialIdx = CELESTIAL_DEPTHS_LOCATION_INDEX;
+
+        if (this.starlightLureCrafted && this.hasAllHiddenRelics()) {
+            if (!this.locationUnlocks.includes(celestialIdx)) {
+                this.locationUnlocks.push(celestialIdx);
+            }
+            this.unlockStarlightLure();
+        } else {
+            this.locationUnlocks = this.locationUnlocks.filter((index) => index !== celestialIdx);
+            if (!this.starlightLureCrafted && Array.isArray(this.tackleUnlocks?.baits)) {
+                this.tackleUnlocks.baits = this.tackleUnlocks.baits.filter(
+                    (id) => id !== STARLIGHT_LURE_BAIT_ID
+                );
+            }
+        }
     }
 
     normalizeTackleState() {

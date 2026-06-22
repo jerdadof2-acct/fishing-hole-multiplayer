@@ -1950,3 +1950,207 @@ canvas {
     }
 }
 
+/* Hidden relic discovery popup & logbook */
+.relic-popup {
+    background: radial-gradient(circle at top, rgba(28, 36, 72, 0.97), rgba(6, 10, 28, 0.98));
+    border: 2px solid rgba(255, 220, 140, 0.55);
+    border-radius: 22px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.75), 0 0 40px rgba(120, 180, 255, 0.2);
+    color: #f8f4e8;
+    font-family: 'Poppins', 'Arial', sans-serif;
+    text-align: center;
+    animation: popupFadeIn 0.35s ease-out;
+}
+
+.relic-popup-glow {
+    position: absolute;
+    inset: -20%;
+    background: radial-gradient(circle, rgba(255, 230, 150, 0.18) 0%, transparent 65%);
+    pointer-events: none;
+    z-index: -1;
+}
+
+.relic-popup-eyebrow {
+    margin: 0 0 0.35rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255, 236, 180, 0.75);
+}
+
+.relic-popup-title {
+    margin: 0 0 0.25rem;
+    font-size: clamp(1.35rem, 4vw, 1.75rem);
+    color: #fff3c4;
+    text-shadow: 0 0 18px rgba(255, 220, 120, 0.55);
+}
+
+.relic-popup-location {
+    margin: 0 0 1rem;
+    font-size: 0.9rem;
+    color: rgba(186, 230, 253, 0.85);
+}
+
+.relic-popup-image-wrap {
+    display: flex;
+    justify-content: center;
+    margin: 0 0 1.1rem;
+}
+
+.relic-popup-image {
+    display: block;
+    max-width: min(72vw, 260px);
+    max-height: 220px;
+    border-radius: 14px;
+    border: 2px solid rgba(255, 220, 140, 0.45);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), 0 0 24px rgba(255, 220, 120, 0.25);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.relic-popup-message {
+    margin: 0 0 0.85rem;
+    padding: 0;
+    border: none;
+    font-size: 1.05rem;
+    font-style: italic;
+    line-height: 1.55;
+    color: #fef9c3;
+}
+
+.relic-popup-meaning {
+    margin: 0 0 1.25rem;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    color: rgba(219, 234, 254, 0.88);
+}
+
+.relic-popup-forge {
+    margin: 0 0 1.25rem;
+    padding: 0.85rem 1rem;
+    border-radius: 12px;
+    background: rgba(255, 220, 120, 0.1);
+    border: 1px solid rgba(255, 220, 140, 0.35);
+}
+
+.relic-popup-forge-title {
+    font-weight: 700;
+    color: #fde68a;
+    margin-bottom: 0.5rem;
+}
+
+.relic-popup-forge-quote {
+    margin: 0 0 0.5rem;
+    font-style: italic;
+    color: #fff7d6;
+    line-height: 1.5;
+}
+
+.relic-popup-forge-note {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #dbeafe;
+}
+
+.relic-popup-close {
+    width: 100%;
+    padding: 0.75rem 1.25rem;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #fde68a, #fbbf24);
+    color: #1f2937;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.relic-popup-close:hover {
+    filter: brightness(1.05);
+}
+
+.relics-panel {
+    padding: 0.25rem 0 1rem;
+}
+
+.relics-header {
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.relics-heading {
+    margin: 0 0 0.35rem;
+    font-size: 1.15rem;
+    color: #fde68a;
+}
+
+.relics-progress {
+    margin: 0;
+    font-weight: 600;
+    color: #fff;
+}
+
+.relics-subtitle {
+    margin: 0.35rem 0 0;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.relics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.75rem;
+}
+
+.relic-card {
+    padding: 0.65rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    text-align: center;
+}
+
+.relic-card--found {
+    border-color: rgba(255, 220, 140, 0.35);
+    box-shadow: 0 0 16px rgba(255, 220, 120, 0.12);
+}
+
+.relic-card--locked {
+    opacity: 0.72;
+}
+
+.relic-card-image {
+    display: block;
+    width: 100%;
+    max-height: 88px;
+    object-fit: contain;
+    margin: 0 auto 0.5rem;
+}
+
+.relic-card-silhouette {
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: rgba(255, 255, 255, 0.25);
+    margin-bottom: 0.5rem;
+}
+
+.relic-card-name {
+    margin: 0 0 0.25rem;
+    font-size: 0.82rem;
+    color: #fef3c7;
+}
+
+.relic-card-region {
+    margin: 0 0 0.35rem;
+    font-size: 0.72rem;
+    color: rgba(186, 230, 253, 0.75);
+}
+
+.relic-card-message {
+    margin: 0;
+    font-size: 0.68rem;
+    line-height: 1.4;
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.55);
+}
+

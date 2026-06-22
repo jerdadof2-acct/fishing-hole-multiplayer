@@ -949,18 +949,12 @@ export class Game {
     }
 
     ensureStarlightLureUnlocked() {
-        if (!this.player || !this.player.tackleUnlocks || !Array.isArray(this.player.tackleUnlocks.baits)) {
+        if (!this.player || !this.player.starlightLureCrafted || !this.player.hasAllHiddenRelics()) {
             return;
         }
 
-        const baits = this.player.tackleUnlocks.baits;
-        if (!baits.includes(this.STARLIGHT_LURE_ID)) {
-            baits.push(this.STARLIGHT_LURE_ID);
-            if (this.player.tackleNotified?.baits) {
-                this.player.tackleNotified.baits = this.player.tackleNotified.baits.filter(id => id !== this.STARLIGHT_LURE_ID);
-            }
-            this.player.save({ skipSync: true });
-        }
+        this.player.unlockStarlightLure();
+        this.player.save({ skipSync: true });
     }
 
     applyCelestialBaitPreference(location) {

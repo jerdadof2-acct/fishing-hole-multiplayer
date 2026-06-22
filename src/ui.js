@@ -97,6 +97,7 @@ export class UI {
         this.waitingForBite = false;
         this.biteStrikeTime = null;
         this.hookSetSuccess = false;
+        this.relicDiscoveryActive = false;
         
         // Initialize new UI components
         this.initTabs();
@@ -1763,6 +1764,8 @@ export class UI {
                 console.error('[UI] Failed to load fishTypes:', error);
                 inventoryContent.innerHTML = '<p style="text-align: center; color: rgba(255,255,255,0.5); padding: 40px;">Failed to load collection. Please refresh.</p>';
             });
+        } else if (tab === 'relics') {
+            this.renderRelicsTab(inventoryContent);
         } else if (tab === 'achievements') {
             this.renderAchievementsTab(inventoryContent);
         } else if (tab === 'settings') {
@@ -1932,6 +1935,10 @@ export class UI {
             console.error('Fishing system not available');
             return;
         }
+
+        if (this.relicDiscoveryActive) {
+            return;
+        }
         
         // Check if we're setting hook (after bite)
         if (this.waitingForBite && this.biteStrikeTime) {
@@ -1959,6 +1966,7 @@ export class UI {
         // Reset bite detection state
         this.waitingForBite = false;
         this.biteStrikeTime = null;
+        this.relicDiscoveryActive = false;
         this.hookSetSuccess = false;
         
         castButton.disabled = true;
@@ -2019,8 +2027,21 @@ export class UI {
             castButton.disabled = true;
             
             // Wait for bite
-            setTimeout(() => {
-                if (!this.waitingForBite) return; // Cast was cancelled
+            setTimeout(async () => {
+                if (!this.waitingForBite) return;
+
+                try {
+                    const { getRelicForGameLocation } = await import('./config/hiddenRelics.js');
+                    const { rollRelicDiscovery } = await import('./hiddenRelics.js');
+                    const relic = getRelicForGameLocation(currentLocation?.name);
+
+                    if (relic && rollRelicDiscovery(this.player, relic)) {
+                        this.handleRelicDiscovery(relic);
+                        return;
+                    }
+                } catch (error) {
+                    console.warn('[UI] Relic discovery check failed:', error);
+                }
                 
                 // Fish strikes!
                 this.biteStrikeTime = Date.now();
@@ -2046,6 +2067,185 @@ export class UI {
         });
     }
     
+    handleRelicDiscovery(relic) {
+        if (!relic || !this.player) return;
+
+        const castButton = document.getElementById('cast-button');
+        this.waitingForBite = false;
+        this.relicDiscoveryActive = true;
+        this.biteStrikeTime = null;
+        this.hookSetSuccess = false;
+
+        if (this.autoFailTimer) {
+            clearTimeout(this.autoFailTimer);
+            this.autoFailTimer = null;
+        }
+
+        if (this.fishing?.bobber) {
+            this.fishing.bobber.userData.relicStrike = true;
+            this.fishing.bobber.userData.relicStrikeTime =
+                this.fishing.sceneRef?.clock?.elapsedTime || Date.now() / 1000;
+
+            if (this.fishing.splash && this.fishing.bobber) {
+                for (let i = 0; i < 4; i++) {
+                    setTimeout(() => {
+                        if (this.fishing?.splash && this.fishing?.bobber) {
+                            this.fishing.splash.trigger(this.fishing.bobber.position);
+                        }
+                    }, i * 120);
+                }
+            }
+        }
+
+        if (castButton) {
+            castButton.textContent = 'RELIC RISING…';
+            castButton.disabled = true;
+            castButton.style.background = 'rgba(255, 220, 120, 0.85)';
+            castButton.setAttribute('data-state', 'relic');
+        }
+
+        console.log('[UI] Hidden relic discovered:', relic.name);
+
+        import('./hiddenRelics.js').then(({ collectHiddenRelic }) => {
+            const forgedStarlight = collectHiddenRelic(this.player, relic.id);
+            setTimeout(() => {
+                this.showRelicPopup(relic, forgedStarlight);
+            }, 900);
+        });
+    }
+
+    showRelicPopup(relic, forgedStarlight = false) {
+        const existingPopup = document.getElementById('relic-popup');
+        if (existingPopup) existingPopup.remove();
+
+        const progress = this.player?.hiddenRelicsCollected?.length ?? 0;
+        const isSmallScreen = window.innerWidth <= 600;
+        const popupPadding = isSmallScreen ? '22px 18px' : '36px 44px';
+        const imageMax = isSmallScreen ? 200 : 260;
+
+        const popup = document.createElement('div');
+        popup.id = 'relic-popup';
+        popup.className = 'relic-popup';
+        popup.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 12000;
+            max-width: min(92vw, 520px);
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: ${popupPadding};
+        `;
+
+        const forgeBlock = forgedStarlight ? `
+            <div class="relic-popup-forge">
+                <div class="relic-popup-forge-title">✨ The Starlight Lure is forged ✨</div>
+                <p class="relic-popup-forge-quote">"Ten pieces of a puzzle I didn't even know I was solving… Looks like I've just built the light that started it all."</p>
+                <p class="relic-popup-forge-note">Halley can now sail to the <strong>Celestial Depths</strong>.</p>
+            </div>
+        ` : '';
+
+        popup.innerHTML = `
+            <div class="relic-popup-glow" aria-hidden="true"></div>
+            <p class="relic-popup-eyebrow">Hidden relic recovered · ${progress} of 10</p>
+            <h2 class="relic-popup-title">${relic.name}</h2>
+            <p class="relic-popup-location">Found near ${relic.storyLocation}</p>
+            <div class="relic-popup-image-wrap">
+                <img class="relic-popup-image" src="${relic.image}" alt="${relic.name}" />
+            </div>
+            <blockquote class="relic-popup-message">"${relic.message}"</blockquote>
+            <p class="relic-popup-meaning">${relic.meaning}</p>
+            ${forgeBlock}
+            <button type="button" id="relic-popup-close" class="relic-popup-close">Keep in logbook</button>
+        `;
+
+        document.body.appendChild(popup);
+
+        const close = () => {
+            popup.remove();
+            this.finishRelicDiscovery(forgedStarlight);
+        };
+
+        document.getElementById('relic-popup-close')?.addEventListener('click', close);
+        popup.addEventListener('click', (event) => {
+            if (event.target === popup) close();
+        });
+    }
+
+    finishRelicDiscovery(forgedStarlight) {
+        this.relicDiscoveryActive = false;
+
+        const castButton = document.getElementById('cast-button');
+        if (castButton) {
+            castButton.textContent = 'CAST';
+            castButton.disabled = false;
+            castButton.style.background = '';
+            castButton.setAttribute('data-state', 'cast');
+        }
+
+        if (this.fishing?.bobber) {
+            delete this.fishing.bobber.userData.relicStrike;
+            delete this.fishing.bobber.userData.relicStrikeTime;
+        }
+
+        this.updatePlayerInfo();
+        this.updateLocationSelector();
+        if (this.currentShopTab) {
+            this.renderShop(this.currentShopTab);
+        }
+
+        if (forgedStarlight) {
+            this.showBannerNotification('Starlight Lure forged! Celestial Depths unlocked.', '#fde68a', 4500);
+        } else {
+            this.showBannerNotification('Relic added to Halley\'s logbook.', '#a5f3fc', 2800);
+        }
+    }
+
+    renderRelicsTab(container) {
+        if (!container || !this.player) return;
+
+        import('./config/hiddenRelics.js').then(({ HIDDEN_RELICS }) => {
+            const collected = this.player.hiddenRelicsCollected || [];
+            const count = collected.length;
+            const lureReady = this.player.starlightLureCrafted;
+
+            const cards = HIDDEN_RELICS.map((relic) => {
+                const owned = collected.includes(relic.id);
+                if (owned) {
+                    return `
+                        <article class="relic-card relic-card--found">
+                            <img class="relic-card-image" src="${relic.image}" alt="${relic.name}" />
+                            <h4 class="relic-card-name">${relic.name}</h4>
+                            <p class="relic-card-region">${relic.storyLocation}</p>
+                            <p class="relic-card-message">"${relic.message}"</p>
+                        </article>
+                    `;
+                }
+                return `
+                    <article class="relic-card relic-card--locked">
+                        <div class="relic-card-silhouette" aria-hidden="true">?</div>
+                        <h4 class="relic-card-name">Undiscovered relic</h4>
+                        <p class="relic-card-region">Fish at ${relic.gameLocation}</p>
+                    </article>
+                `;
+            }).join('');
+
+            container.innerHTML = `
+                <div class="relics-panel">
+                    <header class="relics-header">
+                        <h3 class="relics-heading">Relics of the Sea</h3>
+                        <p class="relics-progress">${count} of ${HIDDEN_RELICS.length} recovered</p>
+                        <p class="relics-subtitle">${lureReady
+                            ? 'The Starlight Lure shines aboard The Shooting Star.'
+                            : 'Gather all ten relics to forge the Starlight Lure.'}</p>
+                    </header>
+                    <div class="relics-grid">${cards}</div>
+                </div>
+            `;
+        });
+    }
+
     handleFishBite() {
         const castButton = document.getElementById('cast-button');
         
@@ -3309,7 +3509,9 @@ export class UI {
             this.player.totalCaught = 0;
             this.player.totalWeight = 0;
             this.player.biggestCatch = 0;
-            this.player.locationUnlocks = [0, 1, 9];
+            this.player.locationUnlocks = [0, 1];
+            this.player.hiddenRelicsCollected = [];
+            this.player.starlightLureCrafted = false;
             this.player.tackleUnlocks = {
                 rods: [0],
                 reels: [0],
@@ -3356,6 +3558,9 @@ export class UI {
             }
             if (typeof this.player.normalizeTackleState === 'function') {
                 this.player.normalizeTackleState();
+            }
+            if (typeof this.player.syncStoryUnlocks === 'function') {
+                this.player.syncStoryUnlocks();
             }
             this.player.save();
         }

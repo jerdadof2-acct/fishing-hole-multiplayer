@@ -1418,6 +1418,20 @@ export class Fishing {
             if (!this.isCasting && this.bobber.visible && !this.isReeling && this.bobber.userData.floating) {
                 const time = this.sceneRef.clock.elapsedTime;
                 
+                // Relic rising — slow golden lift from the depths
+                if (this.bobber.userData.relicStrike) {
+                    const relicTime = this.bobber.userData.relicStrikeTime || 0;
+                    const relicElapsed = time - relicTime;
+                    const relicDuration = 1.4;
+
+                    if (relicElapsed < relicDuration) {
+                        const t = relicElapsed / relicDuration;
+                        const lift = Math.sin(t * Math.PI) * 0.35;
+                        this.bobber.position.y += lift * delta * 6;
+                        this.bobber.rotation.z = Math.sin(t * Math.PI * 2) * 0.12;
+                    }
+                }
+
                 // Check for bite strike animation
                 if (this.bobber.userData.biteStrike) {
                     // Bite strike animation - dramatic bobber movement
@@ -1441,8 +1455,8 @@ export class Fishing {
                     }
                 }
                 
-                // Gentle drift (only if not in bite strike)
-                if (!this.bobber.userData.biteStrike) {
+                // Gentle drift (only if not in bite strike or relic rise)
+                if (!this.bobber.userData.biteStrike && !this.bobber.userData.relicStrike) {
                     const driftX = Math.sin(time * 0.35) * 0.12 * delta;
                     const driftZ = Math.cos(time * 0.27) * 0.12 * delta;
                     this.bobber.position.x += driftX;
