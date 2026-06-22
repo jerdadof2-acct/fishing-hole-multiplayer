@@ -2283,7 +2283,8 @@ export class Cat {
                             if (distance > 0.5) {
                                 toBobber.y = 0;
                                 toBobber.normalize();
-                                const targetAngle = Math.atan2(toBobber.x, toBobber.z);
+                                // Anchor uses baseRotationY (π) to face water; offset bearing by that base yaw.
+                                const targetAngle = Math.atan2(toBobber.x, toBobber.z) + this.baseRotationY;
                                 let angleDiff = targetAngle - anchor.rotation.y;
                                 while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
                                 while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
