@@ -20,6 +20,10 @@ import { Inventory } from './inventory.js';
 import { Leaderboard } from './leaderboard.js';
 import { FishCollection } from './fishCollection.js';
 import { loadingProgress } from './loadingProgress.js';
+import {
+    IDLE_PORTRAIT_DELAY_SEC,
+    PORTRAIT_BOBBER_TRACKING_CUTOFF
+} from './config/idlePortrait.js';
 
 export class Game {
     constructor(options = {}) {
@@ -53,7 +57,7 @@ export class Game {
         this.waterParticleDefaults = null;
         this.STARLIGHT_LURE_ID = 6;
         this.STARLIGHT_LURE_NAME = 'Starlight Lure';
-        this.idlePortraitDelaySec = 28;
+        this.idlePortraitDelaySec = IDLE_PORTRAIT_DELAY_SEC;
         this.lastActivityTime = performance.now();
         this._portraitIdleActive = false;
         
@@ -423,7 +427,7 @@ export class Game {
             if (this.cat) {
                 // Get bobber position if bobber is active and visible
                 let bobberPos = null;
-                if (portraitBlend < 0.05 && this.fishing?.bobber && this.fishing.bobber.visible) {
+                if (portraitBlend < PORTRAIT_BOBBER_TRACKING_CUTOFF && this.fishing?.bobber && this.fishing.bobber.visible) {
                     bobberPos = this.fishing.bobber.position.clone();
                 }
                 

@@ -1,11 +1,17 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { AnimationMixer } from 'three';
+import {
+    CAT_FACING_Y,
+    PORTRAIT_CAT_TURN_RADIANS,
+    PORTRAIT_CAT_TURN_SPEED_MIN,
+    PORTRAIT_CAT_TURN_SPEED_BLEND_SCALE,
+    PORTRAIT_BLEND_ACTIVE_THRESHOLD
+} from './config/idlePortrait.js';
 
 const CAT_MODEL_URL = 'assets/glb/Cat.glb';
 const CAT_TARGET_HEIGHT = 1.75;
-// Bind pose forward is -Z. Y=0 faces the camera/dock front; cast animations aim toward the lake.
-const CAT_FACING_Y = 0;
+// Lake-facing rotation: see CAT_FACING_Y in src/config/idlePortrait.js (locked).
 
 export class Cat {
     constructor(scene, dock) {
@@ -2309,12 +2315,12 @@ export class Cat {
                         anchor.rotation.x = 0;
                         anchor.rotation.z = 0;
 
-                        if (portraitBlend > 0.001) {
-                            const targetY = this.baseRotationY + Math.PI * portraitBlend;
+                        if (portraitBlend > PORTRAIT_BLEND_ACTIVE_THRESHOLD) {
+                            const targetY = this.baseRotationY + PORTRAIT_CAT_TURN_RADIANS * portraitBlend;
                             anchor.rotation.y = THREE.MathUtils.lerp(
                                 anchor.rotation.y,
                                 targetY,
-                                Math.min(1, delta * (4 + portraitBlend * 4))
+                                Math.min(1, delta * (PORTRAIT_CAT_TURN_SPEED_MIN + portraitBlend * PORTRAIT_CAT_TURN_SPEED_BLEND_SCALE))
                             );
                         } else if (bobberPosition) {
                             const catPos = anchor.position.clone();

@@ -1,0 +1,26 @@
+---
+description: Locked idle portrait camera and cat lake-facing behavior. Read before changing camera, cat rotation, or idle logic.
+globs: src/main.js,src/camera.js,src/camera/**,src/cat.js,src/config/idlePortrait.js
+alwaysApply: false
+---
+
+# Idle Portrait Camera (LOCKED)
+
+**Restore baseline:** commit `54a151a`, tag `idle-portrait-locked-v1`, config `src/config/idlePortrait.js`, spec `DOCS/idle-portrait-camera-locked.md`.
+
+## Behavior
+
+- Cat faces **lake** (`CAT_FACING_Y = 0`) during all fishing — cast, reel, fight, bobber tracking.
+- Portrait (camera pan + cat turn toward lens) only after **28s idle** on Game tab with no fishing activity.
+- Any input cancels portrait; cat returns to lake-facing immediately.
+
+## Do Not Break
+
+1. `positionOnSurface(pos, preserveFacing)` — reset `rotation.y` to `CAT_FACING_Y` when `preserveFacing` is false (default). Only pass `true` when `_portraitIdleActive`.
+2. Pass `portraitBlend` to `cat.update()` **only** when `_portraitIdleActive`; otherwise pass `0`. Never pass raw `camera.portraitBlend` during blend decay after portrait ends.
+3. Frame order in `animate()`: `updateIdlePortrait()` → `positionOnSurface` → `advancePortraitBlend` → `cat.update` → `updateSpring`.
+4. Portrait cat turn: `targetY = baseRotationY + Math.PI * portraitBlend` with lerp — only inside `cat.update` when `portraitBlend > 0.001`.
+
+## Constants
+
+Change values only in `src/config/idlePortrait.js` and re-test full flow (fish + idle portrait + cancel).

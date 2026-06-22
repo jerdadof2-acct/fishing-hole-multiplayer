@@ -1,6 +1,7 @@
 // src/camera/cameraSpring.js
 
 import * as THREE from "three";
+import { CAMERA_SPRING_DAMPING } from '../config/idlePortrait.js';
 
 // Smooth follow with critically-damped spring
 export class CameraSpring {
@@ -9,7 +10,7 @@ export class CameraSpring {
     this.getTarget = targetGetter; // () => THREE.Vector3
     this.offset = opts.offset || new THREE.Vector3(0, 2.2, 4.2);
     this.stiffness = opts.stiffness ?? 60;
-    this.damping = opts.damping ?? 12;
+    this.damping = opts.damping ?? CAMERA_SPRING_DAMPING;
     this.vel = new THREE.Vector3();
     this.portraitBlend = 0;
     this.gameplayOffset = this.offset.clone();

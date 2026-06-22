@@ -1,5 +1,14 @@
 import * as THREE from 'three';
 import { CameraSpring } from './camera/cameraSpring.js';
+import {
+    GAMEPLAY_CAMERA_OFFSET,
+    PORTRAIT_CAMERA_OFFSET,
+    GAMEPLAY_LOOK_AT_OFFSET,
+    PORTRAIT_BLEND_SPEED,
+    CAMERA_SPRING_STIFFNESS,
+    PORTRAIT_SPRING_STIFFNESS_BLEND_FACTOR,
+    CAMERA_SPRING_DAMPING
+} from './config/idlePortrait.js';
 
 export class Camera {
     constructor(scene, cat, dock, water) {
@@ -11,10 +20,10 @@ export class Camera {
         this.spring = null;
         this.portraitBlend = 0;
         this.portraitTarget = 0;
-        this.portraitBlendSpeed = 1.4;
-        this.gameplayOffset = new THREE.Vector3(0, 16, -12);
-        this.portraitOffset = new THREE.Vector3(0, 2.05, -4.2);
-        this.gameplayLookAtOffset = new THREE.Vector3(0, 1.5, 4);
+        this.portraitBlendSpeed = PORTRAIT_BLEND_SPEED;
+        this.gameplayOffset = GAMEPLAY_CAMERA_OFFSET.clone();
+        this.portraitOffset = PORTRAIT_CAMERA_OFFSET.clone();
+        this.gameplayLookAtOffset = GAMEPLAY_LOOK_AT_OFFSET.clone();
     }
 
     isPortraitActive() {
@@ -113,8 +122,8 @@ export class Camera {
                     offset: this.gameplayOffset,
                     portraitOffset: this.portraitOffset,
                     lookAtOffset: this.gameplayLookAtOffset,
-                    stiffness: 60,
-                    damping: 12,
+                    stiffness: CAMERA_SPRING_STIFFNESS,
+                    damping: CAMERA_SPRING_DAMPING,
                     getPortraitLookAt: () => this.cat.getHeadWorldPosition?.()
                 }
             );
@@ -166,7 +175,7 @@ export class Camera {
 
         if (this.spring) {
             this.spring.portraitBlend = this.portraitBlend;
-            const stiffness = 60 * (1 - this.portraitBlend * 0.35);
+            const stiffness = CAMERA_SPRING_STIFFNESS * (1 - this.portraitBlend * PORTRAIT_SPRING_STIFFNESS_BLEND_FACTOR);
             this.spring.stiffness = stiffness;
         }
     }
