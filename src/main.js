@@ -302,21 +302,40 @@ export class Game {
             this.platform = new Platform(this.scene, this.water);
             this.platform.createPlatform(currentLocation.platformType);
             console.log('[PLATFORM] Created platform:', currentLocation.platformType);
-            
+
             // Keep dock reference for backward compatibility with Camera class
-            // Create a Dock instance but don't create its mesh (platform handles it)
             this.dock = new Dock(this.scene, this.water);
-            // Expose platform methods to dock for compatibility
             this.dock.getSurfacePosition = () => this.platform.getSurfacePosition();
             this.dock.getDockMesh = () => this.platform.getPlatformMesh();
             
+            // Keep progress moving while the cat GLB downloads (mobile often omits byte length).
+            let catLoadPulse = null;
+            const stopCatLoadPulse = () => {
+                if (catLoadPulse) {
+                    clearInterval(catLoadPulse);
+                    catLoadPulse = null;
+                }
+            };
+            
             loadingProgress.update(62, 'Loading fisher cat model...');
             this.cat = new Cat(this.scene, this.dock);
-            await this.cat.load((fraction) => {
-                const pct = 62 + fraction * 28;
-                const label = Math.round(fraction * 100);
-                loadingProgress.update(pct, `Loading fisher cat model... ${label}%`);
-            });
+            catLoadPulse = setInterval(() => {
+                const pct = loadingProgress.getPercent();
+                if (pct < 90) {
+                    loadingProgress.update(pct + 0.35, 'Loading fisher cat model...');
+                }
+            }, 400);
+
+            try {
+                await this.cat.load((fraction) => {
+                    stopCatLoadPulse();
+                    const pct = 62 + fraction * 28;
+                    const label = Math.round(fraction * 100);
+                    loadingProgress.update(pct, `Loading fisher cat model... ${label}%`);
+                });
+            } finally {
+                stopCatLoadPulse();
+            }
             console.log('Cat loaded, position:', this.cat.getModel()?.position);
             
             // Position cat on platform (feet aligned to dock surface)

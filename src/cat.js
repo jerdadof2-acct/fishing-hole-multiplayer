@@ -69,10 +69,16 @@ export class Cat {
 
     async load(onProgress = null) {
         return new Promise((resolve, reject) => {
+            const timeoutMs = 120000;
+            const timeoutId = setTimeout(() => {
+                reject(new Error('Cat model download timed out — check your connection and refresh.'));
+            }, timeoutMs);
+
             const loader = new GLTFLoader();
             loader.load(
                 CAT_MODEL_URL,
                 (gltf) => {
+                    clearTimeout(timeoutId);
                     this.model = gltf.scene;
                     // Check model bounding box to determine appropriate scale
                     const box = new THREE.Box3().setFromObject(this.model);
@@ -156,6 +162,7 @@ export class Cat {
                     }
                 },
                 (error) => {
+                    clearTimeout(timeoutId);
                     console.error('Error loading cat model:', error);
                     reject(error);
                 }

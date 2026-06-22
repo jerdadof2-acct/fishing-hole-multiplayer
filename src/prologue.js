@@ -135,7 +135,8 @@ export function playStoryPrologue(options = {}) {
         if (!loadHint) return;
         const pct = Math.round(options.onLoadProgress?.() ?? loadingProgress.getPercent());
         if (pct > 0 && pct < 100) {
-            loadHint.textContent = `Loading game resources… ${pct}%`;
+            const stallHint = pct >= 55 && pct < 65 ? ' (building boat & loading Halley…)' : '';
+            loadHint.textContent = `Loading game resources… ${pct}%${stallHint}`;
             loadHint.classList.remove('hidden');
         } else if (pct >= 100) {
             loadHint.textContent = 'Ready to cast!';

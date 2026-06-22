@@ -311,22 +311,6 @@ export class Platform {
         bottom.position.y = -hullHeight * 0.5 + 0.008;
         boatGroup.add(bottom);
         
-        // Left side hull with bevel/taper (not straight box)
-        const sideShape = new THREE.Shape();
-        sideShape.moveTo(0, 0);
-        sideShape.lineTo(0, hullHeight);
-        sideShape.lineTo(0.06, hullHeight * 0.8); // Taper inward at top
-        sideShape.lineTo(0.06, 0.2);
-        sideShape.lineTo(0, 0);
-        sideShape.closePath();
-        
-        const extrudeSettings = { depth: boatLength * 0.95, bevelEnabled: false };
-        const sideGeometry = new THREE.ExtrudeGeometry(sideShape, extrudeSettings);
-        sideGeometry.name = 'smallBoat-hullSideGeometry';
-        sideGeometry.rotateY(Math.PI / 2);
-        sideGeometry.rotateX(-Math.PI / 2);
-        sideGeometry.translate(0, -hullHeight * 0.5, 0);
-        
         const sideWallThickness = 0.05;
         const sideWallHeight = hullHeight;
         const sideWallLength = smallBottomLength - 0.1;
@@ -748,6 +732,12 @@ export class Platform {
         if (!group || typeof maxAbsXAllowed !== 'number') {
             return;
         }
+
+        const isMobile = typeof navigator !== 'undefined'
+            && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+            return;
+        }
         
         try {
             const limitText = maxAbsZAllowed
@@ -847,21 +837,6 @@ export class Platform {
         const boatLength = this.largeBoatDepth;
         const hullHeight = 0.25; // Taller hull for large boat
         const hullOuterEdge = boatWidth * 0.42 + 0.03; // Outer edge of hull sides (including thickness)
-        
-        // Stern hull with bevel/taper (chunkier than small boat)
-        const sideShape = new THREE.Shape();
-        sideShape.moveTo(0, 0);
-        sideShape.lineTo(0, hullHeight);
-        sideShape.lineTo(0.08, hullHeight * 0.75); // More pronounced taper
-        sideShape.lineTo(0.08, 0.25);
-        sideShape.lineTo(0, 0);
-        sideShape.closePath();
-        
-        const extrudeSettings = { depth: boatLength * 0.95, bevelEnabled: false };
-        const sideGeometry = new THREE.ExtrudeGeometry(sideShape, extrudeSettings);
-        sideGeometry.rotateY(Math.PI / 2);
-        sideGeometry.rotateX(-Math.PI / 2);
-        sideGeometry.translate(0, -hullHeight * 0.5, 0);
         
         const hullMaterial = new THREE.MeshStandardMaterial({
             color: 0x2c3e50, // Dark blue-gray hull
