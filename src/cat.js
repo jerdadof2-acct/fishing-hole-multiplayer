@@ -4,8 +4,8 @@ import { AnimationMixer } from 'three';
 
 const CAT_MODEL_URL = 'assets/glb/Cat.glb';
 const CAT_TARGET_HEIGHT = 1.75;
-// Bind pose faces the camera (-Z). Rotate anchor 180° so cat faces the water (+Z).
-const CAT_FACING_Y = Math.PI;
+// Bind pose forward is -Z. Y=0 faces the camera/dock front; cast animations aim toward the lake.
+const CAT_FACING_Y = 0;
 
 export class Cat {
     constructor(scene, dock) {
@@ -2283,8 +2283,7 @@ export class Cat {
                             if (distance > 0.5) {
                                 toBobber.y = 0;
                                 toBobber.normalize();
-                                // Anchor uses baseRotationY (π) to face water; offset bearing by that base yaw.
-                                const targetAngle = Math.atan2(toBobber.x, toBobber.z) + this.baseRotationY;
+                                const targetAngle = Math.atan2(toBobber.x, toBobber.z) + Math.PI;
                                 let angleDiff = targetAngle - anchor.rotation.y;
                                 while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
                                 while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
