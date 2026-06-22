@@ -11,7 +11,6 @@ import { Fish } from './fish.js';
 import { UI } from './ui.js';
 import { Camera } from './camera.js';
 import { Splash } from './splash.js';
-import { TempRod } from './tempRod.js';
 import { buildLakeMask } from './buildLakeMask.js';
 import { SoundManager } from './sound.js';
 import { addWaterParticles } from './effects/waterParticles.js';
@@ -40,7 +39,6 @@ export class Game {
         this.ui = null;
         this.camera = null;
         this.splash = null;
-        this.tempRod = null;
         this.lakeMask = null;
         this.soundManager = null;
         this.sfx = null;
@@ -50,11 +48,10 @@ export class Game {
         this.inventory = null;
         this.leaderboard = null;
         this.fishCollection = null;
-        
-        // Debug: Enable rod dragging to adjust position
-        this.rodDragging = false;
-        this.rodDragStartX = 0;
-        this.rodDragStartOffset = null;
+        this.waterParticles = null;
+        this.waterParticleDefaults = null;
+        this.STARLIGHT_LURE_ID = 6;
+        this.STARLIGHT_LURE_NAME = 'Starlight Lure';
         
         this.init();
     }
@@ -74,6 +71,17 @@ export class Game {
             
             // Add floating water particles near surface
             this.waterParticles = addWaterParticles(this.scene.scene);
+            if (this.waterParticles?.material) {
+                const mat = this.waterParticles.material;
+                this.waterParticleDefaults = {
+                    size: mat.size,
+                    opacity: mat.opacity,
+                    blending: mat.blending,
+                    depthWrite: mat.depthWrite,
+                    color: mat.color ? mat.color.clone() : new THREE.Color(0xffffff),
+                    rotationSpeed: this.waterParticles.userData?.rotationSpeed ?? 0.00025
+                };
+            }
             console.log('Water particles created');
             
             // Create grass around lake (instanced with wind sway)
@@ -100,9 +108,23 @@ export class Game {
             }
 
             console.log('[GAME] Gameplay systems initialized');
+            this.ensureStarlightLureUnlocked();
             
             // Initialize location system
             this.locations = new Locations();
+            if (this.player && Array.isArray(this.locations.locations)) {
+                let unlocksAdded = false;
+                this.locations.locations.forEach((location, index) => {
+                    if (location?.temporaryUnlock && !this.player.locationUnlocks.includes(index)) {
+                        this.player.locationUnlocks.push(index);
+                        unlocksAdded = true;
+                    }
+                });
+                if (unlocksAdded) {
+                    this.player.save({ skipSync: true });
+                    console.log('[LOCATIONS] Temporary unlocks granted for testing:', this.player.locationUnlocks);
+                }
+            }
             if (this.player) {
                 const savedIndex = typeof this.player.currentLocationIndex === 'number'
                     ? this.player.currentLocationIndex
@@ -123,6 +145,8 @@ export class Game {
             
             // Set water type based on current location
             this.water.setWaterBodyType(currentLocation.waterBodyType);
+            this.applyLocationEnvironment(currentLocation);
+            this.applyCelestialBaitPreference(currentLocation);
             
             // Create platform system (dock or boat based on location)
             this.platform = new Platform(this.scene, this.water);
@@ -147,83 +171,19 @@ export class Game {
             this.cat.savedPosition = platformPos.clone();
             console.log('[PLATFORM] Cat positioned at:', platformPos);
             
-            // Create temporary rod (GLB rod not working, using temp rod with aiming)
-            const platformPosForRod = this.platform.getSurfacePosition();
-            this.tempRod = new TempRod(this.scene, 0, platformPosForRod);
-            const rodTip = this.tempRod.create();
-            console.log('Temporary rod created');
-            
-            // Set up fishing system with temp rod FIRST (before rod attachment)
+            const rodTip = this.cat.getRodTip();
+            if (!rodTip) {
+                console.warn('[ROD] No rod tip found on cat model');
+            }
+
             this.fishing = new Fishing(this.scene, this.cat, this.water, rodTip);
             this.fishing.game = this;
             await this.fishing.init();
             console.log('Fishing system initialized');
             
-            // Attach rod to cat's hand bone AFTER fishing is initialized
-            // Ensure cat model matrices are updated before attachment
             const catModel = this.cat.getModel();
             if (catModel) {
                 catModel.updateMatrixWorld(true);
-            }
-            
-            // REVERTED: Manual positioning instead of bone attachment
-            // Attaching to bones causes visibility issues and can affect cat position
-            // Store hand bone reference for manual positioning each frame
-            const leftHandBone = this.cat.leftHandBone || this.cat.getAllBones().find(b => b.name && (b.name.toLowerCase() === 'handl' || (b.name.toLowerCase().includes('hand') && b.name.toLowerCase().includes('l'))));
-            if (leftHandBone && this.tempRod.rodRoot) {
-                // Get hand bone world position to verify it exists and is valid
-                catModel.updateMatrixWorld(true);
-                leftHandBone.updateMatrixWorld(true);
-                
-                const handWorldPos = new THREE.Vector3();
-                leftHandBone.getWorldPosition(handWorldPos);
-                console.log('[ROD] Left hand bone world position:', handWorldPos);
-                
-                // Store hand bone reference for manual positioning (NOT attaching to bone)
-                this.tempRod.rodRoot.userData.handBone = leftHandBone;
-                
-                // Ensure rod stays in scene (don't attach to bone - causes visibility issues)
-                // Keep rod in scene, position it manually each frame
-                // Safety check: ensure scene exists before accessing
-                if (this.scene && this.scene.scene) {
-                    if (this.tempRod.rodRoot.parent !== this.scene.scene) {
-                        if (this.tempRod.rodRoot.parent) {
-                            this.tempRod.rodRoot.parent.remove(this.tempRod.rodRoot);
-                        }
-                        this.scene.scene.add(this.tempRod.rodRoot);
-                    }
-                } else {
-                    console.error('[ROD] Scene not initialized - cannot add rod to scene');
-                }
-                
-                // Ensure rod and all its children are visible
-                this.tempRod.rodRoot.visible = true;
-                this.tempRod.rodRoot.scale.set(1, 1, 1);
-                
-                // Traverse rod hierarchy and ensure everything is visible
-                this.tempRod.rodRoot.traverse((child) => {
-                    if (child.isMesh || child.isGroup) {
-                        child.visible = true;
-                        child.scale.set(1, 1, 1);
-                    }
-                    // Make sure materials are not transparent
-                    if (child.isMesh && child.material) {
-                        if (Array.isArray(child.material)) {
-                            child.material.forEach(mat => {
-                                if (mat) mat.opacity = 1.0;
-                                if (mat) mat.transparent = false;
-                            });
-                        } else {
-                            child.material.opacity = 1.0;
-                            child.material.transparent = false;
-                        }
-                    }
-                });
-                
-                console.log('[ROD] Rod will be positioned manually relative to hand bone (not attached)');
-                console.log('[ROD] Rod visible:', this.tempRod.rodRoot.visible);
-            } else {
-                console.warn('[ROD] Could not find hand bone - rod will stay at original position');
             }
             
             // Initialize sound manager
@@ -387,12 +347,7 @@ export class Game {
             this.cat.savedPosition = platformPos.clone();
         }
         
-        // Update temporary rod
-        if (this.tempRod) {
-            this.tempRod.update(delta);
-        }
-            
-            // Update cat with sway and bobber tracking (only when idle - not casting or reeling)
+        // Update cat with sway and bobber tracking (only when idle - not casting or reeling)
             if (this.cat) {
                 // Get bobber position if bobber is active and visible
                 let bobberPos = null;
@@ -675,6 +630,147 @@ export class Game {
         // Rod position is now handled by pivot system in main.js
         // Pivot automatically follows hand bone, no manual positioning needed
     }
+
+    applyWaterParticleSettings(settings) {
+        if (!this.waterParticles?.material || !settings) {
+            return;
+        }
+
+        const mat = this.waterParticles.material;
+
+        if (typeof settings.size === 'number') {
+            mat.size = settings.size;
+        }
+        if (typeof settings.opacity === 'number') {
+            mat.opacity = settings.opacity;
+        }
+        if (typeof settings.blending !== 'undefined') {
+            mat.blending = settings.blending;
+        }
+        if (typeof settings.depthWrite !== 'undefined') {
+            mat.depthWrite = settings.depthWrite;
+        }
+        if (typeof settings.color !== 'undefined') {
+            const color = settings.color instanceof THREE.Color
+                ? settings.color
+                : new THREE.Color(settings.color);
+            if (!mat.color) {
+                mat.color = color.clone();
+            } else {
+                mat.color.copy(color);
+            }
+        }
+
+        mat.needsUpdate = true;
+
+        if (typeof settings.rotationSpeed !== 'undefined' && this.waterParticles?.userData) {
+            this.waterParticles.userData.rotationSpeed = settings.rotationSpeed;
+            this.waterParticles.userData.lastRotationTime = performance.now();
+            if (settings.rotationSpeed === 0) {
+                this.waterParticles.rotation.y = 0;
+            }
+        }
+    }
+
+    applyLocationEnvironment(location) {
+        if (!location) {
+            return;
+        }
+
+        const defaultParticleSettings = this.waterParticleDefaults
+            ? {
+                  ...this.waterParticleDefaults,
+                  color: this.waterParticleDefaults.color?.clone?.() || this.waterParticleDefaults.color
+              }
+            : null;
+
+        const profiles = {
+            DEFAULT: {
+                scene: {},
+                waterParticles: defaultParticleSettings
+            },
+            CELESTIAL: {
+                scene: {
+                    background: 0x04050a,
+                    fogColor: 0x04050a,
+                    fogNear: 12,
+                    fogFar: 160,
+                    hemisphereSkyColor: 0x222845,
+                    hemisphereGroundColor: 0x050509,
+                    hemisphereIntensity: 0.28,
+                    directionalColor: 0xb7c4ff,
+                    directionalIntensity: 0.55,
+                    ambientColor: 0x1c2a4a,
+                    ambientIntensity: 0.24
+                },
+                waterParticles: {
+                    size: 0.22,
+                    opacity: 0.9,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    color: 0xf4f8ff,
+                    rotationSpeed: 0
+                }
+            }
+        };
+
+        const waterType = location.waterBodyType || 'DEFAULT';
+        const profile = profiles[waterType] || profiles.DEFAULT;
+
+        if (this.scene?.setEnvironment) {
+            this.scene.setEnvironment(profile.scene || {});
+        }
+
+        if (profile.waterParticles) {
+            this.applyWaterParticleSettings(profile.waterParticles);
+        } else if (this.waterParticleDefaults) {
+            this.applyWaterParticleSettings(this.waterParticleDefaults);
+        }
+    }
+
+    ensureStarlightLureUnlocked() {
+        if (!this.player || !this.player.tackleUnlocks || !Array.isArray(this.player.tackleUnlocks.baits)) {
+            return;
+        }
+
+        const baits = this.player.tackleUnlocks.baits;
+        if (!baits.includes(this.STARLIGHT_LURE_ID)) {
+            baits.push(this.STARLIGHT_LURE_ID);
+            if (this.player.tackleNotified?.baits) {
+                this.player.tackleNotified.baits = this.player.tackleNotified.baits.filter(id => id !== this.STARLIGHT_LURE_ID);
+            }
+            this.player.save({ skipSync: true });
+        }
+    }
+
+    applyCelestialBaitPreference(location) {
+        if (!this.player || !this.player.gear) {
+            return;
+        }
+
+        const isCelestial = location?.waterBodyType === 'CELESTIAL';
+        let saveNeeded = false;
+
+        if (isCelestial) {
+            this.ensureStarlightLureUnlocked();
+            if (this.player.gear.bait !== this.STARLIGHT_LURE_NAME) {
+                if (!this.player.__previousBait || this.player.gear.bait !== this.STARLIGHT_LURE_NAME) {
+                    this.player.__previousBait = this.player.gear.bait;
+                }
+                this.player.gear.bait = this.STARLIGHT_LURE_NAME;
+                saveNeeded = true;
+            }
+        } else if (this.player.gear.bait === this.STARLIGHT_LURE_NAME) {
+            const fallback = this.player.__previousBait || 'Basic Bait';
+            this.player.gear.bait = fallback;
+            delete this.player.__previousBait;
+            saveNeeded = true;
+        }
+
+        if (saveNeeded) {
+            this.player.save({ skipSync: true });
+        }
+    }
     
     /**
      * Switch to a different location (for testing)
@@ -698,6 +794,8 @@ export class Game {
         
         // Switch water type
         this.water.setWaterBodyType(location.waterBodyType);
+        this.applyLocationEnvironment(location);
+        this.applyCelestialBaitPreference(location);
         
         // Switch platform
         this.platform.switchPlatform(location.platformType);

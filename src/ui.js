@@ -35,6 +35,21 @@ export class UI {
         this.friendDetailCache = new Map();
         this.activeFriendId = null;
         this.totalFishTypes = null;
+        this.toastContainer = null;
+        this.toastStyleInjected = false;
+        this.pendingAchievementCheck = false;
+        this.starfishAdviceIndex = 0;
+        this.starfishAdviceLines = [
+            "You've already caught the Starfish of Eternity, Halley. Cast again only when your heart is curious, not restless.",
+            "You've already caught the Starfish of Eternity. The brightest lure in your tackle box is still patience.",
+            "You've already caught the Starfish of Eternity. Let the currents carry your worries like driftwood.",
+            "You've already caught the Starfish of Eternity. Even legends need catnaps between miracles.",
+            "You've already caught the Starfish of Eternity. Swap the chase for a story and share it with the crew.",
+            "You've already caught the Starfish of Eternity. Tie your knots with kindness; they hold the strongest.",
+            "You've already caught the Starfish of Eternity. Remember: not every sparkle is a target—some are just to enjoy.",
+            "You've already caught the Starfish of Eternity. The universe is impressed; now go feed your crew."
+        ];
+        this.starfishFirstCatchLine = "You've spent your life chasing wonders.\n\nBut the light you sought was always within you.";
     }
 
     init() {
@@ -111,6 +126,131 @@ export class UI {
         
         // Default to game tab
         this.switchTab('game');
+    }
+
+    ensureToastInfrastructure() {
+        if (typeof document === 'undefined') {
+            return null;
+        }
+
+        if (!this.toastStyleInjected) {
+            const style = document.createElement('style');
+            style.id = 'halleys-toast-styles';
+            style.textContent = `
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 9999;
+    pointer-events: none;
+}
+.toast {
+    min-width: 240px;
+    max-width: 360px;
+    background: rgba(12, 16, 32, 0.9);
+    color: #f6fbff;
+    border-radius: 10px;
+    padding: 12px 16px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+    border-left: 4px solid rgba(255, 255, 255, 0.3);
+    font-family: 'Poppins', sans-serif;
+    transform: translateX(120%);
+    opacity: 0;
+    transition: transform 0.32s ease, opacity 0.32s ease;
+    pointer-events: auto;
+}
+.toast.visible {
+    transform: translateX(0);
+    opacity: 1;
+}
+.toast-title {
+    font-weight: 600;
+    font-size: 16px;
+    margin-bottom: 6px;
+}
+.toast-body {
+    font-size: 14px;
+    line-height: 1.4;
+    white-space: pre-line;
+}
+.toast-info { border-left-color: #58b4ff; }
+.toast-success { border-left-color: #3ddc97; }
+.toast-warning { border-left-color: #f7b32b; }
+.toast-error { border-left-color: #ff6b6b; }
+`;
+            document.head.appendChild(style);
+            this.toastStyleInjected = true;
+        }
+
+        if (!this.toastContainer || !document.body.contains(this.toastContainer)) {
+            const container = document.createElement('div');
+            container.id = 'toast-container';
+            document.body.appendChild(container);
+            this.toastContainer = container;
+        }
+
+        return this.toastContainer;
+    }
+
+    showToast(options = {}) {
+        const {
+            type = 'info',
+            title = '',
+            body = '',
+            duration = 4000
+        } = options;
+
+        const container = this.ensureToastInfrastructure();
+        if (!container) {
+            console.warn('[UI] Toast container not available');
+            return;
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+
+        if (title) {
+            const titleEl = document.createElement('div');
+            titleEl.className = 'toast-title';
+            titleEl.textContent = title;
+            toast.appendChild(titleEl);
+        }
+
+        if (body) {
+            const bodyEl = document.createElement('div');
+            bodyEl.className = 'toast-body';
+            bodyEl.textContent = body;
+            toast.appendChild(bodyEl);
+        }
+
+        container.appendChild(toast);
+
+        // Trigger transition
+        requestAnimationFrame(() => {
+            toast.classList.add('visible');
+        });
+
+        const removeToast = () => {
+            toast.classList.remove('visible');
+            setTimeout(() => {
+                toast.remove();
+            }, 320);
+        };
+
+        toast.addEventListener('click', removeToast);
+        setTimeout(removeToast, duration);
+    }
+
+    getNextStarfishAdvice() {
+        if (!Array.isArray(this.starfishAdviceLines) || this.starfishAdviceLines.length === 0) {
+            return "You've already caught the Starfish of Eternity. Let the calm stay with you.";
+        }
+        const line = this.starfishAdviceLines[this.starfishAdviceIndex % this.starfishAdviceLines.length];
+        this.starfishAdviceIndex = (this.starfishAdviceIndex + 1) % this.starfishAdviceLines.length;
+        return line;
     }
     
     switchTab(tab) {
@@ -818,7 +958,7 @@ export class UI {
             metaPieces.push(`Now level ${this.safeText(level)}`);
             body = activity.message
                 ? this.safeText(activity.message)
-                : 'They are climbing the Kitty Creek ranks.';
+                : 'They are climbing the Halley\'s Big Catch ranks.';
         } else {
             const fishName = this.safeText(activity.fish_name || activity.fishName || 'a fish');
             const weightValue = Number(activity.fish_weight ?? activity.weight ?? activity.maxWeight);
@@ -1528,11 +1668,13 @@ export class UI {
             } else {
                 inventoryContent.innerHTML = top10.map((fishCatch, index) => {
                     const date = new Date(fishCatch.timestamp);
+                    const hasWeight = typeof fishCatch.weight === 'number' && Number.isFinite(fishCatch.weight);
+                    const weightDisplay = hasWeight ? `${fishCatch.weight.toFixed(2)} lbs` : '--';
                     return `
                         <div class="inventory-item">
                             <div class="inventory-item-header">
                                 <div class="inventory-item-name">#${index + 1} - ${fishCatch.fishName}</div>
-                                <div class="inventory-item-weight">${fishCatch.weight.toFixed(2)} lbs</div>
+                                <div class="inventory-item-weight">${weightDisplay}</div>
                             </div>
                             <div class="inventory-item-date">${date.toLocaleDateString()}</div>
                         </div>
@@ -1560,8 +1702,9 @@ export class UI {
                     allCatches.push(...fishInRecent.map(c => c.weight));
                     
                     // If we found any catches for this fish, return the max weight
-                    if (allCatches.length > 0) {
-                        return Math.max(...allCatches);
+                    const numericWeights = allCatches.filter(value => typeof value === 'number' && Number.isFinite(value) && value > 0);
+                    if (numericWeights.length > 0) {
+                        return Math.max(...numericWeights);
                     }
                     
                     return null;
@@ -1874,7 +2017,11 @@ export class UI {
                 this.handleFishBite();
                 
                 // Auto-fail if player doesn't react in time
-                const reactionWindow = getReactionTimeWindow();
+                let reactionWindow = getReactionTimeWindow();
+                if (currentLocation?.waterBodyType === 'CELESTIAL') {
+                    reactionWindow = Math.max(reactionWindow, 8000);
+                    console.log('[UI] Celestial Depths reaction window extended to', reactionWindow, 'ms');
+                }
                 this.autoFailTimer = setTimeout(() => {
                     if (!this.hookSetSuccess && this.biteStrikeTime) {
                         this.handleMiss('Too slow! Fish got away!');
@@ -1946,7 +2093,11 @@ export class UI {
                 const catchProbability = calculateCatchChance(this.player, currentLocation, null);
                 
                 // Get hook timing window
-                const timingWindow = getHookTimingWindow(this.player);
+                let timingWindow = getHookTimingWindow(this.player);
+                if (currentLocation?.waterBodyType === 'CELESTIAL') {
+                    timingWindow = Math.max(timingWindow, 4000);
+                    console.log('[UI] Celestial Depths hook timing window extended to', timingWindow, 'ms');
+                }
                 
                 console.log('[UI] Catch check - Probability:', (catchProbability * 100).toFixed(1) + '%, Reaction time:', reactionTime, 'ms, Timing window:', timingWindow, 'ms');
                 
@@ -2036,6 +2187,8 @@ export class UI {
                 this.fishing.bobber.visible = false;
             }
         }
+
+        this.game?.cat?.playMissedFish?.();
         
         // Clear auto-fail timer
         if (this.autoFailTimer) {
@@ -2186,11 +2339,19 @@ export class UI {
         
         // Record catch in gameplay systems
         if (this.player && this.inventory && this.leaderboard && this.fishCollection) {
-            const { species, weight, fishId, value, experience } = fishData;
+            const { species, weight, fishId } = fishData;
             const rawReaction = this.fishing?.lastReactionTimeMs;
             const reactionTimeMs = typeof rawReaction === 'number' && Number.isFinite(rawReaction)
                 ? Math.max(0, Math.round(rawReaction))
                 : null;
+            const currentLocation = this.game?.locations?.getCurrentLocation?.();
+            const isStarfishCatch = fishId === 33;
+            const isCelestialCatch = currentLocation?.waterBodyType === 'CELESTIAL';
+            const recordWeight = !(isStarfishCatch && isCelestialCatch);
+            const recordedWeight = recordWeight && typeof weight === 'number' && Number.isFinite(weight) ? weight : null;
+            const rewardValue = isStarfishCatch && isCelestialCatch ? 0 : (fishData.value ?? 0);
+            const rewardExperience = isStarfishCatch && isCelestialCatch ? 0 : (fishData.experience ?? 0);
+            const catchTimestamp = Date.now();
             
             // Check if first catch of this fish
             const isFirstCatch = this.fishCollection.unlockFish(fishId);
@@ -2198,10 +2359,10 @@ export class UI {
             // Add to player catch tracking (returns unlocks if leveled up)
             const newUnlocks = this.player.addCatch({
                 fishName: species,
-                weight,
+                weight: recordedWeight,
                 fishId,
-                value,
-                experience,
+                value: rewardValue,
+                experience: rewardExperience,
                 reactionTimeMs
             }, this.game?.locations, TackleShop);
             
@@ -2213,58 +2374,61 @@ export class UI {
             // Add to inventory
             this.inventory.addCatch({
                 fishName: species,
-                weight,
+                weight: recordedWeight,
                 fishId,
-                value,
-                experience,
+                value: rewardValue,
+                experience: rewardExperience,
                 reactionTimeMs,
-                timestamp: Date.now()
+                timestamp: catchTimestamp
             });
             this.inventory.save();
             
             // Update leaderboard
             const locationId = this.game?.locations?.getCurrentLocationIndex() || 0;
             
-            this.leaderboard.addCatch({
-                playerName: this.player.name,
-                fishName: species,
-                weight,
-                reactionTimeMs,
-                locationId,
-                timestamp: Date.now()
-            });
+            if (recordWeight) {
+                this.leaderboard.addCatch({
+                    playerName: this.player.name,
+                    fishName: species,
+                    weight: recordedWeight,
+                    reactionTimeMs,
+                    locationId,
+                    timestamp: catchTimestamp
+                });
+            }
 
             if (this.api && this.isOnline()) {
-                const currentLocation = this.game?.locations?.getCurrentLocation?.();
                 const locationName = currentLocation?.name || null;
 
                 this.api.logCatch({
                     fishName: species,
-                    fishWeight: weight,
+                    fishWeight: recordWeight ? recordedWeight : null,
                     fishRarity: fishData.rarity,
                     locationName,
-                    experienceGained: experience,
+                    experienceGained: rewardExperience,
                     reactionTimeMs
                 }).catch(error => {
                     console.warn('[UI] Failed to log catch activity:', error);
                 });
 
-                this.api.logLeaderboardCatch({
-                    fishName: species,
-                    fishWeight: weight,
-                    locationName,
-                    reactionTimeMs
-                }).then(() => {
-                    this.globalLeaderboardCache.fetchedAt = 0;
-                    this.speedLeaderboardCache.fetchedAt = 0;
-                    if (this.activeLeaderboardTab === 'global') {
-                        this.renderGlobalLeaderboardSection(true);
-                    } else if (this.activeLeaderboardTab === 'speed') {
-                        this.renderSpeedLeaderboard(true);
-                    }
-                }).catch(error => {
-                    console.warn('[UI] Failed to update leaderboard catch:', error);
-                });
+                if (recordWeight) {
+                    this.api.logLeaderboardCatch({
+                        fishName: species,
+                        fishWeight: recordedWeight,
+                        locationName,
+                        reactionTimeMs
+                    }).then(() => {
+                        this.globalLeaderboardCache.fetchedAt = 0;
+                        this.speedLeaderboardCache.fetchedAt = 0;
+                        if (this.activeLeaderboardTab === 'global') {
+                            this.renderGlobalLeaderboardSection(true);
+                        } else if (this.activeLeaderboardTab === 'speed') {
+                            this.renderSpeedLeaderboard(true);
+                        }
+                    }).catch(error => {
+                        console.warn('[UI] Failed to update leaderboard catch:', error);
+                    });
+                }
             }
             
             // Update top 10 biggest fish in player
@@ -2272,17 +2436,44 @@ export class UI {
             this.player.save();
             
             // Check for achievement unlocks after catch
-            this.evaluateAchievements('catch');
+            const shouldEvaluateNow = !(isStarfishCatch && isCelestialCatch);
+            if (shouldEvaluateNow) {
+                this.evaluateAchievements('catch');
+            } else {
+                this.pendingAchievementCheck = true;
+            }
             
             // Show first catch popup if needed
-            if (isFirstCatch) {
-        setTimeout(() => {
-                    this.showFirstCatchPopup(fishData);
+            const isFirstStarfishCatch = isStarfishCatch && isCelestialCatch && isFirstCatch;
+            if (isFirstStarfishCatch && this.fishing?.beginStarfishFirstCatchCelebration) {
+                this.fishing.beginStarfishFirstCatchCelebration({
+                    duration: 4.5,
+                    catDuration: 4.5,
+                    scale: 3.4,
+                    sprite: 3.0,
+                    baseOpacity: 0.98,
+                    coreOpacity: 1.0,
+                    spriteOpacity: 1.0,
+                    opacityBoost: 2.4
+                });
+            }
+
+            const starfishPopupDelay = isFirstStarfishCatch ? 4500 : 1900;
+
+            const popupFishData = { ...fishData, weight: recordedWeight };
+
+            if (isStarfishCatch && isCelestialCatch) {
+                setTimeout(() => {
+                    this.showStarfishPopup(popupFishData, isFirstCatch);
+                }, starfishPopupDelay);
+            } else if (isFirstCatch) {
+                setTimeout(() => {
+                    this.showFirstCatchPopup(popupFishData);
                 }, 1900); // After celebration
             } else {
                 // Show regular catch popup
                 setTimeout(() => {
-            this.showFishCatchPopup();
+                    this.showFishCatchPopup();
                 }, 1900); // After celebration
             }
         } else {
@@ -2531,6 +2722,173 @@ export class UI {
         }).catch(error => {
             console.error('[UI] Failed to load fishTypes:', error);
             // Fallback to regular popup
+            this.showFishCatchPopup();
+        });
+    }
+
+    showStarfishPopup(fishData, isFirstCatch) {
+        if (!fishData) {
+            console.warn('[UI] No fish data for starfish popup');
+            return;
+        }
+
+        const existingPopup = document.getElementById('starfish-popup');
+        if (existingPopup) {
+            existingPopup.remove();
+        }
+
+        import('./fishTypes.js').then(({ getFishImagePath }) => {
+            const fishName = fishData.species || fishData.name || 'Starfish of Eternity';
+            const rarity = fishData.rarity || 'Mythic';
+            const imagePath = getFishImagePath(fishName);
+            const isFirstStarfishCatch = !!isFirstCatch;
+            const advice = !isFirstStarfishCatch ? this.getNextStarfishAdvice() : null;
+            const quoteText = this.starfishFirstCatchLine || "You've spent your life chasing wonders.\n\nBut the light you sought was always within you.";
+            const narrationText = [
+                'The sea grows still. The air feels weightless.',
+                'For a moment, Halley isn’t holding a catch — he’s holding a reflection.',
+                'The glow from the Starfish mirrors the same spark in his own eyes,',
+                'and the waves whisper with the voice of every journey he’s taken.',
+                '',
+                'He realizes this was never about the biggest fish,',
+                'or the rarest treasure.',
+                'It was about coming home —',
+                'to the light that’s been with him since the beginning.'
+            ].join('\n');
+            const isSmallScreen = window.innerWidth <= 600;
+            const popupPadding = isSmallScreen ? '24px 20px' : '40px 52px';
+            const popupMaxWidth = isSmallScreen ? '90vw' : '600px';
+            const popupMinWidth = isSmallScreen ? '0' : '380px';
+            const popupMaxHeight = isSmallScreen ? '90vh' : '92vh';
+            const popupGap = isSmallScreen ? '18px' : '24px';
+            const imageMaxWidth = isSmallScreen ? 260 : 340;
+            const imageMaxHeight = isSmallScreen ? 220 : 260;
+            const imagePadding = isSmallScreen ? '4px' : '6px';
+            const buttonWidth = isSmallScreen ? '100%' : 'auto';
+            const buttonPaddingPrimary = isSmallScreen ? '12px 24px' : '12px 42px';
+            const buttonPaddingSecondary = isSmallScreen ? '12px 24px' : '12px 38px';
+
+            const popup = document.createElement('div');
+            popup.id = 'starfish-popup';
+            popup.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: radial-gradient(circle at top, rgba(32, 24, 64, 0.95), rgba(8, 8, 20, 0.97));
+                color: #f8f9ff;
+                padding: ${popupPadding};
+                border-radius: 22px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+                z-index: 12000;
+                font-family: 'Poppins', 'Arial', sans-serif;
+                text-align: center;
+                min-width: ${popupMinWidth};
+                max-width: ${popupMaxWidth};
+                max-height: ${popupMaxHeight};
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: ${popupGap};
+                align-items: stretch;
+                border: 2px solid rgba(120, 180, 255, 0.45);
+                animation: popupFadeIn 0.3s ease-out;
+            `;
+
+            const imageSection = `
+                <div style="margin-bottom: 28px; display: flex; justify-content: center;">
+                    <div style="display: inline-flex; align-items: center; justify-content: center; border-radius: 16px; overflow: hidden; border: 3px solid rgba(150, 200, 255, 0.55); background: rgba(255,255,255,0.05); padding: ${imagePadding};">
+                        <img src="${imagePath}" alt="${fishName}" style="display: block; width: auto; height: auto; max-width: ${imageMaxWidth}px; max-height: ${imageMaxHeight}px;"
+                            onerror="this.onerror=null; this.style.display='none'; const placeholder=this.parentElement.querySelector('.starfish-placeholder'); placeholder.style.display='flex';">
+                        <div class="starfish-placeholder" style="display: none; min-width: 240px; min-height: 190px; align-items: center; justify-content: center; font-size: 72px;">
+                            ⭐
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            let contentHtml;
+            if (isFirstStarfishCatch) {
+                contentHtml = `
+                    <div style="font-size: 34px; font-weight: 700; letter-spacing: 1px; margin-bottom: 24px; color: #a4d1ff; text-shadow: 0 0 16px rgba(140, 210, 255, 0.85);">
+                        ✨ You have caught the Starfish of Eternity! ✨
+                    </div>
+                    ${imageSection}
+                    <div style="font-size: 22px; font-weight: 600; color: #fef3c7; margin-bottom: 20px; text-shadow: 0 0 18px rgba(253, 224, 171, 0.85); white-space: pre-line;">
+                        &ldquo;${quoteText.replace(/\n/g, '\n')}&rdquo;
+                    </div>
+                    <div style="font-size: 18px; line-height: 1.7; color: #dbeafe; white-space: pre-line; margin-bottom: 36px;">
+                        ${narrationText}
+                    </div>
+                    <button id="starfish-close-btn" style="
+                        padding: ${buttonPaddingPrimary};
+                        background: linear-gradient(135deg, #6cc6ff, #b693ff);
+                        border: none;
+                        border-radius: 999px;
+                        color: #0b1026;
+                        font-weight: 700;
+                        font-size: 16px;
+                        letter-spacing: 0.6px;
+                        cursor: pointer;
+                        transition: transform 0.18s ease, box-shadow 0.18s ease;
+                        box-shadow: 0 12px 28px rgba(110, 180, 255, 0.45);
+                        width: ${buttonWidth};
+                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 16px 32px rgba(110,180,255,0.55)';"
+                      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 12px 28px rgba(110,180,255,0.45)';">
+                        &rarr; Let Go and Watch It Return to the Deep
+                    </button>
+                `;
+            } else {
+                contentHtml = `
+                    <div style="font-size: 32px; font-weight: 700; letter-spacing: 1px; margin-bottom: 20px; color: #8ec5ff;">
+                        ✨ Starfish of Eternity ✨
+                    </div>
+                    ${imageSection}
+                    <div style="font-size: 20px; margin-bottom: 6px; font-weight: 600;">${fishName}</div>
+                    <div style="font-size: 16px; letter-spacing: 1.2px; text-transform: uppercase; color: #9cc7ff; margin-bottom: 28px;">
+                        ${rarity}
+                    </div>
+                    <div style="font-size: 18px; line-height: 1.6; white-space: pre-line; margin-bottom: 32px; color: #d1ddff;">
+                        ${advice}
+                    </div>
+                    <button id="starfish-close-btn" style="
+                        padding: ${buttonPaddingSecondary};
+                        background: linear-gradient(135deg, #5b7cfa, #7dd3fc);
+                        border: none;
+                        border-radius: 999px;
+                        color: #0b1026;
+                        font-weight: 700;
+                        font-size: 16px;
+                        letter-spacing: 0.5px;
+                        cursor: pointer;
+                        transition: transform 0.18s ease, box-shadow 0.18s ease;
+                        box-shadow: 0 10px 25px rgba(90, 150, 255, 0.35);
+                        width: ${buttonWidth};
+                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 14px 30px rgba(90,150,255,0.45)';"
+                      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 25px rgba(90,150,255,0.35)';">
+                        Close
+                    </button>
+                `;
+            }
+
+            popup.innerHTML = contentHtml;
+
+            document.body.appendChild(popup);
+
+            const closeBtn = document.getElementById('starfish-close-btn');
+            const onClose = () => {
+                popup.style.animation = 'popupFadeOut 0.3s ease-out';
+                setTimeout(() => {
+                    popup.remove();
+                    if (this.pendingAchievementCheck) {
+                        this.pendingAchievementCheck = false;
+                        this.evaluateAchievements('catch');
+                    }
+                }, 300);
+            };
+            closeBtn.addEventListener('click', onClose);
+        }).catch(error => {
+            console.error('[UI] Failed to load fishTypes for starfish popup:', error);
             this.showFishCatchPopup();
         });
     }
@@ -2939,7 +3297,7 @@ export class UI {
             this.player.totalCaught = 0;
             this.player.totalWeight = 0;
             this.player.biggestCatch = 0;
-            this.player.locationUnlocks = [0, 1];
+            this.player.locationUnlocks = [0, 1, 9];
             this.player.tackleUnlocks = {
                 rods: [0],
                 reels: [0],

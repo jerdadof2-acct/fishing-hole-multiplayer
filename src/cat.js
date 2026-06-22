@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { AnimationMixer } from 'three';
 
+const CAT_MODEL_URL = 'assets/glb/Cat.glb';
+
 export class Cat {
     constructor(scene, dock) {
         this.sceneRef = scene;
@@ -43,13 +45,19 @@ export class Cat {
         this._rightShoulderInitPos = null;
         this._rightForearmInitRot = null;
         this._rightUpperArmInitRot = null;
+
+        this.useGlbAnimations = true;
+        this.animationClips = {};
+        this._currentAction = null;
+        this.rodTipMarker = null;
+        this.rodMesh = null;
     }
 
     async load() {
         return new Promise((resolve, reject) => {
             const loader = new GLTFLoader();
             loader.load(
-                'assets/glb/PZSNQ3IH66OXPUSBTYNAMD6EC.glb',
+                CAT_MODEL_URL,
                 (gltf) => {
                     this.model = gltf.scene;
                     // Check model bounding box to determine appropriate scale
@@ -63,65 +71,20 @@ export class Cat {
                     this.model.scale.setScalar(scale);
                     console.log('Cat model size:', size, 'Scale applied:', scale);
                     
-                    // Set up animation mixer if animations exist
-                    if (gltf.animations && gltf.animations.length > 0) {
-                        this.mixer = new AnimationMixer(this.model);
-                        console.log('[CAT] Found', gltf.animations.length, 'animations in GLB');
-                        
-                        // Look for arm sway animation (common names: 'arm_sway', 'left_arm_sway', 'idle', etc.)
-                        const armSwayClip = gltf.animations.find(clip => 
-                            clip.name.toLowerCase().includes('arm') && 
-                            (clip.name.toLowerCase().includes('sway') || clip.name.toLowerCase().includes('idle'))
-                        ) || gltf.animations[0]; // Fallback to first animation if no match
-                        
-                        if (armSwayClip) {
-                            this.armSwayAction = this.mixer.clipAction(armSwayClip);
-                            
-                            // Keep body/head idle motion but exclude both arms from animation completely.
-                            // This prevents any noodling from the mixer.
-                            const originalTracks = armSwayClip.tracks;
-                            const isArmTrack = (boneName) => {
-                                const n = boneName.toLowerCase();
-                                return (
-                                    // left arm chain
-                                    n.includes('shoulderl') || n.includes('arm_stretchl') || n.includes('arm_twistl') ||
-                                    n.includes('forearm_stretchl') || n.includes('forearm_twistl') || n === 'handl' ||
-                                    // right arm chain
-                                    n.includes('shoulderr') || n.includes('arm_stretchr') || n.includes('arm_twistr') ||
-                                    n.includes('forearm_stretchr') || n.includes('forearm_twistr') || n === 'handr' ||
-                                    n === 'mixamorigrighthand' || n === 'mixamorig:righthand'
-                                );
-                            };
-                            
-                            const bodyOnlyTracks = originalTracks.filter(track => {
-                                const boneName = track.name.split('.')[0];
-                                return !isArmTrack(boneName);
-                            });
-                            
-                            const filteredClip = new THREE.AnimationClip(
-                                armSwayClip.name + '_no_arms',
-                                armSwayClip.duration,
-                                bodyOnlyTracks
-                            );
-                            this.armSwayAction = this.mixer.clipAction(filteredClip);
-                            this.armSwayAction.setLoop(THREE.LoopRepeat).setEffectiveWeight(0.6).play();
-                            console.log('[CAT] Filtered animation to body only (both arms excluded). Original tracks:', originalTracks.length, 'Filtered tracks:', bodyOnlyTracks.length);
-                        }
-                    } else {
-                        console.log('[CAT] No animations found in GLB. Add arm sway animation in Blender and re-export.');
-                        console.log('[CAT] Animation should target bones: shoulderl, arm_stretchl, forearm_stretchl, or handl');
-                    }
+                    this.setupAnimations(gltf);
+                    this.setupRodTip();
                     
                     // Find all bones for manual manipulation (still needed for rod attachment)
                     this.findAllBones();
-                    this.findArmBones();
-                    
-                    // Create gripping pose for LEFT hand (holding rod)
-                    this.createHandGrip('left');
-                    this._leftHandLockQuat = null; // will lock on first call
-                    // Create right-hand grip once after bones are found
-                    this.createHandGrip('right');
-                    this._rightHandLockQuat = null; // will be set on first fish pose
+                    if (!this.useGlbAnimations) {
+                        this.findArmBones();
+                        this.createHandGrip('left');
+                        this._leftHandLockQuat = null;
+                        this.createHandGrip('right');
+                        this._rightHandLockQuat = null;
+                    } else {
+                        this.findArmBones();
+                    }
                     
                     // Position cat on dock
                     const dockSurfacePos = this.dock.getSurfacePosition();
@@ -196,6 +159,130 @@ export class Cat {
         });
     }
 
+    setupAnimations(gltf) {
+        if (!gltf.animations?.length) {
+            console.warn('[CAT] No animations in GLB');
+            this.useGlbAnimations = false;
+            return;
+        }
+
+        this.mixer = new AnimationMixer(this.model);
+        gltf.animations.forEach((clip) => {
+            this.animationClips[clip.name] = clip;
+        });
+
+        console.log('[CAT] Animations:', Object.keys(this.animationClips).join(', '));
+        this.playIdle();
+    }
+
+    playClip(name, { loop = THREE.LoopRepeat, fade = 0.2, onFinished = null } = {}) {
+        const clip = this.animationClips[name];
+        if (!this.mixer || !clip) {
+            console.warn('[CAT] Animation not found:', name);
+            return null;
+        }
+
+        const next = this.mixer.clipAction(clip);
+        next.reset();
+        next.setLoop(loop, loop === THREE.LoopOnce ? 1 : Infinity);
+        next.clampWhenFinished = true;
+
+        if (this._currentAction && this._currentAction !== next) {
+            this._currentAction.crossFadeTo(next, fade, false);
+        } else {
+            next.fadeIn(fade).play();
+        }
+
+        this._currentAction = next;
+
+        if (onFinished && loop === THREE.LoopOnce) {
+            const mixer = this.mixer;
+            const onDone = (event) => {
+                if (event.action === next) {
+                    mixer.removeEventListener('finished', onDone);
+                    onFinished();
+                }
+            };
+            mixer.addEventListener('finished', onDone);
+        }
+
+        return next;
+    }
+
+    playIdle() {
+        return this.playClip('Idle', { loop: THREE.LoopRepeat });
+    }
+
+    playThrow(onFinished = null) {
+        return this.playClip('Throw', {
+            loop: THREE.LoopOnce,
+            onFinished: onFinished || (() => this.playIdle())
+        });
+    }
+
+    playReeling() {
+        return this.playClip('Reeling', { loop: THREE.LoopRepeat });
+    }
+
+    playBigCatch(onFinished = null) {
+        return this.playClip('Big Catch', {
+            loop: THREE.LoopOnce,
+            onFinished: onFinished || (() => this.playIdle())
+        });
+    }
+
+    playMissedFish(onFinished = null) {
+        return this.playClip('Missed_Fish', {
+            loop: THREE.LoopOnce,
+            onFinished: onFinished || (() => this.playIdle())
+        });
+    }
+
+    setupRodTip() {
+        this.model.traverse((child) => {
+            if (!child.isMesh || this.rodMesh) return;
+
+            const materials = Array.isArray(child.material) ? child.material : [child.material];
+            const isRod = materials.some((mat) => mat?.name?.includes('Fishing_Rod'));
+            if (isRod) {
+                this.rodMesh = child;
+            }
+        });
+
+        if (!this.rodMesh) {
+            console.warn('[CAT] Fishing rod mesh not found in GLB');
+            return;
+        }
+
+        const geometry = this.rodMesh.geometry;
+        if (!geometry.boundingBox) {
+            geometry.computeBoundingBox();
+        }
+
+        const box = geometry.boundingBox;
+        const size = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
+        const tipLocal = center.clone();
+
+        if (size.y >= size.x && size.y >= size.z) {
+            tipLocal.y = box.max.y;
+        } else if (size.z >= size.x) {
+            tipLocal.z = box.max.z;
+        } else {
+            tipLocal.x = box.max.x;
+        }
+
+        this.rodTipMarker = new THREE.Object3D();
+        this.rodTipMarker.name = 'RodTipMarker';
+        this.rodTipMarker.position.copy(tipLocal);
+        this.rodMesh.add(this.rodTipMarker);
+        console.log('[CAT] Rod tip marker attached to fishing rod mesh');
+    }
+
+    getRodTip() {
+        return this.rodTipMarker || this.leftHandBone || null;
+    }
+
     /**
      * Find all bones in the model for inspection/manipulation
      */
@@ -231,35 +318,35 @@ export class Cat {
         this.model.traverse((child) => {
             if (child.isBone) {
                 const name = (child.name || '').toLowerCase();
+                const boneKey = name.replace(/^mixamorig:/, '').replace(/[._]/g, '');
                 
                 // RIGHT ARM BONES
-                // Check for shoulder/clavicle bones - handle both patterns: 'shoulderr' (exact) and 'shoulder' with 'right'/'r'
                 if (name === 'shoulderr' || 
-                    ((name.includes('right') || name.includes('r_') || name.includes('_r')) && 
-                     (name.includes('shoulder') || name.includes('clavicle')))) {
-                    this.rightShoulderBone = child;
-                    console.log('[CAT] Found right shoulder bone:', child.name);
-                }
-                // Right upper arm - check for arm_stretchr pattern first (common in GLTF models)
-                if (name === 'arm_stretchr' || 
+                    boneKey === 'rightarm' ||
                     ((name.includes('right') || name.includes('r_') || name.includes('_r')) && 
                      (name.includes('upperarm') || name.includes('upper_arm') || name.includes('arm_stretch') || name === 'mixamorigrightarm' || name === 'mixamorig:rightarm'))) {
                     this.rightUpperArmBone = child;
                     console.log('[CAT] Found right upper arm bone:', child.name);
                 }
-                // Right forearm - check for forearm_stretchr pattern first (common in GLTF models)
                 if (name === 'forearm_stretchr' || 
+                    boneKey === 'rightforearm' ||
                     ((name.includes('right') || name.includes('r_') || name.includes('_r')) && 
                      (name.includes('lowerarm') || name.includes('forearm') || name.includes('lower_arm') || name.includes('forearm_stretch') || name === 'mixamorigrightforearm' || name === 'mixamorig:rightforearm'))) {
                     this.rightLowerArmBone = child;
                     console.log('[CAT] Found right lower arm bone:', child.name);
                 }
-                // Right hand - check for handr pattern first (common in GLTF models)
                 if (name === 'handr' || 
+                    boneKey === 'righthand' ||
                     ((name.includes('right') || name.includes('r_') || name.includes('_r')) && 
                      (name.includes('hand') || name === 'mixamorigrighthand' || name === 'mixamorig:righthand'))) {
                     this.rightHandBone = child;
                     console.log('[CAT] Found right hand bone:', child.name);
+                }
+                if (name === 'shoulderr' || 
+                    ((name.includes('right') || name.includes('r_') || name.includes('_r')) && 
+                     (name.includes('shoulder') || name.includes('clavicle')))) {
+                    this.rightShoulderBone = child;
+                    console.log('[CAT] Found right shoulder bone:', child.name);
                 }
                 
                 // LEFT ARM BONES
@@ -268,23 +355,30 @@ export class Cat {
                     this.leftShoulderBone = child;
                     console.log('[CAT] Found left shoulder bone:', child.name);
                 }
-                if ((name.includes('left') || name.includes('l_') || name.includes('_l')) && 
-                    (name.includes('upperarm') || name.includes('upper_arm') || name === 'mixamorigleftarm' || name === 'mixamorig:leftarm')) {
+                if (boneKey === 'leftarm' ||
+                    ((name.includes('left') || name.includes('l_') || name.includes('_l')) && 
+                     (name.includes('upperarm') || name.includes('upper_arm') || name === 'mixamorigleftarm' || name === 'mixamorig:leftarm'))) {
                     this.leftUpperArmBone = child;
                     console.log('[CAT] Found left upper arm bone:', child.name);
                 }
-                if ((name.includes('left') || name.includes('l_') || name.includes('_l')) && 
-                    (name.includes('lowerarm') || name.includes('forearm') || name.includes('lower_arm') || name === 'mixamorigleftforearm' || name === 'mixamorig:leftforearm')) {
+                if (boneKey === 'leftforearm' ||
+                    ((name.includes('left') || name.includes('l_') || name.includes('_l')) && 
+                     (name.includes('lowerarm') || name.includes('forearm') || name.includes('lower_arm') || name === 'mixamorigleftforearm' || name === 'mixamorig:leftforearm'))) {
                     this.leftLowerArmBone = child;
                     console.log('[CAT] Found left lower arm bone:', child.name);
                 }
-                if ((name.includes('left') || name.includes('l_') || name.includes('_l')) && 
-                    (name.includes('hand') || name === 'mixamoriglefthand' || name === 'mixamorig:lefthand' || name === 'handl')) {
+                if (boneKey === 'lefthand' || name === 'handl' ||
+                    ((name.includes('left') || name.includes('l_') || name.includes('_l')) && 
+                     (name.includes('hand') || name === 'mixamoriglefthand' || name === 'mixamorig:lefthand' || name === 'handl'))) {
                     this.leftHandBone = child;
                     console.log('[CAT] Found left hand bone:', child.name);
                 }
             }
         });
+        
+        if (this.useGlbAnimations) {
+            return;
+        }
         
         // Initialize right arm segment cache after bones are found
         if (this.rightShoulderBone && this.rightUpperArmBone && this.rightLowerArmBone && this.rightHandBone) {
@@ -392,6 +486,10 @@ export class Cat {
      */
     startCelebrate(duration = 1.6) {
         if (!this.model) return;
+        if (this.useGlbAnimations) {
+            this.playBigCatch(() => this.playIdle());
+            return;
+        }
         this._celebrate.active = true;
         this._celebrate.t = 0;
         this._celebrate.dur = duration;
@@ -2032,6 +2130,28 @@ export class Cat {
                             this.model.rotation.y = currentRotationY;
                             this.model.rotation.z = currentRotationZ;
                         }
+                    }
+                    
+                    if (this.useGlbAnimations) {
+                        if (this.mixer) {
+                            this.mixer.update(delta);
+                        }
+
+                        if (bobberPosition && this.model) {
+                            const catPos = this.model.position.clone();
+                            const toBobber = bobberPosition.clone().sub(catPos);
+                            const distance = toBobber.length();
+                            if (distance > 0.5) {
+                                toBobber.y = 0;
+                                toBobber.normalize();
+                                const targetAngle = Math.atan2(toBobber.x, toBobber.z);
+                                let angleDiff = targetAngle - this.model.rotation.y;
+                                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                                this.model.rotation.y += angleDiff * Math.min(1, delta * 2);
+                            }
+                        }
+                        return;
                     }
                     
                     // Update animation mixer if it exists (handles GLB animations)

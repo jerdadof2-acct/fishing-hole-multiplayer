@@ -81,6 +81,16 @@ export class Fishing {
             zMin: -LAKE_SIZE / 2 + 12,
             zMax: LAKE_SIZE / 2 - 12
         };
+        // Celestial Depths visual state
+        this.starlightActive = false;
+        this.starlightGlowGroup = null;
+        this.starlightBase = null;
+        this.starlightCore = null;
+        this.starlightSprite = null;
+        this.starlightPulse = 0;
+        this.defaultBobberAppearance = null;
+        this.starfishCelebration = null;
+        this.pendingCelebrateDuration = null;
     }
     
     clampToCastBounds(v) {
@@ -157,14 +167,12 @@ export class Fishing {
     }
 
     async init() {
-        // Use temporary rod only (GLB rod disabled for multi-section design)
         if (this.tempRodTip) {
             this.rodTipBone = this.tempRodTip;
-            console.log('Using temporary rod with multi-section design');
-        } else {
-            // Fallback: create temp rod if not provided
-            console.warn('No temp rod provided, creating fallback rod');
-            // Could create fallback here if needed
+            console.log('Using provided rod tip');
+        } else if (this.cat?.getRodTip) {
+            this.rodTipBone = this.cat.getRodTip();
+            console.log('Using rod tip from cat GLB');
         }
         this.createBobber();
         
@@ -226,6 +234,235 @@ export class Fishing {
         this.fightSplashRing.add(innerRing);
         
         this.sceneRef.scene.add(this.fightSplashRing);
+    }
+
+    createRadialTexture(innerColor = 'rgba(255,255,255,1)', outerColor = 'rgba(255,255,255,0)') {
+        const size = 256;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+        gradient.addColorStop(0, innerColor);
+        gradient.addColorStop(1, outerColor);
+
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, size, size);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.needsUpdate = true;
+        return texture;
+    }
+
+    ensureStarlightEffect() {
+        if (this.starlightGlowGroup) {
+            return;
+        }
+
+        this.starlightGlowGroup = new THREE.Group();
+        this.starlightGlowGroup.visible = false;
+        this.starlightGlowGroup.renderOrder = 1003;
+
+        const baseTexture = this.createRadialTexture('rgba(120, 190, 255, 0.8)', 'rgba(10, 20, 40, 0)');
+        const baseMaterial = new THREE.MeshBasicMaterial({
+            map: baseTexture,
+            transparent: true,
+            opacity: 0,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            side: THREE.DoubleSide
+        });
+        this.starlightBase = new THREE.Mesh(new THREE.CircleGeometry(3.4, 64), baseMaterial);
+        this.starlightBase.rotation.x = -Math.PI / 2;
+        this.starlightGlowGroup.add(this.starlightBase);
+
+        const coreTexture = this.createRadialTexture('rgba(255, 255, 255, 1)', 'rgba(120, 200, 255, 0)');
+        const coreMaterial = new THREE.MeshBasicMaterial({
+            map: coreTexture,
+            transparent: true,
+            opacity: 0,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            side: THREE.DoubleSide
+        });
+        this.starlightCore = new THREE.Mesh(new THREE.CircleGeometry(0.85, 48), coreMaterial);
+        this.starlightCore.rotation.x = -Math.PI / 2;
+        this.starlightGlowGroup.add(this.starlightCore);
+
+        const spriteTexture = this.createRadialTexture('rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)');
+        const spriteMaterial = new THREE.SpriteMaterial({
+            map: spriteTexture,
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.9,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        this.starlightSprite = new THREE.Sprite(spriteMaterial);
+        this.starlightSprite.scale.set(1.5, 1.5, 1.5);
+        this.starlightSprite.position.set(0, 0.8, 0);
+        this.starlightGlowGroup.add(this.starlightSprite);
+
+        this.sceneRef.scene.add(this.starlightGlowGroup);
+    }
+
+    shouldUseStarlightMode() {
+        const location = this.game?.locations?.getCurrentLocation();
+        return location?.waterBodyType === 'CELESTIAL';
+    }
+
+    beginStarfishFirstCatchCelebration(options = {}) {
+        const duration = Math.max(0, options.duration ?? 4.5);
+        const scale = options.scale ?? 3.2;
+        const sprite = options.sprite ?? 2.8;
+        this.starfishCelebration = {
+            active: true,
+            timer: 0,
+            duration,
+            scale,
+            sprite,
+            baseOpacity: options.baseOpacity ?? 0.98,
+            coreOpacity: options.coreOpacity ?? 1.0,
+            spriteOpacity: options.spriteOpacity ?? 1.0,
+            opacityBoost: options.opacityBoost ?? 2.3
+        };
+        this.pendingCelebrateDuration = options.catDuration ?? duration;
+        if (this.starlightGlowGroup) {
+            this.starlightGlowGroup.visible = true;
+        }
+    }
+
+    getCelebrateDurationForCatch() {
+        if (this.pendingCelebrateDuration) {
+            const duration = this.pendingCelebrateDuration;
+            this.pendingCelebrateDuration = null;
+            return duration;
+        }
+        return 1.6;
+    }
+
+    updateStarlightMode() {
+        const shouldEnable = this.shouldUseStarlightMode();
+        if (shouldEnable && !this.starlightActive) {
+            this.ensureStarlightEffect();
+            this.starlightActive = true;
+            if (this.bobber?.material) {
+                this.bobber.material.transparent = true;
+                this.bobber.material.opacity = 0;
+                if (this.bobber.material.emissive) {
+                    this.bobber.material.emissiveIntensity = 0;
+                }
+                this.bobber.material.needsUpdate = true;
+            }
+        } else if (!shouldEnable && this.starlightActive) {
+            this.starlightActive = false;
+            if (this.starlightGlowGroup) {
+                this.starlightGlowGroup.visible = false;
+            }
+            if (this.bobber?.material && this.defaultBobberAppearance) {
+                this.bobber.material.transparent = this.defaultBobberAppearance.transparent;
+                this.bobber.material.opacity = this.defaultBobberAppearance.opacity;
+                if (this.bobber.material.emissive && this.defaultBobberAppearance.emissive) {
+                    this.bobber.material.emissive.copy(this.defaultBobberAppearance.emissive);
+                }
+                if (typeof this.bobber.material.emissiveIntensity === 'number' && typeof this.defaultBobberAppearance.emissiveIntensity === 'number') {
+                    this.bobber.material.emissiveIntensity = this.defaultBobberAppearance.emissiveIntensity;
+                }
+                this.bobber.material.needsUpdate = true;
+            }
+        }
+    }
+
+    updateStarlightEffect(delta) {
+        if (!this.starlightGlowGroup || !this.starlightActive) {
+            if (this.starlightGlowGroup && this.starlightGlowGroup.visible) {
+                this.starlightGlowGroup.visible = false;
+            }
+            return;
+        }
+
+        const celebration = this.starfishCelebration?.active ? this.starfishCelebration : null;
+        const fishInstance = this.sceneRef?.fish || this.game?.fish || null;
+        const fishState = fishInstance?.state || null;
+        const isFighting = this.fishOnLine && fishState === 'HOOKED_FIGHT';
+        const isLanding = this.fishOnLine && fishState === 'LANDING';
+
+        if (!this.starlightGlowGroup.visible) {
+            this.starlightGlowGroup.visible = true;
+        }
+
+        const scaleMultiplier = celebration
+            ? celebration.scale
+            : isLanding
+                ? 3.0
+                : isFighting
+                    ? 1.6
+                    : 1.0;
+
+        const opacityBoost = celebration
+            ? celebration.opacityBoost
+            : isLanding
+                ? 1.9
+                : isFighting
+                    ? 1.3
+                    : 1.0;
+
+        const spriteMultiplier = celebration
+            ? celebration.sprite
+            : isLanding
+                ? 2.2
+                : isFighting
+                    ? 1.35
+                    : 1.0;
+
+        const spriteOpacityBoost = celebration
+            ? celebration.spriteOpacity
+            : isLanding
+                ? 1.6
+                : isFighting
+                    ? 1.2
+                    : 1.0;
+
+        const sourcePos = this.bobber?.position ?? this.castEnd ?? this.castStart ?? new THREE.Vector3();
+        const targetPos = sourcePos.clone();
+        targetPos.y = this.water?.waterY != null ? this.water.waterY + 0.015 : targetPos.y;
+        this.starlightGlowGroup.position.copy(targetPos);
+
+        this.starlightPulse += delta;
+        const basePulse = celebration
+            ? celebration.baseOpacity
+            : (0.55 + Math.sin(this.starlightPulse * 1.6) * 0.25) * opacityBoost;
+        const corePulse = celebration
+            ? celebration.coreOpacity
+            : (0.7 + Math.sin(this.starlightPulse * 2.4 + 0.7) * 0.2) * opacityBoost;
+        const spritePulse = celebration
+            ? celebration.spriteOpacity
+            : (0.6 + Math.sin(this.starlightPulse * 2.1 + 2.2) * 0.25) * spriteOpacityBoost;
+
+        if (this.starlightBase?.material) {
+            this.starlightBase.material.opacity = THREE.MathUtils.clamp(basePulse, 0, 1);
+            const scale = celebration
+                ? scaleMultiplier
+                : scaleMultiplier * (1.0 + Math.sin(this.starlightPulse * 1.2) * 0.08);
+            this.starlightBase.scale.set(scale, scale, scale);
+        }
+
+        if (this.starlightCore?.material) {
+            this.starlightCore.material.opacity = THREE.MathUtils.clamp(corePulse, 0, 1);
+            const coreScale = celebration
+                ? scaleMultiplier
+                : scaleMultiplier * (0.9 + Math.sin(this.starlightPulse * 3.0) * 0.06);
+            this.starlightCore.scale.set(coreScale, coreScale, coreScale);
+        }
+
+        if (this.starlightSprite?.material) {
+            this.starlightSprite.material.opacity = THREE.MathUtils.clamp(spritePulse, 0.25, 1.0);
+            const spriteScale = celebration
+                ? spriteMultiplier
+                : spriteMultiplier * (1.3 + Math.sin(this.starlightPulse * 1.8) * 0.1);
+            this.starlightSprite.scale.set(spriteScale, spriteScale, spriteScale);
+        }
     }
     
     setSplash(splash) {
@@ -445,6 +682,8 @@ export class Fishing {
             emissive: 0xff0000, // Red glow for visibility
             emissiveIntensity: 0.3
         });
+        material.transparent = true;
+        material.opacity = 1.0;
         
         this.bobber = new THREE.Mesh(geometry, material);
         this.bobber.visible = false;
@@ -453,6 +692,13 @@ export class Fishing {
         this.bobber.name = 'Bobber';
         this.sceneRef.scene.add(this.bobber);
         console.log('Bobber created - size:', 0.08);
+
+        this.defaultBobberAppearance = {
+            opacity: material.opacity,
+            transparent: material.transparent,
+            emissive: material.emissive ? material.emissive.clone() : null,
+            emissiveIntensity: material.emissiveIntensity
+        };
     }
 
     createFishingLine() {
@@ -494,6 +740,8 @@ export class Fishing {
         
         this.isCasting = true;
         this.castT = 0;
+        this.updateStarlightMode();
+        this.cat?.playThrow?.();
         
         // Set rope states
         if (this.rope) {
@@ -540,6 +788,14 @@ export class Fishing {
     }
 
     update(delta) {
+        this.updateStarlightMode();
+        this.updateStarlightEffect(delta);
+        if (this.starfishCelebration?.active) {
+            this.starfishCelebration.timer += delta;
+            if (this.starfishCelebration.timer >= this.starfishCelebration.duration) {
+                this.starfishCelebration.active = false;
+            }
+        }
         // Update rod tip world position first
         if (this.rodModel && this.rodTipBone) {
             this.cat.getModel().updateMatrixWorld(true);
@@ -1513,6 +1769,7 @@ export class Fishing {
         
         this.isReeling = true;
         console.log('[FISHING] isReeling set to:', this.isReeling);
+        this.cat?.playReeling?.();
         if (this.rope) {
             this.rope.setReeling(true);
             // Set slower reel rate if fighting fish
@@ -1544,6 +1801,7 @@ export class Fishing {
             this.bobberJiggleTime = 0;
             this.fightSplashTimer = 0;
         }
+        this.updateStarlightMode();
     }
 
     // Reel speed constants
@@ -1869,6 +2127,7 @@ export class Fishing {
                 // Reeling complete - fish caught
                 // Stop reel sound immediately
                 this.isReeling = false;
+                this.cat?.playIdle?.();
                 this._reelSoundTimer = 0; // Reset reel sound timer immediately
                 
                 // Stop all active reel sounds immediately
@@ -1973,6 +2232,7 @@ export class Fishing {
                 // Reeling complete - no fish
                 // No splash/ripple when reeling without fish completes - just quietly finish
                 this.isReeling = false;
+                this.cat?.playIdle?.();
                 if (this.rope) {
                     this.rope.setReeling(false);
                     this.rope.setFloating(false);
@@ -2013,6 +2273,7 @@ export class Fishing {
                 this.fishingLine.visible = false;
             }
         }
+
     }
 
     getRodTip() {
@@ -2031,10 +2292,11 @@ export class Fishing {
     getRodTipPosition() {
         const rodTipWorld = new THREE.Vector3();
         if (this.tempRodTip) {
-            // Use temp rod
             return this.tempRodTip.getWorldPosition(new THREE.Vector3());
-        } else if (this.rodTipBone) {
-            // Use GLB rod
+        }
+        if (this.rodTipBone) {
+            this.cat?.getModel()?.updateMatrixWorld(true);
+            this.rodTipBone.updateMatrixWorld(true);
             this.rodTipBone.getWorldPosition(rodTipWorld);
         }
         return rodTipWorld;
