@@ -2282,8 +2282,9 @@ export class Cat {
                  * @param {boolean} isIdle - Whether the cat is idle (not casting or reeling)
                  * @param {THREE.Vector3|null} bobberPosition - Position of bobber to face toward (null if no bobber)
                  * @param {boolean} isFishing - True when casting, reeling, or fighting
+                 * @param {number} portraitBlend - 0–1 blend toward portrait pose (turns cat to face camera)
                  */
-                update(delta, isIdle = true, bobberPosition = null, isFishing = false, portraitMode = false) {
+                update(delta, isIdle = true, bobberPosition = null, isFishing = false, portraitBlend = 0) {
                     const anchor = this.catAnchor || this.model;
                     if (!anchor) return;
                     
@@ -2304,11 +2305,13 @@ export class Cat {
                         anchor.rotation.x = 0;
                         anchor.rotation.z = 0;
 
-                        if (portraitMode) {
-                            let angleDiff = this.baseRotationY - anchor.rotation.y;
+                        if (portraitBlend > 0.001) {
+                            // Turn toward camera as portrait zoom blends in (lake-facing + π).
+                            const targetY = this.baseRotationY + Math.PI * portraitBlend;
+                            let angleDiff = targetY - anchor.rotation.y;
                             while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
                             while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-                            anchor.rotation.y += angleDiff * Math.min(1, delta * 3);
+                            anchor.rotation.y += angleDiff * Math.min(1, delta * (2.5 + portraitBlend * 2));
                         } else if (bobberPosition) {
                             const catPos = anchor.position.clone();
                             const toBobber = bobberPosition.clone().sub(catPos);

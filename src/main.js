@@ -410,13 +410,13 @@ export class Game {
         }
 
         this.updateIdlePortrait();
-        const portraitMode = this.camera?.isPortraitActive?.() ?? false;
+        const portraitBlend = this.camera?.portraitBlend ?? 0;
         
         // Update cat with sway and bobber tracking (only when idle - not casting or reeling)
             if (this.cat) {
                 // Get bobber position if bobber is active and visible
                 let bobberPos = null;
-                if (!portraitMode && this.fishing?.bobber && this.fishing.bobber.visible) {
+                if (portraitBlend < 0.05 && this.fishing?.bobber && this.fishing.bobber.visible) {
                     bobberPos = this.fishing.bobber.position.clone();
                 }
                 
@@ -461,7 +461,7 @@ export class Game {
                             this._lastIsFishingState = isFishing;
                         }
                 
-                this.cat.update(delta, isIdle, bobberPos, isFishing, portraitMode);
+                this.cat.update(delta, isIdle, bobberPos, isFishing, portraitBlend);
             }
         
         // Update rod dragging if active
