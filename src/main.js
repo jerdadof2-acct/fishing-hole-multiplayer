@@ -53,6 +53,9 @@ export class Game {
         this.waterParticleDefaults = null;
         this.STARLIGHT_LURE_ID = 6;
         this.STARLIGHT_LURE_NAME = 'Starlight Lure';
+        this.idlePortraitDelaySec = 28;
+        this.lastActivityTime = performance.now();
+        this._portraitIdleActive = false;
         
         this.init();
     }
@@ -304,12 +307,74 @@ export class Game {
             document.getElementById('game-area').classList.remove('hidden');
             document.getElementById('tab-bar').classList.remove('hidden');
             
+            this.setupActivityTracking();
+            
             // Start render loop
             this.animate();
             
         } catch (error) {
             console.error('Failed to initialize game:', error);
             loadingProgress.fail('Loading failed. Please refresh and try again.');
+        }
+    }
+
+    setupActivityTracking() {
+        const bump = () => this.markActivity();
+        const events = ['pointerdown', 'keydown', 'touchstart', 'wheel'];
+        this._activityListeners = events.map((evt) => {
+            window.addEventListener(evt, bump, { passive: true });
+            return { evt, bump };
+        });
+    }
+
+    markActivity() {
+        this.lastActivityTime = performance.now();
+        if (this._portraitIdleActive && this.camera) {
+            this._portraitIdleActive = false;
+            this.camera.setPortraitMode(false);
+        }
+    }
+
+    isPortraitEligible() {
+        if (!this.fishing || !this.ui) return false;
+
+        const usernameModal = document.getElementById('username-modal');
+        if (usernameModal && !usernameModal.classList.contains('hidden')) return false;
+
+        const activeTab = document.querySelector('.tab-button.active')?.getAttribute('data-tab');
+        if (activeTab && activeTab !== 'game') return false;
+
+        if (this.fishing.isCasting || this.fishing.isReeling || this.fishing.fishOnLine) return false;
+        if (this.ui.waitingForBite) return false;
+
+        const castButton = document.getElementById('cast-button');
+        const castState = castButton?.getAttribute('data-state');
+        if (castState === 'waiting' || castState === 'set-hook' || castState === 'fighting') {
+            return false;
+        }
+
+        const bobberVisible = this.fishing.bobber?.visible;
+        const fishState = this.fish?.state;
+        const sequenceComplete =
+            fishState === 'LANDED' && !this.fishing.isReeling && !this.fishing.fishOnLine;
+        if (bobberVisible && !sequenceComplete) return false;
+
+        return true;
+    }
+
+    updateIdlePortrait() {
+        if (!this.camera) return;
+
+        const idleSec = (performance.now() - this.lastActivityTime) / 1000;
+        const wantPortrait = this.isPortraitEligible() && idleSec >= this.idlePortraitDelaySec;
+
+        if (wantPortrait && !this._portraitIdleActive) {
+            this._portraitIdleActive = true;
+            this.cat?.enterPortraitIdle?.();
+            this.camera.setPortraitMode(true);
+        } else if (!wantPortrait && this._portraitIdleActive) {
+            this._portraitIdleActive = false;
+            this.camera.setPortraitMode(false);
         }
     }
 
@@ -343,12 +408,15 @@ export class Game {
         if (this.cat && this.platform) {
             this.cat.positionOnSurface(this.platform.getSurfacePosition());
         }
+
+        this.updateIdlePortrait();
+        const portraitMode = this.camera?.isPortraitActive?.() ?? false;
         
         // Update cat with sway and bobber tracking (only when idle - not casting or reeling)
             if (this.cat) {
                 // Get bobber position if bobber is active and visible
                 let bobberPos = null;
-                if (this.fishing?.bobber && this.fishing.bobber.visible) {
+                if (!portraitMode && this.fishing?.bobber && this.fishing.bobber.visible) {
                     bobberPos = this.fishing.bobber.position.clone();
                 }
                 
@@ -393,7 +461,7 @@ export class Game {
                             this._lastIsFishingState = isFishing;
                         }
                 
-                this.cat.update(delta, isIdle, bobberPos, isFishing);
+                this.cat.update(delta, isIdle, bobberPos, isFishing, portraitMode);
             }
         
         // Update rod dragging if active

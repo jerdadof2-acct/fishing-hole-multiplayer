@@ -11,11 +11,20 @@ export class CameraSpring {
     this.stiffness = opts.stiffness ?? 60;
     this.damping = opts.damping ?? 12;
     this.vel = new THREE.Vector3();
+    this.portraitBlend = 0;
+    this.gameplayOffset = this.offset.clone();
+    this.portraitOffset = opts.portraitOffset?.clone() || new THREE.Vector3(0, 2.0, -4.5);
+    this.gameplayLookAtOffset = opts.lookAtOffset?.clone() || new THREE.Vector3(0, 1.5, 4);
+    this.getPortraitLookAt = opts.getPortraitLookAt || null;
+    this._offsetScratch = new THREE.Vector3();
+    this._lookAtScratch = new THREE.Vector3();
   }
 
   update(dt) {
     const target = this.getTarget();
-    const tgt = target.clone().add(this.offset);
+    const blend = this.portraitBlend;
+    this._offsetScratch.copy(this.gameplayOffset).lerp(this.portraitOffset, blend);
+    const tgt = target.clone().add(this._offsetScratch);
     const pos = this.camera.position;
     
     // Safety check: ensure camera is above water (y > 0)
@@ -43,7 +52,21 @@ export class CameraSpring {
     }
 
     // look at target point (can be customized via getLookAtTarget if provided)
-    const lookAtTarget = this.getLookAtTarget ? this.getLookAtTarget() : target;
+    let lookAtTarget;
+    if (this.getLookAtTarget) {
+      lookAtTarget = this.getLookAtTarget().clone();
+    } else {
+      this._lookAtScratch.copy(target).add(this.gameplayLookAtOffset);
+      lookAtTarget = this._lookAtScratch;
+    }
+
+    if (blend > 0.001 && this.getPortraitLookAt) {
+      const portraitLook = this.getPortraitLookAt();
+      if (portraitLook) {
+        lookAtTarget = lookAtTarget.clone().lerp(portraitLook, blend);
+      }
+    }
+
     this.camera.lookAt(lookAtTarget);
   }
 }

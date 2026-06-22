@@ -9,6 +9,23 @@ export class Camera {
         this.water = water;
         this.camera = scene.camera;
         this.spring = null;
+        this.portraitBlend = 0;
+        this.portraitTarget = 0;
+        this.portraitBlendSpeed = 1.4;
+        this.gameplayOffset = new THREE.Vector3(0, 16, -12);
+        this.portraitOffset = new THREE.Vector3(0, 2.05, -4.2);
+        this.gameplayLookAtOffset = new THREE.Vector3(0, 1.5, 4);
+    }
+
+    isPortraitActive() {
+        return this.portraitTarget > 0.5 || this.portraitBlend > 0.5;
+    }
+
+    setPortraitMode(active) {
+        this.portraitTarget = active ? 1 : 0;
+        if (this.spring) {
+            this.spring.portraitBlend = this.portraitBlend;
+        }
     }
 
     setup() {
@@ -93,22 +110,27 @@ export class Camera {
                     return pos;
                 },
                 {
-                    offset: new THREE.Vector3(0, 16, -12), // Camera further back and higher for zoom out, dock at bottom
+                    offset: this.gameplayOffset,
+                    portraitOffset: this.portraitOffset,
+                    lookAtOffset: this.gameplayLookAtOffset,
                     stiffness: 60,
-                    damping: 12
+                    damping: 12,
+                    getPortraitLookAt: () => this.cat.getHeadWorldPosition?.()
                 }
             );
+            this.spring.gameplayOffset.copy(this.gameplayOffset);
+            this.spring.portraitOffset.copy(this.portraitOffset);
+            this.spring.gameplayLookAtOffset.copy(this.gameplayLookAtOffset);
+            this.spring.getPortraitLookAt = () => this.cat.getHeadWorldPosition?.();
             
             // Set custom look-at target (near dock, looking forward)
             // IMPORTANT: Use saved position (not affected by bone attachments)
             this.spring.getLookAtTarget = () => {
-                // Use saved position (not affected by bone attachments)
                 const catPos = this.cat.getSavedPosition();
-                // Look forward from dock toward water (less of dock visible)
                 return new THREE.Vector3(
-                    catPos.x,
-                    catPos.y + 1.5, // Look higher above dock level to see less dock
-                    catPos.z + 4 // Look further forward toward water (positive Z)
+                    catPos.x + this.gameplayLookAtOffset.x,
+                    catPos.y + this.gameplayLookAtOffset.y,
+                    catPos.z + this.gameplayLookAtOffset.z
                 );
             };
             
@@ -135,8 +157,17 @@ export class Camera {
     }
     
     update(dt) {
-        // Update spring camera follow if initialized
+        const blendDiff = this.portraitTarget - this.portraitBlend;
+        if (Math.abs(blendDiff) > 0.0005) {
+            this.portraitBlend += blendDiff * Math.min(1, dt * this.portraitBlendSpeed);
+        } else {
+            this.portraitBlend = this.portraitTarget;
+        }
+
         if (this.spring) {
+            this.spring.portraitBlend = this.portraitBlend;
+            const stiffness = 60 * (1 - this.portraitBlend * 0.35);
+            this.spring.stiffness = stiffness;
             this.spring.update(dt);
         }
     }

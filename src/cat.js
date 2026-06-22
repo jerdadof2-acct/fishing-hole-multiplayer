@@ -412,6 +412,34 @@ export class Cat {
         return this.rodTipMarker || this.leftHandBone || null;
     }
 
+    getHeadWorldPosition() {
+        const anchor = this.catAnchor || this.model;
+        const fallback = () => {
+            const pos = anchor?.getWorldPosition(new THREE.Vector3()) || new THREE.Vector3();
+            return pos.add(new THREE.Vector3(0, 1.55, 0));
+        };
+
+        if (!this.model) return fallback();
+
+        const head =
+            this.headBone ||
+            this.model.getObjectByName('mixamorig:Head') ||
+            this.model.getObjectByName('mixamorigHead');
+
+        if (!head) return fallback();
+
+        if (this.mixer) {
+            this.updateSkeleton();
+        }
+        head.updateWorldMatrix(true, false);
+        return head.getWorldPosition(new THREE.Vector3());
+    }
+
+    enterPortraitIdle() {
+        if (!this.useGlbAnimations) return;
+        this.playIdle();
+    }
+
     /**
      * Place the cat so the bottom of its bounding box sits on the platform surface.
      * @param {THREE.Vector3} surfacePos
@@ -2255,7 +2283,7 @@ export class Cat {
                  * @param {THREE.Vector3|null} bobberPosition - Position of bobber to face toward (null if no bobber)
                  * @param {boolean} isFishing - True when casting, reeling, or fighting
                  */
-                update(delta, isIdle = true, bobberPosition = null, isFishing = false) {
+                update(delta, isIdle = true, bobberPosition = null, isFishing = false, portraitMode = false) {
                     const anchor = this.catAnchor || this.model;
                     if (!anchor) return;
                     
@@ -2276,7 +2304,12 @@ export class Cat {
                         anchor.rotation.x = 0;
                         anchor.rotation.z = 0;
 
-                        if (bobberPosition) {
+                        if (portraitMode) {
+                            let angleDiff = this.baseRotationY - anchor.rotation.y;
+                            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                            anchor.rotation.y += angleDiff * Math.min(1, delta * 3);
+                        } else if (bobberPosition) {
                             const catPos = anchor.position.clone();
                             const toBobber = bobberPosition.clone().sub(catPos);
                             const distance = toBobber.length();
