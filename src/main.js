@@ -799,10 +799,9 @@ export class Game {
         
         // Reposition cat on new platform
         const newPlatformPos = this.platform.getSurfacePosition();
-        if (this.cat && this.cat.getModel()) {
-            this.cat.getModel().position.copy(newPlatformPos);
-            this.cat.savedPosition = newPlatformPos.clone();
-            console.log('[LOCATION SWITCH] Cat repositioned to:', newPlatformPos);
+        if (this.cat) {
+            this.cat.positionOnSurface(newPlatformPos);
+            console.log('[LOCATION SWITCH] Cat repositioned to:', this.cat.savedPosition);
         }
     }
 }

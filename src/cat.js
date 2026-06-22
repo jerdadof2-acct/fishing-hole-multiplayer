@@ -4,7 +4,7 @@ import { AnimationMixer } from 'three';
 
 const CAT_MODEL_URL = 'assets/glb/Cat.glb';
 const CAT_TARGET_HEIGHT = 1.75;
-// Camera is behind the cat (-Z); water is ahead (+Z). This model's bind pose faces -Z, so flip 180°.
+// Bind pose faces the camera (-Z). Rotate anchor 180° so cat faces the water (+Z).
 const CAT_FACING_Y = Math.PI;
 
 export class Cat {
@@ -54,6 +54,8 @@ export class Cat {
         this._currentAction = null;
         this.rodTipMarker = null;
         this.rodMesh = null;
+        this.catAnchor = null;
+        this.feetYOffset = 0;
     }
 
     async load() {
@@ -87,14 +89,24 @@ export class Cat {
                     } else {
                         this.findArmBones();
                     }
-                    
-                    // Face the water (+Z) and stand on the platform surface (feet, not hips)
+
+                    this.model.rotation.set(0, 0, 0);
+                    this.model.position.set(0, 0, 0);
+                    this.resetToBindPose();
+
+                    const bindBox = new THREE.Box3().setFromObject(this.model);
+                    this.feetYOffset = -bindBox.min.y;
+
+                    this.catAnchor = new THREE.Group();
+                    this.catAnchor.name = 'CatAnchor';
+                    this.catAnchor.add(this.model);
+
                     this.baseRotationY = CAT_FACING_Y;
                     this.savedRotationY = CAT_FACING_Y;
-                    this.model.rotation.y = CAT_FACING_Y;
-                    
+
                     const dockSurfacePos = this.dock.getSurfacePosition();
                     this.positionOnSurface(dockSurfacePos);
+                    this.playIdle();
                     
                     // Enable shadows and lighten materials
                     this.model.traverse((child) => {
@@ -123,10 +135,10 @@ export class Cat {
                         }
                     });
                     
-                    this.sceneRef.scene.add(this.model);
-                    console.log('Cat model added to scene. Position:', this.model.position);
+                    this.sceneRef.scene.add(this.catAnchor);
+                    console.log('Cat model added to scene. Position:', this.catAnchor.position);
                     console.log('Cat model scale:', this.model.scale);
-                    console.log('Cat model visible:', this.model.visible);
+                    console.log('Cat feet Y offset:', this.feetYOffset);
                     resolve();
                 },
                 undefined,
@@ -151,7 +163,27 @@ export class Cat {
         });
 
         console.log('[CAT] Animations:', Object.keys(this.animationClips).join(', '));
-        this.playIdle();
+    }
+
+    resetToBindPose() {
+        if (!this.model) return;
+        this.model.traverse((child) => {
+            if (child.isSkinnedMesh?.skeleton) {
+                child.skeleton.pose();
+            }
+        });
+    }
+
+    playIdle() {
+        if (this._currentAction) {
+            this._currentAction.fadeOut(0.15);
+            this._currentAction = null;
+        }
+        if (this.mixer) {
+            this.mixer.stopAllAction();
+        }
+        this.resetToBindPose();
+        return null;
     }
 
     playClip(name, { loop = THREE.LoopRepeat, fade = 0.2, onFinished = null } = {}) {
@@ -267,18 +299,19 @@ export class Cat {
      * @param {THREE.Vector3} surfacePos
      */
     positionOnSurface(surfacePos) {
-        if (!this.model || !surfacePos) return;
+        const anchor = this.catAnchor || this.model;
+        if (!anchor || !surfacePos) return;
 
-        this.model.rotation.y = this.baseRotationY;
-        this.model.position.set(surfacePos.x, surfacePos.y, surfacePos.z);
-        this.model.updateMatrixWorld(true);
+        anchor.rotation.set(0, this.baseRotationY, 0);
+        anchor.position.set(
+            surfacePos.x,
+            surfacePos.y + this.feetYOffset + 0.02,
+            surfacePos.z
+        );
+        anchor.updateMatrixWorld(true);
 
-        const box = new THREE.Box3().setFromObject(this.model);
-        this.model.position.y += (surfacePos.y + 0.02) - box.min.y;
-
-        this.model.updateMatrixWorld(true);
-        this.savedPosition = this.model.position.clone();
-        this.savedRotationY = this.model.rotation.y;
+        this.savedPosition = anchor.position.clone();
+        this.savedRotationY = anchor.rotation.y;
 
         console.log('[CAT] Positioned on surface:', this.savedPosition, 'facing Y:', this.baseRotationY);
     }
@@ -2066,7 +2099,7 @@ export class Cat {
     }
 
     getModel() {
-        return this.model;
+        return this.catAnchor || this.model;
     }
     
     /**
@@ -2075,34 +2108,25 @@ export class Cat {
      * @returns {THREE.Vector3} The saved position
      */
                 getSavedPosition() {
-                    // CRITICAL: Always force cat position to saved position
-                    // Bone attachments (especially pivot system) can cause position drift
-                    if (this.savedPosition && this.model) {
-                        // Force position correction on every call to prevent drift
-                        if (this.model.position.distanceTo(this.savedPosition) > 0.01) {
-                            // Only log if drift is significant (to avoid spam)
-                            if (!this._driftWarned || this.model.position.distanceTo(this.savedPosition) > 0.5) {
+                    const anchor = this.catAnchor || this.model;
+                    if (this.savedPosition && anchor) {
+                        if (anchor.position.distanceTo(this.savedPosition) > 0.01) {
+                            if (!this._driftWarned || anchor.position.distanceTo(this.savedPosition) > 0.5) {
                                 if (!this._driftWarned) {
-                                    console.warn('[CAT] Model position drifted, correcting to saved position');
+                                    console.warn('[CAT] Cat anchor drifted, correcting to saved position');
                                     this._driftWarned = true;
                                     setTimeout(() => { this._driftWarned = false; }, 5000);
                                 }
                             }
-                            // Save current rotation before correcting position
-                            const currentRotationY = this.model.rotation.y;
-                            const currentRotationX = this.model.rotation.x;
-                            const currentRotationZ = this.model.rotation.z;
-                            // Force position back to saved position
-                            this.model.position.copy(this.savedPosition);
-                            // Restore ALL rotations (don't let position correction affect rotation)
-                            this.model.rotation.x = currentRotationX;
-                            this.model.rotation.y = currentRotationY;
-                            this.model.rotation.z = currentRotationZ;
+                            const currentRotationY = anchor.rotation.y;
+                            anchor.position.copy(this.savedPosition);
+                            anchor.rotation.x = 0;
+                            anchor.rotation.y = currentRotationY;
+                            anchor.rotation.z = 0;
                         }
                         return this.savedPosition.clone();
                     }
-                    // Fallback to model position if saved position not set
-                    return this.model ? this.model.position.clone() : new THREE.Vector3(0, 0.36, 3.4);
+                    return anchor ? anchor.position.clone() : new THREE.Vector3(0, 0.36, 3.4);
                 }
     
                 /**
@@ -2113,49 +2137,43 @@ export class Cat {
                  * @param {boolean} isFishing - True when casting, reeling, or fighting
                  */
                 update(delta, isIdle = true, bobberPosition = null, isFishing = false) {
-                    if (!this.model) return;
+                    const anchor = this.catAnchor || this.model;
+                    if (!anchor) return;
                     
-                    // CRITICAL: Force cat position to saved position every frame
-                    // This prevents bone attachments (like pivot system) from moving the cat
                     if (this.savedPosition) {
-                        if (this.model.position.distanceTo(this.savedPosition) > 0.01) {
-                            // Save current rotation before correcting position
-                            const currentRotationY = this.model.rotation.y;
-                            const currentRotationX = this.model.rotation.x;
-                            const currentRotationZ = this.model.rotation.z;
-                            // Force position back to saved position
-                            this.model.position.copy(this.savedPosition);
-                            // Restore rotations
-                            this.model.rotation.x = currentRotationX;
-                            this.model.rotation.y = currentRotationY;
-                            this.model.rotation.z = currentRotationZ;
+                        if (anchor.position.distanceTo(this.savedPosition) > 0.01) {
+                            const currentRotationY = anchor.rotation.y;
+                            anchor.position.copy(this.savedPosition);
+                            anchor.rotation.set(0, currentRotationY, 0);
                         }
                     }
                     
                     if (this.useGlbAnimations) {
-                        if (this.mixer) {
+                        if (this.mixer && this._currentAction) {
                             this.mixer.update(delta);
                         }
 
-                        if (bobberPosition && this.model) {
-                            const catPos = this.model.position.clone();
+                        anchor.rotation.x = 0;
+                        anchor.rotation.z = 0;
+
+                        if (bobberPosition) {
+                            const catPos = anchor.position.clone();
                             const toBobber = bobberPosition.clone().sub(catPos);
                             const distance = toBobber.length();
                             if (distance > 0.5) {
                                 toBobber.y = 0;
                                 toBobber.normalize();
                                 const targetAngle = Math.atan2(toBobber.x, toBobber.z);
-                                let angleDiff = targetAngle - this.model.rotation.y;
+                                let angleDiff = targetAngle - anchor.rotation.y;
                                 while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
                                 while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-                                this.model.rotation.y += angleDiff * Math.min(1, delta * 2);
+                                anchor.rotation.y += angleDiff * Math.min(1, delta * 2);
                             }
-                        } else if (this.model) {
-                            // Idle: face the water (+Z), not the camera
-                            let angleDiff = this.baseRotationY - this.model.rotation.y;
+                        } else {
+                            let angleDiff = this.baseRotationY - anchor.rotation.y;
                             while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
                             while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-                            this.model.rotation.y += angleDiff * Math.min(1, delta * 4);
+                            anchor.rotation.y += angleDiff * Math.min(1, delta * 4);
                         }
                         return;
                     }
