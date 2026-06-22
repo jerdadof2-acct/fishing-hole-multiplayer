@@ -883,8 +883,8 @@ export class Fishing {
                 this.starfishCelebration.active = false;
             }
         }
-        // GLB rod tip marker — skip when procedural bendable rod is active
-        if (!this.tempRodTip && this.cat?.updateRodTipMarker) {
+        // Update rod tip world position (GLB cat: tip tracks animated rod each frame)
+        if (this.cat?.updateRodTipMarker) {
             this.cat.updateRodTipMarker();
         } else if (this.rodModel && this.rodTipBone) {
             this.cat.getModel().updateMatrixWorld(true);
@@ -2066,7 +2066,7 @@ export class Fishing {
     }
 
     getRodTipPosition() {
-        if (!this.tempRodTip && this.cat?.updateRodTipMarker) {
+        if (this.cat?.updateRodTipMarker) {
             this.cat.updateRodTipMarker();
         }
         const rodTipWorld = new THREE.Vector3();

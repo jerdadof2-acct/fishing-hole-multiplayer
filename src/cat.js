@@ -300,16 +300,6 @@ export class Cat {
         });
     }
 
-    /** Hide the skinned rod baked into Cat.glb when using procedural TempRod. */
-    setEmbeddedRodVisible(visible) {
-        if (this.rodMesh) {
-            this.rodMesh.visible = visible;
-        }
-        if (this.rodTipNode) {
-            this.rodTipNode.visible = visible;
-        }
-    }
-
     setupRodTip() {
         const tipNamePatterns = [
             /^rodtip$/i,
