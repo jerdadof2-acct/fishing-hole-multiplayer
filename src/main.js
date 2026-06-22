@@ -175,7 +175,7 @@ export class Game {
             
             // Position cat on platform (feet aligned to dock surface)
             const platformPos = this.platform.getSurfacePosition();
-            this.cat.positionOnSurface(platformPos);
+            this.cat.positionOnSurface(platformPos, true);
             console.log('[PLATFORM] Cat positioned at:', this.cat.savedPosition);
             
             loadingProgress.update(92, 'Rigging fishing line and bobber...');
@@ -410,6 +410,10 @@ export class Game {
         }
 
         this.updateIdlePortrait();
+
+        if (this.camera) {
+            this.camera.advancePortraitBlend(delta);
+        }
         const portraitBlend = this.camera?.portraitBlend ?? 0;
         
         // Update cat with sway and bobber tracking (only when idle - not casting or reeling)
@@ -492,9 +496,9 @@ export class Game {
             this.splash.update(delta);
         }
 
-        // Update camera spring follow
+        // Update camera spring follow (after cat has turned for portrait look-at)
         if (this.camera) {
-            this.camera.update(delta);
+            this.camera.updateSpring(delta);
         }
 
         // Render
@@ -868,7 +872,7 @@ export class Game {
         // Reposition cat on new platform
         const newPlatformPos = this.platform.getSurfacePosition();
         if (this.cat) {
-            this.cat.positionOnSurface(newPlatformPos);
+            this.cat.positionOnSurface(newPlatformPos, true);
             console.log('[LOCATION SWITCH] Cat repositioned to:', this.cat.savedPosition);
         }
     }

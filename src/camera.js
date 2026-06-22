@@ -156,7 +156,7 @@ export class Camera {
         this.camera.updateProjectionMatrix();
     }
     
-    update(dt) {
+    advancePortraitBlend(dt) {
         const blendDiff = this.portraitTarget - this.portraitBlend;
         if (Math.abs(blendDiff) > 0.0005) {
             this.portraitBlend += blendDiff * Math.min(1, dt * this.portraitBlendSpeed);
@@ -168,8 +168,18 @@ export class Camera {
             this.spring.portraitBlend = this.portraitBlend;
             const stiffness = 60 * (1 - this.portraitBlend * 0.35);
             this.spring.stiffness = stiffness;
+        }
+    }
+
+    updateSpring(dt) {
+        if (this.spring) {
             this.spring.update(dt);
         }
+    }
+    
+    update(dt) {
+        this.advancePortraitBlend(dt);
+        this.updateSpring(dt);
     }
 }
 
