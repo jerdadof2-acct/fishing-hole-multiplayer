@@ -875,8 +875,6 @@ export class Fishing {
         const targets = computeRodBendTowardBobber({
             localTipPos,
             localBobberPos,
-            rodTipWorld: rodTipWorldPos,
-            bobberWorld: bobberWorldPos,
             rodRoot: tempRodRoot,
             fishPullWorld,
             distance,
