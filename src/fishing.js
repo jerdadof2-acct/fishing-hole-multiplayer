@@ -3,6 +3,12 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Physics } from './physics.js';
 import { FishingRope } from './rope.js';
 import { updateRodTip } from './fishing/rod.js';
+import {
+    applyRodSectionBend,
+    collectBlankSections,
+    computeRodBendTowardBobber,
+    resetRodSectionBend
+} from './fishing/rodBend.js';
 import { attachRodToHand } from './fishing/attachRod.js';
 import { aimRodForwardAt45 } from './fishing/aimRod.js';
 
@@ -803,6 +809,79 @@ export class Fishing {
         }
     }
 
+    _estimateLineTension(fishInstance, delta) {
+        if (!this.rope || !this.bobber?.visible) {
+            return 0;
+        }
+
+        const rodTip = this.getRodTipPosition();
+        const bobberPos = this.bobber.position;
+
+        if (fishInstance && this.fishOnLine && fishInstance.state === 'HOOKED_FIGHT' && fishInstance.mesh) {
+            const moveX = fishInstance.mesh.position.x - (fishInstance._lastPosX ?? fishInstance.mesh.position.x);
+            const moveZ = fishInstance.mesh.position.z - (fishInstance._lastPosZ ?? fishInstance.mesh.position.z);
+            const moveSpeed = Math.sqrt(moveX * moveX + moveZ * moveZ) / Math.max(0.016, delta);
+            fishInstance._lastPosX = fishInstance.mesh.position.x;
+            fishInstance._lastPosZ = fishInstance.mesh.position.z;
+            return Math.min(2.2, moveSpeed * 0.55 + 0.55);
+        }
+
+        if (this.isReeling) {
+            const straightDist = rodTip.distanceTo(bobberPos);
+            const ropeRatio = this.rope.ropeLen / Math.max(straightDist, 0.1);
+            return Math.min(1.6, ropeRatio * 0.85 + 0.25);
+        }
+
+        if (this.bobber.userData?.floating) {
+            return 0.22;
+        }
+
+        return 0.1;
+    }
+
+    _updateTempRodBend(tempRodRoot, delta, fishInstance) {
+        if (!this.tempRodTip || !tempRodRoot) {
+            return;
+        }
+
+        const bobberActive = this.bobber?.visible && !this.isCasting;
+        const isFighting = this.fishOnLine && fishInstance?.state === 'HOOKED_FIGHT';
+        const isWaiting = bobberActive && this.bobber.userData?.floating && !this.isReeling && !this.fishOnLine;
+        const isReelingLine = bobberActive && this.isReeling;
+        const shouldBendTowardBobber = bobberActive && (isFighting || isReelingLine || isWaiting);
+
+        const blankSections = collectBlankSections(this.tempRodTip, tempRodRoot);
+
+        if (!shouldBendTowardBobber || !blankSections.length) {
+            this.rodBendTime = 0;
+            resetRodSectionBend(blankSections, this.rodBendState, delta);
+            return;
+        }
+
+        const bobberWorldPos = new THREE.Vector3();
+        const rodTipWorldPos = new THREE.Vector3();
+        this.bobber.getWorldPosition(bobberWorldPos);
+        this.tempRodTip.getWorldPosition(rodTipWorldPos);
+
+        const distance = rodTipWorldPos.distanceTo(bobberWorldPos);
+        const localBobberPos = tempRodRoot.worldToLocal(bobberWorldPos.clone());
+        const localTipPos = tempRodRoot.worldToLocal(rodTipWorldPos.clone());
+        const lineTension = this._estimateLineTension(fishInstance, delta);
+        const mode = isFighting ? 'fight' : isReelingLine ? 'reel' : 'idle';
+
+        const targets = computeRodBendTowardBobber({
+            localTipPos,
+            localBobberPos,
+            distance,
+            fishWeight: fishInstance?.currentFish?.weight ?? 0,
+            lineTension,
+            mode
+        });
+
+        this.rodBendTime += delta;
+        applyRodSectionBend(blankSections, this.rodBendState, targets, delta, this.rodBendTime);
+    }
+
     update(delta) {
         this.updateStarlightMode();
         this.updateStarlightEffect(delta);
@@ -1213,209 +1292,27 @@ export class Fishing {
                 
                 // Continue with rod bend logic if needed
                 if (catModel && tempRodRoot) {
-                    
-                    // Check if fighting - apply rod bend toward bobber during fight
                     const fishInstance = this.sceneRef?.fish;
-                    const isFighting = this.fishOnLine && fishInstance?.state === 'HOOKED_FIGHT' && this.bobber?.visible;
-                    
-                    if (isFighting && this.bobber && this.tempRodTip) {
-                        // Get bobber position in world space
-                        const bobberWorldPos = new THREE.Vector3();
-                        this.bobber.getWorldPosition(bobberWorldPos);
-                        
-                        // Get rod tip position in world space
-                        const rodTipWorldPos = new THREE.Vector3();
-                        this.tempRodTip.getWorldPosition(rodTipWorldPos);
-                        
-                        // Calculate direction from rod tip to bobber
-                        const toBobber = bobberWorldPos.clone().sub(rodTipWorldPos);
-                        const distance = toBobber.length();
-                        
-                        if (distance > 0.1) { // Only bend if bobber is far enough away
-                            toBobber.normalize();
-                            
-                            // Max bend distance for scaling bend amount
-                            const maxBendDistance = 10.0;
-                            
-                            // Get bobber direction in rod root's local space
-                            const localBobberPos = bobberWorldPos.clone();
-                            tempRodRoot.worldToLocal(localBobberPos);
-                            const localRodTipPos = rodTipWorldPos.clone();
-                            tempRodRoot.worldToLocal(localRodTipPos);
-                            
-                            // Calculate offset from rod tip to bobber in local space
-                            const localOffset = localBobberPos.clone().sub(localRodTipPos);
-                            
-                            // Rod extends along +Y in local space
-                            // Calculate how far left/right the bobber is relative to rod forward (+Y)
-                            // X axis: left (-X) or right (+X)
-                            // Z axis: forward/backward (not used for side bend)
-                            
-                            // Get the projection onto the XZ plane (perpendicular to rod +Y)
-                            // We want to know how far left/right the bobber is
-                            const xzOffset = new THREE.Vector3(localOffset.x, 0, localOffset.z);
-                            const lateralDistance = xzOffset.length();
-                            
-                            // Calculate lateral direction (left or right)
-                            // X component tells us: negative = left, positive = right
-                            // Normalize to get direction, then use X component to determine bend direction
-                            const lateralDir = lateralDistance > 0.01 ? xzOffset.normalize() : new THREE.Vector3(0, 0, 1);
-                            
-                            // Calculate bend amount based on how far off-center the bobber is
-                            // More distance from center = more bend
-                            // Use X component to determine left (-) or right (+)
-                            const maxLateralDistance = 8.0; // Maximum expected lateral distance for full bend
-                            const lateralFactor = Math.min(1.0, lateralDistance / maxLateralDistance);
-                            
-                            // Bend direction: 
-                            // - Bobber at +X (right of rod): need negative Z rotation to bend right (toward +X)
-                            // - Bobber at -X (left of rod): need positive Z rotation to bend left (toward -X)
-                            // Invert the X component because positive Z rotation bends away from +X (toward -X)
-                            // So negative X (left) = positive rotation (bends toward left), positive X (right) = negative rotation (bends toward right)
-                            const bendDirection = -lateralDir.x; // Invert: negative X (left) = positive rotation, positive X (right) = negative rotation
-                            
-                            // Calculate bend amount based on lateral distance, fish distance, and fish weight
-                            // Closer fish = more visible bend, further fish = less visible
-                            // Bigger fish = more dramatic bend
-                            // Maximum bend when fish is at max lateral distance
-                            const baseMaxBendAngle = THREE.MathUtils.degToRad(18); // Increased from 15 to 18 degrees for slightly more bend
-                            const distanceFactor = Math.min(1.0, 1.0 - (distance / maxBendDistance) * 0.3); // Slight reduction for far fish
-                            
-                            // Scale bend amount based on fish weight - bigger fish = more dramatic bend
-                            // Small fish (1-3 lbs): base bend (1.0x)
-                            // Medium fish (3-6 lbs): 1.2x bend
-                            // Big fish (6-10 lbs): 1.5x bend
-                            // Large fish (10-20 lbs): 1.8x bend
-                            // Trophy fish (20+ lbs): 2.2x bend
-                            let weightMultiplier = 1.0; // Default for small fish
-                            if (fishInstance?.currentFish?.weight) {
-                                const fishWeight = fishInstance.currentFish.weight;
-                                if (fishWeight < 3.0) {
-                                    weightMultiplier = 1.0; // Small fish: base bend
-                                } else if (fishWeight < 6.0) {
-                                    weightMultiplier = 1.2; // Medium fish: 20% more bend
-                                } else if (fishWeight < 10.0) {
-                                    weightMultiplier = 1.5; // Big fish: 50% more bend
-                                } else if (fishWeight < 20.0) {
-                                    weightMultiplier = 1.8; // Large fish: 80% more bend
-                                } else {
-                                    weightMultiplier = 2.2; // Trophy fish: 120% more bend (very dramatic)
-                                }
-                            }
-                            
-                            // Calculate final bend amount with weight scaling
-                            const maxBendAngle = baseMaxBendAngle * weightMultiplier;
-                            const bendAmount = maxBendAngle * lateralFactor * distanceFactor;
-                            
-                            // Calculate final bend angle with direction
-                            const baseBendAngle = bendAmount * bendDirection;
-                            
-                            // Traverse up from tip to find all blank sections (now 7 sections)
-                            // Collect all blank sections in order from tip to base
-                            const blankSections = [];
-                            let current = this.tempRodTip.parent; // Should be blank7 (tip)
-                            
-                            while (current && current !== tempRodRoot) {
-                                const name = current.name || '';
-                                if (name.includes('Blank') || name.includes('RodBlank')) {
-                                    blankSections.push(current);
-                                }
-                                current = current.parent;
-                            }
-                            
-                            // blankSections is now ordered from tip (index 0) to base (index 6)
-                            // blankSections[0] = blank7 (tip), blankSections[6] = blank1 (base)
-                            
-                            // Apply progressive bend to all 7 blank sections with fluid sway
-                            // Reduced bend percentages for more natural look
-                            // Progressive percentages: 90%, 75%, 60%, 45%, 30%, 15%, 5%
-                            const bendPercentages = [0.9, 0.75, 0.60, 0.45, 0.30, 0.15, 0.05];
-                            
-                            // Add fluid sway - oscillate the bend slightly for natural movement
-                            // Use time-based animation for smooth, fluid sway
-                            this.rodBendTime += delta;
-                            const swayFrequency = 2.5; // How fast the sway oscillates
-                            const swayAmplitude = 0.15; // How much extra movement (15% variation)
-                            const sway1 = Math.sin(this.rodBendTime * swayFrequency) * swayAmplitude;
-                            const sway2 = Math.sin(this.rodBendTime * swayFrequency * 1.7) * swayAmplitude * 0.5;
-                            const totalSway = (sway1 + sway2) * 1.5; // Combined sway for fluidity
-                            
-                            // Apply bend with smooth interpolation and fluid sway
-                            for (let i = 0; i < blankSections.length && i < bendPercentages.length; i++) {
-                                const section = blankSections[i];
-                                const sectionId = section.uuid || section.name;
-                                
-                                // Calculate target bend with sway
-                                const bendPercent = bendPercentages[i];
-                                const targetBend = baseBendAngle * bendPercent;
-                                
-                                // Add sway - more sway at tip (full), less at base (reduced)
-                                const swayFactor = 1.0 - (i / blankSections.length) * 0.7; // Tip gets full sway, base gets 30%
-                                const swayedBend = targetBend + (totalSway * targetBend * swayFactor);
-                                
-                                // Store target in state for interpolation
-                                if (!this.rodBendState[sectionId]) {
-                                    this.rodBendState[sectionId] = { current: 0, target: 0 };
-                                }
-                                this.rodBendState[sectionId].target = swayedBend;
-                                
-                                // Smooth interpolation for fluid movement (lerp toward target)
-                                const lerpSpeed = 12.0; // How fast sections respond (higher = snappier)
-                                const current = this.rodBendState[sectionId].current;
-                                const target = this.rodBendState[sectionId].target;
-                                const lerped = THREE.MathUtils.lerp(current, target, lerpSpeed * delta);
-                                this.rodBendState[sectionId].current = lerped;
-                                
-                                // Apply smooth, interpolated bend
-                                section.rotation.z = lerped;
-                            }
-                            
-                            // Handle stays straight (rotation.z = 0, inherits parent rotation only)
-                        }
-                    } else {
-                        // Not fighting - smoothly reset rod bend rotations and add micro sway if idle
-                        // Reset bend state
-                        this.rodBendTime = 0; // Reset sway timer
-                        
-                        // Smoothly lerp all sections back to zero rotation
-                        let current = this.tempRodTip?.parent;
-                        while (current && current !== tempRodRoot) {
-                            const name = current.name || '';
-                            if (name.includes('Blank') || name.includes('RodBlank')) {
-                                const sectionId = current.uuid || current.name;
-                                
-                                // Initialize state if needed
-                                if (!this.rodBendState[sectionId]) {
-                                    this.rodBendState[sectionId] = { current: current.rotation.z || 0, target: 0 };
-                                }
-                                
-                                // Smoothly lerp toward zero
-                                this.rodBendState[sectionId].target = 0;
-                                const lerpSpeed = 8.0; // Slower reset for smooth transition
-                                const currentRot = this.rodBendState[sectionId].current;
-                                const lerped = THREE.MathUtils.lerp(currentRot, 0, lerpSpeed * delta);
-                                this.rodBendState[sectionId].current = lerped;
-                                current.rotation.z = lerped;
-                            }
-                            current = current.parent;
-                        }
-                        
-                        // Add micro sway if idle
+                    this._updateTempRodBend(tempRodRoot, delta, fishInstance);
+
+                    const bobberActive = this.bobber?.visible && !this.isCasting;
+                    const isFighting = this.fishOnLine && fishInstance?.state === 'HOOKED_FIGHT';
+                    const isWaiting = bobberActive && this.bobber.userData?.floating && !this.isReeling && !this.fishOnLine;
+                    const isReelingLine = bobberActive && this.isReeling;
+                    const rodEngaged = bobberActive && (isFighting || isReelingLine || isWaiting);
+
+                    if (!rodEngaged) {
                         const isIdle = !this.isCasting && !this.isReeling;
                         if (isIdle) {
                             const t = performance.now() * 0.001;
-                            // More visible sway - increased amplitude from 0.002 to 0.008 (4x more visible)
-                            // Multiple frequencies for natural, organic movement
-                            const sway1 = Math.sin(t * 1.2) * 0.008; // Primary slow sway
-                            const sway2 = Math.sin(t * 2.1) * 0.004; // Secondary faster component
-                            const sway3 = Math.sin(t * 0.8) * 0.003; // Slow drift component
-                            const microSway = sway1 + sway2 + sway3; // Combined sway for natural movement
-                            
-                            // Apply Z-axis rotation (side-to-side sway)
+                            const sway1 = Math.sin(t * 1.2) * 0.008;
+                            const sway2 = Math.sin(t * 2.1) * 0.004;
+                            const sway3 = Math.sin(t * 0.8) * 0.003;
+                            const microSway = sway1 + sway2 + sway3;
+
                             const swayQuatZ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), microSway);
                             tempRodRoot.quaternion.multiply(swayQuatZ);
-                            
-                            // Add slight X-axis rotation (front-back gentle nod) for more organic feel
+
                             const nod = Math.sin(t * 0.9) * 0.003;
                             const nodQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), nod);
                             tempRodRoot.quaternion.multiply(nodQuat);
@@ -1562,41 +1459,14 @@ export class Fishing {
             const t = this.sceneRef.clock.elapsedTime;
             this.rope.update(delta, this.sceneRef.camera, t);
             
-            // Calculate line tension for rod tip wiggle (fishInstance already declared above)
-            let lineTension = 0;
+            // Calculate line tension for rod tip wiggle (GLB rod fallback only)
+            const lineTension = this._estimateLineTension(fishInstance, delta);
             
-            if (this.rope && this.bobber && this.bobber.visible) {
-                const rodTip = this.getRodTipPosition();
-                const bobberPos = this.bobber.position;
-                
-                if (fishInstance && this.fishOnLine && fishInstance.state === 'HOOKED_FIGHT') {
-                    // During fight: tension based on fish movement/intensity
-                    const moveX = fishInstance.mesh.position.x - (fishInstance._lastPosX || fishInstance.mesh.position.x);
-                    const moveZ = fishInstance.mesh.position.z - (fishInstance._lastPosZ || fishInstance.mesh.position.z);
-                    const moveSpeed = Math.sqrt(moveX * moveX + moveZ * moveZ) / delta;
-                    fishInstance._lastPosX = fishInstance.mesh.position.x;
-                    fishInstance._lastPosZ = fishInstance.mesh.position.z;
-                    
-                    // Tension proportional to fish struggle (0.5 to 2.0)
-                    lineTension = Math.min(2.0, moveSpeed * 0.5 + 0.5);
-                } else if (this.isReeling) {
-                    // While reeling: tension based on rope tautness
-                    const straightDist = rodTip.distanceTo(bobberPos);
-                    const ropeRatio = this.rope.ropeLen / Math.max(straightDist, 0.1);
-                    // Tighter rope = more tension (0.3 to 1.5)
-                    lineTension = Math.min(1.5, ropeRatio * 0.8 + 0.3);
-                } else if (this.bobber.userData.floating) {
-                    // Idle: minimal tension from gentle line sag
-                    lineTension = 0.1;
-                }
-            }
-            
-            // Update rod tip wiggle based on tension
-            if (this.rodModel || this.rodTipBone || this.tempRodTip) {
+            if (this.rodModel || (this.rodTipBone && !this.tempRodTip)) {
                 const rod = {
                     tipBone: this.rodTipBone,
                     rodModel: this.rodModel,
-                    tempRodTip: this.tempRodTip
+                    tempRodTip: null
                 };
                 updateRodTip(rod, lineTension, delta);
             }
