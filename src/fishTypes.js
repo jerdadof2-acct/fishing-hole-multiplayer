@@ -47,7 +47,10 @@ export const FishTypes = [
     { id: 29, name: 'Trophy Tuna', rarity: 'Trophy', minWeight: 80.0, maxWeight: 200.0, value: 800, experience: 94, season: 'All' },
     { id: 30, name: 'Trophy Sturgeon', rarity: 'Trophy', minWeight: 150.0, maxWeight: 400.0, value: 1200, experience: 104, season: 'All' },
     { id: 31, name: 'Trophy Catfish', rarity: 'Trophy', minWeight: 60.0, maxWeight: 150.0, value: 900, experience: 90, season: 'All' },
-    { id: 32, name: 'Trophy King', rarity: 'Trophy', minWeight: 200.0, maxWeight: 500.0, value: 1500, experience: 110, season: 'All' }
+    { id: 32, name: 'Trophy King', rarity: 'Trophy', minWeight: 200.0, maxWeight: 500.0, value: 1500, experience: 110, season: 'All' },
+    
+    // Mythic (33)
+    { id: 33, name: 'Starfish of Eternity', rarity: 'Mythic', minWeight: 120.0, maxWeight: 220.0, recordWeight: 250.0, value: 5000, experience: 240, season: 'All' }
 ];
 
 // Fish facts database
@@ -84,7 +87,8 @@ export const FishFacts = {
     'Trophy Tuna': { fact: 'Ocean giant worth its weight in sashimi.', fun: 'Sushi price tag included!', real: 'Can weigh over 1,000 pounds.' },
     'Trophy Sturgeon': { fact: 'Ancient giant of the rivers.', fun: 'Older than your grandpa and twice as wise!', real: 'Some reach over 15 feet long.' },
     'Trophy Catfish': { fact: 'Freshwater giant with suction cup mouth.', fun: 'Named "Trophy" because it won first place!', real: 'World record catfish was over 300 lbs.' },
-    'Trophy King': { fact: 'The ultimate catch - king of all fish!', fun: 'Rules the depths with an iron fin!', real: 'Crown jewel of any angler\'s collection.' }
+    'Trophy King': { fact: 'The ultimate catch - king of all fish!', fun: 'Rules the depths with an iron fin!', real: 'Crown jewel of any angler\'s collection.' },
+    'Starfish of Eternity': { fact: 'Born the same night as Halleycat under the comet\'s glow.', fun: 'Remembers every wish whispered to the sea.', real: 'Glows with bioluminescent patterns that mirror constellations.' }
 };
 
 /**
@@ -193,6 +197,10 @@ export function getAllFishTypes() {
  * @returns {string} Image path
  */
 export function getFishImagePath(fishName) {
+    // Special cases for non-standard filenames
+    if (fishName === 'Starfish of Eternity') {
+        return 'assets/images/StarfishofEternity.jpg';
+    }
     // Fish images are in assets/images/ with Title Case names (e.g., "Bass.png", "Ancient Sturgeon.png")
     // Keep the fish name as-is (Title Case with spaces) since that's how the files are named
     return `assets/images/${fishName}.png`;

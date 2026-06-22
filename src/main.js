@@ -442,6 +442,15 @@ export class Game {
             }, this.sfx);
             this.ui.init();
 
+            if (typeof window !== 'undefined') {
+                const params = new URLSearchParams(window.location.search);
+                if (params.has('dev') || params.has('storytest')) {
+                    import('./dev/storyTestPanel.js').then(({ initStoryTestPanel }) => {
+                        initStoryTestPanel(this);
+                    });
+                }
+            }
+
             if (this.player) {
                 this.player.enableSync();
             }

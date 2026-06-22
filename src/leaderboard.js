@@ -20,15 +20,16 @@ export class Leaderboard {
      */
     addCatch(catchData) {
         const { playerName, fishName, weight, locationId, timestamp, reactionTimeMs } = catchData;
+        const hasValidWeight = typeof weight === 'number' && Number.isFinite(weight) && weight > 0;
         const catchEntry = {
             playerName,
             fishName,
-            weight,
+            weight: hasValidWeight ? weight : null,
             timestamp: timestamp || Date.now()
         };
         
         // Add to location leaderboard
-        if (locationId !== undefined && locationId !== null) {
+        if (hasValidWeight && locationId !== undefined && locationId !== null) {
             if (!this.leaderboards[locationId]) {
                 this.leaderboards[locationId] = [];
             }
@@ -43,19 +44,21 @@ export class Leaderboard {
         }
         
         // Add to global leaderboard
-        this.global.push(catchEntry);
-        
-        // Sort by weight (descending) and keep top 10
-        this.global.sort((a, b) => b.weight - a.weight);
-        if (this.global.length > 10) {
-            this.global = this.global.slice(0, 10);
+        if (hasValidWeight) {
+            this.global.push(catchEntry);
+            
+            // Sort by weight (descending) and keep top 10
+            this.global.sort((a, b) => b.weight - a.weight);
+            if (this.global.length > 10) {
+                this.global = this.global.slice(0, 10);
+            }
         }
 
         if (typeof reactionTimeMs === 'number' && Number.isFinite(reactionTimeMs)) {
             this.updateSpeedBoard({
                 playerName,
                 fishName,
-                weight,
+                weight: catchEntry.weight,
                 reactionTimeMs: Math.max(0, Math.round(reactionTimeMs)),
                 timestamp: catchEntry.timestamp
             });

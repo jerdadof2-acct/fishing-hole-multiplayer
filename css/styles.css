@@ -1986,9 +1986,16 @@ canvas {
 }
 
 .relic-popup-location {
-    margin: 0 0 1rem;
+    margin: 0 0 0.35rem;
     font-size: 0.9rem;
     color: rgba(186, 230, 253, 0.85);
+}
+
+.relic-popup-story-region {
+    margin: 0 0 1rem;
+    font-size: 0.8rem;
+    color: rgba(148, 163, 184, 0.9);
+    font-style: italic;
 }
 
 .relic-popup-image-wrap {
@@ -2151,6 +2158,57 @@ canvas {
     font-size: 0.68rem;
     line-height: 1.4;
     font-style: italic;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+/* Local story test panel — only when URL has ?dev=1 or ?storytest=1 */
+#story-test-panel {
+    position: fixed;
+    left: 12px;
+    bottom: 72px;
+    z-index: 11000;
+    width: min(92vw, 220px);
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(12, 18, 40, 0.94);
+    border: 1px solid rgba(255, 220, 140, 0.45);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+    font-family: 'Poppins', 'Arial', sans-serif;
+    color: #f8f4e8;
+}
+
+.story-test-panel-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #fde68a;
+    margin-bottom: 8px;
+}
+
+#story-test-panel button {
+    display: block;
+    width: 100%;
+    margin: 0 0 6px;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 220, 140, 0.18);
+    color: #fff8e8;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+}
+
+#story-test-panel button:hover {
+    background: rgba(255, 220, 140, 0.32);
+}
+
+.story-test-panel-hint {
+    margin: 4px 0 0;
+    font-size: 0.65rem;
+    line-height: 1.35;
     color: rgba(255, 255, 255, 0.55);
 }
 

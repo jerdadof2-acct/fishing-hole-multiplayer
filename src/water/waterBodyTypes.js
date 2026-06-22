@@ -80,6 +80,24 @@ export const WaterBodyTypes = {
         waveAmplitude: 0.15,                     // Larger wave amplitude (ocean-specific)
         windScroll1: new THREE.Vector2(0.035, 0.018),
         windScroll2: new THREE.Vector2(-0.02, 0.026)
+    },
+
+    CELESTIAL: {
+        name: 'Celestial Depths',
+        deepColor: new THREE.Color(0x05060f),      // Near-black base tone
+        shallowColor: new THREE.Color(0x0b1632),   // Subtle indigo highlight
+        fogColor: new THREE.Color(0x04040a),       // Midnight fog tint
+        fogDepth: 42.0,                           // Deep fog to keep horizon soft
+        fogIntensity: 0.8,                        // Strong fog for dreamy blend
+        turbidity: 0.1,                           // Keep water clear for glow
+        absorption: 0.95,                         // Heavy absorption for depth darkness
+        opacity: 0.98,                            // Almost opaque to hide ground plane
+        sparkleStrength: 0.6,                     // Enhanced sparkle for star shimmer
+        waveScale: 1.4,                           // Gentle undulation
+        waveSpeed: 1.1,                           // Slow drift
+        waveAmplitude: 0.05,                      // Calm surface
+        windScroll1: new THREE.Vector2(0.01, 0.005),
+        windScroll2: new THREE.Vector2(-0.006, 0.008)
     }
 };
 

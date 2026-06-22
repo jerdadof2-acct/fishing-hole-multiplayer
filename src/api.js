@@ -1,5 +1,5 @@
 /**
- * API Client for Kitty Creek Friends System
+ * API Client for Halley's Big Catch Friends System
  * Handles all communication with the backend server
  */
 
@@ -12,7 +12,7 @@ export class API {
                 : null;
         const metaBase =
             typeof document !== 'undefined'
-                ? document.querySelector('meta[name="kitty-creek-api-base"]')?.content
+                ? document.querySelector('meta[name="halleys-big-catch-api-base"]')?.content
                 : null;
 
         this.baseURL = this.normalizeBaseURL(globalBase || metaBase || '/api');

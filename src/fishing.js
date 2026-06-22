@@ -349,6 +349,28 @@ export class Fishing {
         return 1.6;
     }
 
+    _pinGentleReunionLine(fishInstance) {
+        if (!this.rope || !this.bobber || !fishInstance?.mesh) return;
+
+        const fx = fishInstance.mesh.position.x;
+        const fz = fishInstance.mesh.position.z;
+        const waterHeight = this.water.getWaterHeight(fx, fz);
+
+        this.bobber.position.x = fx;
+        this.bobber.position.z = fz;
+
+        const lastNode = this.rope.rope[this.rope.rope.length - 1];
+        if (!lastNode) return;
+
+        lastNode.pos.x = fx;
+        lastNode.pos.z = fz;
+        lastNode.pos.y = waterHeight + 0.12;
+        lastNode.prev.x = fx;
+        lastNode.prev.z = fz;
+        lastNode.prev.y = lastNode.pos.y;
+        this.bobber.position.y = lastNode.pos.y;
+    }
+
     updateStarlightMode() {
         const shouldEnable = this.shouldUseStarlightMode();
         if (shouldEnable && !this.starlightActive) {
@@ -1276,14 +1298,9 @@ export class Fishing {
                     // Smoothly lerp bobber to fish position (prevents snapping)
                     const targetX = fishInstance.mesh.position.x;
                     const targetZ = fishInstance.mesh.position.z;
-                    // During fight, bobber should be below surface (submerged), not above
-                    // Let the rope system handle Y position during fight (it will submerge it)
-                    // Just sync X and Z to fish
-                    
-                    // Use lerp for smooth transition (90% per frame)
-                    this.bobber.position.x = THREE.MathUtils.lerp(this.bobber.position.x, targetX, 0.9);
-                    this.bobber.position.z = THREE.MathUtils.lerp(this.bobber.position.z, targetZ, 0.9);
-                    // Don't lerp Y - let rope system handle submersion during fight
+                    const bobberLerp = fishInstance._gentleReunion ? 1.0 : 0.9;
+                    this.bobber.position.x = THREE.MathUtils.lerp(this.bobber.position.x, targetX, bobberLerp);
+                    this.bobber.position.z = THREE.MathUtils.lerp(this.bobber.position.z, targetZ, bobberLerp);
                     
                     // Update rope's last node to match (BEFORE substeps)
                     lastNode.pos.x = this.bobber.position.x;
@@ -1351,7 +1368,13 @@ export class Fishing {
             
             // Pass camera and time for screen clamping and surface height
             const t = this.sceneRef.clock.elapsedTime;
-            this.rope.update(delta, this.sceneRef.camera, t);
+            const gentleReunionFight = fishInstance?._gentleReunion && fishInstance.state === 'HOOKED_FIGHT';
+            if (gentleReunionFight) {
+                this._pinGentleReunionLine(fishInstance);
+                this.rope.updateLineGeometry(delta);
+            } else {
+                this.rope.update(delta, this.sceneRef.camera, t);
+            }
             
             // Calculate line tension for rod tip wiggle (GLB rod fallback only)
             const lineTension = this._estimateLineTension(fishInstance, delta);
@@ -1615,6 +1638,11 @@ export class Fishing {
         // Skip reel updates during hook freeze period to prevent snap
         if (this.rope?._hookFreezeTime !== undefined && this.rope._hookFreezeTime > 0) {
             return; // Don't reel during freeze
+        }
+
+        // Starfish reunion: fish drives position; reel nudge fights homeward glide
+        if (fish?._gentleReunion && fish.state === 'HOOKED_FIGHT') {
+            return;
         }
         
         // Play reel sound during reeling

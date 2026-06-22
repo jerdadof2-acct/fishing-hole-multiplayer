@@ -50,11 +50,24 @@ export function addWaterParticles(scene) {
 
   const points = new THREE.Points(geo, mat);
   points.name = "WaterParticles";
+  points.userData = points.userData || {};
+  points.userData.rotationSpeed = 0.00025;
+  points.userData.lastRotationTime = performance.now();
   scene.add(points);
 
   points.onBeforeRender = function() {
-    const a = performance.now() * 0.00025;
-    points.rotation.y = a; // subtle drift
+    const speed = points.userData.rotationSpeed ?? 0.00025;
+    const now = performance.now();
+    const lastTime = points.userData.lastRotationTime ?? now;
+
+    if (speed === 0) {
+      points.userData.lastRotationTime = now;
+      return;
+    }
+
+    const delta = now - lastTime;
+    points.rotation.y += delta * speed;
+    points.userData.lastRotationTime = now;
   };
   
   return points;
@@ -80,6 +93,7 @@ function createProceduralParticleSprite() {
   texture.needsUpdate = true;
   return texture;
 }
+
 
 
 

@@ -48,9 +48,11 @@ export class Water2Lake {
         this.waterY = 0;
         this.bounds = null;
         this.riverParticles = null; // River particle system (for rivers only)
+        this.celestialParticles = null; // Star particles for Celestial Depths
         this.dockPostSplashes = null; // Splash effects around dock posts (for rivers only)
         this.dockPostParticles = null; // Particle stream from dock posts (for rivers only)
         this.time = 0; // Time accumulator for splash animations
+        this.celestialTime = 0; // Time accumulator for celestial twinkle
     }
     
     /**
@@ -147,6 +149,75 @@ export class Water2Lake {
         
         // Debug: Log particle visibility
         console.log('[RIVER] Particles created:', particleCount, 'Visible:', this.riverParticles.visible, 'HasFlow:', this.waterBodyConfig.hasFlow);
+    }
+
+    /**
+     * Create static starfield particles for Celestial Depths
+     */
+    createCelestialParticles() {
+        const particleCount = 1500;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+
+        const concentricLayers = [
+            { radius: this.groundSize * 0.42, height: 0.14 },
+            { radius: this.groundSize * 0.30, height: 0.17 },
+            { radius: this.groundSize * 0.18, height: 0.20 }
+        ];
+
+        let index = 0;
+        concentricLayers.forEach(layer => {
+            const layerCount = Math.floor(particleCount * (layer.radius / concentricLayers[0].radius) * 0.6);
+            for (let i = 0; i < layerCount && index < particleCount; i++) {
+                const i3 = index * 3;
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.sqrt(Math.random()) * layer.radius;
+
+                positions[i3] = Math.cos(angle) * distance;
+                positions[i3 + 1] = this.waterY + layer.height + Math.random() * 0.08;
+                positions[i3 + 2] = Math.sin(angle) * distance;
+                index++;
+            }
+        });
+
+        // Fill any remaining particles uniformly
+        for (; index < particleCount; index++) {
+            const i3 = index * 3;
+            const radius = this.groundSize * 0.42;
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.random() * radius;
+            positions[i3] = Math.cos(angle) * distance;
+            positions[i3 + 1] = this.waterY + 0.14 + Math.random() * 0.08;
+            positions[i3 + 2] = Math.sin(angle) * distance;
+        }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+        const renderer = this.sceneRef?.renderer;
+        const pixelRatio = renderer?.getPixelRatio ? renderer.getPixelRatio() : (window.devicePixelRatio || 1);
+        const clampedRatio = THREE.MathUtils.clamp(pixelRatio, 1, 2.5);
+        const baseSize = 0.36;
+        const material = new THREE.PointsMaterial({
+            color: 0xfffeff,
+            size: baseSize * clampedRatio,
+            transparent: true,
+            opacity: 1.0,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            sizeAttenuation: false,
+            fog: false
+        });
+
+        this.celestialParticles = new THREE.Points(geometry, material);
+        this.celestialParticles.visible = false;
+        this.celestialParticles.renderOrder = 1002;
+        this.celestialParticles.userData = {
+            baseOpacity: 1.0,
+            twinkleRange: 0.45,
+            baseSize,
+            pixelRatio: clampedRatio
+        };
+        this.sceneRef.scene.add(this.celestialParticles);
     }
     
     /**
@@ -461,6 +532,18 @@ export class Water2Lake {
                     }
                 }
             }
+            
+            if (this.celestialParticles) {
+                const showCelestial = (type === 'CELESTIAL');
+                if (this.celestialParticles.visible !== showCelestial) {
+                    this.celestialParticles.visible = showCelestial;
+                    console.log('[CELESTIAL] Starfield visibility:', showCelestial, 'type:', type);
+                }
+                if (showCelestial) {
+                    const baseOpacity = this.celestialParticles.userData?.baseOpacity ?? 0.85;
+                    this.celestialParticles.material.opacity = baseOpacity;
+                }
+            }
         }
     }
 
@@ -596,6 +679,8 @@ export class Water2Lake {
         
         // Create river particle system (if river)
         this.createRiverParticles();
+        // Create celestial starfield particles (for Celestial Depths)
+        this.createCelestialParticles();
         // Create dock post splash effects (if river)
         this.createDockPostSplashes();
         // Create dock post particle stream (if river)
@@ -854,6 +939,27 @@ export class Water2Lake {
             
             // Update geometry
             this.riverParticles.geometry.attributes.position.needsUpdate = true;
+        }
+
+        // Update celestial starfield twinkle
+        if (this.celestialParticles && this.celestialParticles.visible) {
+            this.celestialTime = (this.celestialTime || 0) + delta;
+            const mat = this.celestialParticles.material;
+            const baseOpacity = this.celestialParticles.userData?.baseOpacity ?? 1.0;
+            const range = this.celestialParticles.userData?.twinkleRange ?? 0.45;
+            const twinkle = Math.sin(this.celestialTime * 1.6) * 0.5 + Math.sin(this.celestialTime * 2.3 + 1.2) * 0.5;
+            const adjusted = baseOpacity + twinkle * range * 0.6;
+            mat.opacity = THREE.MathUtils.clamp(adjusted, 0.55, 1.0);
+            
+            const renderer = this.sceneRef?.renderer;
+            const pixelRatio = renderer?.getPixelRatio ? renderer.getPixelRatio() : (window.devicePixelRatio || 1);
+            const clampedRatio = THREE.MathUtils.clamp(pixelRatio, 1, 2.5);
+            const baseSize = this.celestialParticles.userData?.baseSize ?? 0.36;
+            const targetSize = baseSize * clampedRatio;
+            if (Math.abs(mat.size - targetSize) > 0.005) {
+                mat.size = targetSize;
+            }
+            mat.needsUpdate = true;
         }
         
         // Update dock post splash effects (animated wakes) - only for POND

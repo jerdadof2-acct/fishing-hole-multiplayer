@@ -2014,7 +2014,6 @@ export class UI {
         }
         
         const castButton = document.getElementById('cast-button');
-        const currentLocation = this.game.locations.getCurrentLocation();
         
         // Import bite detection
         import('./biteDetection.js').then(({ calculateBiteTiming, getReactionTimeWindow }) => {
@@ -2032,12 +2031,15 @@ export class UI {
             setTimeout(async () => {
                 if (!this.waitingForBite) return;
 
+                const currentLocation = this.game.locations.getCurrentLocation();
+
                 try {
                     const { getRelicForGameLocation } = await import('./config/hiddenRelics.js');
                     const { rollRelicDiscovery } = await import('./hiddenRelics.js');
                     const relic = getRelicForGameLocation(currentLocation?.name);
 
                     if (relic && rollRelicDiscovery(this.player, relic)) {
+                        console.log('[UI] Relic discovery at', currentLocation?.name, '→', relic.id);
                         this.handleRelicDiscovery(relic);
                         return;
                     }
@@ -2155,7 +2157,7 @@ export class UI {
             <div class="relic-popup-glow" aria-hidden="true"></div>
             <p class="relic-popup-eyebrow">Hidden relic recovered · ${progress} of 10</p>
             <h2 class="relic-popup-title">${relic.name}</h2>
-            <p class="relic-popup-location">Found near ${relic.storyLocation}</p>
+            <p class="relic-popup-location">Found at <strong>${relic.location}</strong></p>
             <div class="relic-popup-image-wrap">
                 <img class="relic-popup-image" src="${relic.image}" alt="${relic.name}" />
             </div>
@@ -2231,7 +2233,7 @@ export class UI {
                         <article class="relic-card relic-card--found">
                             <img class="relic-card-image" src="${relic.image}" alt="${relic.name}" />
                             <h4 class="relic-card-name">${relic.name}</h4>
-                            <p class="relic-card-region">${relic.storyLocation}</p>
+                            <p class="relic-card-region">${relic.location}</p>
                             <p class="relic-card-message">"${relic.message}"</p>
                         </article>
                     `;
@@ -2240,7 +2242,7 @@ export class UI {
                     <article class="relic-card relic-card--locked">
                         <div class="relic-card-silhouette" aria-hidden="true">?</div>
                         <h4 class="relic-card-name">Undiscovered relic</h4>
-                        <p class="relic-card-region">Fish at ${relic.gameLocation}</p>
+                        <p class="relic-card-region">Fish at ${relic.location}</p>
                     </article>
                 `;
             }).join('');

@@ -241,29 +241,7 @@ export class Platform {
         frontRail.receiveShadow = true;
         dockGroup.add(frontRail);
         
-        // Left side rail - align inner edge with dock left edge, shorten to end before front rail
-        const sideRailLength = this.dockDepth - railWidth; // Shorten by railWidth to leave room for front rail
-        const leftRail = new THREE.Mesh(
-            new THREE.BoxGeometry(railWidth, railHeight, sideRailLength),
-            postMaterial
-        );
-        // Position so inner edge aligns with dock left edge, but ends before front rail
-        // Offset Z position so rail ends just before front rail position
-        leftRail.position.set(-this.dockWidth * 0.5 + railWidth * 0.5, raisedDockY + this.dockHeight * 0.5 + railHeight * 0.5, -railWidth * 0.5);
-        leftRail.castShadow = true;
-        leftRail.receiveShadow = true;
-        dockGroup.add(leftRail);
-        
-        // Right side rail - align inner edge with dock right edge, shorten to end before front rail
-        const rightRail = new THREE.Mesh(
-            new THREE.BoxGeometry(railWidth, railHeight, sideRailLength),
-            postMaterial
-        );
-        // Position so inner edge aligns with dock right edge, but ends before front rail
-        rightRail.position.set(this.dockWidth * 0.5 - railWidth * 0.5, raisedDockY + this.dockHeight * 0.5 + railHeight * 0.5, -railWidth * 0.5);
-        rightRail.castShadow = true;
-        rightRail.receiveShadow = true;
-        dockGroup.add(rightRail);
+        // Side rails intentionally omitted to avoid protruding boards in camera framing
         
         // Realistic details for dock
         // Dock bumpers/fenders (protection along front edge, on outside of rail, facing outward toward water)
@@ -302,6 +280,7 @@ export class Platform {
     createSmallBoat() {
         // Create boat as a group so we can animate rotation
         const boatGroup = new THREE.Group();
+        boatGroup.name = 'smallBoat-root';
         
         const boatWidth = this.smallBoatWidth;
         const boatLength = this.smallBoatDepth;
@@ -324,9 +303,12 @@ export class Platform {
         
         // Boat hull (curved bottom using multiple segments for tapered effect)
         // Bottom hull plate
-        const bottomGeometry = new THREE.BoxGeometry(boatWidth * 0.85, 0.03, boatLength * 0.9);
+        const smallBottomWidth = Math.max(0.1, boatWidth * 0.78);
+        const smallBottomLength = boatLength * 0.82;
+        const bottomGeometry = new THREE.BoxGeometry(smallBottomWidth, 0.03, smallBottomLength);
         const bottom = new THREE.Mesh(bottomGeometry, hullMaterial);
-        bottom.position.y = -hullHeight * 0.5;
+        bottom.name = 'smallBoat-bottom';
+        bottom.position.y = -hullHeight * 0.5 + 0.008;
         boatGroup.add(bottom);
         
         // Left side hull with bevel/taper (not straight box)
@@ -340,25 +322,56 @@ export class Platform {
         
         const extrudeSettings = { depth: boatLength * 0.95, bevelEnabled: false };
         const sideGeometry = new THREE.ExtrudeGeometry(sideShape, extrudeSettings);
+        sideGeometry.name = 'smallBoat-hullSideGeometry';
         sideGeometry.rotateY(Math.PI / 2);
         sideGeometry.rotateX(-Math.PI / 2);
         sideGeometry.translate(0, -hullHeight * 0.5, 0);
         
-        const leftSide = new THREE.Mesh(sideGeometry, hullMaterial);
-        leftSide.position.set(-boatWidth * 0.42, 0, 0);
-        boatGroup.add(leftSide);
-        
-        // Right side hull (mirror of left)
-        const rightSideGeometry = sideGeometry.clone();
-        rightSideGeometry.scale(-1, 1, 1); // Mirror
-        const rightSide = new THREE.Mesh(rightSideGeometry, hullMaterial);
-        rightSide.position.set(boatWidth * 0.42, 0, 0);
-        boatGroup.add(rightSide);
+        const sideWallThickness = 0.05;
+        const sideWallHeight = hullHeight;
+        const sideWallLength = smallBottomLength - 0.1;
+        const sideWallGeometry = new THREE.BoxGeometry(sideWallThickness, sideWallHeight, sideWallLength);
+
+        const leftWall = new THREE.Mesh(sideWallGeometry, hullMaterial);
+        leftWall.name = 'smallBoat-leftHull';
+        leftWall.position.set(-(smallBottomWidth * 0.5 - sideWallThickness * 0.5), -hullHeight * 0.5 + sideWallHeight * 0.5, 0);
+        leftWall.castShadow = true;
+        leftWall.receiveShadow = true;
+        boatGroup.add(leftWall);
+
+        const rightWall = new THREE.Mesh(sideWallGeometry.clone(), hullMaterial);
+        rightWall.name = 'smallBoat-rightHull';
+        rightWall.position.set(smallBottomWidth * 0.5 - sideWallThickness * 0.5, -hullHeight * 0.5 + sideWallHeight * 0.5, 0);
+        rightWall.castShadow = true;
+        rightWall.receiveShadow = true;
+        boatGroup.add(rightWall);
+
+        const smallEndThickness = 0.05;
+        const smallEndWidth = smallBottomWidth - 0.06;
+        const smallEndGeometry = new THREE.BoxGeometry(smallEndWidth, sideWallHeight, smallEndThickness);
+
+        const smallFrontWall = new THREE.Mesh(smallEndGeometry, hullMaterial);
+        smallFrontWall.name = 'smallBoat-frontHull';
+        smallFrontWall.position.set(0, -hullHeight * 0.5 + sideWallHeight * 0.5, smallBottomLength * 0.5 - smallEndThickness * 0.5);
+        // Disable shadow casting to prevent visible shadow seams on deck
+        smallFrontWall.castShadow = false;
+        smallFrontWall.receiveShadow = true;
+        boatGroup.add(smallFrontWall);
+
+        const smallBackWall = new THREE.Mesh(smallEndGeometry.clone(), hullMaterial);
+        smallBackWall.name = 'smallBoat-backHull';
+        smallBackWall.position.set(0, -hullHeight * 0.5 + sideWallHeight * 0.5, -smallBottomLength * 0.5 + smallEndThickness * 0.5);
+        smallBackWall.castShadow = true;
+        smallBackWall.receiveShadow = true;
+        boatGroup.add(smallBackWall);
         
         // Transom (back of boat - vertical, properly attached)
         // Align transom with shortened side rails - it should be inside the back rail
-        const transomGeometry = new THREE.BoxGeometry(boatWidth * 0.85, hullHeight * 0.7, 0.12);
+        const transomWidth = Math.min(boatWidth * 0.85, railCenterX * 2 - 0.05);
+        const transomGeometry = new THREE.BoxGeometry(transomWidth, hullHeight * 0.7, 0.12);
+        transomGeometry.name = 'largeBoat-transomGeometry';
         const transom = new THREE.Mesh(transomGeometry, hullMaterial);
+        transom.name = 'largeBoat-transom';
         // Position transom inside where back rail will be (backRailZ from gunwale calculation)
         // Since backRailZ is calculated later, use the same calculation: -(boatLength * 0.88 * 0.5) - railThick
         const backRailZCalc = -(boatLength * 0.88 * 0.5) - 0.03; // Slightly inside back rail position
@@ -388,16 +401,40 @@ export class Platform {
         boatGroup.add(bow);
         
         // Deck (sunken into hull to create boat interior)
-        const deckGeometry = new THREE.BoxGeometry(boatWidth * 0.9, deckThickness, boatLength * 0.9);
-        const deck = new THREE.Mesh(deckGeometry, deckMaterial);
-        // Put the deck clearly below the gunwale to create "inside the boat" pocket
-        deck.position.y = hullHeight * 0.35; // Lower than before
-        deck.castShadow = true;
-        deck.receiveShadow = true;
-        boatGroup.add(deck);
+        // Use PlaneGeometry for seamless rendering to prevent visible seams
+        const hullOuterEdge = boatWidth * 0.42 + 0.03; // Hull center plus half side thickness
+        const deckWidth = Math.max(0.1, hullOuterEdge * 2 - 0.3); // Slight margin to stay inside hull
+        const deckLength = Math.max(0.2, smallBottomLength - 0.002);
+        
+        // Create deck as seamless top surface using PlaneGeometry (prevents visible seams)
+        const deckTopGeometry = new THREE.PlaneGeometry(deckWidth - 0.04, deckLength);
+        deckTopGeometry.name = 'smallBoat-deckTopGeometry';
+        const deckTop = new THREE.Mesh(deckTopGeometry, deckMaterial);
+        deckTop.name = 'smallBoat-deck';
+        deckTop.rotation.x = -Math.PI / 2; // Rotate to horizontal
+        const smallDeckFrontGap = (smallBottomLength * 0.5 - smallEndThickness * 0.5) - (deckLength * 0.5);
+        deckTop.position.y = hullHeight * 0.35 + deckThickness * 0.5; // Top surface
+        deckTop.position.z = smallDeckFrontGap > 0 ? smallDeckFrontGap : 0;
+        deckTop.castShadow = true;
+        deckTop.receiveShadow = true;
+        boatGroup.add(deckTop);
+        
+        // Store deck reference for compatibility
+        const deck = deckTop;
+        
+        const smallSternGap = Math.max(0.0, smallBottomLength - Math.max(0.2, smallBottomLength - 0.002));
+        if (smallSternGap > 0.02) {
+            const sternFillerGeometry = new THREE.BoxGeometry(deckWidth - 0.06, deckThickness, smallSternGap);
+            const sternFiller = new THREE.Mesh(sternFillerGeometry, deckMaterial);
+            sternFiller.name = 'smallBoat-sternFiller';
+            sternFiller.position.set(0, deckTop.position.y - deckThickness * 0.5, smallBottomLength * 0.5 - smallSternGap * 0.5);
+            sternFiller.castShadow = true;
+            sternFiller.receiveShadow = true;
+            boatGroup.add(sternFiller);
+        }
         
         // Exact top surface (center + half height)
-        const deckTopLocal = deck.position.y + deckThickness * 0.5;
+        const deckTopLocal = deckTop.position.y;
         // Store for getSurfacePosition or other code
         boatGroup.userData.deckTopLocal = deckTopLocal;
         
@@ -408,15 +445,11 @@ export class Platform {
             metalness: 0.05
         });
         
-        const gunwaleHeight = 1.3;       // Taller - increased to 1.3
+        const gunwaleHeight = 1.1;       // Slightly taller for defined edge
         const gunwaleOut = 0.0;           // No outward overhang - align exactly with hull
         const gunwaleIn = 0.06;           // Inward overhang above the deck
-        const railThick = 0.24;           // Thickness of the gunwale rails
-        
-        // Hull side outer edge position (hull sides are at ±boatWidth * 0.42, with side thickness ~0.06)
-        // So outer edge is at approximately ±(boatWidth * 0.42 + 0.03) = ±(4.0 * 0.42 + 0.03) = ±1.71
-        // To align gunwale center with hull outer edge, position at ±1.71
-        const hullOuterEdge = boatWidth * 0.42 + 0.03; // Hull center + half side thickness
+        const railThick = 0.08;           // Slimmer gunwale profile to avoid board silhouette
+        const railCenterX = hullOuterEdge - 0.04 - railThick * 0.5; // Keep rails inside hull line
         
         // Sides (left/right) - shorten them to leave room for front/back rails
         const sideLen = boatLength * 0.88; // Shortened from 0.95 to leave gap for front/back rails
@@ -427,14 +460,16 @@ export class Platform {
         
         // Left rail: move slightly outward to increase space between rails
         const leftRail = new THREE.Mesh(sideRailGeom, gunwaleMaterial);
-        leftRail.position.set(-hullOuterEdge + railThick * 0.5 - 0.02, railY, 0); // Move out by 0.02
+        leftRail.name = 'smallBoat-leftRail';
+        leftRail.position.set(-railCenterX, railY, 0);
         leftRail.castShadow = true;
         leftRail.receiveShadow = true;
         boatGroup.add(leftRail);
         
         // Right rail: move slightly outward to increase space between rails
         const rightRail = new THREE.Mesh(sideRailGeom, gunwaleMaterial);
-        rightRail.position.set(hullOuterEdge - railThick * 0.5 + 0.02, railY, 0); // Move out by 0.02
+        rightRail.name = 'smallBoat-rightRail';
+        rightRail.position.set(railCenterX, railY, 0);
         rightRail.castShadow = true;
         rightRail.receiveShadow = true;
         boatGroup.add(rightRail);
@@ -442,7 +477,7 @@ export class Platform {
         // Front & back rails (bow/transom) - align with shortened side rails' ends
         // Side rails now run from -sideLen/2 to +sideLen/2, where sideLen = boatLength * 0.88
         // Side rails end at ±(boatLength * 0.88 * 0.5) = ±(boatLength * 0.44)
-        const foreAftLen = boatWidth - railThick * 1.2; // Shortened more to prevent protruding over edges
+        const foreAftLen = railCenterX * 2;
         const foreAftGeom = new THREE.BoxGeometry(foreAftLen, gunwaleHeight, railThick);
         
         // Side rails end at ±sideLen/2 = ±(boatLength * 0.88 * 0.5)
@@ -452,12 +487,14 @@ export class Platform {
         const backRailZ = -sideRailEndZ - railThick * 0.5; // Position to meet side rail end
         
         const frontRail = new THREE.Mesh(foreAftGeom, gunwaleMaterial);
+        frontRail.name = 'smallBoat-frontRail';
         frontRail.position.set(0, railY, frontRailZ);
         frontRail.castShadow = true;
         frontRail.receiveShadow = true;
         boatGroup.add(frontRail);
         
         const backRail = new THREE.Mesh(foreAftGeom, gunwaleMaterial);
+        backRail.name = 'smallBoat-backRail';
         backRail.position.set(0, railY, backRailZ);
         backRail.castShadow = true;
         backRail.receiveShadow = true;
@@ -479,14 +516,14 @@ export class Platform {
         
         // Left inner lip - positioned inside hull edge
         const leftCoam = new THREE.Mesh(coamSideGeom, coamMat);
-        leftCoam.position.set(-hullOuterEdge + gunwaleIn, coamY, 0);
+        leftCoam.position.set(-railCenterX + gunwaleIn, coamY, 0);
         leftCoam.castShadow = true;
         leftCoam.receiveShadow = true;
         boatGroup.add(leftCoam);
         
         // Right inner lip - positioned inside hull edge
         const rightCoam = new THREE.Mesh(coamSideGeom, coamMat);
-        rightCoam.position.set(hullOuterEdge - gunwaleIn, coamY, 0);
+        rightCoam.position.set(railCenterX - gunwaleIn, coamY, 0);
         rightCoam.castShadow = true;
         rightCoam.receiveShadow = true;
         boatGroup.add(rightCoam);
@@ -513,18 +550,20 @@ export class Platform {
         });
         
         const leftSheer = new THREE.Mesh(sheerGeom, sheerMat);
-        leftSheer.position.set(-hullOuterEdge + 0.01 - 0.02, railY - gunwaleHeight * 0.55, 0); // Match rail position
+        leftSheer.position.set(-railCenterX + 0.01, railY - gunwaleHeight * 0.55, 0);
         leftSheer.castShadow = true;
         boatGroup.add(leftSheer);
         
         const rightSheer = new THREE.Mesh(sheerGeom, sheerMat);
-        rightSheer.position.set(hullOuterEdge - 0.01 + 0.02, railY - gunwaleHeight * 0.55, 0); // Match rail position
+        rightSheer.position.set(railCenterX - 0.01, railY - gunwaleHeight * 0.55, 0);
         rightSheer.castShadow = true;
         boatGroup.add(rightSheer);
         
         // Bench seats (multiple seats along the boat length - positioned on sunken deck)
         // Front bench (near where cat stands) - wider, deeper, raised, and with shadows
-        const frontBenchGeometry = new THREE.BoxGeometry(boatWidth * 0.85, 0.08, 0.5); // Deeper from 0.3 to 0.5
+        const benchHalfSpan = Math.max(0.12, railCenterX - 0.12);
+        const benchWidth = benchHalfSpan * 2;
+        const frontBenchGeometry = new THREE.BoxGeometry(benchWidth, 0.08, 0.5); // Deeper from 0.3 to 0.5
         const frontBench = new THREE.Mesh(frontBenchGeometry, deckMaterial);
         frontBench.position.set(0, deckTopLocal + 0.20, boatLength * 0.15); // Raised 0.20 above deck
         frontBench.castShadow = true; // Enable shadow casting
@@ -532,7 +571,7 @@ export class Platform {
         boatGroup.add(frontBench);
         
         // Middle bench - wider, deeper, raised, and with shadows
-        const middleBenchGeometry = new THREE.BoxGeometry(boatWidth * 0.85, 0.08, 0.5); // Deeper from 0.3 to 0.5
+        const middleBenchGeometry = new THREE.BoxGeometry(benchWidth, 0.08, 0.5); // Deeper from 0.3 to 0.5
         const middleBench = new THREE.Mesh(middleBenchGeometry, deckMaterial);
         middleBench.position.set(0, deckTopLocal + 0.20, -boatLength * 0.15); // Raised 0.20 above deck
         middleBench.castShadow = true; // Enable shadow casting
@@ -540,38 +579,12 @@ export class Platform {
         boatGroup.add(middleBench);
         
         // Back bench (near transom) - wider, deeper, raised, and with shadows
-        const backBenchGeometry = new THREE.BoxGeometry(boatWidth * 0.85, 0.08, 0.5); // Deeper from 0.3 to 0.5
+        const backBenchGeometry = new THREE.BoxGeometry(benchWidth, 0.08, 0.5); // Deeper from 0.3 to 0.5
         const backBench = new THREE.Mesh(backBenchGeometry, deckMaterial);
         backBench.position.set(0, deckTopLocal + 0.20, -boatLength * 0.4); // Raised 0.20 above deck
         backBench.castShadow = true; // Enable shadow casting
         backBench.receiveShadow = true; // Enable shadow receiving
         boatGroup.add(backBench);
-        
-        // Oarlocks (small details on gunwales - multiple pairs along the boat)
-        const oarlockMaterial = new THREE.MeshStandardMaterial({
-            color: 0x3d2814, // Very dark wood/metal
-            roughness: 0.4,
-            metalness: 0.6
-        });
-        
-        const oarlockGeometry = new THREE.BoxGeometry(0.06, 0.04, 0.06);
-        
-        // Left oarlocks (3 pairs spaced along boat) - positioned on gunwale
-        const oarlockY = railY + gunwaleHeight * 0.5; // Top of gunwale
-        for (let i = 0; i < 3; i++) {
-            const zPos = -boatLength * 0.3 + i * boatLength * 0.3;
-            const leftOarlock = new THREE.Mesh(oarlockGeometry, oarlockMaterial);
-            leftOarlock.position.set(-hullOuterEdge + railThick * 0.5 - 0.02, oarlockY + 0.02, zPos); // Match rail position
-            boatGroup.add(leftOarlock);
-        }
-        
-        // Right oarlocks (3 pairs spaced along boat) - positioned on gunwale
-        for (let i = 0; i < 3; i++) {
-            const zPos = -boatLength * 0.3 + i * boatLength * 0.3;
-            const rightOarlock = new THREE.Mesh(oarlockGeometry.clone(), oarlockMaterial);
-            rightOarlock.position.set(hullOuterEdge - railThick * 0.5 + 0.02, oarlockY + 0.02, zPos); // Match rail position
-            boatGroup.add(rightOarlock);
-        }
         
         // Cleats for docking (mooring hardware) - small metal cleats
         const cleatMaterial = new THREE.MeshStandardMaterial({
@@ -602,42 +615,14 @@ export class Platform {
         
         // Stern cleats (back of boat, both sides)
         const sternCleatLeft = cleatGroup.clone();
-        sternCleatLeft.position.set(-hullOuterEdge * 0.7, railY + gunwaleHeight * 0.4, -boatLength * 0.88 * 0.5 - 0.1);
+        sternCleatLeft.position.set(-railCenterX * 0.7, railY + gunwaleHeight * 0.4, -boatLength * 0.88 * 0.5 - 0.1);
         sternCleatLeft.rotation.y = -Math.PI / 2; // Rotate to face backward
         boatGroup.add(sternCleatLeft);
         
         const sternCleatRight = cleatGroup.clone();
-        sternCleatRight.position.set(hullOuterEdge * 0.7, railY + gunwaleHeight * 0.4, -boatLength * 0.88 * 0.5 - 0.1);
+        sternCleatRight.position.set(railCenterX * 0.7, railY + gunwaleHeight * 0.4, -boatLength * 0.88 * 0.5 - 0.1);
         sternCleatRight.rotation.y = -Math.PI / 2;
         boatGroup.add(sternCleatRight);
-        
-        // Rod holders (for storing extra rods) - mounted on gunwales
-        const rodHolderMat = new THREE.MeshStandardMaterial({
-            color: 0x555555, // Dark gray/black
-            roughness: 0.4,
-            metalness: 0.7
-        });
-        const rodHolderGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.15, 12);
-        
-        // Left side rod holders (2-3 along the side)
-        for (let i = 0; i < 2; i++) {
-            const zPos = -boatLength * 0.2 + i * boatLength * 0.4;
-            const leftRodHolder = new THREE.Mesh(rodHolderGeo, rodHolderMat);
-            leftRodHolder.rotation.z = Math.PI / 2; // Horizontal
-            leftRodHolder.position.set(-hullOuterEdge * 0.9, railY + gunwaleHeight * 0.3, zPos);
-            leftRodHolder.castShadow = true;
-            boatGroup.add(leftRodHolder);
-        }
-        
-        // Right side rod holders (2-3 along the side)
-        for (let i = 0; i < 2; i++) {
-            const zPos = -boatLength * 0.2 + i * boatLength * 0.4;
-            const rightRodHolder = new THREE.Mesh(rodHolderGeo.clone(), rodHolderMat);
-            rightRodHolder.rotation.z = Math.PI / 2; // Horizontal
-            rightRodHolder.position.set(hullOuterEdge * 0.9, railY + gunwaleHeight * 0.3, zPos);
-            rightRodHolder.castShadow = true;
-            boatGroup.add(rightRodHolder);
-        }
         
         // Drain scuppers (drain holes in deck) - small holes near edges
         const scupperGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.05, 8);
@@ -690,7 +675,7 @@ export class Platform {
         // Rope wrapped around stern cleats (loops) - made much bigger
         for (let side = 0; side < 2; side++) {
             const xSide = side === 0 ? -1 : 1;
-            const cleatX = hullOuterEdge * 0.7 * xSide;
+            const cleatX = railCenterX * 0.7 * xSide;
             const cleatZ = -boatLength * 0.88 * 0.5 - 0.1;
             for (let i = 0; i < 2; i++) {
                 const sternRopeLoop = new THREE.Mesh(
@@ -743,8 +728,111 @@ export class Platform {
         this.platformMesh.castShadow = true;
         this.platformMesh.receiveShadow = true;
         
+        const smallBoatBBox = new THREE.Box3().setFromObject(this.platformMesh);
+        console.log(
+            '[PLATFORM][SMALL_BOAT] BBox',
+            {
+                min: { x: smallBoatBBox.min.x.toFixed(3), z: smallBoatBBox.min.z.toFixed(3) },
+                max: { x: smallBoatBBox.max.x.toFixed(3), z: smallBoatBBox.max.z.toFixed(3) }
+            }
+        );
+        
+        // Debug helper: report max extents to track down protruding geometry
+        this.reportPlatformExtents(this.platformMesh, hullOuterEdge, 'SMALL_BOAT', this.smallBoatWidth, boatLength);
+        
         // Store initial rotation for animation
         this.platformMesh.userData.initialRotation = new THREE.Euler(0, 0, 0);
+    }
+    
+    reportPlatformExtents(group, maxAbsXAllowed, label, maxAbsZAllowed = null, boatLength = null) {
+        if (!group || typeof maxAbsXAllowed !== 'number') {
+            return;
+        }
+        
+        try {
+            const limitText = maxAbsZAllowed
+                ? `limits x=${maxAbsXAllowed.toFixed(3)} z=${(maxAbsZAllowed * 0.5).toFixed(3)}`
+                : `limit x=${maxAbsXAllowed.toFixed(3)}`;
+            console.log(`[PLATFORM][${label}] Checking mesh extents (${limitText})`);
+            group.updateMatrixWorld(true);
+            let maxAbsX = 0;
+            let maxAbsZ = 0;
+            const offenders = [];
+            
+            group.traverse(child => {
+                if (child && child.isMesh && child.geometry) {
+                    if (child.visible === false) {
+                        return;
+                    }
+                    if (!child.geometry.boundingBox) {
+                        child.geometry.computeBoundingBox();
+                    }
+                    const localBox = child.geometry.boundingBox;
+                    if (!localBox) {
+                        return;
+                    }
+                    const worldBox = localBox.clone().applyMatrix4(child.matrixWorld);
+                    const childMaxAbs = Math.max(Math.abs(worldBox.min.x), Math.abs(worldBox.max.x));
+                    if (childMaxAbs > maxAbsX) {
+                        maxAbsX = childMaxAbs;
+                    }
+                    let outOfBounds = false;
+                    if (childMaxAbs > maxAbsXAllowed + 0.005) {
+                        outOfBounds = true;
+                    }
+                    
+                    if (maxAbsZAllowed) {
+                        const childMaxZAbs = Math.max(Math.abs(worldBox.min.z), Math.abs(worldBox.max.z));
+                        if (childMaxZAbs > maxAbsZAllowed + 0.005) {
+                            outOfBounds = true;
+                        }
+                        if (childMaxZAbs > maxAbsZ) {
+                            maxAbsZ = childMaxZAbs;
+                        }
+                    }
+                    
+                    if (outOfBounds) {
+                        offenders.push({
+                            name: child.name || child.userData?.label || child.type || 'Mesh',
+                            uuid: child.uuid,
+                            parentName: child.parent?.name || child.parent?.userData?.label || child.parent?.type || null,
+                            parentUUID: child.parent?.uuid || null,
+                            position: {
+                                x: child.position.x.toFixed(3),
+                                y: child.position.y.toFixed(3),
+                                z: child.position.z.toFixed(3)
+                            },
+                            scale: {
+                                x: child.scale.x.toFixed(3),
+                                y: child.scale.y.toFixed(3),
+                                z: child.scale.z.toFixed(3)
+                            },
+                            maxAbs: childMaxAbs,
+                            maxZ: maxAbsZAllowed ? Math.max(Math.abs(worldBox.min.z), Math.abs(worldBox.max.z)) : null
+                        });
+                    }
+                }
+            });
+            
+            const extentText = maxAbsZAllowed
+                ? `max |x| ${maxAbsX.toFixed(3)}, max |z| ${maxAbsZ.toFixed(3)}`
+                : `max |x| ${maxAbsX.toFixed(3)}`;
+            console.log(`[PLATFORM][${label}] Extents: ${extentText}`);
+            if (offenders.length) {
+                offenders.forEach(entry => {
+                    console.warn(
+                        `[PLATFORM][${label}] Out-of-bounds mesh ` +
+                        `${entry.name} uuid=${entry.uuid} parent=${entry.parentName || 'null'} ` +
+                        `pos=(${entry.position.x}, ${entry.position.y}, ${entry.position.z}) ` +
+                        `scale=(${entry.scale.x}, ${entry.scale.y}, ${entry.scale.z}) ` +
+                        `maxX=${entry.maxAbs.toFixed(3)}` +
+                        (entry.maxZ != null ? ` maxZ=${entry.maxZ.toFixed(3)}` : '')
+                    );
+                });
+            }
+        } catch (err) {
+            console.warn('[PLATFORM] Failed to report extents:', err);
+        }
     }
     
     /**
@@ -753,10 +841,12 @@ export class Platform {
     createLargeBoat() {
         // Create boat as a group so we can animate rotation
         const boatGroup = new THREE.Group();
+        boatGroup.name = 'largeBoat-root';
         
         const boatWidth = this.largeBoatWidth;
         const boatLength = this.largeBoatDepth;
         const hullHeight = 0.25; // Taller hull for large boat
+        const hullOuterEdge = boatWidth * 0.42 + 0.03; // Outer edge of hull sides (including thickness)
         
         // Stern hull with bevel/taper (chunkier than small boat)
         const sideShape = new THREE.Shape();
@@ -782,49 +872,97 @@ export class Platform {
         // For now, skip shader modifications to avoid compilation errors
         // The geometry improvements (beveled hull, pointed bow) will provide visual improvement
         
-        // Bottom hull plate
-        const bottomGeometry = new THREE.BoxGeometry(boatWidth * 0.85, 0.05, boatLength * 0.9);
+        // Bottom hull plate (trimmed to stay within hull outline)
+        const bottomWidth = Math.max(0.1, hullOuterEdge * 2 - 0.3);
+        const bottomLength = Math.min(boatLength - 0.2, 8.0);
+        const bottomGeometry = new THREE.BoxGeometry(bottomWidth - 0.04, 0.05, bottomLength - 0.1);
+        bottomGeometry.name = 'largeBoat-bottomGeometry';
         const bottom = new THREE.Mesh(bottomGeometry, hullMaterial);
-        bottom.position.y = -hullHeight * 0.5;
+        bottom.name = 'largeBoat-bottom';
+        bottom.position.y = -hullHeight * 0.5 + 0.01;
         boatGroup.add(bottom);
         
-        // Left side hull
-        const leftSide = new THREE.Mesh(sideGeometry, hullMaterial);
-        leftSide.position.set(-boatWidth * 0.42, 0, 0);
-        boatGroup.add(leftSide);
-        
-        // Right side hull (mirror)
-        const rightSideGeometry = sideGeometry.clone();
-        rightSideGeometry.scale(-1, 1, 1);
-        const rightSide = new THREE.Mesh(rightSideGeometry, hullMaterial);
-        rightSide.position.set(boatWidth * 0.42, 0, 0);
-        boatGroup.add(rightSide);
+        // Simple hull walls - extend to match full deck length to prevent shadow seams
+        const sideThickness = 0.06;
+        const sideHeight = hullHeight;
+        // Use full deck length instead of bottomLength to match deck extension
+        const extendedDeckLength = boatLength - 0.2;
+        const sideLength = extendedDeckLength - 0.12;
+        const sideWallGeometry = new THREE.BoxGeometry(sideThickness, sideHeight, sideLength);
+
+        const leftWall = new THREE.Mesh(sideWallGeometry, hullMaterial);
+        leftWall.name = 'largeBoat-leftHull';
+        leftWall.position.set(-(bottomWidth * 0.5 - sideThickness * 0.5), -hullHeight * 0.5 + sideHeight * 0.5, 0);
+        leftWall.castShadow = true;
+        leftWall.receiveShadow = true;
+        boatGroup.add(leftWall);
+
+        const rightWall = new THREE.Mesh(sideWallGeometry.clone(), hullMaterial);
+        rightWall.name = 'largeBoat-rightHull';
+        rightWall.position.set(bottomWidth * 0.5 - sideThickness * 0.5, -hullHeight * 0.5 + sideHeight * 0.5, 0);
+        rightWall.castShadow = true;
+        rightWall.receiveShadow = true;
+        boatGroup.add(rightWall);
+
+        const endThickness = 0.06;
+        const endWidth = bottomWidth - 0.08;
+        const endGeometry = new THREE.BoxGeometry(endWidth, sideHeight, endThickness);
+
+        // Front wall - position at extended deck edge to prevent shadow seam
+        const frontWall = new THREE.Mesh(endGeometry, hullMaterial);
+        frontWall.name = 'largeBoat-frontHull';
+        frontWall.position.set(0, -hullHeight * 0.5 + sideHeight * 0.5, extendedDeckLength * 0.5 - endThickness * 0.5);
+        // Disable shadow casting to prevent visible seam on deck
+        frontWall.castShadow = false;
+        frontWall.receiveShadow = true;
+        boatGroup.add(frontWall);
+
+        const backWall = new THREE.Mesh(endGeometry.clone(), hullMaterial);
+        backWall.name = 'largeBoat-backHull';
+        backWall.position.set(0, -hullHeight * 0.5 + sideHeight * 0.5, -extendedDeckLength * 0.5 + endThickness * 0.5);
+        backWall.castShadow = true;
+        backWall.receiveShadow = true;
+        boatGroup.add(backWall);
         
         // Stern deck (white, sunken below gunwales)
         const deckMaterial = new THREE.MeshStandardMaterial({
             color: 0xf5f5f5, // White deck
             roughness: 0.7,
-            metalness: 0.1
+            metalness: 0.1,
+            // Disable polygon offset - it can cause visible seams
+            // Instead, ensure seamless rendering
+            flatShading: false // Smooth shading to eliminate visible seams
         });
         
         const deckThickness = 0.06;
-        const deckGeometry = new THREE.BoxGeometry(boatWidth * 0.9, deckThickness, boatLength * 0.9);
-        const deck = new THREE.Mesh(deckGeometry, deckMaterial);
-        // Lower deck to create boat interior
-        deck.position.y = hullHeight * 0.35;
-        deck.castShadow = true;
-        deck.receiveShadow = true;
-        boatGroup.add(deck);
+        const deckWidth = Math.max(0.1, hullOuterEdge * 2 - 0.3); // Keep deck within hull
+        // Extend deck to cover full boat length where cat stands (cat is at boatLength * 0.28)
+        // Use boatLength instead of bottomLength to ensure coverage
+        const deckLength = boatLength - 0.2; // Slight margin but covers full area
+        
+        // Create deck as a seamless top surface using PlaneGeometry
+        // This eliminates visible seams that BoxGeometry creates between faces
+        const deckTopGeometry = new THREE.PlaneGeometry(deckWidth - 0.04, deckLength);
+        deckTopGeometry.name = 'largeBoat-deckTopGeometry';
+        const deckTop = new THREE.Mesh(deckTopGeometry, deckMaterial);
+        deckTop.name = 'largeBoat-deck';
+        deckTop.rotation.x = -Math.PI / 2; // Rotate to horizontal
+        deckTop.position.y = hullHeight * 0.35 + deckThickness * 0.5; // Top surface
+        deckTop.castShadow = true;
+        deckTop.receiveShadow = true;
+        boatGroup.add(deckTop);
         
         // Exact top surface (center + half height)
-        const deckTopLocal = deck.position.y + deckThickness * 0.5;
+        const deckTopLocal = deckTop.position.y;
         // Store for getSurfacePosition
         boatGroup.userData.deckTopLocal = deckTopLocal;
         
         // Transom (back wall of boat) - positioned at the front where cat stands
         // Since boat is 14 units deep, place transom at front (positive Z) so cat doesn't see back end
-        const transomGeometry = new THREE.BoxGeometry(boatWidth * 0.85, hullHeight * 0.8, 0.12);
+        const transomWidth = Math.min(bottomWidth * 0.94, hullOuterEdge * 2 - 0.3);
+        const transomGeometry = new THREE.BoxGeometry(transomWidth, hullHeight * 0.8, 0.12);
         const transom = new THREE.Mesh(transomGeometry, hullMaterial);
+        transom.name = 'largeBoat-transom';
         transom.position.set(0, 0, boatLength * 0.45 - 0.06); // Position at front (positive Z)
         boatGroup.add(transom);
         
@@ -842,8 +980,11 @@ export class Platform {
         bowGeometry.translate(0, -hullHeight * 0.15, 0);
         
         const bow = new THREE.Mesh(bowGeometry, hullMaterial);
-        bow.position.set(0, 0, -boatLength * 0.5 + 0.1); // Position at back end (negative Z)
+        bow.name = 'largeBoat-bow';
+        bow.position.set(0, 0, -bottomLength * 0.5 + 0.05); // Position at back end (negative Z)
         bow.rotation.x = -Math.PI / 12; // Tilt forward slightly
+        const bowScaleX = Math.max(0.1, (bottomWidth - 0.12) / (boatWidth * 0.9));
+        bow.scale.x = bowScaleX;
         boatGroup.add(bow);
         
         // Gunwale "cap" - L-cap with chunkier proportions for large boat
@@ -861,38 +1002,39 @@ export class Platform {
             polygonOffsetUnits: -1
         });
         
-        const gunwaleHeight = 2.6;  // Increased to 2.6
-        const gunwaleOut = 0.0;     // No outward overhang - align exactly with deck edge
-        const gunwaleIn = 0.06;     // Inward overhang above the deck (same as small boat)
-        const railThick = 0.30;     // Increased to 0.30
+        const gunwaleHeight = 2.2;
+        const gunwaleIn = 0.06;
+        const railThick = 0.10;
         
         // Sides (left/right) - shorten like small boat
         const sideLen = boatLength * 0.88; // Shortened to leave room for front/back rails
+        const railCenterX = Math.max(0.1, bottomWidth * 0.5 + gunwaleIn);
         const sideRailGeom = new THREE.BoxGeometry(railThick, gunwaleHeight, sideLen);
         
         // y at which the rail sits
         const railY = Math.max(deckTopLocal + 0.06, hullHeight * 0.5 + 0.02);
         
-        // Deck edge position (deck width is boatWidth * 0.9, so edges are at ±boatWidth * 0.45)
-        const deckEdge = boatWidth * 0.45; // Half of deck width (boatWidth * 0.9 / 2)
+        // Deck edge position (within hull margins)
         
         // Left rail - align with deck edge
         const leftRail = new THREE.Mesh(sideRailGeom, gunwaleMaterial);
-        leftRail.position.set(-deckEdge + railThick * 0.5, railY, 0); // Rail center aligns with deck edge
+        leftRail.name = 'largeBoat-leftRail';
+        leftRail.position.set(-railCenterX, railY, 0);
         leftRail.castShadow = true;
         leftRail.receiveShadow = true;
         boatGroup.add(leftRail);
         
         // Right rail - align with deck edge
         const rightRail = new THREE.Mesh(sideRailGeom, gunwaleMaterial);
-        rightRail.position.set(deckEdge - railThick * 0.5, railY, 0); // Rail center aligns with deck edge
+        rightRail.name = 'largeBoat-rightRail';
+        rightRail.position.set(railCenterX, railY, 0);
         rightRail.castShadow = true;
         rightRail.receiveShadow = true;
         boatGroup.add(rightRail);
         
         // Front & back rails - align with shortened side rails' ends
         // Make front rail match deck width exactly (deck is boatWidth * 0.9)
-        const foreAftLen = boatWidth * 0.9; // Match deck width exactly
+        const foreAftLen = railCenterX * 2;
         const foreAftGeom = new THREE.BoxGeometry(foreAftLen, gunwaleHeight, railThick);
         
         // Side rails end at ±sideLen/2 = ±(boatLength * 0.88 * 0.5)
@@ -900,18 +1042,23 @@ export class Platform {
         
         // Front rail (at transom, where cat stands - positive Z)
         const frontRail = new THREE.Mesh(foreAftGeom, gunwaleMaterial);
+        frontRail.name = 'largeBoat-frontRail';
         const frontRailZ = sideRailEndZ + railThick * 0.5; // At front (positive Z)
         frontRail.position.set(0, railY, frontRailZ);
-        frontRail.castShadow = true;
+        // Disable shadow casting to prevent shadow seam on deck under cat
+        frontRail.castShadow = false;
         frontRail.receiveShadow = true;
+        frontRail.visible = true;
         boatGroup.add(frontRail);
         
         // Back rail (at bow end - negative Z)
         const backRail = new THREE.Mesh(foreAftGeom, gunwaleMaterial);
+        backRail.name = 'largeBoat-backRail';
         const backRailZ = -sideRailEndZ - railThick * 0.5; // At back (negative Z)
         backRail.position.set(0, railY, backRailZ);
         backRail.castShadow = true;
         backRail.receiveShadow = true;
+        backRail.visible = true;
         boatGroup.add(backRail);
 
         // Add darker top caps to emphasize rail edge
@@ -931,13 +1078,15 @@ export class Platform {
         boatGroup.add(rightTopCap);
 
         const frontTopCap = new THREE.Mesh(foreAftTopGeom, gunwaleTopMaterial);
-        frontTopCap.position.set(0, topY, frontRail.position.z);
+        frontTopCap.position.set(0, topY, frontRail.position.z - 0.4);
         frontTopCap.castShadow = false;
+        frontTopCap.visible = true;
         boatGroup.add(frontTopCap);
 
         const backTopCap = new THREE.Mesh(foreAftTopGeom, gunwaleTopMaterial);
-        backTopCap.position.set(0, topY, backRail.position.z);
+        backTopCap.position.set(0, topY, backRail.position.z + 0.4);
         backTopCap.castShadow = false;
+        backTopCap.visible = true;
         boatGroup.add(backTopCap);
         
         // Inner coaming lip (chunkier for large boat)
@@ -955,14 +1104,14 @@ export class Platform {
         
         // Left inner lip - positioned inside deck edge
         const leftCoam = new THREE.Mesh(coamSideGeom, coamMat);
-        leftCoam.position.set(-deckEdge + gunwaleIn, coamY, 0);
+        leftCoam.position.set(-railCenterX + gunwaleIn, coamY, 0);
         leftCoam.castShadow = true;
         leftCoam.receiveShadow = true;
         boatGroup.add(leftCoam);
         
         // Right inner lip - positioned inside deck edge
         const rightCoam = new THREE.Mesh(coamSideGeom, coamMat);
-        rightCoam.position.set(deckEdge - gunwaleIn, coamY, 0);
+        rightCoam.position.set(railCenterX - gunwaleIn, coamY, 0);
         rightCoam.castShadow = true;
         rightCoam.receiveShadow = true;
         boatGroup.add(rightCoam);
@@ -972,6 +1121,7 @@ export class Platform {
         frontCoam.position.set(0, coamY, frontRailZ - gunwaleIn);
         frontCoam.castShadow = true;
         frontCoam.receiveShadow = true;
+        frontCoam.visible = true;
         boatGroup.add(frontCoam);
         
         // Back inner lip (at bow end)
@@ -979,6 +1129,7 @@ export class Platform {
         backCoam.position.set(0, coamY, backRailZ + gunwaleIn);
         backCoam.castShadow = true;
         backCoam.receiveShadow = true;
+        backCoam.visible = true;
         boatGroup.add(backCoam);
         
         // Optional: Sheer clamp strip
@@ -989,12 +1140,12 @@ export class Platform {
         });
         
         const leftSheer = new THREE.Mesh(sheerGeom, sheerMat);
-        leftSheer.position.set(-deckEdge + 0.01, railY - gunwaleHeight * 0.55, 0);
+        leftSheer.position.set(-railCenterX + 0.01, railY - gunwaleHeight * 0.55, 0);
         leftSheer.castShadow = true;
         boatGroup.add(leftSheer);
         
         const rightSheer = new THREE.Mesh(sheerGeom, sheerMat);
-        rightSheer.position.set(deckEdge - 0.01, railY - gunwaleHeight * 0.55, 0);
+        rightSheer.position.set(railCenterX - 0.01, railY - gunwaleHeight * 0.55, 0);
         rightSheer.castShadow = true;
         boatGroup.add(rightSheer);
         
@@ -1021,53 +1172,25 @@ export class Platform {
         
         // Front cleats (at transom where cat stands)
         const frontCleatLeft = cleatGroup.clone();
-        frontCleatLeft.position.set(-deckEdge * 0.6, railY + gunwaleHeight * 0.4, frontRailZ - 0.1);
+        frontCleatLeft.position.set(-railCenterX * 0.6, railY + gunwaleHeight * 0.4, frontRailZ - 0.1);
         frontCleatLeft.rotation.y = Math.PI / 2;
         boatGroup.add(frontCleatLeft);
         
         const frontCleatRight = cleatGroup.clone();
-        frontCleatRight.position.set(deckEdge * 0.6, railY + gunwaleHeight * 0.4, frontRailZ - 0.1);
+        frontCleatRight.position.set(railCenterX * 0.6, railY + gunwaleHeight * 0.4, frontRailZ - 0.1);
         frontCleatRight.rotation.y = Math.PI / 2;
         boatGroup.add(frontCleatRight);
         
         // Back cleats (at bow end)
         const backCleatLeft = cleatGroup.clone();
-        backCleatLeft.position.set(-deckEdge * 0.6, railY + gunwaleHeight * 0.4, backRailZ + 0.1);
+        backCleatLeft.position.set(-railCenterX * 0.6, railY + gunwaleHeight * 0.4, backRailZ + 0.1);
         backCleatLeft.rotation.y = -Math.PI / 2;
         boatGroup.add(backCleatLeft);
         
         const backCleatRight = cleatGroup.clone();
-        backCleatRight.position.set(deckEdge * 0.6, railY + gunwaleHeight * 0.4, backRailZ + 0.1);
+        backCleatRight.position.set(railCenterX * 0.6, railY + gunwaleHeight * 0.4, backRailZ + 0.1);
         backCleatRight.rotation.y = -Math.PI / 2;
         boatGroup.add(backCleatRight);
-        
-        // Multiple rod holders along gunwales (for storing rods)
-        const rodHolderMat = new THREE.MeshStandardMaterial({
-            color: 0x444444, // Dark gray
-            roughness: 0.4,
-            metalness: 0.7
-        });
-        const rodHolderGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.20, 12);
-        
-        // Left side rod holders (3-4 along the side)
-        for (let i = 0; i < 3; i++) {
-            const zPos = -boatLength * 0.25 + i * boatLength * 0.25;
-            const leftRodHolder = new THREE.Mesh(rodHolderGeo, rodHolderMat);
-            leftRodHolder.rotation.z = Math.PI / 2; // Horizontal
-            leftRodHolder.position.set(-deckEdge * 0.85, railY + gunwaleHeight * 0.3, zPos);
-            leftRodHolder.castShadow = true;
-            boatGroup.add(leftRodHolder);
-        }
-        
-        // Right side rod holders (3-4 along the side)
-        for (let i = 0; i < 3; i++) {
-            const zPos = -boatLength * 0.25 + i * boatLength * 0.25;
-            const rightRodHolder = new THREE.Mesh(rodHolderGeo.clone(), rodHolderMat);
-            rightRodHolder.rotation.z = Math.PI / 2; // Horizontal
-            rightRodHolder.position.set(deckEdge * 0.85, railY + gunwaleHeight * 0.3, zPos);
-            rightRodHolder.castShadow = true;
-            boatGroup.add(rightRodHolder);
-        }
         
         // Anchor winch system at bow (front where cat stands)
         const winchMaterial = new THREE.MeshStandardMaterial({
@@ -1136,12 +1259,12 @@ export class Platform {
             // Left side
             const leftScupper = new THREE.Mesh(scupperGeo, scupperMat);
             leftScupper.rotation.x = Math.PI / 2;
-            leftScupper.position.set(-deckEdge * 0.8, deckTopLocal - 0.04, zPos);
+            leftScupper.position.set(-railCenterX + 0.2, deckTopLocal - 0.04, zPos);
             boatGroup.add(leftScupper);
             // Right side
             const rightScupper = new THREE.Mesh(scupperGeo.clone(), scupperMat);
             rightScupper.rotation.x = Math.PI / 2;
-            rightScupper.position.set(deckEdge * 0.8, deckTopLocal - 0.04, zPos);
+            rightScupper.position.set(railCenterX - 0.2, deckTopLocal - 0.04, zPos);
             boatGroup.add(rightScupper);
         }
         
@@ -1172,7 +1295,7 @@ export class Platform {
         // Rope wrapped around front and back cleats
         for (let side = 0; side < 2; side++) {
             const xSide = side === 0 ? -1 : 1;
-            const cleatX = deckEdge * 0.6 * xSide;
+            const cleatX = railCenterX * 0.6 * xSide;
             
             // Front cleats (transom)
             const frontCleatZ = frontRailZ - 0.1;
@@ -1250,6 +1373,7 @@ export class Platform {
         
         // Fighting chair (game chair) - positioned directly behind cat for aesthetics
         const chairGroup = new THREE.Group();
+        chairGroup.name = 'largeBoat-chairGroup';
         
         // Chair materials - authentic fighting chair colors
         // Teak wood frame (warm golden-brown)
@@ -1302,6 +1426,7 @@ export class Platform {
         const footrestThickness = 0.12; // Was 0.08, original 0.04
         const footrestGeometry = new THREE.BoxGeometry(footrestWidth, footrestThickness, footrestDepth);
         const footrest = new THREE.Mesh(footrestGeometry, stainlessSteelMaterial); // Stainless steel footrest
+        footrest.name = 'largeBoat-footrest';
         footrest.position.set(0, deckTopLocal + 0.24, 0); // Adjusted for larger pedestal
         footrest.castShadow = true;
         footrest.receiveShadow = true;
@@ -1312,6 +1437,7 @@ export class Platform {
         const seatThickness = 0.18; // Was 0.12, original 0.06
         const seatGeometry = new THREE.CylinderGeometry(seatRadius, seatRadius, seatThickness, 16);
         const seat = new THREE.Mesh(seatGeometry, chairSeatMaterial);
+        seat.name = 'largeBoat-chairSeat';
         seat.position.y = deckTopLocal + pedestalHeight + seatThickness * 0.5;
         seat.rotation.x = Math.PI / 2; // Rotate to horizontal
         seat.castShadow = true;
@@ -1353,9 +1479,11 @@ export class Platform {
         const armrestThickness = 0.12; // Was 0.08, original 0.04
         const armrestHeight = 0.96; // Was 0.64, original 0.32
         const armrestGeometry = new THREE.BoxGeometry(armrestWidth, armrestThickness, armrestDepth);
+        armrestGeometry.name = 'largeBoat-armrestGeometry';
         
         // Left armrest - stainless steel
         const leftArmrest = new THREE.Mesh(armrestGeometry, stainlessSteelMaterial);
+        leftArmrest.name = 'largeBoat-leftArmrest';
         leftArmrest.position.set(-backrestWidth * 0.5 - armrestWidth * 0.5, deckTopLocal + pedestalHeight + armrestHeight, armrestDepth * 0.25);
         leftArmrest.castShadow = true;
         leftArmrest.receiveShadow = true;
@@ -1363,13 +1491,16 @@ export class Platform {
         
         // Left armrest support post - teak wood
         const leftArmSupport = new THREE.Mesh(new THREE.BoxGeometry(0.075, armrestHeight, 0.075), chairFrameMaterial); // Was 0.05, original 0.025
+        leftArmSupport.name = 'largeBoat-leftArmSupport';
         leftArmSupport.position.set(-backrestWidth * 0.5 - armrestWidth * 0.5, deckTopLocal + pedestalHeight + armrestHeight * 0.5, armrestDepth * 0.25);
         leftArmSupport.castShadow = true;
         chairGroup.add(leftArmSupport);
         
         // Left rod holder (on armrest) - 3x original size - stainless steel
         const rodHolderGeometry = new THREE.CylinderGeometry(0.09, 0.09, 0.18, 12); // Was 0.06 radius, 0.12 depth
+        rodHolderGeometry.name = 'largeBoat-rodHolderGeometry';
         const leftRodHolder = new THREE.Mesh(rodHolderGeometry, rodHolderMaterial);
+        leftRodHolder.name = 'largeBoat-leftRodHolder';
         leftRodHolder.rotation.x = Math.PI / 2;
         leftRodHolder.position.set(-backrestWidth * 0.5 - armrestWidth * 0.5, deckTopLocal + pedestalHeight + armrestHeight + armrestThickness * 0.5 + 0.09, armrestDepth * 0.25); // Was 0.06
         leftRodHolder.castShadow = true;
@@ -1377,6 +1508,7 @@ export class Platform {
         
         // Right armrest - stainless steel
         const rightArmrest = new THREE.Mesh(armrestGeometry, stainlessSteelMaterial);
+        rightArmrest.name = 'largeBoat-rightArmrest';
         rightArmrest.position.set(backrestWidth * 0.5 + armrestWidth * 0.5, deckTopLocal + pedestalHeight + armrestHeight, armrestDepth * 0.25);
         rightArmrest.castShadow = true;
         rightArmrest.receiveShadow = true;
@@ -1384,12 +1516,14 @@ export class Platform {
         
         // Right armrest support post - teak wood
         const rightArmSupport = new THREE.Mesh(new THREE.BoxGeometry(0.075, armrestHeight, 0.075), chairFrameMaterial); // Was 0.05, original 0.025
+        rightArmSupport.name = 'largeBoat-rightArmSupport';
         rightArmSupport.position.set(backrestWidth * 0.5 + armrestWidth * 0.5, deckTopLocal + pedestalHeight + armrestHeight * 0.5, armrestDepth * 0.25);
         rightArmSupport.castShadow = true;
         chairGroup.add(rightArmSupport);
         
         // Right rod holder (on armrest) - 3x original size - stainless steel
         const rightRodHolder = new THREE.Mesh(rodHolderGeometry, rodHolderMaterial);
+        rightRodHolder.name = 'largeBoat-rightRodHolder';
         rightRodHolder.rotation.x = Math.PI / 2;
         rightRodHolder.position.set(backrestWidth * 0.5 + armrestWidth * 0.5, deckTopLocal + pedestalHeight + armrestHeight + armrestThickness * 0.5 + 0.09, armrestDepth * 0.25); // Was 0.06
         rightRodHolder.castShadow = true;
@@ -1399,6 +1533,7 @@ export class Platform {
         const harnessBarLength = backrestWidth + 0.3; // Was + 0.2, original + 0.1
         const harnessBarGeometry = new THREE.CylinderGeometry(0.045, 0.045, harnessBarLength, 12); // Was 0.03, original 0.015
         const harnessBar = new THREE.Mesh(harnessBarGeometry, chairFrameMaterial);
+        harnessBar.name = 'largeBoat-harnessBar';
         harnessBar.rotation.z = Math.PI / 2;
         harnessBar.position.set(0, deckTopLocal + pedestalHeight + backrestHeight + 0.45, -backrestThickness * 0.5); // Was + 0.30, original + 0.15
         harnessBar.castShadow = true;
@@ -1420,6 +1555,15 @@ export class Platform {
         this.platformMesh.position.set(0, this.water.waterY + 0.35, -1.5); // Same position as small boat
         this.platformMesh.castShadow = true;
         this.platformMesh.receiveShadow = true;
+        
+        const largeBoatBBox = new THREE.Box3().setFromObject(this.platformMesh);
+        console.log('[PLATFORM][LARGE_BOAT] BBox', {
+            min: { x: largeBoatBBox.min.x.toFixed(3), z: largeBoatBBox.min.z.toFixed(3) },
+            max: { x: largeBoatBBox.max.x.toFixed(3), z: largeBoatBBox.max.z.toFixed(3) }
+        });
+        
+        // Debug helper: report max extents to track down protruding geometry
+        this.reportPlatformExtents(this.platformMesh, hullOuterEdge, 'LARGE_BOAT', this.largeBoatWidth, boatLength);
         
         // Store initial rotation for animation
         this.platformMesh.userData.initialRotation = new THREE.Euler(0, 0, 0);

@@ -33,15 +33,17 @@ export class Inventory {
             this.recentCatches.pop();
         }
         
-        // Update top 10 biggest fish
-        this.updateTop10({
-            fishName,
-            weight,
-            fishId,
-            value,
-            experience,
-            timestamp
-        });
+        // Update top 10 biggest fish only when weight is recorded
+        if (typeof weight === 'number' && Number.isFinite(weight) && weight > 0) {
+            this.updateTop10({
+                fishName,
+                weight,
+                fishId,
+                value,
+                experience,
+                timestamp
+            });
+        }
         
         // Mark as caught
         this.caughtFish[fishName] = true;
@@ -52,6 +54,10 @@ export class Inventory {
      * @param {Object} catchData - Catch data to add
      */
     updateTop10(catchData) {
+        if (typeof catchData.weight !== 'number' || !Number.isFinite(catchData.weight)) {
+            return;
+        }
+        
         // Add new catch
         this.top10BiggestFish.push({
             ...catchData,

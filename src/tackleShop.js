@@ -46,7 +46,8 @@ export const TackleShop = {
         { id: 2, name: 'Artificial Lure', cost: 250, catchBonus: 5, durability: 25, description: 'Reusable lure', unlockLevel: 4 },
         { id: 3, name: 'Premium Bait', cost: 1000, catchBonus: 12, durability: 20, description: 'High-quality bait', unlockLevel: 6 },
         { id: 4, name: 'Specialty Bait', cost: 4000, catchBonus: 18, durability: 15, description: 'Rare fish attractant', unlockLevel: 10 },
-        { id: 5, name: 'Trophy Bait', cost: 15000, catchBonus: 25, durability: 10, description: 'Trophy fish magnet', unlockLevel: 15 }
+        { id: 5, name: 'Trophy Bait', cost: 15000, catchBonus: 25, durability: 10, description: 'Trophy fish magnet', unlockLevel: 15 },
+        { id: 6, name: 'Starlight Lure', cost: 0, catchBonus: 0, durability: 9999, description: 'Comet-forged lure that awakens the Celestial Depths.', unlockLevel: 1 }
     ]
 };
 

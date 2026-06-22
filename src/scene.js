@@ -6,6 +6,23 @@ export class Scene {
         this.camera = null;
         this.renderer = null;
         this.clock = new THREE.Clock();
+        this.hemisphereLight = null;
+        this.directionalLight = null;
+        this.ambientLight = null;
+        this.defaultEnvironment = {
+            background: 0x87ceeb,
+            fogColor: 0x87ceeb,
+            fogNear: 50,
+            fogFar: 200,
+            hemisphereSkyColor: 0xffffff,
+            hemisphereGroundColor: 0x446688,
+            hemisphereIntensity: 0.7,
+            directionalColor: 0xffffff,
+            directionalIntensity: 0.8,
+            ambientColor: 0xffffff,
+            ambientIntensity: 0.35
+        };
+        this.currentEnvironment = null;
     }
 
     async init() {
@@ -26,6 +43,7 @@ export class Scene {
         // Set up lights for cartoon style
         const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x446688, 0.7);
         this.scene.add(hemisphereLight);
+        this.hemisphereLight = hemisphereLight;
 
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
         // Position light coming from upper left (to match shadow orientation)
@@ -51,11 +69,16 @@ export class Scene {
             directionalLight.shadow.intensity = 1.0; // Maximum shadow darkness
         }
         this.scene.add(directionalLight);
+        this.directionalLight = directionalLight;
 
         // Ambient light for overall illumination
         // Increased slightly to brighten cat on dock
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.35); // Increased from 0.25 to 0.35 to brighten cat
         this.scene.add(ambientLight);
+        this.ambientLight = ambientLight;
+
+        // Apply default environment to ensure lights/fog sync with overrides
+        this.setEnvironment();
 
         // Create camera (will be configured by Camera class)
         const container = document.getElementById('game-container');
@@ -93,6 +116,51 @@ export class Scene {
         if (this.renderer && this.scene && this.camera) {
             this.renderer.render(this.scene, this.camera);
         }
+    }
+
+    /**
+     * Apply environment lighting/fog overrides, merging with defaults.
+     * @param {Object} overrides
+     */
+    setEnvironment(overrides = {}) {
+        if (!this.scene) {
+            return;
+        }
+
+        const env = {
+            ...this.defaultEnvironment,
+            ...overrides
+        };
+
+        if (typeof env.background !== 'undefined') {
+            this.scene.background.set(env.background);
+        }
+
+        if (!this.scene.fog) {
+            this.scene.fog = new THREE.Fog(env.fogColor, env.fogNear, env.fogFar);
+        } else {
+            this.scene.fog.color.set(env.fogColor);
+            this.scene.fog.near = env.fogNear;
+            this.scene.fog.far = env.fogFar;
+        }
+
+        if (this.hemisphereLight) {
+            this.hemisphereLight.color.set(env.hemisphereSkyColor);
+            this.hemisphereLight.groundColor.set(env.hemisphereGroundColor);
+            this.hemisphereLight.intensity = env.hemisphereIntensity;
+        }
+
+        if (this.directionalLight) {
+            this.directionalLight.color.set(env.directionalColor);
+            this.directionalLight.intensity = env.directionalIntensity;
+        }
+
+        if (this.ambientLight) {
+            this.ambientLight.color.set(env.ambientColor);
+            this.ambientLight.intensity = env.ambientIntensity;
+        }
+
+        this.currentEnvironment = env;
     }
 }
 

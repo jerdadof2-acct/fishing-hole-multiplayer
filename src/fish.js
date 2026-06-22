@@ -227,7 +227,14 @@ export class Fish {
         }
 
         if (this._gentleReunion) {
-            console.log(`[FISH] Starfish reunion — gentle approach for ${this._fightDur}s`);
+            const catXZ = this._getCatWorldXZ();
+            this._reunionHookPos = new THREE.Vector3(this.mesh.position.x, 0, this.mesh.position.z);
+            this._reunionMaxDist = this._reunionHookPos.distanceTo(catXZ);
+            console.log(`[FISH] Starfish reunion — gentle approach for ${this._fightDur}s`, {
+                hook: `(${this._reunionHookPos.x.toFixed(1)}, ${this._reunionHookPos.z.toFixed(1)})`,
+                home: `(${catXZ.x.toFixed(1)}, ${catXZ.z.toFixed(1)})`,
+                maxDist: this._reunionMaxDist.toFixed(1)
+            });
         }
     }
     
@@ -301,34 +308,75 @@ export class Fish {
         }
     }
     
+    _getCatWorldXZ() {
+        const anchor = this.fishing?.cat?.getModel?.() || this.fishing?.sceneRef?.cat?.getModel?.();
+        const pos = new THREE.Vector3();
+        if (anchor) {
+            anchor.updateMatrixWorld(true);
+            anchor.getWorldPosition(pos);
+        } else {
+            pos.set(0, 0, -4.4);
+        }
+        // Same landing offset used when reeling fish to the boat
+        return new THREE.Vector3(pos.x, 0, pos.z + 0.65);
+    }
+
     _getReunionHomeTarget() {
-        const catModel = this.fishing?.cat?.getModel?.() || this.fishing?.sceneRef?.cat?.getModel?.();
-        const home = catModel
-            ? catModel.position.clone()
-            : new THREE.Vector3(0, 0, -4.4);
-        home.y = 0;
-        home.z += 2.2;
-        return home;
+        return this._getCatWorldXZ();
+    }
+
+    _enforceReunionDistanceCap(catXZ) {
+        if (!this._reunionMaxDist || !catXZ) return;
+        const toFish = new THREE.Vector3(
+            this.mesh.position.x - catXZ.x,
+            0,
+            this.mesh.position.z - catXZ.z
+        );
+        const dist = toFish.length();
+        if (dist > this._reunionMaxDist + 0.05) {
+            toFish.normalize().multiplyScalar(this._reunionMaxDist);
+            this.mesh.position.x = catXZ.x + toFish.x;
+            this.mesh.position.z = catXZ.z + toFish.z;
+        }
     }
 
     _updateGentleReunionFight(delta) {
         this._fightT += delta;
         this._gentlePulseT += delta;
 
+        const hook = this._reunionHookPos;
         const home = this._getReunionHomeTarget();
-        const toHome = new THREE.Vector3().subVectors(home, this.mesh.position);
-        toHome.y = 0;
-        const dist = toHome.length();
+        const catXZ = home;
 
-        if (dist > 0.08) {
-            toHome.normalize();
-            const heartbeat = 0.78 + Math.sin(this._gentlePulseT * STARFISH_PULSE_HZ * Math.PI * 2) * 0.18;
-            const step = STARFISH_DRIFT_SPEED * heartbeat * delta;
-            this.mesh.position.addScaledVector(toHome, Math.min(step, dist));
+        if (hook) {
+            const progress = Math.min(1, this._fightT / Math.max(this._fightDur, 0.01));
+            const eased = progress * progress * (3 - 2 * progress);
+            this.mesh.position.x = THREE.MathUtils.lerp(hook.x, home.x, eased);
+            this.mesh.position.z = THREE.MathUtils.lerp(hook.z, home.z, eased);
+        } else {
+            const toHome = new THREE.Vector3().subVectors(home, this.mesh.position);
+            toHome.y = 0;
+            const dist = toHome.length();
+            if (dist > 0.08) {
+                toHome.normalize();
+                const heartbeat = 0.78 + Math.sin(this._gentlePulseT * STARFISH_PULSE_HZ * Math.PI * 2) * 0.18;
+                const step = STARFISH_DRIFT_SPEED * heartbeat * delta;
+                this.mesh.position.addScaledVector(toHome, Math.min(step, dist));
+            }
         }
 
-        const sway = Math.sin(this._gentlePulseT * 0.45) * 0.04 * delta;
-        this.mesh.position.x += sway;
+        // Soft lateral heartbeat — never shove the presence farther from Halley
+        const lateral = Math.sin(this._gentlePulseT * 0.45) * 0.012;
+        this.mesh.position.x += lateral;
+
+        this._enforceReunionDistanceCap(catXZ);
+        this.clampPlayArea(this.mesh.position);
+        this._enforceReunionDistanceCap(catXZ);
+
+        this._dir.set(home.x - this.mesh.position.x, 0, home.z - this.mesh.position.z);
+        if (this._dir.lengthSq() > 1e-6) {
+            this._dir.normalize();
+        }
 
         if (this.water?.getWaterHeight) {
             const surfaceY = this.water.getWaterHeight(this.mesh.position.x, this.mesh.position.z);
@@ -338,7 +386,12 @@ export class Fish {
         this.mesh.visible = false;
 
         if (Math.floor(this._fightT * 2) !== Math.floor((this._fightT - delta) * 2)) {
-            console.log(`[FISH] Starfish reunion approach: ${this._fightT.toFixed(1)}s / ${this._fightDur.toFixed(1)}s`);
+            const distToCat = new THREE.Vector3(
+                this.mesh.position.x - catXZ.x,
+                0,
+                this.mesh.position.z - catXZ.z
+            ).length();
+            console.log(`[FISH] Starfish reunion approach: ${this._fightT.toFixed(1)}s / ${this._fightDur.toFixed(1)}s, dist to boat ${distToCat.toFixed(1)}`);
         }
     }
 
@@ -516,18 +569,22 @@ export class Fish {
                 console.log(`[FISH] Landing: bobber dist to dock=${bobberDistToDock.toFixed(2)}, bobber pos=(${bobberPos.x.toFixed(2)}, ${bobberPos.z.toFixed(2)})`);
             }
             
-            // Fish still moves toward rod tip during landing (reel pulls it in)
-            // Don't clamp fish position during LANDING - let reel pull it closer to dock
-            if (rodTip) {
-                const toTip = new THREE.Vector3().subVectors(rodTip, this.mesh.position);
-                const distToTip = toTip.length();
-                if (distToTip > 0.01) {
-                    toTip.normalize();
+            // Fish still moves homeward during landing (reel pulls bobber in)
+            const landingTarget = this._gentleReunion
+                ? this._getReunionHomeTarget()
+                : rodTip;
+            if (landingTarget) {
+                const toTarget = new THREE.Vector3().subVectors(landingTarget, this.mesh.position);
+                toTarget.y = 0;
+                const distToTarget = toTarget.length();
+                if (distToTarget > 0.01) {
+                    toTarget.normalize();
                     const landingSpeed = this._gentleReunion ? STARFISH_LANDING_FISH_SPEED : this.speedLanding;
-                    const step = Math.min(landingSpeed * delta, distToTip);
-                    this.mesh.position.addScaledVector(toTip, step);
-                    // Don't clamp during LANDING - let reel pull fish/bobber closer to dock
-                    // this.clampPlayArea(this.mesh.position);
+                    const step = Math.min(landingSpeed * delta, distToTarget);
+                    this.mesh.position.addScaledVector(toTarget, step);
+                    if (this._gentleReunion) {
+                        this._enforceReunionDistanceCap(this._getCatWorldXZ());
+                    }
                 }
             }
             
@@ -698,6 +755,8 @@ export class Fish {
             
             this.state = FishState.IDLE;
             this._gentleReunion = false;
+            this._reunionHookPos = null;
+            this._reunionMaxDist = 0;
         }
     }
     

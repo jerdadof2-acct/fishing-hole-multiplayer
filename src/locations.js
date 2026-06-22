@@ -1,110 +1,101 @@
 /**
  * Location system - manages fishing locations with water body types and platforms
+ * Region names match DOCS/halleys-big-catch-story.md
  */
 
 export class Locations {
     constructor() {
-        // Initial locations from reference file with water body type and platform mappings
         this.locations = [
-            // POND locations (use dock) - starter pond uses dock
             {
-                name: 'Willow Pond',
+                name: 'Crescent Pond',
                 difficulty: 'Easy',
                 fish: [0, 1, 2],
                 cost: 0,
                 unlockLevel: 1,
-                description: 'Quiet freshwater pond perfect for beginners',
+                description: "Halley's home pond — where the smallest ripples began",
                 waterBodyType: 'POND',
                 platformType: 'DOCK'
             },
-            
-            // RIVER locations (use dock)
             {
-                name: 'River Bend',
+                name: 'Amazon Depths',
                 difficulty: 'Easy',
                 fish: [0, 1, 2, 3],
                 cost: 0,
                 unlockLevel: 2,
-                description: 'Gentle flowing waters',
+                description: 'Jungle rivers where the stars still whisper their names',
                 waterBodyType: 'RIVER',
                 platformType: 'DOCK'
             },
-            
-            // LAKE locations (use small boat)
             {
-                name: 'Deep Lake',
+                name: 'Coral Kingdoms',
                 difficulty: 'Medium',
                 fish: [2, 3, 4, 5],
                 cost: 50,
                 unlockLevel: 3,
-                description: 'Deep waters with bigger fish',
+                description: 'Shallow reefs hiding treasures that remember your name',
                 waterBodyType: 'LAKE',
                 platformType: 'SMALL_BOAT'
             },
             {
-                name: 'Crystal Lake',
+                name: 'Frozen Fjords',
                 difficulty: 'Hard',
                 fish: [15, 16, 17, 18],
                 cost: 200,
                 unlockLevel: 9,
-                description: 'Magical crystal-clear waters',
+                description: 'Ice-bound waters where even time can sleep',
                 waterBodyType: 'LAKE',
                 platformType: 'SMALL_BOAT'
             },
             {
-                name: 'Legendary Waters',
+                name: 'Craggy Coast',
                 difficulty: 'Expert',
                 fish: [6, 7, 8, 9],
                 cost: 300,
                 unlockLevel: 12,
-                description: 'Where legends are born',
+                description: 'Rugged shores where hunters become seekers',
                 waterBodyType: 'LAKE',
                 platformType: 'SMALL_BOAT'
             },
-            
-            // OCEAN locations (use large boat)
             {
-                name: 'Ocean Pier',
+                name: 'Sandy Shoals',
                 difficulty: 'Medium',
                 fish: [10, 11, 12],
                 cost: 100,
                 unlockLevel: 6,
-                description: 'Saltwater fishing spot',
+                description: 'Sun-warmed shallows — the sea never forgets its course',
                 waterBodyType: 'OCEAN',
                 platformType: 'LARGE_BOAT'
             },
             {
-                name: 'Deep Sea',
+                name: 'Stormbreaker Bay',
                 difficulty: 'Hard',
                 fish: [12, 13, 14],
                 cost: 250,
                 unlockLevel: 10,
-                description: 'Deep ocean fishing',
+                description: 'Storm-lashed waters — the path forward rides the current',
                 waterBodyType: 'OCEAN',
                 platformType: 'LARGE_BOAT'
             },
             {
-                name: 'Trophy Waters',
+                name: 'Forgotten Reefs',
                 difficulty: 'Expert',
                 fish: [33],
                 cost: 500,
                 unlockLevel: 15,
-                description: 'Trophy fish paradise',
+                description: 'Lost coral gardens where two lights were born as one',
                 waterBodyType: 'OCEAN',
                 platformType: 'LARGE_BOAT'
             },
             {
-                name: 'Abyss',
+                name: 'Twilight Trench',
                 difficulty: 'Expert',
                 fish: [19, 20, 21, 22, 23],
                 cost: 400,
                 unlockLevel: 14,
-                description: 'Bottomless depths',
+                description: 'The deepest trench — the ocean remembers every spark',
                 waterBodyType: 'OCEAN',
                 platformType: 'LARGE_BOAT'
             },
-
-            // Celestial finale — unlocked after all ten hidden relics forge the Starlight Lure
             {
                 name: 'Celestial Depths',
                 difficulty: 'Legendary',
@@ -116,58 +107,41 @@ export class Locations {
                 platformType: 'LARGE_BOAT',
                 requiresStarlightLure: true
             },
-            
-            // POND locations (use dock) - Added at end
             {
-                name: 'Secret Pond',
+                name: 'Desert Lagoon',
                 difficulty: 'Hard',
-                fish: [4, 5, 6, 7], // Fish type indices
+                fish: [4, 5, 6, 7],
                 cost: 150,
                 unlockLevel: 8,
-                description: 'Hidden treasure spot',
+                description: 'Hidden oasis — look to the stars that guide the waves',
                 waterBodyType: 'POND',
                 platformType: 'DOCK'
             }
         ];
-        
-        this.currentLocationIndex = 0; // Default to first location (Willow Pond - uses POND/DOCK)
+
+        this.currentLocationIndex = 0; // Crescent Pond
     }
-    
-    /**
-     * Get all locations
-     */
+
     getLocations() {
         return this.locations;
     }
-    
-    /**
-     * Get location by index
-     */
+
     getLocation(index) {
         if (index < 0 || index >= this.locations.length) {
             console.warn('[LOCATIONS] Invalid location index:', index);
-            return this.locations[0]; // Return first location as fallback
+            return this.locations[0];
         }
         return this.locations[index];
     }
-    
-    /**
-     * Get current location
-     */
+
     getCurrentLocation() {
         return this.getLocation(this.currentLocationIndex);
     }
-    
-    /**
-     * Get current location index
-     */
+
     getCurrentLocationIndex() {
         return this.currentLocationIndex;
     }
-    
-    /**
-     * Set current location by index
-     */
+
     setCurrentLocation(index) {
         if (index < 0 || index >= this.locations.length) {
             console.warn('[LOCATIONS] Invalid location index:', index);
@@ -175,26 +149,17 @@ export class Locations {
         }
         this.currentLocationIndex = index;
     }
-    
-    /**
-     * Get available fish types for current location
-     */
+
     getAvailableFish() {
         const location = this.getCurrentLocation();
         return location ? location.fish : [];
     }
-    
-    /**
-     * Get water body type for current location
-     */
+
     getWaterBodyType() {
         const location = this.getCurrentLocation();
         return location ? location.waterBodyType : 'LAKE';
     }
-    
-    /**
-     * Get platform type for current location
-     */
+
     getPlatformType() {
         const location = this.getCurrentLocation();
         return location ? location.platformType : 'DOCK';
