@@ -11,6 +11,7 @@ import {
 } from './fishing/rodBend.js';
 import { attachRodToHand } from './fishing/attachRod.js';
 import { aimRodForwardAt45 } from './fishing/aimRod.js';
+import { STARFISH_LANDING_REEL_RATE } from './config/starfishEncounter.js';
 
 // Apply tug visual to bobber when fish pulls
 export function applyTug(bobber, intensity = 1.0, sfx = null, scene = null) {
@@ -403,7 +404,7 @@ export class Fishing {
             : isLanding
                 ? 3.0
                 : isFighting
-                    ? 1.6
+                    ? (fishInstance?._gentleReunion ? 1.15 : 1.6)
                     : 1.0;
 
         const opacityBoost = celebration
@@ -411,7 +412,7 @@ export class Fishing {
             : isLanding
                 ? 1.9
                 : isFighting
-                    ? 1.3
+                    ? (fishInstance?._gentleReunion ? 1.05 : 1.3)
                     : 1.0;
 
         const spriteMultiplier = celebration
@@ -818,6 +819,10 @@ export class Fishing {
         const bobberPos = this.bobber.position;
 
         if (fishInstance && this.fishOnLine && fishInstance.state === 'HOOKED_FIGHT' && fishInstance.mesh) {
+            if (fishInstance._gentleReunion) {
+                const t = fishInstance._gentlePulseT ?? 0;
+                return 0.22 + Math.sin(t * 2.1) * 0.12;
+            }
             const moveX = fishInstance.mesh.position.x - (fishInstance._lastPosX ?? fishInstance.mesh.position.x);
             const moveZ = fishInstance.mesh.position.z - (fishInstance._lastPosZ ?? fishInstance.mesh.position.z);
             const moveSpeed = Math.sqrt(moveX * moveX + moveZ * moveZ) / Math.max(0.016, delta);
@@ -1325,6 +1330,9 @@ export class Fishing {
             // Update fight splash ring position every frame during HOOKED_FIGHT (independent of reeling)
             // fishInstance is already declared above (line 1140), so reuse it here
             if (fishInstance && fishInstance.state === 'HOOKED_FIGHT' && this.fightSplashRing && this.bobber && this.bobber.visible) {
+                if (fishInstance._gentleReunion) {
+                    this.fightSplashRing.visible = false;
+                } else {
                 // Continuously update ring position to follow bobber
                 const waterHeight = this.water.getWaterHeight(this.bobber.position.x, this.bobber.position.z);
                 this.fightSplashRing.position.set(
@@ -1333,6 +1341,7 @@ export class Fishing {
                     this.bobber.position.z
                 );
                 this.fightSplashRing.visible = true;
+                }
             } else if (this.fightSplashRing) {
                 // Hide ring when fish is not fighting
                 if (fishInstance && fishInstance.state !== 'HOOKED_FIGHT') {
@@ -1634,9 +1643,10 @@ export class Fishing {
             
             // Check if fighting a fish
             const isFighting = this.fishOnLine && fish && fish.state === 'HOOKED_FIGHT';
+            const isGentleReunion = fish?._gentleReunion;
             
             // Use shorter interval for fighting (more intense) or longer for normal reeling
-            const reelSoundInterval = isFighting ? 0.25 : 0.35; // Faster when fighting
+            const reelSoundInterval = isFighting && !isGentleReunion ? 0.25 : 0.35;
             
             if (this._reelSoundTimer >= reelSoundInterval) {
                 // Get rod tip position for 3D sound
@@ -1650,7 +1660,7 @@ export class Fishing {
                     rodTipPos = this.getRodTipPosition();
                 }
                 
-                if (rodTipPos && this.sceneRef && this.sfx && isFighting) {
+                if (rodTipPos && this.sceneRef && this.sfx && isFighting && !isGentleReunion) {
                     // Only play reel sound when fighting fish
                     const volume = 0.5; // Increased volume for better audibility
                     
@@ -1822,7 +1832,9 @@ export class Fishing {
         
         if (this.fishOnLine && fish) {
             const fishState = fish.state; // Now using string states
-            if (fishState === 'LANDING') reelRate = this.REEL_RATE_LANDING;
+            if (fishState === 'LANDING') {
+                reelRate = fish._gentleReunion ? STARFISH_LANDING_REEL_RATE : this.REEL_RATE_LANDING;
+            }
         }
         
         if (!this.rope) return;

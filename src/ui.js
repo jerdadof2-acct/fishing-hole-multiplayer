@@ -2,6 +2,7 @@ import { TackleShop } from './tackleShop.js';
 import { ACHIEVEMENTS, evaluateAchievements as evaluateAchievementDefs, getAchievementStatuses } from './achievements.js';
 import { replayStoryPrologue } from './prologue.js';
 import { STARLIGHT_LURE_IMAGE } from './config/hiddenRelics.js';
+import { isCelestialStarfishHook } from './config/starfishEncounter.js';
 
 export class UI {
     constructor(fishing, fish, water, game, gameplaySystems = null, sfx = null) {
@@ -2334,20 +2335,27 @@ export class UI {
                     this.waitingForBite = false;
                     
                     castButton.disabled = true;
-                    castButton.textContent = 'FIGHTING...';
-                    castButton.style.background = '';
-                    castButton.setAttribute('data-state', 'fighting');
+                    const starfishReunion = isCelestialStarfishHook(this.fishing);
+                    castButton.textContent = starfishReunion ? 'A PRESENCE RISES...' : 'FIGHTING...';
+                    castButton.style.background = starfishReunion ? 'rgba(180, 210, 255, 0.35)' : '';
+                    castButton.setAttribute('data-state', starfishReunion ? 'reunion' : 'fighting');
                     
                     // Hook fish and start fight
             if (this.fishing.bobber && this.fishing.bobber.visible) {
-                        // Spawn fish at bobber location (fish is determined by location)
                         this.fish.spawnFish();
-                        // Hook the fish (starts fight)
                         this.fish.hook();
-                        // Set fishing state for fight
                         this.fishing.setFishOnLine(true);
-                        this.fishing.isReeling = true; // Start reeling/fighting
-                        this.fishing.cat?.ensureReelingAnimation?.();
+                        this.fishing.isReeling = true;
+                        if (starfishReunion) {
+                            this.fishing.cat?.playIdle?.();
+                            this.showBannerNotification?.(
+                                'The line breathes with a steady, shared pulse…',
+                                '#c4e4ff',
+                                4200
+                            );
+                        } else {
+                            this.fishing.cat?.ensureReelingAnimation?.();
+                        }
                         console.log('[UI] Fish hooked, fight begins!');
                     
                     if (this.fishing) {
