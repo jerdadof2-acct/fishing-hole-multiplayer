@@ -883,123 +883,13 @@ export class Fishing {
                 this.starfishCelebration.active = false;
             }
         }
-        // Update rod tip world position first (GLB cat: tip tracks animated rod each frame)
-        if (this.cat?.updateRodTipMarker) {
+        // GLB rod tip marker — skip when procedural bendable rod is active
+        if (!this.tempRodTip && this.cat?.updateRodTipMarker) {
             this.cat.updateRodTipMarker();
         } else if (this.rodModel && this.rodTipBone) {
             this.cat.getModel().updateMatrixWorld(true);
             this.rodModel.updateMatrixWorld(true);
             this.rodTipBone.updateMatrixWorld(true);
-        }
-        
-        // Legacy temp-rod path only — skip when cat uses integrated GLB rod + animations
-        if (this.tempRodTip && !this.rodModel && !this.cat?.useGlbAnimations) {
-            const catModel = this.cat?.getModel();
-            if (catModel) {
-                catModel.updateMatrixWorld(true);
-                
-                // Find temp rod root by traversing up parent chain
-                let tempRodRoot = this.tempRodTip;
-                while (tempRodRoot.parent && tempRodRoot.parent !== this.sceneRef.scene && tempRodRoot.parent.type !== 'Scene') {
-                    tempRodRoot = tempRodRoot.parent;
-                }
-                if (tempRodRoot.parent && tempRodRoot.parent.type === 'Group') {
-                    tempRodRoot = tempRodRoot.parent;
-                }
-                
-                // Position rod relative to cat's body (not hand) to avoid circular dependency
-                // Get cat's chest/shoulder position as reference
-                const leftHandBone = this.cat.leftHandBone || this.cat.getAllBones().find(b => b.name && (b.name.toLowerCase() === 'handl' || (b.name.toLowerCase().includes('hand') && b.name.toLowerCase().includes('l'))));
-                const leftShoulderBone = this.cat.leftShoulderBone || this.cat.getAllBones().find(b => b.name && b.name.toLowerCase() === 'shoulderl');
-                
-                if (leftHandBone && leftShoulderBone) {
-                    // Get shoulder position as reference (more stable than hand)
-                    leftShoulderBone.updateMatrixWorld(true);
-                    const shoulderWorldPos = new THREE.Vector3();
-                    leftShoulderBone.getWorldPosition(shoulderWorldPos);
-                    const shoulderWorldQuat = new THREE.Quaternion();
-                    leftShoulderBone.getWorldQuaternion(shoulderWorldQuat);
-                    
-                    // Position rod relative to shoulder (in front of cat)
-                    // Offset: forward from shoulder, slightly right, slightly down
-                    const forwardOffset = new THREE.Vector3(0, 0, 0.15); // Forward from shoulder
-                    const rightOffset = new THREE.Vector3(0.04, 0, 0); // Slightly right
-                    const downOffset = new THREE.Vector3(0, -0.08, 0); // Slightly down
-                    const offsetWorld = forwardOffset.clone()
-                        .add(rightOffset)
-                        .add(downOffset)
-                        .applyQuaternion(shoulderWorldQuat);
-                    
-                    tempRodRoot.position.copy(shoulderWorldPos).add(offsetWorld);
-                    
-                    // Apply rod aiming (45° tilt, 180° flip)
-                    const catForward = new THREE.Vector3(0, 0, 1)
-                        .applyQuaternion(catModel.getWorldQuaternion(new THREE.Quaternion()));
-                    catForward.y = 0;
-                    if (catForward.lengthSq() < 1e-6) catForward.set(0, 0, 1);
-                    catForward.normalize();
-                    const tilt = THREE.MathUtils.degToRad(45);
-                    const up = new THREE.Vector3(0, 1, 0);
-                    const dir = catForward.clone().multiplyScalar(Math.cos(tilt))
-                        .addScaledVector(up, Math.sin(tilt)).normalize();
-                    const currentRodDir = new THREE.Vector3(0, 1, 0);
-                    let q = new THREE.Quaternion().setFromUnitVectors(currentRodDir, dir);
-                    q.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI));
-                    tempRodRoot.quaternion.copy(q);
-                    
-                    // Update rod matrices to get accurate handle position
-                    tempRodRoot.updateMatrixWorld(true);
-                    
-                    // Find handle group in rod hierarchy
-                    // Handle is a Group named 'RodHandle' that's a direct child of rodRoot
-                    let rodHandle = null;
-                    tempRodRoot.children.forEach((child) => {
-                        if (child.name === 'RodHandle' || (child.type === 'Group' && child.name && child.name.toLowerCase().includes('handle'))) {
-                            rodHandle = child;
-                        }
-                    });
-                    // If not found by name, get first Group child (handle should be first)
-                    if (!rodHandle) {
-                        rodHandle = tempRodRoot.children.find(child => child.type === 'Group');
-                    }
-                    
-                    // If handle found, calculate position at (0, 0.25, 0) in handle's local space
-                    if (rodHandle) {
-                        rodHandle.updateMatrixWorld(true);
-                        const handleLocalPos = new THREE.Vector3(0, 0.25, 0); // Handle position where hand should grip (0.25 units up from handle bottom)
-                        // Transform local position to world space
-                        const handleWorldPos = handleLocalPos.clone().applyMatrix4(rodHandle.matrixWorld);
-                        
-                        // Debug logging (only once)
-                        if (!this._handlePosLogged) {
-                            console.log('[FISHING] Handle position for left hand:');
-                            console.log('  Handle local pos:', handleLocalPos);
-                            console.log('  Handle world pos:', handleWorldPos);
-                            this._handlePosLogged = true;
-                        }
-                        
-                        // Get rod's world rotation for hand orientation
-                        const rodWorldQuat = new THREE.Quaternion();
-                        tempRodRoot.getWorldQuaternion(rodWorldQuat);
-                        
-                        // Position left hand at handle position with tight static grip
-                        // Call every frame to keep hand positioned correctly
-                        if (this.cat.positionLeftHandAtHandle) {
-                            this.cat.positionLeftHandAtHandle(handleWorldPos, rodWorldQuat);
-                        }
-                    } else {
-                        if (!this._handleNotFoundWarned) {
-                            console.warn('[FISHING] Rod handle not found - cannot position left hand');
-                            this._handleNotFoundWarned = true;
-                        }
-                    }
-                } else {
-                    // Fallback: use cat model position with hand offset
-                    const catPos = new THREE.Vector3();
-                    catModel.getWorldPosition(catPos);
-                    tempRodRoot.position.set(catPos.x, catPos.y + 0.8, catPos.z);
-                }
-            }
         }
         
         // Update casting animation - parabolic arc to target
@@ -1217,7 +1107,7 @@ export class Fishing {
                 
                 // REVERTED: Manual positioning relative to hand bone (not attached to bone)
                 // This prevents visibility issues and cat position drift
-                const handBone = tempRodRoot.userData?.handBone;
+                const handBone = tempRodRoot.userData?.handBone || this.cat?.leftHandBone;
                 const catModel = this.cat?.getModel();
                 
                 if (handBone && catModel && tempRodRoot) {
@@ -1243,6 +1133,11 @@ export class Fishing {
                         .add(upOffset)
                         .add(forwardOffset)
                         .applyQuaternion(handWorldQuat);
+
+                    const tuneOffset = tempRodRoot.userData?.rodPositionOffset;
+                    if (tuneOffset) {
+                        offsetWorld.add(tuneOffset.clone().applyQuaternion(handWorldQuat));
+                    }
                     
                     // Position rod root at hand position + offset
                     tempRodRoot.position.copy(handWorldPos).add(offsetWorld);
@@ -2171,7 +2066,7 @@ export class Fishing {
     }
 
     getRodTipPosition() {
-        if (this.cat?.updateRodTipMarker) {
+        if (!this.tempRodTip && this.cat?.updateRodTipMarker) {
             this.cat.updateRodTipMarker();
         }
         const rodTipWorld = new THREE.Vector3();

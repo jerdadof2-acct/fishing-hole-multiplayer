@@ -7,6 +7,7 @@ import { Dock } from './dock.js';
 import { Platform } from './platform.js';
 import { Locations } from './locations.js';
 import { Fishing } from './fishing.js';
+import { TempRod } from './tempRod.js';
 import { Fish } from './fish.js';
 import { UI } from './ui.js';
 import { Camera } from './camera.js';
@@ -43,6 +44,7 @@ export class Game {
         this.platform = null; // New platform system
         this.locations = null; // Location management
         this.fishing = null;
+        this.tempRod = null;
         this.fish = null;
         this.ui = null;
         this.camera = null;
@@ -324,8 +326,19 @@ export class Game {
             this.cat.positionOnSurface(platformPos);
             console.log('[PLATFORM] Cat positioned at:', this.cat.savedPosition);
             
+            loadingProgress.update(90, 'Building bendable fishing rod...');
+            this.tempRod = new TempRod(this.scene, this.water.waterY ?? 0, platformPos);
+            const rodTip = this.tempRod.create();
+            this.cat.setEmbeddedRodVisible(false);
+
+            const leftHand = this.cat.leftHandBone;
+            if (leftHand && this.tempRod.rodRoot) {
+                this.tempRod.rodRoot.userData.handBone = leftHand;
+                this.tempRod.rodRoot.userData.rodPositionOffset = new THREE.Vector3(0.113, 0, 0.12);
+            }
+
             loadingProgress.update(92, 'Rigging fishing line and bobber...');
-            this.fishing = new Fishing(this.scene, this.cat, this.water);
+            this.fishing = new Fishing(this.scene, this.cat, this.water, rodTip);
             this.fishing.game = this;
             await this.fishing.init();
             console.log('Fishing system initialized');
