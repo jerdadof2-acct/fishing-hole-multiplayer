@@ -22,6 +22,7 @@ import { Inventory } from './inventory.js';
 import { Leaderboard } from './leaderboard.js';
 import { FishCollection } from './fishCollection.js';
 import { loadingProgress } from './loadingProgress.js';
+import { showAdBanner } from './ads.js';
 import {
     IDLE_PORTRAIT_DELAY_SEC,
     PORTRAIT_BOBBER_TRACKING_CUTOFF
@@ -64,6 +65,9 @@ export class Game {
         this._portraitIdleActive = false;
         this.deferReveal = options.deferReveal === true;
         this._revealed = false;
+        if (this.deferReveal) {
+            document.getElementById('game-container')?.classList.add('pre-entry');
+        }
         this.ready = this.init();
     }
 
@@ -73,9 +77,11 @@ export class Game {
 
         loadingProgress.suppress(false);
         loadingProgress.hide();
+        document.getElementById('game-container')?.classList.remove('pre-entry');
         document.getElementById('player-info')?.classList.remove('hidden');
         document.getElementById('game-area')?.classList.remove('hidden');
         document.getElementById('tab-bar')?.classList.remove('hidden');
+        showAdBanner();
 
         this.setupActivityTracking();
         this.setupCatTap();

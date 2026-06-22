@@ -200,6 +200,18 @@ canvas {
     color: #ff9b9b;
 }
 
+#game-container.pre-entry canvas {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+#game-container.pre-entry #player-info,
+#game-container.pre-entry #game-area,
+#game-container.pre-entry #tab-bar,
+#game-container.pre-entry #ad-banner {
+    display: none !important;
+}
+
 /* Utility Classes */
 .hidden {
     display: none !important;
@@ -1604,13 +1616,18 @@ canvas {
     transition: opacity 1.2s ease;
 }
 
-.story-prologue.is-fading {
+.story-prologue.is-fading-credits .prologue-credits-phase {
     opacity: 0;
+    transition: opacity 1.2s ease;
 }
 
 .story-prologue.is-title-phase .prologue-speed-controls {
     opacity: 0.45;
     pointer-events: none;
+}
+
+.story-prologue.is-splash-only .prologue-speed-controls {
+    display: none;
 }
 
 .prologue-credits-phase,

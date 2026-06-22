@@ -55,16 +55,28 @@ export function markPrologueSeenForVersion() {
     }
 }
 
+/** True when the player finished a prior prologue and should see splash-only on return visits. */
+export function shouldShowReturnSplash() {
+    try {
+        const seenVersion = localStorage.getItem(PROLOGUE_VERSION_STORAGE_KEY);
+        return seenVersion != null && !shouldPlayStoryPrologue();
+    } catch {
+        return false;
+    }
+}
+
 /**
  * Full-screen cinematic prologue: scrolling story → splash art → tap anywhere to enter.
  * @param {{
  *   scrollSpeedMultiplier?: number,
+ *   skipCredits?: boolean,
  *   waitForReady?: () => Promise<unknown>,
  *   onLoadProgress?: (percent: number) => void
  * }} options
  * @returns {Promise<void>}
  */
 export function playStoryPrologue(options = {}) {
+    const skipCredits = options.skipCredits === true;
     const overlay = document.getElementById('story-prologue');
     const creditsPhase = document.getElementById('prologue-credits-phase');
     const titlePhase = document.getElementById('prologue-title-phase');
@@ -151,11 +163,11 @@ export function playStoryPrologue(options = {}) {
             slowerBtn?.removeEventListener('click', onSlower);
             fasterBtn?.removeEventListener('click', onFaster);
             overlay.removeEventListener('click', onOverlayTap);
-            overlay.classList.remove('can-enter');
+            overlay.classList.remove('can-enter', 'is-splash-only');
             overlay.removeAttribute('role');
             overlay.removeAttribute('tabindex');
             overlay.classList.add('hidden');
-            overlay.classList.remove('is-title-phase', 'is-fading');
+            overlay.classList.remove('is-title-phase', 'is-fading', 'is-fading-credits');
             creditsPhase.classList.remove('hidden');
             titlePhase.classList.add('hidden');
             tapHint?.classList.add('hidden');
@@ -211,24 +223,29 @@ export function playStoryPrologue(options = {}) {
             onEnter();
         };
 
+        const startTitlePhase = () => {
+            phase = 'title';
+            overlay.classList.remove('is-fading', 'is-fading-credits');
+            overlay.classList.add('is-title-phase');
+            if (skipCredits) {
+                overlay.classList.add('is-splash-only');
+            }
+            creditsPhase.classList.add('hidden');
+            titlePhase.classList.remove('hidden');
+            updateLoadHint();
+
+            enterTimer = window.setTimeout(enableEnter, PROLOGUE_ENTER_BUTTON_DELAY_SEC * 1000);
+        };
+
         const goToTitlePhase = () => {
             if (phase !== 'credits') return;
-            phase = 'title';
             if (rafId) {
                 cancelAnimationFrame(rafId);
                 rafId = null;
             }
 
-            overlay.classList.add('is-fading');
-            window.setTimeout(() => {
-                overlay.classList.remove('is-fading');
-                overlay.classList.add('is-title-phase');
-                creditsPhase.classList.add('hidden');
-                titlePhase.classList.remove('hidden');
-                updateLoadHint();
-
-                enterTimer = window.setTimeout(enableEnter, PROLOGUE_ENTER_BUTTON_DELAY_SEC * 1000);
-            }, PROLOGUE_PHASE_FADE_MS);
+            overlay.classList.add('is-fading-credits');
+            window.setTimeout(startTitlePhase, PROLOGUE_PHASE_FADE_MS);
         };
 
         const tick = (ts) => {
@@ -281,8 +298,22 @@ export function playStoryPrologue(options = {}) {
         fasterBtn?.addEventListener('click', onFaster);
         document.addEventListener('keydown', onKeyDown);
 
+        updateSpeedLabel();
+        updateLoadHint();
+        loadPollId = window.setInterval(updateLoadHint, 350);
+
+        if (skipCredits) {
+            overlay.classList.remove('hidden', 'is-title-phase', 'is-fading', 'is-fading-credits', 'can-enter');
+            creditsPhase.classList.add('hidden');
+            titlePhase.classList.add('hidden');
+            tapHint?.classList.add('hidden');
+            canEnter = false;
+            startTitlePhase();
+            return;
+        }
+
         phase = 'credits';
-        overlay.classList.remove('hidden', 'is-title-phase', 'is-fading', 'can-enter');
+        overlay.classList.remove('hidden', 'is-title-phase', 'is-fading', 'is-fading-credits', 'can-enter');
         creditsPhase.classList.remove('hidden');
         titlePhase.classList.add('hidden');
         tapHint?.classList.add('hidden');

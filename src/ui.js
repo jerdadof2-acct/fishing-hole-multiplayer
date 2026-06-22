@@ -277,7 +277,10 @@ export class UI {
         friendsModal?.classList.add('hidden');
         
         if (tab === 'game') {
-            gameArea?.classList.remove('hidden');
+            const deferReveal = this.game?.deferReveal && !this.game?._revealed;
+            if (!deferReveal) {
+                gameArea?.classList.remove('hidden');
+            }
         } else if (tab === 'shop') {
             gameArea?.classList.add('hidden');
             this.openModal('shop-modal');

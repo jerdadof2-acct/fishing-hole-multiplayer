@@ -227,7 +227,6 @@ export function initAdRotator() {
         return;
     }
 
-    banner.classList.remove('hidden');
     bannerContent.innerHTML = '';
     stopRotation();
 
@@ -254,4 +253,8 @@ export function initAdRotator() {
     rotator.addEventListener('mouseleave', () => startRotation(rotator));
 
     rotator.setAttribute('tabindex', '0');
+}
+
+export function showAdBanner() {
+    document.getElementById('ad-banner')?.classList.remove('hidden');
 }

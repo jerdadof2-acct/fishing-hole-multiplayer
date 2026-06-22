@@ -5,7 +5,8 @@ import { loadingProgress } from './loadingProgress.js';
 import {
     markPrologueSeenForVersion,
     playStoryPrologue,
-    shouldPlayStoryPrologue
+    shouldPlayStoryPrologue,
+    shouldShowReturnSplash
 } from './prologue.js';
 
 const AUTH_STORAGE_KEY = 'kittyCreekAuth';
@@ -58,9 +59,11 @@ async function startOfflineGame(reason) {
 }
 
 async function launchGame(gameOptions) {
-    const playPrologue = shouldPlayStoryPrologue();
+    const playFullPrologue = shouldPlayStoryPrologue();
+    const playReturnSplash = shouldShowReturnSplash();
+    const needsPreEntry = playFullPrologue || playReturnSplash;
 
-    if (playPrologue) {
+    if (needsPreEntry) {
         loadingProgress.suppress(true);
         loadingProgress.update(18, 'Loading Halley\'s Big Catch…');
     } else {
@@ -74,16 +77,27 @@ async function launchGame(gameOptions) {
 
     const game = new Game({
         ...gameOptions,
-        deferReveal: playPrologue
+        deferReveal: needsPreEntry
     });
     window.game = game;
 
-    if (playPrologue) {
+    if (playFullPrologue) {
         await playStoryPrologue({
             waitForReady: () => game.ready,
             onLoadProgress: () => loadingProgress.getPercent()
         });
         markPrologueSeenForVersion();
+        loadingProgress.suppress(false);
+        game.reveal();
+        return game;
+    }
+
+    if (playReturnSplash) {
+        await playStoryPrologue({
+            skipCredits: true,
+            waitForReady: () => game.ready,
+            onLoadProgress: () => loadingProgress.getPercent()
+        });
         loadingProgress.suppress(false);
         game.reveal();
         return game;
