@@ -1641,9 +1641,10 @@ canvas {
     inset: 0;
     overflow: hidden;
     perspective: 320px;
-    background:
-        radial-gradient(ellipse 80% 55% at 50% 100%, rgba(74, 144, 226, 0.12) 0%, transparent 55%),
-        radial-gradient(ellipse 120% 80% at 50% 0%, rgba(20, 12, 48, 0.95) 0%, #000 70%);
+    background-color: #000c24;
+    background-position: center center;
+    background-size: cover;
+    background-repeat: no-repeat;
 }
 
 .prologue-credits-viewport::after {
@@ -1652,8 +1653,8 @@ canvas {
     left: 0;
     right: 0;
     bottom: 0;
-    height: 28%;
-    background: linear-gradient(to top, #000 0%, transparent 100%);
+    height: 32%;
+    background: linear-gradient(to top, rgba(0, 6, 20, 0.92) 0%, transparent 100%);
     pointer-events: none;
     z-index: 2;
 }
@@ -1673,10 +1674,13 @@ canvas {
     margin: 0 auto 2.4rem;
     font-size: clamp(1.05rem, 2.6vw, 1.45rem);
     line-height: 1.65;
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: 0.03em;
-    color: #ffe9a8;
-    text-shadow: 0 0 24px rgba(255, 220, 120, 0.35);
+    color: #fff8e8;
+    text-shadow:
+        0 0 18px rgba(0, 16, 48, 0.95),
+        0 1px 3px rgba(0, 0, 0, 0.9),
+        0 0 36px rgba(255, 248, 220, 0.5);
 }
 
 .prologue-credits-hint {
@@ -1688,7 +1692,10 @@ canvas {
     font-size: 0.85rem;
     letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: rgba(255, 233, 168, 0.45);
+    color: rgba(255, 248, 228, 0.82);
+    text-shadow:
+        0 0 12px rgba(0, 12, 40, 0.9),
+        0 1px 2px rgba(0, 0, 0, 0.85);
     z-index: 3;
     pointer-events: none;
 }

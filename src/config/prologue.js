@@ -32,6 +32,9 @@ export const PROLOGUE_PHASE_FADE_MS = 1200;
 
 export const PROLOGUE_ENTRANCE_IMAGE = 'images/halley-splash.png';
 
+/** Full-screen art behind scrolling story credits. */
+export const PROLOGUE_SCROLL_BACKGROUND = 'images/prologue-background.png';
+
 export const PROLOGUE_STORY_PARAGRAPHS = [
     'Forty years ago, a comet crossed the sky — a streak of light that touched both sea and shore.',
     'On that night, a kitten named Halley was born… and the ocean hasn\'t been quiet since.',

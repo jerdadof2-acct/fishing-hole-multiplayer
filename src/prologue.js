@@ -4,6 +4,7 @@ import {
     PROLOGUE_ENTRANCE_IMAGE,
     PROLOGUE_GAME_VERSION,
     PROLOGUE_PHASE_FADE_MS,
+    PROLOGUE_SCROLL_BACKGROUND,
     PROLOGUE_SCROLL_SPEED_MAX,
     PROLOGUE_SCROLL_SPEED_MIN,
     PROLOGUE_SCROLL_SPEED_STEP,
@@ -108,6 +109,12 @@ export function playStoryPrologue(options = {}) {
     creditsInner.innerHTML = PROLOGUE_STORY_PARAGRAPHS
         .map((text) => `<p class="prologue-credit-line">${text}</p>`)
         .join('');
+
+    const creditsViewport = creditsPhase.querySelector('.prologue-credits-viewport');
+    if (creditsViewport) {
+        creditsViewport.style.backgroundImage =
+            `linear-gradient(to bottom, rgba(0, 8, 28, 0.55) 0%, rgba(0, 12, 40, 0.25) 40%, rgba(0, 8, 28, 0.45) 100%), url('${PROLOGUE_SCROLL_BACKGROUND}')`;
+    }
 
     const titleImg = document.getElementById('prologue-title-image');
     if (titleImg) {
