@@ -2,6 +2,7 @@ import Game from './main.js';
 import { api } from './api.js';
 import { initAdRotator } from './ads.js';
 import { loadingProgress } from './loadingProgress.js';
+import { maybePlayStoryPrologue } from './prologue.js';
 
 const AUTH_STORAGE_KEY = 'kittyCreekAuth';
 
@@ -105,6 +106,7 @@ async function handleOfflineMode(message) {
                 username: offlineUsername,
                 friendCode: 'OFFLINE'
             });
+            await maybePlayStoryPrologue(true);
         }
     } else {
         if (existingAuth && !localData) {
@@ -318,6 +320,7 @@ async function bootstrapGame() {
             auth = result.auth;
             profile = result.profile;
             collection = result.collection;
+            await maybePlayStoryPrologue(true);
         }
 
         const playerContext = {

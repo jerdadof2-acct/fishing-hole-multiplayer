@@ -224,6 +224,32 @@
                 </div>
             </div>
         </div>
+
+        <!-- First-time story prologue (after username) -->
+        <div id="story-prologue" class="story-prologue hidden" aria-live="polite">
+            <div id="prologue-credits-phase" class="prologue-credits-phase">
+                <div class="prologue-credits-viewport">
+                    <div id="prologue-credits-inner" class="prologue-credits-inner"></div>
+                </div>
+                <p class="prologue-credits-hint">A long time ago, on a lake not so far away…</p>
+            </div>
+
+            <div id="prologue-title-phase" class="prologue-title-phase hidden">
+                <div class="prologue-title-frame">
+                    <img id="prologue-title-image" class="prologue-title-image" alt="" />
+                    <div class="prologue-title-vignette" aria-hidden="true"></div>
+                </div>
+                <button type="button" id="prologue-enter-button" class="prologue-enter-button hidden">
+                    Enter Halley's Big Catch
+                </button>
+            </div>
+
+            <div class="prologue-speed-controls" aria-label="Prologue scroll speed (for voiceover sync)">
+                <button type="button" id="prologue-slower" class="prologue-speed-btn">Slower</button>
+                <span class="prologue-speed-readout">Scroll <span id="prologue-speed-label">1.00×</span></span>
+                <button type="button" id="prologue-faster" class="prologue-speed-btn">Faster</button>
+            </div>
+        </div>
     </div>
 
 <div id="notification-stack"></div>

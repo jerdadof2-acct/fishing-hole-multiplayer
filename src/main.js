@@ -345,6 +345,9 @@ export class Game {
         const usernameModal = document.getElementById('username-modal');
         if (usernameModal && !usernameModal.classList.contains('hidden')) return false;
 
+        const prologue = document.getElementById('story-prologue');
+        if (prologue && !prologue.classList.contains('hidden')) return false;
+
         const activeTab = document.querySelector('.tab-button.active')?.getAttribute('data-tab');
         if (activeTab && activeTab !== 'game') return false;
 
