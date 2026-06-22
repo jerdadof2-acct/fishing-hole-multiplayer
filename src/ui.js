@@ -1,6 +1,7 @@
 import { TackleShop } from './tackleShop.js';
 import { ACHIEVEMENTS, evaluateAchievements as evaluateAchievementDefs, getAchievementStatuses } from './achievements.js';
 import { replayStoryPrologue } from './prologue.js';
+import { STARLIGHT_LURE_IMAGE } from './config/hiddenRelics.js';
 
 export class UI {
     constructor(fishing, fish, water, game, gameplaySystems = null, sfx = null) {
@@ -2141,6 +2142,9 @@ export class UI {
         const forgeBlock = forgedStarlight ? `
             <div class="relic-popup-forge">
                 <div class="relic-popup-forge-title">✨ The Starlight Lure is forged ✨</div>
+                <div class="relic-popup-image-wrap">
+                    <img class="relic-popup-image relic-popup-image--lure" src="${STARLIGHT_LURE_IMAGE}" alt="Starlight Lure" />
+                </div>
                 <p class="relic-popup-forge-quote">"Ten pieces of a puzzle I didn't even know I was solving… Looks like I've just built the light that started it all."</p>
                 <p class="relic-popup-forge-note">Halley can now sail to the <strong>Celestial Depths</strong>.</p>
             </div>
@@ -2205,10 +2209,19 @@ export class UI {
     renderRelicsTab(container) {
         if (!container || !this.player) return;
 
-        import('./config/hiddenRelics.js').then(({ HIDDEN_RELICS }) => {
+        import('./config/hiddenRelics.js').then(({ HIDDEN_RELICS, STARLIGHT_LURE_IMAGE }) => {
             const collected = this.player.hiddenRelicsCollected || [];
             const count = collected.length;
             const lureReady = this.player.starlightLureCrafted;
+
+            const lureCard = lureReady ? `
+                <article class="relic-card relic-card--found relic-card--lure">
+                    <img class="relic-card-image" src="${STARLIGHT_LURE_IMAGE}" alt="Starlight Lure" />
+                    <h4 class="relic-card-name">Starlight Lure</h4>
+                    <p class="relic-card-region">Forged from ten relics</p>
+                    <p class="relic-card-message">"A fragment of the sky calling to something deep below."</p>
+                </article>
+            ` : '';
 
             const cards = HIDDEN_RELICS.map((relic) => {
                 const owned = collected.includes(relic.id);
@@ -2240,7 +2253,7 @@ export class UI {
                             ? 'The Starlight Lure shines aboard The Shooting Star.'
                             : 'Gather all ten relics to forge the Starlight Lure.'}</p>
                     </header>
-                    <div class="relics-grid">${cards}</div>
+                    <div class="relics-grid">${lureCard}${cards}</div>
                 </div>
             `;
         });

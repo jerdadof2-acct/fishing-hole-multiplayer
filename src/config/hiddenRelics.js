@@ -6,6 +6,9 @@
 export const STARLIGHT_LURE_BAIT_ID = 6;
 export const CELESTIAL_DEPTHS_LOCATION_INDEX = 9;
 
+/** Art for the forged Starlight Lure (shop, forge popup, relics logbook). */
+export const STARLIGHT_LURE_IMAGE = 'images/hiddenitems/starlightlure.png';
+
 /** Chance per cast that an undiscovered relic surfaces instead of a normal bite. */
 export const RELIC_DISCOVERY_CHANCE = 0.11;
 
