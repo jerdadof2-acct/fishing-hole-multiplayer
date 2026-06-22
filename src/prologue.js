@@ -7,6 +7,7 @@ import {
     PROLOGUE_SCROLL_SPEED_MAX,
     PROLOGUE_SCROLL_SPEED_MIN,
     PROLOGUE_SCROLL_SPEED_STEP,
+    PROLOGUE_SCROLL_SPEED_DEFAULT,
     PROLOGUE_SPEED_STORAGE_KEY,
     PROLOGUE_STORY_PARAGRAPHS,
     PROLOGUE_VERSION_STORAGE_KEY
@@ -20,12 +21,12 @@ function clamp(value, min, max) {
 function loadSavedScrollMultiplier() {
     try {
         const raw = localStorage.getItem(PROLOGUE_SPEED_STORAGE_KEY);
-        const parsed = raw ? parseFloat(raw) : 1;
+        const parsed = raw ? parseFloat(raw) : PROLOGUE_SCROLL_SPEED_DEFAULT;
         return Number.isFinite(parsed)
             ? clamp(parsed, PROLOGUE_SCROLL_SPEED_MIN, PROLOGUE_SCROLL_SPEED_MAX)
-            : 1;
+            : PROLOGUE_SCROLL_SPEED_DEFAULT;
     } catch {
-        return 1;
+        return PROLOGUE_SCROLL_SPEED_DEFAULT;
     }
 }
 

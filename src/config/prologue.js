@@ -16,9 +16,13 @@ export const PROLOGUE_GAME_VERSION = '20250621-1';
 /** Base upward scroll speed in pixels per second at multiplier 1.0. */
 export const PROLOGUE_BASE_SCROLL_PX_PER_SEC = 42;
 
+/** Default scroll multiplier (0.55× verified for comfortable reading / voiceover sync). */
+export const PROLOGUE_SCROLL_SPEED_DEFAULT = 0.55;
+
 export const PROLOGUE_SCROLL_SPEED_MIN = 0.35;
 export const PROLOGUE_SCROLL_SPEED_MAX = 3.5;
-export const PROLOGUE_SCROLL_SPEED_STEP = 0.15;
+/** Fine steps so you can land between 0.55× and 0.70× (e.g. 0.60×, 0.65×). */
+export const PROLOGUE_SCROLL_SPEED_STEP = 0.05;
 
 /** Seconds on title/logo screen before Enter button appears. */
 export const PROLOGUE_ENTER_BUTTON_DELAY_SEC = 3.5;
