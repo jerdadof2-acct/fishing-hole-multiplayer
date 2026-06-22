@@ -1,5 +1,6 @@
 import { TackleShop } from './tackleShop.js';
 import { ACHIEVEMENTS, evaluateAchievements as evaluateAchievementDefs, getAchievementStatuses } from './achievements.js';
+import { replayStoryPrologue } from './prologue.js';
 
 export class UI {
     constructor(fishing, fish, water, game, gameplaySystems = null, sfx = null) {
@@ -1762,36 +1763,42 @@ export class UI {
         } else if (tab === 'achievements') {
             this.renderAchievementsTab(inventoryContent);
         } else if (tab === 'settings') {
-            // Settings tab with reset progress button
             inventoryContent.innerHTML = `
-                <div style="padding: 20px;">
-                    <h3 style="margin-bottom: 20px; color: #4a90e2;">Game Settings</h3>
-                    <div style="background: rgba(255, 255, 255, 0.05); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
-                        <div style="margin-bottom: 15px;">
-                            <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #ef4444;">⚠️ Danger Zone</div>
-                            <div style="font-size: 14px; color: rgba(255, 255, 255, 0.7); margin-bottom: 15px;">
-                                Reset all progress and start from the beginning. This action cannot be undone!
-                            </div>
-                            <button id="reset-progress-btn" style="
-                                padding: 12px 24px;
-                                background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-                                color: white;
-                                border: 2px solid rgba(255, 255, 255, 0.3);
-                                border-radius: 8px;
-                                font-size: 14px;
-                                font-weight: bold;
-                                cursor: pointer;
-                                transition: all 0.2s;
-                                width: 100%;
-                            " onmouseover="this.style.background='linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'; this.style.transform='scale(1.02)'" onmouseout="this.style.background='linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'; this.style.transform='scale(1)'">
-                                🔄 Reset All Progress
-                            </button>
-                        </div>
+                <div class="settings-panel">
+                    <h3 class="settings-heading">Game Settings</h3>
+                    <div class="settings-story-row">
+                        <button type="button" id="replay-prologue-btn" class="settings-story-link">
+                            ☄ Halley's tale
+                        </button>
+                        <span class="settings-story-caption">Watch the opening story again</span>
+                    </div>
+                    <div class="settings-danger-zone">
+                        <div class="settings-danger-title">⚠️ Danger Zone</div>
+                        <p class="settings-danger-copy">
+                            Reset all progress and start from the beginning. This action cannot be undone!
+                        </p>
+                        <button type="button" id="reset-progress-btn" class="settings-reset-btn">
+                            🔄 Reset All Progress
+                        </button>
                     </div>
                 </div>
             `;
-            
-            // Add reset button handler
+
+            const replayBtn = document.getElementById('replay-prologue-btn');
+            if (replayBtn) {
+                replayBtn.addEventListener('click', async () => {
+                    replayBtn.disabled = true;
+                    this.closeModal('inventory-modal');
+                    try {
+                        await replayStoryPrologue();
+                    } catch (error) {
+                        console.error('[UI] Prologue replay failed:', error);
+                    } finally {
+                        replayBtn.disabled = false;
+                    }
+                });
+            }
+
             const resetBtn = document.getElementById('reset-progress-btn');
             if (resetBtn) {
                 resetBtn.addEventListener('click', () => {

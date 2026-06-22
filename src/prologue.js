@@ -276,3 +276,19 @@ export function playStoryPrologue(options = {}) {
         });
     });
 }
+
+/**
+ * Replay the opening story from in-game (e.g. Inventory → Settings).
+ * Game may already be loaded; Enter returns to gameplay.
+ */
+export async function replayStoryPrologue() {
+    const game = typeof window !== 'undefined' ? window.game : null;
+    const waitForReady = game?.ready
+        ? () => game.ready
+        : () => Promise.resolve();
+
+    await playStoryPrologue({
+        waitForReady,
+        onLoadProgress: () => loadingProgress.getPercent()
+    });
+}
