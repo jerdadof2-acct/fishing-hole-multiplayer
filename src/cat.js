@@ -108,7 +108,7 @@ export class Cat {
                     this.savedRotationY = CAT_FACING_Y;
 
                     const dockSurfacePos = this.dock.getSurfacePosition();
-                    this.positionOnSurface(dockSurfacePos, true);
+                    this.positionOnSurface(dockSurfacePos);
                     this.playIdle();
                     
                     // Enable shadows and lighten materials
@@ -441,27 +441,11 @@ export class Cat {
     }
 
     /**
-     * Y rotation that blends from lake-facing toward the active camera during portrait idle.
-     */
-    getPortraitFacingY(anchor, portraitBlend) {
-        const cam = this.sceneRef?.camera;
-        let faceCameraY = this.baseRotationY + Math.PI;
-        if (cam?.position) {
-            const dx = cam.position.x - anchor.position.x;
-            const dz = cam.position.z - anchor.position.z;
-            if (dx * dx + dz * dz > 0.0001) {
-                faceCameraY = Math.atan2(dx, dz);
-            }
-        }
-        return THREE.MathUtils.lerp(this.baseRotationY, faceCameraY, portraitBlend);
-    }
-
-    /**
      * Place the cat so the bottom of its bounding box sits on the platform surface.
      * @param {THREE.Vector3} surfacePos
-     * @param {boolean} resetRotation - When true, snap facing to baseRotationY (initial spawn / location change).
+     * @param {boolean} preserveFacing - When true, keep current Y rotation (idle portrait only).
      */
-    positionOnSurface(surfacePos, resetRotation = false) {
+    positionOnSurface(surfacePos, preserveFacing = false) {
         const anchor = this.catAnchor || this.model;
         if (!anchor || !surfacePos) return;
 
@@ -472,7 +456,7 @@ export class Cat {
         );
         anchor.rotation.x = 0;
         anchor.rotation.z = 0;
-        if (resetRotation) {
+        if (!preserveFacing) {
             anchor.rotation.y = this.baseRotationY;
         }
 
@@ -480,10 +464,6 @@ export class Cat {
 
         this.savedPosition = anchor.position.clone();
         this.savedRotationY = anchor.rotation.y;
-
-        if (resetRotation) {
-            console.log('[CAT] Positioned on surface:', this.savedPosition, 'facing Y:', this.baseRotationY);
-        }
     }
 
     /**
@@ -2330,7 +2310,7 @@ export class Cat {
                         anchor.rotation.z = 0;
 
                         if (portraitBlend > 0.001) {
-                            const targetY = this.getPortraitFacingY(anchor, portraitBlend);
+                            const targetY = this.baseRotationY + Math.PI * portraitBlend;
                             anchor.rotation.y = THREE.MathUtils.lerp(
                                 anchor.rotation.y,
                                 targetY,
