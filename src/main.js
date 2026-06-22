@@ -19,6 +19,7 @@ import { Player } from './player.js';
 import { Inventory } from './inventory.js';
 import { Leaderboard } from './leaderboard.js';
 import { FishCollection } from './fishCollection.js';
+import { loadingProgress } from './loadingProgress.js';
 
 export class Game {
     constructor(options = {}) {
@@ -58,14 +59,14 @@ export class Game {
 
     async init() {
         try {
-            // Initialize scene
+            loadingProgress.update(22, 'Starting 3D engine...');
             this.scene = new Scene();
             await this.scene.init();
             
-            // Create lake mask first (needed for water and grass)
+            loadingProgress.update(30, 'Shaping the lake...');
             this.lakeMask = buildLakeMask(1024, {x: 0.5, y: 0.5}, 0.42, 0.34, 0.2);
             
-            // Create water with mask-based blending
+            loadingProgress.update(38, 'Building water and shoreline...');
             this.water = new Water2Lake(this.scene, this.lakeMask);
             this.water.create();
             
@@ -84,11 +85,11 @@ export class Game {
             }
             console.log('Water particles created');
             
-            // Create grass around lake (instanced with wind sway)
+            loadingProgress.update(44, 'Growing grass around the lake...');
             this.grass = new Grass(this.scene, this.lakeMask, 400, 0);
             this.grass.create();
             
-            // Initialize gameplay systems
+            loadingProgress.update(50, 'Loading player progress...');
             this.player = new Player(this.initialPlayerData);
             if (this.playerContext) {
                 this.player.setUserContext(this.playerContext);
@@ -148,7 +149,7 @@ export class Game {
             this.applyLocationEnvironment(currentLocation);
             this.applyCelestialBaitPreference(currentLocation);
             
-            // Create platform system (dock or boat based on location)
+            loadingProgress.update(58, `Building ${currentLocation.name}...`);
             this.platform = new Platform(this.scene, this.water);
             this.platform.createPlatform(currentLocation.platformType);
             console.log('[PLATFORM] Created platform:', currentLocation.platformType);
@@ -160,9 +161,13 @@ export class Game {
             this.dock.getSurfacePosition = () => this.platform.getSurfacePosition();
             this.dock.getDockMesh = () => this.platform.getPlatformMesh();
             
-            // Load cat
+            loadingProgress.update(62, 'Loading fisher cat model...');
             this.cat = new Cat(this.scene, this.dock);
-            await this.cat.load();
+            await this.cat.load((fraction) => {
+                const pct = 62 + fraction * 28;
+                const label = Math.round(fraction * 100);
+                loadingProgress.update(pct, `Loading fisher cat model... ${label}%`);
+            });
             console.log('Cat loaded, position:', this.cat.getModel()?.position);
             
             // Position cat on platform (feet aligned to dock surface)
@@ -170,12 +175,8 @@ export class Game {
             this.cat.positionOnSurface(platformPos);
             console.log('[PLATFORM] Cat positioned at:', this.cat.savedPosition);
             
-            const rodTip = this.cat.getRodTip();
-            if (!rodTip) {
-                console.warn('[ROD] No rod tip found on cat model');
-            }
-
-            this.fishing = new Fishing(this.scene, this.cat, this.water, rodTip);
+            loadingProgress.update(92, 'Rigging fishing line and bobber...');
+            this.fishing = new Fishing(this.scene, this.cat, this.water);
             this.fishing.game = this;
             await this.fishing.init();
             console.log('Fishing system initialized');
@@ -282,7 +283,7 @@ export class Game {
                 console.log('Final camera position:', this.scene.camera.position);
             }, 200);
             
-            // Set up UI controls (pass gameplay systems and sfx)
+            loadingProgress.update(96, 'Loading sounds and UI...');
             this.ui = new UI(this.fishing, this.fish, this.water, this, {
                 player: this.player,
                 inventory: this.inventory,
@@ -298,8 +299,7 @@ export class Game {
                 this.fishCollection.enableSync();
             }
             
-            // Hide loading, show UI
-            document.getElementById('loading').classList.add('hidden');
+            loadingProgress.hide();
             document.getElementById('player-info').classList.remove('hidden');
             document.getElementById('game-area').classList.remove('hidden');
             document.getElementById('tab-bar').classList.remove('hidden');
@@ -309,7 +309,7 @@ export class Game {
             
         } catch (error) {
             console.error('Failed to initialize game:', error);
-            document.getElementById('loading').textContent = 'Loading failed. Please refresh.';
+            loadingProgress.fail('Loading failed. Please refresh and try again.');
         }
     }
 
@@ -413,10 +413,10 @@ export class Game {
         // Update fishing system (syncs bobber to fish position after fish has moved)
         if (this.fishing) {
             this.fishing.update(delta);
-            // Update reel if reeling
             if (this.fishing.isReeling) {
                 this.fishing.updateReel(delta);
             }
+            this.fishing.syncCatAnimation?.();
         }
 
         // Update splash effects

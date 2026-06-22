@@ -791,6 +791,11 @@ export class Fishing {
         const cat = this.cat;
         if (!cat?.useGlbAnimations) return;
 
+        const fishState = this.sceneRef?.fish?.state;
+        if (fishState === 'LANDED') {
+            return;
+        }
+
         if (this.isCasting) {
             cat.ensureThrowAnimation?.();
         } else if (this.isReeling) {
@@ -801,7 +806,6 @@ export class Fishing {
     update(delta) {
         this.updateStarlightMode();
         this.updateStarlightEffect(delta);
-        this.syncCatAnimation();
         if (this.starfishCelebration?.active) {
             this.starfishCelebration.timer += delta;
             if (this.starfishCelebration.timer >= this.starfishCelebration.duration) {
@@ -817,8 +821,8 @@ export class Fishing {
             this.rodTipBone.updateMatrixWorld(true);
         }
         
-        // Update temp rod position and position left hand at handle (if using temp rod)
-        if (this.tempRodTip && !this.rodModel) {
+        // Legacy temp-rod path only — skip when cat uses integrated GLB rod + animations
+        if (this.tempRodTip && !this.rodModel && !this.cat?.useGlbAnimations) {
             const catModel = this.cat?.getModel();
             if (catModel) {
                 catModel.updateMatrixWorld(true);
@@ -2143,9 +2147,8 @@ export class Fishing {
             const fishState = fishInstance.state; // Using string states now
             if (fishState === 'LANDED') {
                 // Reeling complete - fish caught
-                // Stop reel sound immediately
                 this.isReeling = false;
-                // Big Catch animation is triggered from fish.js startCelebrate — don't override with idle
+                // Big Catch animation is triggered from fish.js startCelebrate
                 this._reelSoundTimer = 0; // Reset reel sound timer immediately
                 
                 // Stop all active reel sounds immediately

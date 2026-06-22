@@ -132,14 +132,72 @@ canvas {
 }
 
 /* Loading Screen */
-#loading {
+.loading-screen {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 24px;
-    color: white;
-    z-index: 200;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+    background: radial-gradient(circle at center, rgba(26, 26, 46, 0.92) 0%, rgba(10, 10, 24, 0.98) 100%);
+    backdrop-filter: blur(6px);
+}
+
+.loading-panel {
+    width: min(92vw, 420px);
+    padding: 28px 24px;
+    border-radius: 16px;
+    border: 1px solid rgba(74, 144, 226, 0.45);
+    background: rgba(15, 20, 40, 0.88);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+    text-align: center;
+}
+
+.loading-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 10px;
+}
+
+.loading-message {
+    font-size: 0.98rem;
+    color: rgba(255, 255, 255, 0.82);
+    margin-bottom: 16px;
+    min-height: 1.4em;
+}
+
+.loading-bar-track {
+    width: 100%;
+    height: 12px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.loading-bar-fill {
+    width: 0%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #4a90e2 0%, #6ec6ff 100%);
+    transition: width 0.25s ease;
+}
+
+.loading-percent {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+    letter-spacing: 0.04em;
+}
+
+.loading-screen.is-error .loading-bar-track {
+    display: none;
+}
+
+.loading-screen.is-error .loading-message {
+    color: #ff9b9b;
 }
 
 /* Utility Classes */

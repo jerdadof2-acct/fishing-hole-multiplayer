@@ -1,6 +1,7 @@
 import Game from './main.js';
 import { api } from './api.js';
 import { initAdRotator } from './ads.js';
+import { loadingProgress } from './loadingProgress.js';
 
 const AUTH_STORAGE_KEY = 'kittyCreekAuth';
 
@@ -44,21 +45,9 @@ function clearAuthStorage() {
     }
 }
 
-function toggleLoading(visible, message = 'Loading...') {
-    const loadingElement = document.getElementById('loading');
-    if (!loadingElement) return;
-
-    if (visible) {
-        loadingElement.textContent = message;
-        loadingElement.classList.remove('hidden');
-    } else {
-        loadingElement.classList.add('hidden');
-    }
-}
-
 function startOfflineGame(reason) {
     console.warn('[BOOTSTRAP] API unavailable. Starting offline mode.', reason || '');
-    toggleLoading(true, 'Offline mode - using local save data');
+    loadingProgress.update(12, 'Offline mode — loading local save data...');
 
     const modal = document.getElementById('username-modal');
     if (modal) {
@@ -67,7 +56,6 @@ function startOfflineGame(reason) {
 
     api.setUserId(null);
     window.game = new Game({});
-    toggleLoading(false);
 }
 
 function getLocalPlayerData() {
@@ -284,7 +272,8 @@ async function promptForUsername(options = {}) {
 async function bootstrapGame() {
     registerServiceWorker();
     initAdRotator();
-    toggleLoading(true, 'Connecting to Kitty Creek...');
+    loadingProgress.show('Connecting to Halley\'s Big Catch...');
+    loadingProgress.update(2, 'Connecting to server...');
 
     const health = await api.healthCheck();
     if (!health || health.status !== 'ok') {
@@ -294,6 +283,7 @@ async function bootstrapGame() {
     }
 
     try {
+        loadingProgress.update(8, 'Server connected. Loading profile...');
         let auth = getAuthStorage();
         let profile = null;
         let collection = null;
@@ -301,6 +291,7 @@ async function bootstrapGame() {
         if (auth?.userId) {
             api.setUserId(auth.userId);
             try {
+                loadingProgress.update(12, 'Syncing your fisher cat profile...');
                 const result = await fetchPlayerState(auth.userId);
                 profile = result.profile;
                 collection = result.collection;
@@ -322,6 +313,7 @@ async function bootstrapGame() {
         }
 
         if (!profile) {
+            loadingProgress.update(14, 'Choose your fisher name...');
             const result = await promptForUsername();
             auth = result.auth;
             profile = result.profile;
@@ -343,8 +335,9 @@ async function bootstrapGame() {
             fishCollection: collection
         };
 
+        loadingProgress.update(18, 'Starting the lake...');
+
         window.game = new Game(gameOptions);
-        toggleLoading(false);
     } catch (error) {
         console.error('[BOOTSTRAP] Failed to start online mode, falling back to offline.', error);
         await handleOfflineMode(error?.message);

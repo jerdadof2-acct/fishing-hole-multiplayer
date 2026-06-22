@@ -54,12 +54,14 @@ export class Cat {
         this._currentAction = null;
         this.rodTipMarker = null;
         this.rodMesh = null;
+        this.rodTipNode = null;
+        this._rodTipVertexIndex = undefined;
         this.catAnchor = null;
         this.feetYOffset = 0;
         this._holdReelingAfterThrow = false;
     }
 
-    async load() {
+    async load(onProgress = null) {
         return new Promise((resolve, reject) => {
             const loader = new GLTFLoader();
             loader.load(
@@ -142,7 +144,11 @@ export class Cat {
                     console.log('Cat feet Y offset:', this.feetYOffset);
                     resolve();
                 },
-                undefined,
+                (xhr) => {
+                    if (onProgress && xhr.lengthComputable && xhr.total > 0) {
+                        onProgress(xhr.loaded / xhr.total);
+                    }
+                },
                 (error) => {
                     console.error('Error loading cat model:', error);
                     reject(error);
@@ -289,6 +295,22 @@ export class Cat {
     }
 
     setupRodTip() {
+        const tipNamePatterns = [
+            /^rodtip$/i,
+            /^rod_tip$/i,
+            /rod.*tip/i,
+            /line.*attach/i,
+            /fishing.*tip/i
+        ];
+
+        this.model.traverse((child) => {
+            if (this.rodTipNode) return;
+            if (child.name && tipNamePatterns.some((pattern) => pattern.test(child.name))) {
+                this.rodTipNode = child;
+                console.log('[CAT] Found artist rod tip node:', child.name);
+            }
+        });
+
         this.model.traverse((child) => {
             if (!child.isMesh || this.rodMesh) return;
 
@@ -299,55 +321,91 @@ export class Cat {
             }
         });
 
-        if (!this.rodMesh) {
+        if (!this.rodMesh && !this.rodTipNode) {
             console.warn('[CAT] Fishing rod mesh not found in GLB');
             return;
         }
 
+        if (this.rodMesh) {
+            this._rodTipVertexIndex = this.findRodTipVertexIndex(this.rodMesh);
+        }
+
         this.rodTipMarker = new THREE.Object3D();
         this.rodTipMarker.name = 'RodTipMarker';
-        console.log('[CAT] Rod tip marker created for animated rod mesh');
+        console.log('[CAT] Rod tip marker ready', {
+            node: this.rodTipNode?.name || null,
+            vertexIndex: this._rodTipVertexIndex
+        });
     }
 
-    updateRodTipMarker() {
-        if (!this.rodMesh || !this.rodTipMarker) return;
+    findRodTipVertexIndex(mesh) {
+        const attr = mesh.geometry?.attributes?.position;
+        if (!attr) return 0;
 
-        const anchor = this.catAnchor || this.model;
-        this.updateSkeleton();
-        this.rodMesh.updateWorldMatrix(true, false);
+        if (!mesh.geometry.boundingBox) {
+            mesh.geometry.computeBoundingBox();
+        }
 
-        const box = new THREE.Box3().setFromObject(this.rodMesh);
-        if (box.isEmpty()) return;
+        const box = mesh.geometry.boundingBox;
+        const size = box.getSize(new THREE.Vector3());
+        let axis = 2;
+        if (size.y >= size.z && size.y >= size.x) axis = 1;
+        else if (size.x >= size.z && size.x >= size.y) axis = 0;
 
-        const anchorPos = new THREE.Vector3();
-        anchor.getWorldPosition(anchorPos);
-        const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(anchor.quaternion).normalize();
+        let bestIndex = 0;
+        let bestValue = -Infinity;
+        const vertex = new THREE.Vector3();
 
-        const { min, max } = box;
-        let bestCorner = null;
-        let bestProj = -Infinity;
-
-        for (const x of [min.x, max.x]) {
-            for (const y of [min.y, max.y]) {
-                for (const z of [min.z, max.z]) {
-                    const corner = new THREE.Vector3(x, y, z);
-                    const proj = corner.clone().sub(anchorPos).dot(forward);
-                    if (proj > bestProj) {
-                        bestProj = proj;
-                        bestCorner = corner;
-                    }
-                }
+        for (let i = 0; i < attr.count; i++) {
+            vertex.fromBufferAttribute(attr, i);
+            const value = axis === 0 ? vertex.x : axis === 1 ? vertex.y : vertex.z;
+            if (value > bestValue) {
+                bestValue = value;
+                bestIndex = i;
             }
         }
 
-        if (!bestCorner) return;
+        return bestIndex;
+    }
 
+    getRodTipWorldPosition() {
+        if (this.rodTipNode) {
+            return this.rodTipNode.getWorldPosition(new THREE.Vector3());
+        }
+
+        if (!this.rodMesh || this._rodTipVertexIndex === undefined) {
+            return null;
+        }
+
+        this.updateSkeleton();
+
+        const tipLocal = (this._rodTipScratch ??= new THREE.Vector3());
+        tipLocal.fromBufferAttribute(
+            this.rodMesh.geometry.attributes.position,
+            this._rodTipVertexIndex
+        );
+
+        if (this.rodMesh.isSkinnedMesh && typeof this.rodMesh.applyBoneTransform === 'function') {
+            this.rodMesh.applyBoneTransform(this._rodTipVertexIndex, tipLocal);
+        }
+
+        this.rodMesh.updateWorldMatrix(true, false);
+        return tipLocal.applyMatrix4(this.rodMesh.matrixWorld);
+    }
+
+    updateRodTipMarker() {
+        if (!this.rodTipMarker) return;
+
+        const tipWorld = this.getRodTipWorldPosition();
+        if (!tipWorld) return;
+
+        const anchor = this.catAnchor || this.model;
         if (this.rodTipMarker.parent !== anchor) {
             this.rodTipMarker.parent?.remove(this.rodTipMarker);
             anchor.add(this.rodTipMarker);
         }
 
-        this.rodTipMarker.position.copy(anchor.worldToLocal(bestCorner));
+        this.rodTipMarker.position.copy(anchor.worldToLocal(tipWorld));
     }
 
     getRodTip() {
@@ -1568,6 +1626,7 @@ export class Cat {
          * @param {THREE.Quaternion} rodRotation - Rod's world rotation (for proper hand orientation)
          */
         positionLeftHandAtHandle(targetWorldPos, rodRotation = null) {
+            if (this.useGlbAnimations) return;
             if (!this.model || !targetWorldPos) return;
             
             const leftHandBone = this.leftHandBone || this.getAllBones().find(b => b.name && b.name.toLowerCase() === 'handl');

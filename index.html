@@ -6,17 +6,26 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Kitty Creek">
+    <meta name="apple-mobile-web-app-title" content="Halley's Big Catch">
     <meta name="theme-color" content="#4a90e2">
     
-    <title>Kitty Creek Fishing Club</title>
+    <title>Halley's Big Catch</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/svg+xml" href="assets/icons/icon.svg">
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
     <div id="game-container">
-        <div id="loading">Loading...</div>
+        <div id="loading" class="loading-screen" aria-live="polite" aria-busy="true">
+            <div class="loading-panel">
+                <p class="loading-title">Halley's Big Catch</p>
+                <p id="loading-message" class="loading-message">Loading...</p>
+                <div class="loading-bar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div id="loading-bar-fill" class="loading-bar-fill"></div>
+                </div>
+                <p id="loading-percent" class="loading-percent">0%</p>
+            </div>
+        </div>
         
         <!-- Ad Banner -->
         <div id="ad-banner" class="hidden">
@@ -142,7 +151,7 @@
                             <span id="friends-player-code">------</span>
                             <button id="friends-copy-code" class="friend-copy-button">Copy</button>
                         </div>
-                        <p class="friends-tip">Share this code so friends can add you to their Kitty Creek crew.</p>
+                        <p class="friends-tip">Share this code so friends can add you to their Halley's Big Catch crew.</p>
                     </section>
                     <section class="friends-section">
                         <h3>Add a Friend</h3>
@@ -191,11 +200,11 @@
         <div id="username-modal" class="modal hidden">
             <div class="modal-content username-modal">
                 <div class="modal-header">
-                    <h2>Welcome to Kitty Creek</h2>
+                    <h2>Welcome to Halley's Big Catch</h2>
                 </div>
                 <div class="modal-body">
                     <p id="username-helper" class="modal-helper-text">
-                        Pick a username so we can save your progress in the Kitty Creek clubhouse.
+                        Pick a username so we can save your progress in the Halley's Big Catch clubhouse.
                     </p>
                     <form id="username-form" class="username-form">
                         <input
@@ -228,7 +237,7 @@
         }
     }
     </script>
-    <script type="module" src="src/bootstrap.js"></script>
+    <script type="module" src="src/bootstrap.js?v=20251111-02"></script>
 </body>
 </html>
 
