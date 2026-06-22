@@ -351,7 +351,7 @@ export class Platform {
         
         // Transom (back of boat - vertical, properly attached)
         // Align transom with shortened side rails - it should be inside the back rail
-        const transomWidth = Math.min(boatWidth * 0.85, railCenterX * 2 - 0.05);
+        const transomWidth = Math.min(boatWidth * 0.85, smallBottomWidth - 0.05);
         const transomGeometry = new THREE.BoxGeometry(transomWidth, hullHeight * 0.7, 0.12);
         transomGeometry.name = 'largeBoat-transomGeometry';
         const transom = new THREE.Mesh(transomGeometry, hullMaterial);
@@ -627,7 +627,7 @@ export class Platform {
         
         // Small anchor mount/roller at bow (front)
         const anchorMountGeo = new THREE.BoxGeometry(0.12, 0.04, 0.08);
-        const anchorMount = new THREE.Mesh(anchorMountGeo, oarlockMaterial);
+        const anchorMount = new THREE.Mesh(anchorMountGeo, cleatMaterial);
         anchorMount.position.set(0, railY + gunwaleHeight * 0.3, boatLength * 0.88 * 0.5 + 0.05);
         anchorMount.castShadow = true;
         boatGroup.add(anchorMount);

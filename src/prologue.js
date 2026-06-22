@@ -133,6 +133,12 @@ export function playStoryPrologue(options = {}) {
 
     const updateLoadHint = () => {
         if (!loadHint) return;
+        if (loadingProgress.isFailed?.()) {
+            loadHint.textContent = loadingProgress.getFailMessage?.() || 'Loading failed — refresh and try again.';
+            loadHint.classList.remove('hidden');
+            loadHint.classList.add('is-error');
+            return;
+        }
         const pct = Math.round(options.onLoadProgress?.() ?? loadingProgress.getPercent());
         if (pct > 0 && pct < 100) {
             const stallHint = pct >= 55 && pct < 65 ? ' (building boat & loading Halley…)' : '';

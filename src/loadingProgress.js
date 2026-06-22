@@ -10,6 +10,8 @@ class LoadingProgress {
         this.percent = 0;
         this._bound = false;
         this._suppressed = false;
+        this.failed = false;
+        this.failMessage = '';
     }
 
     bind() {
@@ -42,6 +44,8 @@ class LoadingProgress {
         if (!this.root || this._suppressed) return;
 
         this.percent = 0;
+        this.failed = false;
+        this.failMessage = '';
         this.root.classList.remove('hidden', 'is-error');
         this._render(0, message);
     }
@@ -76,8 +80,18 @@ class LoadingProgress {
         }, 250);
     }
 
+    isFailed() {
+        return this.failed;
+    }
+
+    getFailMessage() {
+        return this.failMessage || 'Loading failed. Please refresh.';
+    }
+
     fail(message = 'Loading failed. Please refresh.') {
         this.bind();
+        this.failed = true;
+        this.failMessage = message;
         this.suppress(false);
         if (!this.root) return;
 

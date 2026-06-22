@@ -486,7 +486,8 @@ export class Game {
         } catch (error) {
             console.error('Failed to initialize game:', error);
             loadingProgress.suppress(false);
-            loadingProgress.fail('Loading failed. Please refresh and try again.');
+            const detail = error?.message ? ` (${error.message})` : '';
+            loadingProgress.fail(`Loading failed. Please refresh and try again.${detail}`);
             throw error;
         }
     }
