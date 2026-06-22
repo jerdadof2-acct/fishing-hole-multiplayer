@@ -3,6 +3,8 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { AnimationMixer } from 'three';
 
 const CAT_MODEL_URL = 'assets/glb/Cat.glb';
+const CAT_TARGET_HEIGHT = 2.15;
+const CAT_FACING_Y = 0; // Mixamo export faces +Z (toward the water)
 
 export class Cat {
     constructor(scene, dock) {
@@ -63,11 +65,10 @@ export class Cat {
                     // Check model bounding box to determine appropriate scale
                     const box = new THREE.Box3().setFromObject(this.model);
                     const size = box.getSize(new THREE.Vector3());
-                    const maxDim = Math.max(size.x, size.y, size.z);
                     
-                    // Scale cat to reasonable size (about 1.5 units tall)
-                    const targetHeight = 1.5;
-                    const scale = targetHeight / maxDim;
+                    // Scale cat to a readable size on the dock (use actual height)
+                    const targetHeight = CAT_TARGET_HEIGHT;
+                    const scale = targetHeight / size.y;
                     this.model.scale.setScalar(scale);
                     console.log('Cat model size:', size, 'Scale applied:', scale);
                     
@@ -86,36 +87,13 @@ export class Cat {
                         this.findArmBones();
                     }
                     
-                    // Position cat on dock
+                    // Face the water (+Z) and stand on the platform surface (feet, not hips)
+                    this.baseRotationY = CAT_FACING_Y;
+                    this.savedRotationY = CAT_FACING_Y;
+                    this.model.rotation.y = CAT_FACING_Y;
+                    
                     const dockSurfacePos = this.dock.getSurfacePosition();
-                    this.model.position.copy(dockSurfacePos);
-                    // Save position so it can't be modified by bone attachments
-                    this.savedPosition = dockSurfacePos.clone();
-                    
-                    // Rotate cat to face the water (away from camera)
-                    // IMPORTANT: Keep this rotation locked - don't let position correction change it
-                    // Camera is at z=-8 (behind cat), cat is at z≈3.4, looking toward water (positive Z)
-                    // Cat model likely faces -Z by default, so rotation.y = Math.PI (180°) makes it face +Z (away from camera)
-                    // rotation.y = 0 makes it face -Z (toward camera - WRONG)
-                    
-                    // Check if model has any baked-in rotation that needs to be accounted for
-                    const modelRotationY = this.model.rotation.y;
-                    console.log('[CAT] Model original rotation.y:', modelRotationY);
-                    
-                    // Cat model likely faces -Z by default, so we need Math.PI (180°) to face +Z (away from camera toward water)
-                    this.baseRotationY = Math.PI; // 180 degrees - faces +Z (away from camera toward water)
-                    this.model.rotation.y = this.baseRotationY;
-                    // Save rotation too
-                    this.savedRotationY = this.baseRotationY;
-                    
-                    // Force update matrices to ensure rotation is applied
-                    this.model.updateMatrixWorld(true);
-                    
-                    // Double-check rotation was applied
-                    console.log('[CAT] Initial rotation set - baseRotationY:', this.baseRotationY, 'model.rotation.y:', this.model.rotation.y);
-                    
-                    // Add a flag to force rotation on first update
-                    this._forceInitialRotation = true;
+                    this.positionOnSurface(dockSurfacePos);
                     
                     // Enable shadows and lighten materials
                     this.model.traverse((child) => {
@@ -281,6 +259,27 @@ export class Cat {
 
     getRodTip() {
         return this.rodTipMarker || this.leftHandBone || null;
+    }
+
+    /**
+     * Place the cat so the bottom of its bounding box sits on the platform surface.
+     * @param {THREE.Vector3} surfacePos
+     */
+    positionOnSurface(surfacePos) {
+        if (!this.model || !surfacePos) return;
+
+        this.model.rotation.y = this.baseRotationY;
+        this.model.position.set(surfacePos.x, surfacePos.y, surfacePos.z);
+        this.model.updateMatrixWorld(true);
+
+        const box = new THREE.Box3().setFromObject(this.model);
+        this.model.position.y += (surfacePos.y + 0.02) - box.min.y;
+
+        this.model.updateMatrixWorld(true);
+        this.savedPosition = this.model.position.clone();
+        this.savedRotationY = this.model.rotation.y;
+
+        console.log('[CAT] Positioned on surface:', this.savedPosition, 'facing Y:', this.baseRotationY);
     }
 
     /**

@@ -165,11 +165,10 @@ export class Game {
             await this.cat.load();
             console.log('Cat loaded, position:', this.cat.getModel()?.position);
             
-            // Position cat on platform
+            // Position cat on platform (feet aligned to dock surface)
             const platformPos = this.platform.getSurfacePosition();
-            this.cat.getModel().position.copy(platformPos);
-            this.cat.savedPosition = platformPos.clone();
-            console.log('[PLATFORM] Cat positioned at:', platformPos);
+            this.cat.positionOnSurface(platformPos);
+            console.log('[PLATFORM] Cat positioned at:', this.cat.savedPosition);
             
             const rodTip = this.cat.getRodTip();
             if (!rodTip) {
@@ -342,9 +341,7 @@ export class Game {
         
         // Update cat position to follow platform (especially important for boats)
         if (this.cat && this.platform) {
-            const platformPos = this.platform.getSurfacePosition();
-            this.cat.getModel().position.copy(platformPos);
-            this.cat.savedPosition = platformPos.clone();
+            this.cat.positionOnSurface(this.platform.getSurfacePosition());
         }
         
         // Update cat with sway and bobber tracking (only when idle - not casting or reeling)
