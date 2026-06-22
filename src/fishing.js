@@ -868,10 +868,17 @@ export class Fishing {
         const localTipPos = tempRodRoot.worldToLocal(rodTipWorldPos.clone());
         const lineTension = this._estimateLineTension(fishInstance, delta);
         const mode = isFighting ? 'fight' : isReelingLine ? 'reel' : 'idle';
+        const fishPullWorld = (isFighting && fishInstance?._dir)
+            ? fishInstance._dir
+            : null;
 
         const targets = computeRodBendTowardBobber({
             localTipPos,
             localBobberPos,
+            rodTipWorld: rodTipWorldPos,
+            bobberWorld: bobberWorldPos,
+            rodRoot: tempRodRoot,
+            fishPullWorld,
             distance,
             fishWeight: fishInstance?.currentFish?.weight ?? 0,
             lineTension,

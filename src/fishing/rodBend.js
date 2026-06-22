@@ -5,6 +5,11 @@ export const ROD_BEND_PERCENTAGES = [0.92, 0.78, 0.64, 0.5, 0.36, 0.22, 0.1];
 
 const _toBobber = new THREE.Vector3();
 const _rodAxis = new THREE.Vector3(0, 1, 0);
+const _worldOffset = new THREE.Vector3();
+const _localHoriz = new THREE.Vector3();
+const _pullLocal = new THREE.Vector3();
+const _rodRootQuat = new THREE.Quaternion();
+const _invRodRootQuat = new THREE.Quaternion();
 
 export function getFishWeightBendMultiplier(weight) {
     if (!weight || weight < 3) return 1.0;
@@ -33,6 +38,10 @@ export function collectBlankSections(tempRodTip, tempRodRoot) {
  * @param {{
  *   localTipPos: THREE.Vector3,
  *   localBobberPos: THREE.Vector3,
+ *   rodTipWorld?: THREE.Vector3,
+ *   bobberWorld?: THREE.Vector3,
+ *   rodRoot?: THREE.Object3D,
+ *   fishPullWorld?: THREE.Vector3 | null,
  *   distance: number,
  *   fishWeight?: number,
  *   lineTension?: number,
@@ -43,11 +52,58 @@ export function collectBlankSections(tempRodTip, tempRodRoot) {
 export function computeRodBendTowardBobber({
     localTipPos,
     localBobberPos,
+    rodTipWorld,
+    bobberWorld,
+    rodRoot,
+    fishPullWorld = null,
     distance,
     fishWeight = 0,
     lineTension = 0.2,
     mode = 'idle'
 }) {
+    const weightMult = getFishWeightBendMultiplier(fishWeight);
+    const distanceFactor = THREE.MathUtils.clamp(1 - (distance / 14) * 0.25, 0.65, 1);
+    const tensionBoost = THREE.MathUtils.clamp(0.5 + lineTension * 0.45, 0.5, 1.65);
+    const modeScale = mode === 'fight' ? 1 : mode === 'reel' ? 0.72 : 0.42;
+
+    // During a fight, bend side-to-side toward the fish (world horizontal pull), not just downward.
+    if (mode === 'fight' && rodRoot && rodTipWorld && bobberWorld) {
+        _worldOffset.subVectors(bobberWorld, rodTipWorld);
+        const horizLen = Math.hypot(_worldOffset.x, _worldOffset.z);
+        if (horizLen > 0.12) {
+            rodRoot.getWorldQuaternion(_rodRootQuat);
+            _invRodRootQuat.copy(_rodRootQuat).invert();
+
+            _localHoriz.set(_worldOffset.x, 0, _worldOffset.z).multiplyScalar(1 / horizLen);
+            _localHoriz.applyQuaternion(_invRodRootQuat);
+
+            const horizAimFactor = Math.min(1, horizLen / 5.5);
+
+            const maxLateral = THREE.MathUtils.degToRad(28) * weightMult * tensionBoost * distanceFactor;
+            const maxPitch = THREE.MathUtils.degToRad(8) * weightMult * tensionBoost * distanceFactor;
+
+            let lateralDir = _localHoriz.x;
+            let pitchDir = -_localHoriz.z * 0.35;
+
+            if (fishPullWorld) {
+                _pullLocal.copy(fishPullWorld);
+                _pullLocal.y = 0;
+                if (_pullLocal.lengthSq() > 1e-4) {
+                    _pullLocal.normalize().applyQuaternion(_invRodRootQuat);
+                    lateralDir = THREE.MathUtils.lerp(lateralDir, _pullLocal.x, 0.65);
+                    pitchDir += _pullLocal.z * 0.12;
+                }
+            }
+
+            return {
+                pitch: maxPitch * horizAimFactor * THREE.MathUtils.clamp(pitchDir, -1, 1),
+                lateral: maxLateral * horizAimFactor * THREE.MathUtils.clamp(lateralDir, -1, 1),
+                swayScale: 1.15,
+                lateralSwayScale: 1.35
+            };
+        }
+    }
+
     _toBobber.subVectors(localBobberPos, localTipPos);
     const dist = _toBobber.length();
     if (dist < 0.08) {
@@ -59,17 +115,13 @@ export function computeRodBendTowardBobber({
     const aimAngle = Math.acos(THREE.MathUtils.clamp(_rodAxis.dot(_toBobber), -1, 1));
     const aimFactor = Math.min(1, aimAngle / THREE.MathUtils.degToRad(32));
 
-    const distanceFactor = THREE.MathUtils.clamp(1 - (distance / 14) * 0.25, 0.65, 1);
-    const tensionBoost = THREE.MathUtils.clamp(0.5 + lineTension * 0.45, 0.5, 1.65);
-
-    const modeScale = mode === 'fight' ? 1 : mode === 'reel' ? 0.72 : 0.42;
-    const weightMult = getFishWeightBendMultiplier(fishWeight);
-
-    const maxPitch = THREE.MathUtils.degToRad(24) * weightMult * modeScale * tensionBoost * distanceFactor;
-    const maxLateral = THREE.MathUtils.degToRad(16) * weightMult * modeScale * tensionBoost * distanceFactor;
+    const maxPitch = THREE.MathUtils.degToRad(mode === 'idle' ? 18 : 14)
+        * weightMult * modeScale * tensionBoost * distanceFactor;
+    const maxLateral = THREE.MathUtils.degToRad(mode === 'reel' ? 14 : 8)
+        * weightMult * modeScale * tensionBoost * distanceFactor;
 
     const pitchDir = THREE.MathUtils.clamp(
-        -_toBobber.z * 0.9 + Math.max(0, -_toBobber.y) * 0.4,
+        -_toBobber.z * 0.55 + Math.max(0, -_toBobber.y) * 0.45,
         -1,
         1
     );
@@ -93,6 +145,7 @@ export function applyRodSectionBend(blankSections, rodBendState, targets, delta,
     const swayScale = targets.swayScale ?? 0;
     const swayFrequency = 2.4;
     const swayAmplitude = 0.12 * swayScale;
+    const lateralSwayScale = targets.lateralSwayScale ?? 1;
     const sway1 = Math.sin(swayTime * swayFrequency) * swayAmplitude;
     const sway2 = Math.sin(swayTime * swayFrequency * 1.65) * swayAmplitude * 0.45;
     const totalSway = sway1 + sway2;
@@ -107,7 +160,7 @@ export function applyRodSectionBend(blankSections, rodBendState, targets, delta,
 
         const targetPitch = targets.pitch * bendPercent;
         const targetLateral = targets.lateral * bendPercent
-            + totalSway * targets.lateral * bendPercent * swayFactor;
+            + totalSway * targets.lateral * bendPercent * swayFactor * lateralSwayScale;
 
         if (!rodBendState[sectionId]) {
             rodBendState[sectionId] = {
