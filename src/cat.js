@@ -3,8 +3,9 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { AnimationMixer } from 'three';
 
 const CAT_MODEL_URL = 'assets/glb/Cat.glb';
-const CAT_TARGET_HEIGHT = 2.15;
-const CAT_FACING_Y = 0; // Mixamo export faces +Z (toward the water)
+const CAT_TARGET_HEIGHT = 1.75;
+// Camera is behind the cat (-Z); water is ahead (+Z). This model's bind pose faces -Z, so flip 180°.
+const CAT_FACING_Y = Math.PI;
 
 export class Cat {
     constructor(scene, dock) {
@@ -2149,6 +2150,12 @@ export class Cat {
                                 while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
                                 this.model.rotation.y += angleDiff * Math.min(1, delta * 2);
                             }
+                        } else if (this.model) {
+                            // Idle: face the water (+Z), not the camera
+                            let angleDiff = this.baseRotationY - this.model.rotation.y;
+                            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                            this.model.rotation.y += angleDiff * Math.min(1, delta * 4);
                         }
                         return;
                     }
