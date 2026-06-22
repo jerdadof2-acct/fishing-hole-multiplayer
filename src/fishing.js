@@ -4,9 +4,9 @@ import { Physics } from './physics.js';
 import { FishingRope } from './rope.js';
 import { updateRodTip } from './fishing/rod.js';
 import {
-    applyRodSectionBend,
+    applyFightTipBend,
     collectBlankSections,
-    computeRodBendTowardBobber,
+    computeFightRodBend,
     resetRodSectionBend
 } from './fishing/rodBend.js';
 import { attachRodToHand } from './fishing/attachRod.js';
@@ -844,47 +844,34 @@ export class Fishing {
             return;
         }
 
-        const bobberActive = this.bobber?.visible && !this.isCasting;
-        const isFighting = this.fishOnLine && fishInstance?.state === 'HOOKED_FIGHT';
-        const isWaiting = bobberActive && this.bobber.userData?.floating && !this.isReeling && !this.fishOnLine;
-        const isReelingLine = bobberActive && this.isReeling;
-        const shouldBendTowardBobber = bobberActive && (isFighting || isReelingLine || isWaiting);
+        const isFighting = this.fishOnLine
+            && fishInstance?.state === 'HOOKED_FIGHT'
+            && this.bobber?.visible
+            && !this.isCasting;
 
         const blankSections = collectBlankSections(this.tempRodTip, tempRodRoot);
 
-        if (!shouldBendTowardBobber || !blankSections.length) {
+        if (!isFighting || !blankSections.length) {
             this.rodBendTime = 0;
             resetRodSectionBend(blankSections, this.rodBendState, delta);
             return;
         }
 
         const bobberWorldPos = new THREE.Vector3();
-        const rodTipWorldPos = new THREE.Vector3();
         this.bobber.getWorldPosition(bobberWorldPos);
-        this.tempRodTip.getWorldPosition(rodTipWorldPos);
 
-        const distance = rodTipWorldPos.distanceTo(bobberWorldPos);
-        const localBobberPos = tempRodRoot.worldToLocal(bobberWorldPos.clone());
-        const localTipPos = tempRodRoot.worldToLocal(rodTipWorldPos.clone());
         const lineTension = this._estimateLineTension(fishInstance, delta);
-        const mode = isFighting ? 'fight' : isReelingLine ? 'reel' : 'idle';
-        const fishPullWorld = (isFighting && fishInstance?._dir)
-            ? fishInstance._dir
-            : null;
+        const fishPullWorld = fishInstance?._dir ?? null;
 
-        const targets = computeRodBendTowardBobber({
-            localTipPos,
-            localBobberPos,
-            rodRoot: tempRodRoot,
+        const targets = computeFightRodBend({
+            bobberWorld: bobberWorldPos,
             fishPullWorld,
-            distance,
             fishWeight: fishInstance?.currentFish?.weight ?? 0,
-            lineTension,
-            mode
+            lineTension
         });
 
         this.rodBendTime += delta;
-        applyRodSectionBend(blankSections, this.rodBendState, targets, delta, this.rodBendTime);
+        applyFightTipBend(blankSections, this.rodBendState, targets, delta, this.rodBendTime);
     }
 
     update(delta) {
@@ -1302,9 +1289,7 @@ export class Fishing {
 
                     const bobberActive = this.bobber?.visible && !this.isCasting;
                     const isFighting = this.fishOnLine && fishInstance?.state === 'HOOKED_FIGHT';
-                    const isWaiting = bobberActive && this.bobber.userData?.floating && !this.isReeling && !this.fishOnLine;
-                    const isReelingLine = bobberActive && this.isReeling;
-                    const rodEngaged = bobberActive && (isFighting || isReelingLine || isWaiting);
+                    const rodEngaged = bobberActive && isFighting;
 
                     if (!rodEngaged) {
                         const isIdle = !this.isCasting && !this.isReeling;
