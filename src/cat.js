@@ -12,10 +12,35 @@ import {
 const CAT_MODEL_URL = 'assets/glb/Cat.glb?v=webp1';
 const CAT_TARGET_HEIGHT = 2.0;
 const CAT_TARGET_HEIGHT_LARGE_BOAT = 2.2;
+/** Extra sole clearance below foot bones (ankle ≠ ground contact). */
+const FOOT_SOLE_PADDING = 0.06;
 // Lake-facing rotation: see CAT_FACING_Y in src/config/idlePortrait.js (locked).
 
-/** Mesh-geometry feet plane — setFromObject often clips skinned legs. */
-function computeFeetYOffset(model) {
+function isFootBone(name) {
+    const key = String(name || '').toLowerCase().replace(/^mixamorig:?/, '').replace(/[._]/g, '');
+    return key.includes('foot') || key.includes('toe');
+}
+
+/** Lowest foot/toe bone in model space — reliable for skinned Mixamo rigs. */
+function computeFeetYOffsetFromBones(model) {
+    model.updateMatrixWorld(true);
+    const inverse = model.matrixWorld.clone().invert();
+    const point = new THREE.Vector3();
+    let lowestY = Infinity;
+
+    model.traverse((node) => {
+        if (!node.isBone || !isFootBone(node.name)) return;
+        node.getWorldPosition(point);
+        point.applyMatrix4(inverse);
+        lowestY = Math.min(lowestY, point.y);
+    });
+
+    if (!Number.isFinite(lowestY)) return null;
+    return -lowestY + FOOT_SOLE_PADDING;
+}
+
+/** Mesh fallback when foot bones are missing. */
+function computeFeetYOffsetFromMeshes(model) {
     if (!model) return 0;
 
     model.updateMatrixWorld(true);
@@ -43,11 +68,16 @@ function computeFeetYOffset(model) {
         box.setFromObject(model);
     }
 
-    return -box.min.y;
+    return -box.min.y + FOOT_SOLE_PADDING;
 }
 
-/** @param {Cat} cat @param {'DOCK'|'SMALL_BOAT'|'LARGE_BOAT'} platformType @param {THREE.Vector3} [surfacePos] */
-export function applyCatPlatformHeight(cat, platformType, surfacePos = null) {
+function computeFeetYOffset(model) {
+    if (!model) return 0;
+    return computeFeetYOffsetFromBones(model) ?? computeFeetYOffsetFromMeshes(model);
+}
+
+/** @param {Cat} cat @param {'DOCK'|'SMALL_BOAT'|'LARGE_BOAT'} platformType @param {THREE.Vector3} [surfacePos] @param {import('./platform.js').Platform} [platform] */
+export function applyCatPlatformHeight(cat, platformType, surfacePos = null, platform = null) {
     if (!cat?.model || !cat.bindHeight) return;
 
     let height = CAT_TARGET_HEIGHT;
@@ -59,9 +89,20 @@ export function applyCatPlatformHeight(cat, platformType, surfacePos = null) {
 
     cat.targetHeight = height;
     cat.model.scale.setScalar(height / cat.bindHeight);
+    cat.platformSurfaceLift = platform?.getCatSurfaceLift?.() ?? 0;
     cat.resetToBindPose?.();
+    cat.playIdle?.();
+    if (cat.mixer) {
+        cat.mixer.update(0);
+    }
     cat.model.updateMatrixWorld(true);
     cat.feetYOffset = computeFeetYOffset(cat.model);
+
+    if (platformType !== 'DOCK' && cat.model) {
+        cat.model.traverse((child) => {
+            if (child.isMesh) child.renderOrder = 8;
+        });
+    }
 
     if (surfacePos && typeof cat.positionOnSurface === 'function') {
         cat.positionOnSurface(surfacePos);
@@ -119,6 +160,7 @@ export class Cat {
         this._rodTipVertexIndex = undefined;
         this.catAnchor = null;
         this.feetYOffset = 0;
+        this.platformSurfaceLift = 0;
         this._holdReelingAfterThrow = false;
     }
 
@@ -521,9 +563,10 @@ export class Cat {
         const anchor = this.catAnchor || this.model;
         if (!anchor || !surfacePos) return;
 
+        const lift = this.platformSurfaceLift || 0;
         anchor.position.set(
             surfacePos.x,
-            surfacePos.y + this.feetYOffset + 0.02,
+            surfacePos.y + this.feetYOffset + lift + 0.02,
             surfacePos.z
         );
         anchor.rotation.x = 0;

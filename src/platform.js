@@ -399,6 +399,13 @@ export class Platform {
         boatGroup.userData.deckTopLocal = deckTopLocal;
         boatGroup.userData.deckThickness = deckThickness;
 
+        const smallDeckSurfaceY = deckTopLocal + deckThickness * 0.5;
+        const smallCatStand = new THREE.Object3D();
+        smallCatStand.name = 'smallBoat-catStand';
+        smallCatStand.position.set(0, smallDeckSurfaceY + 0.02, boatLength * 0.28);
+        boatGroup.add(smallCatStand);
+        boatGroup.userData.catStandMarker = smallCatStand;
+
         // Transom — full height from hull floor to deck underside, flush with back rail
         const transomWidth = Math.min(boatWidth * 0.85, railCenterX * 2 - 0.05);
         const hullFloorY = -hullHeight * 0.5;
@@ -940,6 +947,12 @@ export class Platform {
         
         boatGroup.userData.deckTopLocal = deckTopLocal;
         boatGroup.userData.deckThickness = deckThickness;
+
+        const catStandMarker = new THREE.Object3D();
+        catStandMarker.name = 'largeBoat-catStand';
+        catStandMarker.position.set(0, deckTopLocal + deckThickness * 0.5 + 0.02, boatLength * 0.36);
+        boatGroup.add(catStandMarker);
+        boatGroup.userData.catStandMarker = catStandMarker;
 
         // Teak cockpit slats (sportfisher deck)
         const teakSlatMaterial = new THREE.MeshStandardMaterial({
@@ -1651,6 +1664,25 @@ export class Platform {
     }
     
     /**
+     * Extra Y lift on boats — skinned meshes sit below bind-pose bounds at idle.
+     */
+    getCatSurfaceLift() {
+        if (this.currentPlatformType === 'LARGE_BOAT') return 0.22;
+        if (this.currentPlatformType === 'SMALL_BOAT') return 0.10;
+        return 0;
+    }
+
+    /**
+     * World position of the cat-stand marker when present.
+     */
+    getCatStandWorldPosition() {
+        const marker = this.platformMesh?.userData?.catStandMarker;
+        if (!marker) return null;
+        marker.updateMatrixWorld(true);
+        return marker.getWorldPosition(new THREE.Vector3());
+    }
+
+    /**
      * Get surface position where cat should stand
      */
     getSurfacePosition() {
@@ -1676,6 +1708,9 @@ export class Platform {
                 );
             
             case 'SMALL_BOAT': {
+                const stand = this.getCatStandWorldPosition();
+                if (stand) return stand;
+
                 const deckTopLocal = this.platformMesh.userData.deckTopLocal || (0.2 * 0.35 + 0.04 * 0.5);
                 const deckThickness = this.platformMesh.userData.deckThickness || 0.04;
                 const deckSurfaceY = deckTopLocal + deckThickness * 0.5;
@@ -1689,6 +1724,9 @@ export class Platform {
             }
             
             case 'LARGE_BOAT': {
+                const stand = this.getCatStandWorldPosition();
+                if (stand) return stand;
+
                 const deckTopLocal = this.platformMesh.userData.deckTopLocal || (0.25 * 0.35 + 0.06 * 0.5);
                 const deckThickness = this.platformMesh.userData.deckThickness || 0.06;
                 const deckSurfaceY = deckTopLocal + deckThickness * 0.5;
