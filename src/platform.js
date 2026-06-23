@@ -1664,15 +1664,6 @@ export class Platform {
     }
     
     /**
-     * Extra Y lift on boats — skinned meshes sit below bind-pose bounds at idle.
-     */
-    getCatSurfaceLift() {
-        if (this.currentPlatformType === 'LARGE_BOAT') return 0.22;
-        if (this.currentPlatformType === 'SMALL_BOAT') return 0.10;
-        return 0;
-    }
-
-    /**
      * World position of the cat-stand marker when present.
      */
     getCatStandWorldPosition() {

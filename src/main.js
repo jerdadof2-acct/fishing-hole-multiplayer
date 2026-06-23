@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Scene } from './scene.js';
-import { Cat, applyCatPlatformHeight } from './cat.js?v=20250622-16';
+import { Cat, applyCatPlatformHeight } from './cat.js?v=20250622-17';
 import { Water2Lake } from './water2.js';
 import { Grass } from './grass.js';
 import { Dock } from './dock.js';
@@ -606,12 +606,6 @@ export class Game {
 
         this.updateIdlePortrait();
 
-        // Update cat position to follow platform (especially important for boats)
-        if (this.cat && this.platform) {
-            const preserveFacing = this._portraitIdleActive === true;
-            this.cat.positionOnSurface(this.platform.getSurfacePosition(), preserveFacing);
-        }
-
         if (this.camera) {
             this.camera.advancePortraitBlend(delta);
         }
@@ -670,6 +664,11 @@ export class Game {
                 
                 this.cat.update(delta, isIdle, bobberPos, isFishing, portraitBlend);
             }
+
+        // After animation pose updates, align feet to the deck marker (boats pitch with waves)
+        if (this.cat && this.platform) {
+            this.cat.alignFeetToSurface(this.platform.getSurfacePosition());
+        }
         
         // Update rod dragging if active
         if (this.rodDragging) {

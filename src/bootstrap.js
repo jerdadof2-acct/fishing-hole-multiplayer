@@ -1,4 +1,4 @@
-import Game from './main.js?v=20250622-16';
+import Game from './main.js?v=20250622-17';
 import { api } from './api.js';
 import { initAdRotator } from './ads.js';
 import { loadingProgress } from './loadingProgress.js';

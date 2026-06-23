@@ -89,7 +89,6 @@ export function applyCatPlatformHeight(cat, platformType, surfacePos = null, pla
 
     cat.targetHeight = height;
     cat.model.scale.setScalar(height / cat.bindHeight);
-    cat.platformSurfaceLift = platform?.getCatSurfaceLift?.() ?? 0;
     cat.resetToBindPose?.();
     cat.playIdle?.();
     if (cat.mixer) {
@@ -160,7 +159,6 @@ export class Cat {
         this._rodTipVertexIndex = undefined;
         this.catAnchor = null;
         this.feetYOffset = 0;
-        this.platformSurfaceLift = 0;
         this._holdReelingAfterThrow = false;
     }
 
@@ -555,7 +553,56 @@ export class Cat {
     }
 
     /**
-     * Place the cat so the bottom of its bounding box sits on the platform surface.
+     * Lowest world-space Y of foot bones and skinned mesh bounds (current pose).
+     */
+    getLowestContactWorldY() {
+        if (!this.model) return null;
+
+        this.updateSkeleton();
+        this.model.updateMatrixWorld(true);
+
+        const point = new THREE.Vector3();
+        let lowest = Infinity;
+
+        this.model.traverse((node) => {
+            if (!node.isBone || !isFootBone(node.name)) return;
+            node.getWorldPosition(point);
+            lowest = Math.min(lowest, point.y);
+        });
+
+        const bounds = new THREE.Box3().setFromObject(this.model);
+        if (Number.isFinite(bounds.min.y)) {
+            lowest = Math.min(lowest, bounds.min.y);
+        }
+
+        return Number.isFinite(lowest) ? lowest : null;
+    }
+
+    /**
+     * Each frame: follow deck X/Z and raise/lower until feet touch the surface (keeps rotation).
+     */
+    alignFeetToSurface(surfacePos) {
+        const anchor = this.catAnchor || this.model;
+        if (!anchor || !surfacePos) return;
+
+        anchor.position.x = surfacePos.x;
+        anchor.position.z = surfacePos.z;
+
+        const targetY = surfacePos.y + FOOT_SOLE_PADDING;
+        anchor.updateMatrixWorld(true);
+        const contactY = this.getLowestContactWorldY();
+        if (contactY !== null) {
+            anchor.position.y += targetY - contactY;
+        } else {
+            anchor.position.y = surfacePos.y + this.feetYOffset + 0.02;
+        }
+
+        anchor.updateMatrixWorld(true);
+        this.savedPosition = anchor.position.clone();
+    }
+
+    /**
+     * Full placement for load / location switch (position + facing + foot align).
      * @param {THREE.Vector3} surfacePos
      * @param {boolean} preserveFacing - When true, keep current Y rotation (idle portrait only).
      */
@@ -563,16 +610,20 @@ export class Cat {
         const anchor = this.catAnchor || this.model;
         if (!anchor || !surfacePos) return;
 
-        const lift = this.platformSurfaceLift || 0;
-        anchor.position.set(
-            surfacePos.x,
-            surfacePos.y + this.feetYOffset + lift + 0.02,
-            surfacePos.z
-        );
+        anchor.position.set(surfacePos.x, surfacePos.y, surfacePos.z);
         anchor.rotation.x = 0;
         anchor.rotation.z = 0;
         if (!preserveFacing) {
             anchor.rotation.y = this.baseRotationY;
+        }
+        anchor.updateMatrixWorld(true);
+
+        const targetY = surfacePos.y + FOOT_SOLE_PADDING;
+        const contactY = this.getLowestContactWorldY();
+        if (contactY !== null) {
+            anchor.position.y += targetY - contactY;
+        } else {
+            anchor.position.y = surfacePos.y + this.feetYOffset + 0.02;
         }
 
         anchor.updateMatrixWorld(true);
