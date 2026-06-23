@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'halleys-big-catch-media';
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const CACHE_NAME = `${CACHE_PREFIX}-${CACHE_VERSION}`;
 
 /** Only assets needed for first paint — fish/audio cache on demand via fetch handler */
@@ -34,8 +34,20 @@ self.addEventListener('activate', (event) => {
     );
 });
 
+function isGlbRequest(request) {
+    try {
+        return new URL(request.url).pathname.startsWith('/assets/glb/');
+    } catch (_error) {
+        return false;
+    }
+}
+
 function isMediaRequest(request) {
     if (request.method !== 'GET') {
+        return false;
+    }
+
+    if (isGlbRequest(request)) {
         return false;
     }
 
@@ -49,8 +61,7 @@ function isMediaRequest(request) {
         return url.pathname.startsWith('/assets/images/') ||
             url.pathname.startsWith('/assets/audio/') ||
             url.pathname.startsWith('/assets/textures/') ||
-            url.pathname.startsWith('/assets/icons/') ||
-            url.pathname.startsWith('/assets/glb/');
+            url.pathname.startsWith('/assets/icons/');
     } catch (_error) {
         return false;
     }
@@ -58,13 +69,22 @@ function isMediaRequest(request) {
 
 self.addEventListener('fetch', (event) => {
     const { request } = event;
+
+    // GLB models: always network-first so cat model updates are not stuck in cache
+    if (isGlbRequest(request)) {
+        event.respondWith(
+            fetch(request).catch(() => caches.match(request))
+        );
+        return;
+    }
+
     if (!isMediaRequest(request)) {
         return;
     }
 
     event.respondWith(
         caches.open(CACHE_NAME).then(async (cache) => {
-            const cached = await cache.match(request, { ignoreSearch: true });
+            const cached = await cache.match(request);
             if (cached) {
                 return cached;
             }
