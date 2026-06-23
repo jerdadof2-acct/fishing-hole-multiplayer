@@ -26,7 +26,7 @@ const cmd = [
     'npx --yes @gltf-transform/cli optimize',
     quoted(input),
     quoted(temp),
-    '--compress meshopt',
+    '--compress false',
     '--texture-compress webp',
     '--texture-size 1024',
     '--simplify false'

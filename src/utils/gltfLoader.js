@@ -12,10 +12,21 @@ function ensureMeshoptDecoder() {
     return meshoptReady;
 }
 
+const MESHOPT_READY_TIMEOUT_MS = 15000;
+
 /** GLTFLoader configured for meshopt-compressed models (Cat.glb after compress:cat). */
 export async function createGLTFLoader() {
-    await ensureMeshoptDecoder();
     const loader = new GLTFLoader();
-    loader.setMeshoptDecoder(MeshoptDecoder);
+    try {
+        await Promise.race([
+            ensureMeshoptDecoder(),
+            new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Meshopt decoder init timed out')), MESHOPT_READY_TIMEOUT_MS);
+            })
+        ]);
+        loader.setMeshoptDecoder(MeshoptDecoder);
+    } catch (error) {
+        console.warn('[GLTF] Meshopt decoder unavailable:', error);
+    }
     return loader;
 }

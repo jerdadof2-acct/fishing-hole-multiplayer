@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createGLTFLoader } from './utils/gltfLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { AnimationMixer } from 'three';
 import {
     CAT_FACING_Y,
@@ -9,7 +9,7 @@ import {
     PORTRAIT_BLEND_ACTIVE_THRESHOLD
 } from './config/idlePortrait.js';
 
-const CAT_MODEL_URL = 'assets/glb/Cat.glb?v=original3';
+const CAT_MODEL_URL = 'assets/glb/Cat.glb?v=webp1';
 const CAT_TARGET_HEIGHT = 1.75;
 // Lake-facing rotation: see CAT_FACING_Y in src/config/idlePortrait.js (locked).
 
@@ -74,7 +74,7 @@ export class Cat {
                 reject(new Error('Cat model download timed out — check your connection and refresh.'));
             }, timeoutMs);
 
-            createGLTFLoader().then((loader) => {
+            const loader = new GLTFLoader();
             loader.load(
                 CAT_MODEL_URL,
                 (gltf) => {
@@ -162,10 +162,6 @@ export class Cat {
                     reject(error);
                 }
             );
-            }).catch((error) => {
-                clearTimeout(timeoutId);
-                reject(error);
-            });
         });
     }
 

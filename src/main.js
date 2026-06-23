@@ -321,15 +321,16 @@ export class Game {
             this.cat = new Cat(this.scene, this.dock);
             catLoadPulse = setInterval(() => {
                 const pct = loadingProgress.getPercent();
-                if (pct < 90) {
-                    loadingProgress.update(pct + 0.35, 'Loading fisher cat model...');
+                if (pct < 94) {
+                    const step = pct < 88 ? 0.35 : 0.06;
+                    loadingProgress.update(pct + step, 'Loading fisher cat model...');
                 }
             }, 400);
 
             try {
                 await this.cat.load((fraction) => {
                     stopCatLoadPulse();
-                    const pct = 62 + fraction * 28;
+                    const pct = 62 + fraction * 32;
                     const label = Math.round(fraction * 100);
                     loadingProgress.update(pct, `Loading fisher cat model... ${label}%`);
                 });
