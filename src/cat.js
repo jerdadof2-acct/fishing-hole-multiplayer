@@ -10,7 +10,8 @@ import {
 } from './config/idlePortrait.js';
 
 const CAT_MODEL_URL = 'assets/glb/Cat.glb?v=webp1';
-const CAT_TARGET_HEIGHT = 1.9;
+const CAT_TARGET_HEIGHT = 2.0;
+const CAT_TARGET_HEIGHT_LARGE_BOAT = 2.2;
 // Lake-facing rotation: see CAT_FACING_Y in src/config/idlePortrait.js (locked).
 
 export class Cat {
@@ -82,7 +83,9 @@ export class Cat {
                     this.model = gltf.scene;
                     const box = new THREE.Box3().setFromObject(this.model);
                     const size = box.getSize(new THREE.Vector3());
-                    const scale = CAT_TARGET_HEIGHT / size.y;
+                    this.bindHeight = size.y;
+                    this.targetHeight = CAT_TARGET_HEIGHT;
+                    const scale = this.targetHeight / this.bindHeight;
                     this.model.scale.setScalar(scale);
                     console.log('Cat model size:', size, 'Scale applied:', scale);
                     
@@ -446,6 +449,30 @@ export class Cat {
     enterPortraitIdle() {
         if (!this.useGlbAnimations) return;
         this.playIdle();
+    }
+
+    /**
+     * Resize cat for platform (larger on sportfisher deck).
+     * @param {'DOCK'|'SMALL_BOAT'|'LARGE_BOAT'} platformType
+     */
+    setTargetHeightForPlatform(platformType) {
+        if (!this.model || !this.bindHeight) return;
+
+        let height = CAT_TARGET_HEIGHT;
+        if (platformType === 'LARGE_BOAT') {
+            height = CAT_TARGET_HEIGHT_LARGE_BOAT;
+        } else if (platformType === 'SMALL_BOAT') {
+            height = CAT_TARGET_HEIGHT * 1.04;
+        }
+
+        this.targetHeight = height;
+        this.model.scale.setScalar(height / this.bindHeight);
+
+        if (this.model) {
+            this.model.updateMatrixWorld(true);
+            const bindBox = new THREE.Box3().setFromObject(this.model);
+            this.feetYOffset = -bindBox.min.y;
+        }
     }
 
     /**

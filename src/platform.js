@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import {
+    PORTRAIT_CAMERA_OFFSET,
+    PORTRAIT_CAMERA_OFFSET_LARGE_BOAT
+} from './config/idlePortrait.js';
 
 /**
  * Platform system - manages dock and boats where cat stands
@@ -938,6 +942,28 @@ export class Platform {
         const deckTopLocal = deckTop.position.y;
         // Store for getSurfacePosition
         boatGroup.userData.deckTopLocal = deckTopLocal;
+
+        // Teak cockpit slats (sportfisher deck)
+        const teakSlatMaterial = new THREE.MeshStandardMaterial({
+            color: 0xc9a66b,
+            roughness: 0.72,
+            metalness: 0.04
+        });
+        const slatCount = 16;
+        const slatSpacing = deckLength / slatCount;
+        for (let i = 0; i < slatCount; i++) {
+            const slat = new THREE.Mesh(
+                new THREE.BoxGeometry(deckWidth * 0.84, 0.014, slatSpacing * 0.52),
+                teakSlatMaterial
+            );
+            slat.position.set(
+                0,
+                deckTopLocal + 0.012,
+                -deckLength * 0.5 + slatSpacing * (i + 0.5)
+            );
+            slat.receiveShadow = true;
+            boatGroup.add(slat);
+        }
         
         // Transom (back wall of boat) - positioned at the front where cat stands
         // Since boat is 14 units deep, place transom at front (positive Z) so cat doesn't see back end
@@ -1130,6 +1156,25 @@ export class Platform {
         rightSheer.position.set(railCenterX - 0.01, railY - gunwaleHeight * 0.55, 0);
         rightSheer.castShadow = true;
         boatGroup.add(rightSheer);
+
+        // Flush-mount rod holders along gunwales (sportfisher)
+        const gunwaleRodMaterial = new THREE.MeshStandardMaterial({
+            color: 0xc8c8c8,
+            roughness: 0.22,
+            metalness: 0.88
+        });
+        const gunwaleRodGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.14, 10);
+        for (let i = 0; i < 5; i++) {
+            const t = 0.12 + i * 0.19;
+            const zPos = backRailZ + (frontRailZ - backRailZ) * t;
+            for (const side of [-1, 1]) {
+                const holder = new THREE.Mesh(gunwaleRodGeo, gunwaleRodMaterial);
+                holder.rotation.z = Math.PI / 2;
+                holder.position.set(side * (railCenterX + 0.04), railY + gunwaleHeight * 0.58, zPos);
+                holder.castShadow = true;
+                boatGroup.add(holder);
+            }
+        }
         
         // Cleats for docking (larger for big boat)
         const cleatMaterial = new THREE.MeshStandardMaterial({
@@ -1520,13 +1565,44 @@ export class Platform {
         harnessBar.position.set(0, deckTopLocal + pedestalHeight + backrestHeight + 0.45, -backrestThickness * 0.5); // Was + 0.30, original + 0.15
         harnessBar.castShadow = true;
         chairGroup.add(harnessBar);
+
+        // Rocket launcher rod rack (classic sportfisher chair back)
+        const rocketLauncherMaterial = new THREE.MeshStandardMaterial({
+            color: 0xf2f2f2,
+            roughness: 0.45,
+            metalness: 0.2
+        });
+        const rocketTable = new THREE.Mesh(
+            new THREE.BoxGeometry(backrestWidth * 1.15, 0.07, 0.6),
+            rocketLauncherMaterial
+        );
+        rocketTable.position.set(
+            0,
+            deckTopLocal + pedestalHeight + backrestHeight + 0.58,
+            -backrestThickness * 0.5 - 0.22
+        );
+        rocketTable.castShadow = true;
+        chairGroup.add(rocketTable);
+
+        const rocketTubeGeo = new THREE.CylinderGeometry(0.055, 0.055, 0.16, 12);
+        for (let i = 0; i < 4; i++) {
+            const tube = new THREE.Mesh(rocketTubeGeo, rodHolderMaterial);
+            tube.rotation.x = Math.PI / 2;
+            tube.position.set(
+                (i - 1.5) * 0.24,
+                deckTopLocal + pedestalHeight + backrestHeight + 0.72,
+                -backrestThickness * 0.5 - 0.22
+            );
+            tube.castShadow = true;
+            chairGroup.add(tube);
+        }
         
-        // Position chair directly behind cat
-        // Cat stands at largeBoatDepth * 0.28 (near front edge, positive Z)
-        // Place chair closer to cat but behind him (positive Z, but less than cat's position)
-        const chairZ = boatLength * 0.15; // Position behind cat, closer to center (positive Z but less than 0.28)
+        // Position fighting chair behind cat (clear gap for portrait camera)
+        // Cat stands at largeBoatDepth * 0.36 (transom / fishing position)
+        const chairZ = boatLength * 0.04;
         chairGroup.position.set(0, 0, chairZ);
         boatGroup.add(chairGroup);
+        this.fightingChairGroup = chairGroup;
         
         this.platformMesh = boatGroup;
         
@@ -1589,12 +1665,11 @@ export class Platform {
             }
             
             case 'LARGE_BOAT': {
-                // Cat stands "in" the boat on the deck surface, at the front edge (like small boat)
-                const deckTopLocal = this.platformMesh.userData.deckTopLocal || (0.25 * 0.35 + 0.06 * 0.5); // Fallback: hullHeight 0.25, deckThickness 0.06
+                const deckTopLocal = this.platformMesh.userData.deckTopLocal || (0.25 * 0.35 + 0.06 * 0.5);
                 const local = new THREE.Vector3(
-                    0, 
-                    deckTopLocal + 0.03, // Tiny clearance to keep feet from z-fighting
-                    this.largeBoatDepth * 0.28 // Same position as small boat - near front edge
+                    0,
+                    deckTopLocal + 0.03,
+                    this.largeBoatDepth * 0.36 // Forward at transom — clear of fighting chair in portrait
                 );
                 this.platformMesh.updateMatrixWorld(true);
                 return local.applyMatrix4(this.platformMesh.matrixWorld);
@@ -1603,6 +1678,16 @@ export class Platform {
             default:
                 return new THREE.Vector3(0, 0.36, 3.4);
         }
+    }
+
+    /**
+     * Portrait camera offset — sportfisher uses side-elevated framing so chair does not block Halley.
+     */
+    getPortraitCameraOffset() {
+        if (this.currentPlatformType === 'LARGE_BOAT') {
+            return PORTRAIT_CAMERA_OFFSET_LARGE_BOAT.clone();
+        }
+        return PORTRAIT_CAMERA_OFFSET.clone();
     }
     
     /**

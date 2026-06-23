@@ -174,6 +174,9 @@ export class Camera {
         }
 
         if (this.spring) {
+            if (this.resolvePortraitOffset) {
+                this.spring.portraitOffset.copy(this.resolvePortraitOffset());
+            }
             this.spring.portraitBlend = this.portraitBlend;
             const stiffness = CAMERA_SPRING_STIFFNESS * (1 - this.portraitBlend * PORTRAIT_SPRING_STIFFNESS_BLEND_FACTOR);
             this.spring.stiffness = stiffness;

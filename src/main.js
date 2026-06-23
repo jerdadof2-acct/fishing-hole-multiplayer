@@ -344,6 +344,7 @@ export class Game {
             // Position cat on platform (feet aligned to dock surface)
             const platformPos = this.platform.getSurfacePosition();
             this.cat.positionOnSurface(platformPos);
+            this.cat.setTargetHeightForPlatform(currentLocation.platformType);
             console.log('[PLATFORM] Cat positioned at:', this.cat.savedPosition);
             
             loadingProgress.update(92, 'Rigging fishing line and bobber...');
@@ -394,6 +395,9 @@ export class Game {
             
             // Set up camera (after everything is loaded) - delayed to ensure models are ready
             this.camera = new Camera(this.scene, this.cat, this.dock, this.water);
+            this.camera.resolvePortraitOffset = () => (
+                this.platform?.getPortraitCameraOffset?.() ?? this.camera.portraitOffset
+            );
             this.camera.setup();
             
             // Initialize Sfx system with camera
@@ -1067,6 +1071,7 @@ export class Game {
         const newPlatformPos = this.platform.getSurfacePosition();
         if (this.cat) {
             this.cat.positionOnSurface(newPlatformPos);
+            this.cat.setTargetHeightForPlatform(location.platformType);
             console.log('[LOCATION SWITCH] Cat repositioned to:', this.cat.savedPosition);
         }
     }

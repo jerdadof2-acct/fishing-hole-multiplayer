@@ -26,6 +26,8 @@ export const IDLE_PORTRAIT_DELAY_SEC = 28;
 // --- Camera positions (offset from cat saved position) ---
 export const GAMEPLAY_CAMERA_OFFSET = new THREE.Vector3(0, 16, -12);
 export const PORTRAIT_CAMERA_OFFSET = new THREE.Vector3(0, 2.05, -4.2);
+/** Sportfisher: side-elevated portrait so fighting chair does not block Halley. */
+export const PORTRAIT_CAMERA_OFFSET_LARGE_BOAT = new THREE.Vector3(2.25, 3.15, -2.6);
 export const GAMEPLAY_LOOK_AT_OFFSET = new THREE.Vector3(0, 1.5, 4);
 
 // --- Portrait blend ---
