@@ -3,6 +3,8 @@
  * Defines all 33 fish types with their properties and facts
  */
 
+import { STARFISH_ID } from './config/starfishEncounter.js';
+
 export { getFishImagePath, getFishImagePaths } from './utils/imageAssets.js';
 
 export const FishTypes = [
@@ -108,11 +110,21 @@ export function getFishTypeById(id) {
  * @returns {Object} Fish type with random weight
  */
 export function getRandomFishForLocation(fishIds, options = {}) {
-    if (!fishIds || fishIds.length === 0) {
-        // Default to common fish if no fish array
-        fishIds = [0, 1, 2];
-    }
     const { playerLevel = 1, location = null } = options;
+    let pool = fishIds;
+    if (!pool || pool.length === 0) {
+        if (location?.waterBodyType === 'CELESTIAL') {
+            return null;
+        }
+        pool = [0, 1, 2];
+    }
+    // Starfish is exclusive to Celestial Depths + Starlight Lure (see resolveLocationFishIds).
+    if (location?.waterBodyType !== 'CELESTIAL') {
+        pool = pool.filter((id) => id !== STARFISH_ID);
+    }
+    if (pool.length === 0) {
+        return null;
+    }
     const levelBoost = Math.max(0, playerLevel - 1);
     const unlockLevel = typeof location?.unlockLevel === 'number' ? location.unlockLevel : null;
     const waterBodyType = location?.waterBodyType || null;
@@ -121,7 +133,7 @@ export function getRandomFishForLocation(fishIds, options = {}) {
     const aggressiveScaling = earlyGameLocation || smallWaterBody;
     
     // Select random fish from available fish
-    const randomFishId = fishIds[Math.floor(Math.random() * fishIds.length)];
+    const randomFishId = pool[Math.floor(Math.random() * pool.length)];
     const fishType = getFishTypeById(randomFishId);
     
     if (!fishType) {

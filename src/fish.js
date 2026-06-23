@@ -7,7 +7,8 @@ import {
     STARFISH_HOOK_FREEZE_SEC,
     STARFISH_LANDING_FISH_SPEED,
     STARFISH_PULSE_HZ,
-    isStarfishReunionEncounter
+    isStarfishReunionEncounter,
+    resolveLocationFishIds
 } from './config/starfishEncounter.js';
 import {
     createFishShadowSprite,
@@ -152,11 +153,14 @@ export class Fish {
         if (!this.currentFish) {
             // Get available fish from current location
             // Try multiple ways to access game/locations
-            let availableFishIds = [0, 1, 2]; // Default to common fish
+            let availableFishIds = [0, 1, 2];
             let locations = null;
             let currentLocation = null;
+            const player =
+                this.fishing?.game?.player ??
+                window.game?.player ??
+                null;
             
-            // Try to get locations from fishing.game, window.game, or fishing reference
             if (this.fishing?.game?.locations) {
                 locations = this.fishing.game.locations;
             } else if (window.game?.locations) {
@@ -165,24 +169,24 @@ export class Fish {
             
             if (locations) {
                 currentLocation = locations.getCurrentLocation();
-                if (currentLocation && currentLocation.fish) {
-                    availableFishIds = currentLocation.fish;
-                }
-                if (currentLocation?.waterBodyType === 'CELESTIAL') {
-                    availableFishIds = [33];
-                }
+                availableFishIds = resolveLocationFishIds(currentLocation, player);
             }
             
-            const playerLevel =
-                this.fishing?.game?.player?.level ??
-                window.game?.player?.level ??
-                1;
+            if (availableFishIds.length === 0) {
+                console.warn('[FISH] No fish available at', currentLocation?.name);
+                return;
+            }
             
-            // Get random fish from location using fishTypes
+            const playerLevel = player?.level ?? 1;
+            
             const fishData = getRandomFishForLocation(availableFishIds, {
                 playerLevel,
                 location: currentLocation
             });
+            if (!fishData) {
+                console.warn('[FISH] No fish roll at', currentLocation?.name);
+                return;
+            }
             
             this.currentFish = {
                 id: fishData.id,
@@ -715,11 +719,14 @@ export class Fish {
             
             // Get available fish from current location
             // Try multiple ways to access game/locations
-            let availableFishIds = [0, 1, 2]; // Default to common fish
+            let availableFishIds = [0, 1, 2];
             let locations = null;
             let currentLocation = null;
+            const player =
+                this.fishing?.game?.player ??
+                window.game?.player ??
+                null;
             
-            // Try to get locations from fishing.game, window.game, or fishing reference
             if (this.fishing?.game?.locations) {
                 locations = this.fishing.game.locations;
             } else if (window.game?.locations) {
@@ -728,27 +735,25 @@ export class Fish {
             
             if (locations) {
                 currentLocation = locations.getCurrentLocation();
-                if (currentLocation?.waterBodyType === 'CELESTIAL') {
-                    availableFishIds = [33];
-                } else if (currentLocation && currentLocation.fish) {
-                    availableFishIds = currentLocation.fish;
-                }
+                availableFishIds = resolveLocationFishIds(currentLocation, player);
             }
-            console.log('[FISH] hook() selecting fish - location:', currentLocation?.name, 'ids:', availableFishIds);
+            console.log('[FISH] spawnFish selecting fish - location:', currentLocation?.name, 'ids:', availableFishIds);
             
-            const locationIsCelestial = currentLocation?.waterBodyType === 'CELESTIAL';
-            const playerLevel =
-                this.fishing?.game?.player?.level ??
-                window.game?.player?.level ??
-                1;
+            if (availableFishIds.length === 0) {
+                console.warn('[FISH] No fish available at', currentLocation?.name);
+                return;
+            }
             
-            // Get random fish from location using fishTypes
-            const targetFishIds = locationIsCelestial ? [33] : availableFishIds;
-            console.log('[FISH] spawnFish selecting fish - location:', currentLocation?.name, 'ids:', targetFishIds);
-            const fishData = getRandomFishForLocation(targetFishIds, {
+            const playerLevel = player?.level ?? 1;
+            
+            const fishData = getRandomFishForLocation(availableFishIds, {
                 playerLevel,
                 location: currentLocation
             });
+            if (!fishData) {
+                console.warn('[FISH] No fish roll at', currentLocation?.name);
+                return;
+            }
             
             this.currentFish = {
                 id: fishData.id,

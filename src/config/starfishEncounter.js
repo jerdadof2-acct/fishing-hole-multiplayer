@@ -1,6 +1,29 @@
 /** Starfish of Eternity — Celestial Depths reunion (Ch. 5–6). */
 
 export const STARFISH_ID = 33;
+export const STARLIGHT_LURE_BAIT_NAME = 'Starlight Lure';
+
+/** Starfish only at Celestial Depths with the forged Starlight Lure equipped. */
+export function canSpawnStarfish(location, player) {
+    return location?.waterBodyType === 'CELESTIAL'
+        && player?.starlightLureCrafted === true
+        && player?.gear?.bait === STARLIGHT_LURE_BAIT_NAME;
+}
+
+/**
+ * Fish IDs available for the current cast (never includes Starfish outside Celestial + lure).
+ * @param {import('../locations.js').Locations['locations'][number]|null} location
+ * @param {import('../player.js').Player|null} [player]
+ * @returns {number[]}
+ */
+export function resolveLocationFishIds(location, player = null) {
+    if (!location) return [0, 1, 2];
+    if (location.waterBodyType === 'CELESTIAL') {
+        return canSpawnStarfish(location, player) ? [STARFISH_ID] : [];
+    }
+    const ids = Array.isArray(location.fish) && location.fish.length ? location.fish : [0, 1, 2];
+    return ids.filter((id) => id !== STARFISH_ID);
+}
 
 /** Unhurried approach: the presence drifts homeward (~16s). */
 export const STARFISH_APPROACH_DURATION_SEC = 16;

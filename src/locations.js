@@ -79,7 +79,7 @@ export class Locations {
             {
                 name: 'Forgotten Reefs',
                 difficulty: 'Expert',
-                fish: [33],
+                fish: [25, 26, 27, 28, 29, 30, 31, 32],
                 cost: 500,
                 unlockLevel: 15,
                 description: 'Lost coral gardens where two lights were born as one',
@@ -99,7 +99,7 @@ export class Locations {
             {
                 name: 'Celestial Depths',
                 difficulty: 'Legendary',
-                fish: [25, 26, 27, 28, 29, 30, 31, 32],
+                fish: [33],
                 cost: 0,
                 unlockLevel: 1,
                 description: 'A star-lit abyss where ocean and sky become one',
