@@ -397,6 +397,7 @@ export class Platform {
 
         const deck = deckTop;
         boatGroup.userData.deckTopLocal = deckTopLocal;
+        boatGroup.userData.deckThickness = deckThickness;
 
         // Transom — full height from hull floor to deck underside, flush with back rail
         const transomWidth = Math.min(boatWidth * 0.85, railCenterX * 2 - 0.05);
@@ -926,22 +927,19 @@ export class Platform {
         // Use boatLength instead of bottomLength to ensure coverage
         const deckLength = boatLength - 0.2; // Slight margin but covers full area
         
-        // Create deck as a seamless top surface using PlaneGeometry
-        // This eliminates visible seams that BoxGeometry creates between faces
-        const deckTopGeometry = new THREE.PlaneGeometry(deckWidth - 0.04, deckLength);
-        deckTopGeometry.name = 'largeBoat-deckTopGeometry';
-        const deckTop = new THREE.Mesh(deckTopGeometry, deckMaterial);
+        const deckTopLocal = hullHeight * 0.35 + deckThickness * 0.5;
+        const deckTop = new THREE.Mesh(
+            new THREE.BoxGeometry(deckWidth - 0.04, deckThickness, deckLength),
+            deckMaterial
+        );
         deckTop.name = 'largeBoat-deck';
-        deckTop.rotation.x = -Math.PI / 2; // Rotate to horizontal
-        deckTop.position.y = hullHeight * 0.35 + deckThickness * 0.5; // Top surface
+        deckTop.position.set(0, deckTopLocal, 0);
         deckTop.castShadow = true;
         deckTop.receiveShadow = true;
         boatGroup.add(deckTop);
         
-        // Exact top surface (center + half height)
-        const deckTopLocal = deckTop.position.y;
-        // Store for getSurfacePosition
         boatGroup.userData.deckTopLocal = deckTopLocal;
+        boatGroup.userData.deckThickness = deckThickness;
 
         // Teak cockpit slats (sportfisher deck)
         const teakSlatMaterial = new THREE.MeshStandardMaterial({
@@ -958,21 +956,12 @@ export class Platform {
             );
             slat.position.set(
                 0,
-                deckTopLocal + 0.012,
+                deckTopLocal + deckThickness * 0.5 + 0.008,
                 -deckLength * 0.5 + slatSpacing * (i + 0.5)
             );
             slat.receiveShadow = true;
             boatGroup.add(slat);
         }
-        
-        // Transom (back wall of boat) - positioned at the front where cat stands
-        // Since boat is 14 units deep, place transom at front (positive Z) so cat doesn't see back end
-        const transomWidth = Math.min(bottomWidth * 0.94, hullOuterEdge * 2 - 0.3);
-        const transomGeometry = new THREE.BoxGeometry(transomWidth, hullHeight * 0.8, 0.12);
-        const transom = new THREE.Mesh(transomGeometry, hullMaterial);
-        transom.name = 'largeBoat-transom';
-        transom.position.set(0, 0, boatLength * 0.45 - 0.06); // Position at front (positive Z)
-        boatGroup.add(transom);
         
         // Bow (front of boat - pointed/tapered shape like small boat)
         const bowShape = new THREE.Shape();
@@ -1058,6 +1047,30 @@ export class Platform {
         frontRail.receiveShadow = true;
         frontRail.visible = true;
         boatGroup.add(frontRail);
+
+        // Transom wall + stern cap (sealed top — matches small-boat sportfisher look)
+        const hullFloorY = -hullHeight * 0.5;
+        const deckSurfaceY = deckTopLocal + deckThickness * 0.5;
+        const transomHeight = deckSurfaceY - hullFloorY + 0.04;
+        const transomWall = new THREE.Mesh(
+            new THREE.BoxGeometry(foreAftLen * 0.98, transomHeight, railThick + 0.08),
+            hullMaterial
+        );
+        transomWall.name = 'largeBoat-transom';
+        transomWall.position.set(0, hullFloorY + transomHeight * 0.5, frontRailZ);
+        transomWall.castShadow = true;
+        transomWall.receiveShadow = true;
+        boatGroup.add(transomWall);
+
+        const sternCap = new THREE.Mesh(
+            new THREE.BoxGeometry(deckWidth - 0.02, deckThickness + 0.05, railThick + 0.12),
+            deckMaterial
+        );
+        sternCap.name = 'largeBoat-sternCap';
+        sternCap.position.set(0, deckSurfaceY + 0.02, frontRailZ);
+        sternCap.castShadow = true;
+        sternCap.receiveShadow = true;
+        boatGroup.add(sternCap);
         
         // Back rail (at bow end - negative Z)
         const backRail = new THREE.Mesh(foreAftGeom, gunwaleMaterial);
@@ -1086,16 +1099,26 @@ export class Platform {
         boatGroup.add(rightTopCap);
 
         const frontTopCap = new THREE.Mesh(foreAftTopGeom, gunwaleTopMaterial);
-        frontTopCap.position.set(0, topY, frontRail.position.z - 0.4);
+        frontTopCap.position.set(0, topY, frontRailZ);
         frontTopCap.castShadow = false;
         frontTopCap.visible = true;
         boatGroup.add(frontTopCap);
 
         const backTopCap = new THREE.Mesh(foreAftTopGeom, gunwaleTopMaterial);
-        backTopCap.position.set(0, topY, backRail.position.z + 0.4);
+        backTopCap.position.set(0, topY, backRailZ);
         backTopCap.castShadow = false;
         backTopCap.visible = true;
         boatGroup.add(backTopCap);
+
+        // Transom top rail — bridges gunwale caps across the stern (no open slot on top)
+        const transomTopRail = new THREE.Mesh(
+            new THREE.BoxGeometry(foreAftLen * 0.98, topCapHeight + 0.03, railThick + 0.08),
+            gunwaleTopMaterial
+        );
+        transomTopRail.name = 'largeBoat-transomTopRail';
+        transomTopRail.position.set(0, topY + 0.01, frontRailZ);
+        transomTopRail.castShadow = true;
+        boatGroup.add(transomTopRail);
         
         // Inner coaming lip (chunkier for large boat)
         const coamH = gunwaleHeight * 0.65;
@@ -1653,12 +1676,13 @@ export class Platform {
                 );
             
             case 'SMALL_BOAT': {
-                // Cat stands "in" the boat on the deck surface
-                const deckTopLocal = this.platformMesh.userData.deckTopLocal || (0.2 * 0.35 + 0.04 * 0.5); // Fallback calculation
+                const deckTopLocal = this.platformMesh.userData.deckTopLocal || (0.2 * 0.35 + 0.04 * 0.5);
+                const deckThickness = this.platformMesh.userData.deckThickness || 0.04;
+                const deckSurfaceY = deckTopLocal + deckThickness * 0.5;
                 const local = new THREE.Vector3(
-                    0, 
-                    deckTopLocal + 0.03, // Tiny clearance to keep feet from z-fighting
-                    this.smallBoatDepth * 0.28 // Near front edge
+                    0,
+                    deckSurfaceY + 0.02,
+                    this.smallBoatDepth * 0.28
                 );
                 this.platformMesh.updateMatrixWorld(true);
                 return local.applyMatrix4(this.platformMesh.matrixWorld);
@@ -1666,10 +1690,12 @@ export class Platform {
             
             case 'LARGE_BOAT': {
                 const deckTopLocal = this.platformMesh.userData.deckTopLocal || (0.25 * 0.35 + 0.06 * 0.5);
+                const deckThickness = this.platformMesh.userData.deckThickness || 0.06;
+                const deckSurfaceY = deckTopLocal + deckThickness * 0.5;
                 const local = new THREE.Vector3(
                     0,
-                    deckTopLocal + 0.03,
-                    this.largeBoatDepth * 0.36 // Forward at transom — clear of fighting chair in portrait
+                    deckSurfaceY + 0.025,
+                    this.largeBoatDepth * 0.36
                 );
                 this.platformMesh.updateMatrixWorld(true);
                 return local.applyMatrix4(this.platformMesh.matrixWorld);

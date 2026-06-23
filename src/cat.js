@@ -14,8 +14,40 @@ const CAT_TARGET_HEIGHT = 2.0;
 const CAT_TARGET_HEIGHT_LARGE_BOAT = 2.2;
 // Lake-facing rotation: see CAT_FACING_Y in src/config/idlePortrait.js (locked).
 
-/** @param {Cat} cat @param {'DOCK'|'SMALL_BOAT'|'LARGE_BOAT'} platformType */
-export function applyCatPlatformHeight(cat, platformType) {
+/** Mesh-geometry feet plane — setFromObject often clips skinned legs. */
+function computeFeetYOffset(model) {
+    if (!model) return 0;
+
+    model.updateMatrixWorld(true);
+    const inverse = model.matrixWorld.clone().invert();
+    const box = new THREE.Box3();
+    const meshBox = new THREE.Box3();
+    let hasMesh = false;
+
+    model.traverse((node) => {
+        if (!node.isMesh?.geometry) return;
+        const geometry = node.geometry;
+        if (!geometry.boundingBox) geometry.computeBoundingBox();
+        meshBox.copy(geometry.boundingBox).applyMatrix4(
+            new THREE.Matrix4().multiplyMatrices(inverse, node.matrixWorld)
+        );
+        if (!hasMesh) {
+            box.copy(meshBox);
+            hasMesh = true;
+        } else {
+            box.union(meshBox);
+        }
+    });
+
+    if (!hasMesh) {
+        box.setFromObject(model);
+    }
+
+    return -box.min.y;
+}
+
+/** @param {Cat} cat @param {'DOCK'|'SMALL_BOAT'|'LARGE_BOAT'} platformType @param {THREE.Vector3} [surfacePos] */
+export function applyCatPlatformHeight(cat, platformType, surfacePos = null) {
     if (!cat?.model || !cat.bindHeight) return;
 
     let height = CAT_TARGET_HEIGHT;
@@ -27,9 +59,13 @@ export function applyCatPlatformHeight(cat, platformType) {
 
     cat.targetHeight = height;
     cat.model.scale.setScalar(height / cat.bindHeight);
+    cat.resetToBindPose?.();
     cat.model.updateMatrixWorld(true);
-    const bindBox = new THREE.Box3().setFromObject(cat.model);
-    cat.feetYOffset = -bindBox.min.y;
+    cat.feetYOffset = computeFeetYOffset(cat.model);
+
+    if (surfacePos && typeof cat.positionOnSurface === 'function') {
+        cat.positionOnSurface(surfacePos);
+    }
 }
 
 export class Cat {
@@ -125,8 +161,7 @@ export class Cat {
                     this.model.position.set(0, 0, 0);
                     this.resetToBindPose();
 
-                    const bindBox = new THREE.Box3().setFromObject(this.model);
-                    this.feetYOffset = -bindBox.min.y;
+                    this.feetYOffset = computeFeetYOffset(this.model);
 
                     this.catAnchor = new THREE.Group();
                     this.catAnchor.name = 'CatAnchor';
