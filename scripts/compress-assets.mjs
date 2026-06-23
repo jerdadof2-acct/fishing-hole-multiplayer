@@ -63,13 +63,21 @@ async function main() {
     for (const file of walkFiles(fishDir)) {
         if (!/\.(png|jpe?g)$/i.test(file) || file.endsWith('.webp')) continue;
         const rel = path.relative(fishDir, file);
-        const isRelic = rel.includes('hiddenitems');
-        const maxW = isRelic ? 384 : 512;
+        const maxW = 512;
         const webpOut = file.replace(/\.(png|jpe?g)$/i, '.webp');
-        await toWebp(file, webpOut, maxW, isRelic ? 80 : 82);
+        await toWebp(file, webpOut, maxW, 82);
         if (/\.png$/i.test(file)) {
             await shrinkPng(file, maxW);
         }
+    }
+
+    console.log('[compress] Relic images (images/hiddenitems)…');
+    const relicDir = path.join(ROOT, 'images', 'hiddenitems');
+    for (const file of walkFiles(relicDir)) {
+        if (!/\.png$/i.test(file)) continue;
+        const webpOut = file.replace(/\.png$/i, '.webp');
+        await toWebp(file, webpOut, 384, 80);
+        await shrinkPng(file, 384);
     }
 
     console.log('[compress] Textures (mobile -sm variants)…');

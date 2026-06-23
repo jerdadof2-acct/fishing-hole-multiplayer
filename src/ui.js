@@ -3,7 +3,7 @@ import { ACHIEVEMENTS, evaluateAchievements as evaluateAchievementDefs, getAchie
 import { replayStoryPrologue } from './prologue.js';
 import { STARLIGHT_LURE_IMAGE } from './config/hiddenRelics.js';
 import { isCelestialStarfishHook } from './config/starfishEncounter.js';
-import { getFishImagePaths } from './utils/imageAssets.js';
+import { getFishImagePaths, getRelicImagePaths } from './utils/imageAssets.js';
 
 export class UI {
     constructor(fishing, fish, water, game, gameplaySystems = null, sfx = null) {
@@ -2143,11 +2143,14 @@ export class UI {
             padding: ${popupPadding};
         `;
 
+        const { primary: relicImg, fallback: relicFallback } = getRelicImagePaths(relic.image);
+        const { primary: lureImg, fallback: lureFallback } = getRelicImagePaths(STARLIGHT_LURE_IMAGE);
+
         const forgeBlock = forgedStarlight ? `
             <div class="relic-popup-forge">
                 <div class="relic-popup-forge-title">✨ The Starlight Lure is forged ✨</div>
                 <div class="relic-popup-image-wrap">
-                    <img class="relic-popup-image relic-popup-image--lure" src="${STARLIGHT_LURE_IMAGE}" alt="Starlight Lure" />
+                    <img class="relic-popup-image relic-popup-image--lure" src="${lureImg}" alt="Starlight Lure" decoding="async" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${lureFallback}';}">
                 </div>
                 <p class="relic-popup-forge-quote">"Ten pieces of a puzzle I didn't even know I was solving… Looks like I've just built the light that started it all."</p>
                 <p class="relic-popup-forge-note">Halley can now sail to the <strong>Celestial Depths</strong>.</p>
@@ -2160,7 +2163,7 @@ export class UI {
             <h2 class="relic-popup-title">${relic.name}</h2>
             <p class="relic-popup-location">Found at <strong>${relic.location}</strong></p>
             <div class="relic-popup-image-wrap">
-                <img class="relic-popup-image" src="${relic.image}" alt="${relic.name}" />
+                <img class="relic-popup-image" src="${relicImg}" alt="${relic.name}" decoding="async" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${relicFallback}';}">
             </div>
             <blockquote class="relic-popup-message">"${relic.message}"</blockquote>
             <p class="relic-popup-meaning">${relic.meaning}</p>
@@ -2218,9 +2221,10 @@ export class UI {
             const count = collected.length;
             const lureReady = this.player.starlightLureCrafted;
 
+            const lurePaths = getRelicImagePaths(STARLIGHT_LURE_IMAGE);
             const lureCard = lureReady ? `
                 <article class="relic-card relic-card--found relic-card--lure">
-                    <img class="relic-card-image" src="${STARLIGHT_LURE_IMAGE}" alt="Starlight Lure" />
+                    <img class="relic-card-image" src="${lurePaths.primary}" alt="Starlight Lure" loading="lazy" decoding="async" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${lurePaths.fallback}';}">
                     <h4 class="relic-card-name">Starlight Lure</h4>
                     <p class="relic-card-region">Forged from ten relics</p>
                     <p class="relic-card-message">"A fragment of the sky calling to something deep below."</p>
@@ -2230,9 +2234,10 @@ export class UI {
             const cards = HIDDEN_RELICS.map((relic) => {
                 const owned = collected.includes(relic.id);
                 if (owned) {
+                    const { primary, fallback } = getRelicImagePaths(relic.image);
                     return `
                         <article class="relic-card relic-card--found">
-                            <img class="relic-card-image" src="${relic.image}" alt="${relic.name}" />
+                            <img class="relic-card-image" src="${primary}" alt="${relic.name}" loading="lazy" decoding="async" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${fallback}';}">
                             <h4 class="relic-card-name">${relic.name}</h4>
                             <p class="relic-card-region">${relic.location}</p>
                             <p class="relic-card-message">"${relic.message}"</p>

@@ -10,7 +10,7 @@ import {
 } from './config/idlePortrait.js';
 
 const CAT_MODEL_URL = 'assets/glb/Cat.glb?v=webp1';
-const CAT_TARGET_HEIGHT = 1.75;
+const CAT_TARGET_HEIGHT = 1.9;
 // Lake-facing rotation: see CAT_FACING_Y in src/config/idlePortrait.js (locked).
 
 export class Cat {

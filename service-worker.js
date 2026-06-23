@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'halleys-big-catch-media';
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const CACHE_NAME = `${CACHE_PREFIX}-${CACHE_VERSION}`;
 
 /** Only assets needed for first paint — fish/audio cache on demand via fetch handler */
@@ -59,6 +59,7 @@ function isMediaRequest(request) {
     try {
         const url = new URL(request.url);
         return url.pathname.startsWith('/assets/images/') ||
+            url.pathname.startsWith('/images/') ||
             url.pathname.startsWith('/assets/audio/') ||
             url.pathname.startsWith('/assets/textures/') ||
             url.pathname.startsWith('/assets/icons/');

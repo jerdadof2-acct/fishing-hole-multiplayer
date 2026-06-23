@@ -5,7 +5,8 @@
 
 import {
     getFishImagePath as resolveFishImagePath,
-    getFishImagePaths
+    getFishImagePaths,
+    warmImageCache
 } from './utils/imageAssets.js';
 
 export { resolveFishImagePath as getFishImagePath, getFishImagePaths };
@@ -99,8 +100,15 @@ export class FishCollection {
      * @param {Array} fishIds - Array of fish IDs to preload
      */
     preloadImages(fishIds) {
-        // This will be implemented when we have fish images
-        // For now, just a placeholder
+        if (!Array.isArray(fishIds) || fishIds.length === 0) return;
+
+        import('./fishTypes.js').then(({ FishTypes }) => {
+            const names = fishIds
+                .map((id) => FishTypes.find((fish) => fish.id === id)?.name)
+                .filter(Boolean);
+            const urls = names.map((name) => getFishImagePaths(name).primary);
+            warmImageCache(urls, { batchSize: 4, gapMs: 0 });
+        });
     }
     
     /**

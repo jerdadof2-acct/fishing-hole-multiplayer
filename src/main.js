@@ -22,6 +22,7 @@ import { Inventory } from './inventory.js';
 import { Leaderboard } from './leaderboard.js';
 import { FishCollection } from './fishCollection.js';
 import { loadingProgress } from './loadingProgress.js';
+import { collectGalleryImageUrls, warmImageCache } from './utils/imageAssets.js';
 import { showAdBanner } from './ads.js';
 import {
     IDLE_PORTRAIT_DELAY_SEC,
@@ -83,6 +84,7 @@ export class Game {
         document.getElementById('tab-bar')?.classList.remove('hidden');
         showAdBanner();
 
+        this.startGalleryImageWarmup();
         this.setupActivityTracking();
         this.setupCatTap();
         this.animate();
@@ -490,6 +492,23 @@ export class Game {
             const detail = error?.message ? ` (${error.message})` : '';
             loadingProgress.fail(`Loading failed. Please refresh and try again.${detail}`);
             throw error;
+        }
+    }
+
+    startGalleryImageWarmup() {
+        if (this._galleryWarmupStarted) return;
+        this._galleryWarmupStarted = true;
+
+        const run = () => {
+            collectGalleryImageUrls()
+                .then((urls) => warmImageCache(urls, { batchSize: 5, gapMs: 120 }))
+                .catch((error) => console.warn('[IMAGES] Gallery warmup skipped:', error));
+        };
+
+        if (typeof requestIdleCallback === 'function') {
+            requestIdleCallback(run, { timeout: 6000 });
+        } else {
+            setTimeout(run, 1500);
         }
     }
 
