@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Scene } from './scene.js';
-import { Cat, applyCatPlatformHeight } from './cat.js?v=20250622-17';
+import { Cat, applyCatPlatformHeight } from './cat.js?v=20250622-18';
 import { Water2Lake } from './water2.js';
 import { Grass } from './grass.js';
 import { Dock } from './dock.js';
@@ -612,6 +612,12 @@ export class Game {
         const portraitBlend = this._portraitIdleActive
             ? (this.camera?.portraitBlend ?? 0)
             : 0;
+
+        // Lake-facing reset before animation (portrait keeps turned pose); feet aligned after update
+        if (this.cat && this.platform) {
+            const preserveFacing = this._portraitIdleActive === true;
+            this.cat.applyLakeFacing(preserveFacing);
+        }
         
         // Update cat with sway and bobber tracking (only when idle - not casting or reeling)
             if (this.cat) {

@@ -579,6 +579,20 @@ export class Cat {
     }
 
     /**
+     * Reset Y rotation to lake-facing (position unchanged). Called each frame before cat.update().
+     * @param {boolean} preserveFacing - When true, keep current Y rotation (idle portrait only).
+     */
+    applyLakeFacing(preserveFacing = false) {
+        const anchor = this.catAnchor || this.model;
+        if (!anchor) return;
+        anchor.rotation.x = 0;
+        anchor.rotation.z = 0;
+        if (!preserveFacing) {
+            anchor.rotation.y = this.baseRotationY;
+        }
+    }
+
+    /**
      * Each frame: follow deck X/Z and raise/lower until feet touch the surface (keeps rotation).
      */
     alignFeetToSurface(surfacePos) {
