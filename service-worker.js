@@ -1,74 +1,23 @@
 const CACHE_PREFIX = 'halleys-big-catch-media';
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE_NAME = `${CACHE_PREFIX}-${CACHE_VERSION}`;
 
-const MEDIA_ASSETS = [
-    // Audio
-    'assets/audio/fish-splashing-release-1-96870.mp3',
-    'assets/audio/fishing-reel-302355.mp3',
-    'assets/audio/reel_clicks.wav',
-    'assets/audio/splash-6213.mp3',
-    'assets/audio/splash-sound-228915.mp3',
-    'assets/audio/splash.wav',
-    'assets/audio/tug.wav',
-    'assets/audio/water-splashing-202979.mp3',
-
-    // Textures & icons
+/** Only assets needed for first paint — fish/audio cache on demand via fetch handler */
+const BOOT_ASSETS = [
     'assets/icons/icon-192.png',
     'assets/icons/icon-512.png',
-    'images/halley-splash.png',
-    'assets/textures/caustics_loop.jpg',
     'assets/textures/particle.png',
     'assets/textures/waterNormals1.jpg',
-    'assets/textures/waterNormals2.jpg',
-
-    // Fish images
-    'assets/images/Abyssal Eel.png',
-    'assets/images/Ancient Sturgeon.png',
-    'assets/images/Bass.png',
-    'assets/images/Carp.png',
-    'assets/images/Catfish.png',
-    'assets/images/Crappie.png',
-    'assets/images/Crystal Bass.png',
-    'assets/images/Dragon Carp.png',
-    'assets/images/Flying Fish.png',
-    'assets/images/Golden Trout.png',
-    'assets/images/Ice Pike.png',
-    'assets/images/Leviathan.png',
-    'assets/images/Marlin.png',
-    'assets/images/Minnow.png',
-    'assets/images/Muskie.png',
-    'assets/images/Perch.png',
-    'assets/images/Phoenix Fish.png',
-    'assets/images/Pike.png',
-    'assets/images/Platosaurus.png',
-    'assets/images/Psycho Puffer.png',
-    'assets/images/Salmon.png',
-    'assets/images/Shadow Catfish.png',
-    'assets/images/Sturgeon.png',
-    'assets/images/Sunfish.png',
-    'assets/images/Tournament King.png',
-    'assets/images/Trophy Bass.png',
-    'assets/images/Trophy Catfish.png',
-    'assets/images/Trophy King.png',
-    'assets/images/Trophy Marlin.png',
-    'assets/images/Trophy Pike.png',
-    'assets/images/Trophy Salmon.png',
-    'assets/images/Trophy Sturgeon.png',
-    'assets/images/Trophy Tuna.png',
-    'assets/images/Trout.png',
-    'assets/images/Tuna.png',
-    'assets/images/Tyrannofin Rex.png',
-    'assets/images/Walleye.png'
+    'assets/textures/waterNormals2.jpg'
 ];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then((cache) => cache.addAll(MEDIA_ASSETS))
+            .then((cache) => cache.addAll(BOOT_ASSETS))
             .then(() => self.skipWaiting())
             .catch((error) => {
-                console.warn('[SW] Failed to pre-cache media assets:', error);
+                console.warn('[SW] Boot cache partial fail (non-fatal):', error);
             })
     );
 });
@@ -100,7 +49,8 @@ function isMediaRequest(request) {
         return url.pathname.startsWith('/assets/images/') ||
             url.pathname.startsWith('/assets/audio/') ||
             url.pathname.startsWith('/assets/textures/') ||
-            url.pathname.startsWith('/assets/icons/');
+            url.pathname.startsWith('/assets/icons/') ||
+            url.pathname.startsWith('/assets/glb/');
     } catch (_error) {
         return false;
     }
@@ -134,4 +84,3 @@ self.addEventListener('fetch', (event) => {
         })
     );
 });
-

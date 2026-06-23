@@ -89,6 +89,7 @@ async function launchGame(gameOptions) {
         markPrologueSeenForVersion();
         loadingProgress.suppress(false);
         game.reveal();
+        registerServiceWorker();
         return game;
     }
 
@@ -100,10 +101,12 @@ async function launchGame(gameOptions) {
         });
         loadingProgress.suppress(false);
         game.reveal();
+        registerServiceWorker();
         return game;
     }
 
     await game.ready;
+    registerServiceWorker();
     return game;
 }
 
@@ -329,7 +332,6 @@ async function bootstrapGame() {
 }
 
 async function bootstrapGameInner() {
-    registerServiceWorker();
     initAdRotator();
     loadingProgress.show('Connecting to Halley\'s Big Catch...');
     loadingProgress.update(2, 'Connecting to server...');

@@ -9,6 +9,10 @@ import {
     STARFISH_PULSE_HZ,
     isStarfishReunionEncounter
 } from './config/starfishEncounter.js';
+import {
+    createFishShadowSprite,
+    updateFishShadowSprite
+} from './effects/waterAmbience.js';
 
 // Minimal fish FSM: IDLE -> HOOKED_FIGHT -> LANDING -> LANDED
 export const FishState = {
@@ -34,6 +38,7 @@ export class Fish {
         // Create test fish mesh
         this.createTestFish();
         this.mesh = this.fish;
+        this.fishShadow = createFishShadowSprite(this.sceneRef.scene);
         
         this.speedFight = 1.25;             // m/s, not too fast
         this.speedLanding = 3.5;            // controlled homeward pull (slowed for smoother landing)
@@ -212,6 +217,7 @@ export class Fish {
         
         // Keep fish hidden visually for now (will add proper fish images later)
         this.mesh.visible = false;
+        this._syncFishShadow(true);
         
         // Trigger splash on hook — soft for Starfish reunion
         if (this.fishing.splash && this.fishing.bobber) {
@@ -257,11 +263,22 @@ export class Fish {
         }
     }
     
+    _syncFishShadow(visible) {
+        if (!this.mesh) return;
+        const waterY = this.water?.waterY ?? 0;
+        const show = visible && (
+            this.state === FishState.HOOKED_FIGHT ||
+            this.state === FishState.LANDING
+        );
+        updateFishShadowSprite(this.fishShadow, this.mesh.position, waterY, show);
+    }
+
     markLanded() {
         // Prevent infinite recursion - only execute once
         if (this.state === FishState.LANDED) return;
         
         this.state = FishState.LANDED;
+        this._syncFishShadow(false);
         this.isHooked = true;
         
         // Log catch
@@ -647,6 +664,8 @@ export class Fish {
         if (this._dir.lengthSq() > 1e-4) {
             this.mesh.rotation.y = Math.atan2(-this._dir.z, this._dir.x);
         }
+
+        this._syncFishShadow(true);
     }
     
     clampPlayArea(p) {
@@ -757,6 +776,7 @@ export class Fish {
             this._gentleReunion = false;
             this._reunionHookPos = null;
             this._reunionMaxDist = 0;
+            this._syncFishShadow(false);
         }
     }
     

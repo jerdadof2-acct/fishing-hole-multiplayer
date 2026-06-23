@@ -3,6 +3,7 @@ import { ACHIEVEMENTS, evaluateAchievements as evaluateAchievementDefs, getAchie
 import { replayStoryPrologue } from './prologue.js';
 import { STARLIGHT_LURE_IMAGE } from './config/hiddenRelics.js';
 import { isCelestialStarfishHook } from './config/starfishEncounter.js';
+import { getFishImagePaths } from './utils/imageAssets.js';
 
 export class UI {
     constructor(fishing, fish, water, game, gameplaySystems = null, sfx = null) {
@@ -1689,7 +1690,7 @@ export class UI {
                 }).join('');
             }
         } else if (tab === 'collection') {
-            import('./fishTypes.js').then(({ FishTypes, getFishImagePath }) => {
+            import('./fishTypes.js').then(({ FishTypes }) => {
                 const collection = this.fishCollection ? this.fishCollection.getAllCollectionData() : {};
                 
                 // Get biggest catch for each fish from inventory
@@ -1730,10 +1731,10 @@ export class UI {
                             const isCaught = fishData && fishData.caught === true;
                             const catchCount = fishData ? (fishData.count || 0) : 0;
                             const biggestCatch = isCaught ? getBiggestCatchForFish(fish.id) : null;
-                            const imagePath = getFishImagePath(fish.name);
+                            const { primary: imagePath, fallback: imageFallback } = getFishImagePaths(fish.name);
                             return `
                                 <div class="collection-item ${isCaught ? '' : 'locked'}" data-fish-id="${fish.id}" style="cursor: ${isCaught ? 'pointer' : 'default'};">
-                                    <img src="${imagePath}" alt="${fish.name}" class="collection-item-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                    <img src="${imagePath}" alt="${fish.name}" class="collection-item-image" loading="lazy" decoding="async" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${imageFallback}';}else{this.style.display='none';this.nextElementSibling.style.display='flex';}">
                                     <div style="display: none; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 10px; flex-direction: column; align-items: center; justify-content: center; font-size: 32px;">🐟</div>
                                     <div class="collection-item-name">${fish.name}</div>
                                     ${isCaught ? `
@@ -2864,11 +2865,11 @@ export class UI {
         }
         
         // Import fishTypes for image path only
-        import('./fishTypes.js').then(({ getFishImagePath }) => {
+        import('./fishTypes.js').then(() => {
             const fishName = fishData.species || fishData.name || 'Fish';
             const weight = fishData.weight || 0;
             const rarity = fishData.rarity || 'Common';
-            const imagePath = getFishImagePath(fishName);
+            const { primary: imagePath, fallback: imageFallback } = getFishImagePaths(fishName);
             
             // Rarity colors
             const rarityColors = {
@@ -2910,7 +2911,8 @@ export class UI {
                 <div style="margin-bottom: 20px; position: relative; width: 200px; height: 200px; margin: 0 auto;">
                     <img src="${imagePath}" alt="${fishName}" 
                          style="max-width: 200px; max-height: 200px; width: auto; height: auto; border-radius: 10px; border: 3px solid ${rarityColor}; display: block;"
-                         onerror="this.onerror=null; this.style.display='none'; this.parentElement.querySelector('.fish-placeholder').style.display='flex';">
+                         decoding="async"
+                         onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${imageFallback}';}else{this.onerror=null;this.style.display='none';this.parentElement.querySelector('.fish-placeholder').style.display='flex';}">
                     <div class="fish-placeholder" style="display: none; width: 200px; height: 200px; background: rgba(255,255,255,0.1); border-radius: 10px; border: 3px solid ${rarityColor}; position: absolute; top: 0; left: 0; flex-direction: column; align-items: center; justify-content: center; font-size: 48px;">
                         🐟
                     </div>
@@ -2972,10 +2974,10 @@ export class UI {
             existingPopup.remove();
         }
 
-        import('./fishTypes.js').then(({ getFishImagePath }) => {
+        import('./fishTypes.js').then(() => {
             const fishName = fishData.species || fishData.name || 'Starfish of Eternity';
             const rarity = fishData.rarity || 'Mythic';
-            const imagePath = getFishImagePath(fishName);
+            const { primary: imagePath, fallback: imageFallback } = getFishImagePaths(fishName);
             const isFirstStarfishCatch = !!isFirstCatch;
             const advice = !isFirstStarfishCatch ? this.getNextStarfishAdvice() : null;
             const quoteText = this.starfishFirstCatchLine || "You've spent your life chasing wonders.\n\nBut the light you sought was always within you.";
@@ -3033,8 +3035,8 @@ export class UI {
             const imageSection = `
                 <div style="margin-bottom: 28px; display: flex; justify-content: center;">
                     <div style="display: inline-flex; align-items: center; justify-content: center; border-radius: 16px; overflow: hidden; border: 3px solid rgba(150, 200, 255, 0.55); background: rgba(255,255,255,0.05); padding: ${imagePadding};">
-                        <img src="${imagePath}" alt="${fishName}" style="display: block; width: auto; height: auto; max-width: ${imageMaxWidth}px; max-height: ${imageMaxHeight}px;"
-                            onerror="this.onerror=null; this.style.display='none'; const placeholder=this.parentElement.querySelector('.starfish-placeholder'); placeholder.style.display='flex';">
+                        <img src="${imagePath}" alt="${fishName}" style="display: block; width: auto; height: auto; max-width: ${imageMaxWidth}px; max-height: ${imageMaxHeight}px;" decoding="async"
+                            onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${imageFallback}';}else{this.onerror=null;this.style.display='none';const placeholder=this.parentElement.querySelector('.starfish-placeholder');placeholder.style.display='flex';}">
                         <div class="starfish-placeholder" style="display: none; min-width: 240px; min-height: 190px; align-items: center; justify-content: center; font-size: 72px;">
                             ⭐
                         </div>
@@ -3268,9 +3270,9 @@ export class UI {
         if (!fish) return;
         
         // Import fishTypes for facts and image path
-        import('./fishTypes.js').then(({ getFishFacts, getFishImagePath }) => {
+        import('./fishTypes.js').then(({ getFishFacts }) => {
             const facts = getFishFacts(fish.name);
-            const imagePath = getFishImagePath(fish.name);
+            const { primary: imagePath, fallback: imageFallback } = getFishImagePaths(fish.name);
             const isCaught = collectionData && collectionData.caught === true;
             
             // Rarity colors
@@ -3339,7 +3341,8 @@ export class UI {
                 <div style="margin-bottom: 20px; text-align: center;">
                     <img src="${imagePath}" alt="${fish.name}" 
                          style="max-width: 200px; max-height: 200px; width: auto; height: auto; border-radius: 10px; border: 3px solid ${rarityColor}; display: block; margin: 0 auto;"
-                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                         loading="lazy" decoding="async"
+                         onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${imageFallback}';}else{this.style.display='none';this.nextElementSibling.style.display='flex';}">
                     <div style="display: none; width: 200px; height: 200px; background: rgba(255,255,255,0.1); border-radius: 10px; border: 3px solid ${rarityColor}; margin: 0 auto; flex-direction: column; align-items: center; justify-content: center; font-size: 48px;">
                         🐟
                     </div>

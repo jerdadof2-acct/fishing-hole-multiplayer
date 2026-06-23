@@ -421,7 +421,7 @@ export class Game {
                 // Use a new cache key to completely bypass browser cache
                 // Add random timestamp to force fresh load
                 (() => {
-                    const reelUrl = "/src/audio/reel-78063.mp3?nocache=" + Date.now() + "&r=" + Math.random();
+                    const reelUrl = '/src/audio/reel-78063.mp3?v=1';
                     return this.sfx.load("reel_fight_new", reelUrl, true);
                 })().catch((error) => {
                     console.warn('Failed to load reel sound:', error);

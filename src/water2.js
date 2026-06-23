@@ -1,6 +1,12 @@
 import * as THREE from 'three';
 import { makeWaterMaterial } from './water/waterMaterial.js';
 import { getWaterBodyConfig, DEFAULT_WATER_BODY_TYPE, WaterBodyTypes } from './water/waterBodyTypes.js';
+import {
+    createAmbientSplashRings,
+    createCausticsLayer,
+    tickAmbientSplashes,
+    tickCausticsLayer
+} from './effects/waterAmbience.js';
 
 // Create procedural water normal map if texture is missing
 function createProceduralWaterNormal(offset = 0) {
@@ -53,6 +59,8 @@ export class Water2Lake {
         this.dockPostParticles = null; // Particle stream from dock posts (for rivers only)
         this.time = 0; // Time accumulator for splash animations
         this.celestialTime = 0; // Time accumulator for celestial twinkle
+        this.causticsLayer = null;
+        this.ambientSplashes = null;
     }
     
     /**
@@ -561,37 +569,44 @@ export class Water2Lake {
         ground.receiveShadow = true;
         this.sceneRef.scene.add(ground);
 
+        this.causticsLayer = createCausticsLayer(
+            this.sceneRef.scene,
+            this.groundSize,
+            this.waterY,
+            { skipOnMobile: false }
+        );
+
         // Create water geometry with enough detail for waves
         const waterGeometry = new THREE.PlaneGeometry(this.groundSize, this.groundSize, 128, 128);
         
-        // Load normal maps for the new material system with fallback
+        // Load normal maps — mobile uses smaller -sm variants when available
         const textureLoader = new THREE.TextureLoader();
-        let normalMap1, normalMap2;
+        const isMobile = typeof navigator !== 'undefined'
+            && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+        const loadNormal = (baseName, proceduralOffset = 0) => {
+            const fullPath = `/assets/textures/${baseName}.jpg`;
+            const smPath = `/assets/textures/${baseName}-sm.jpg`;
+            const primary = isMobile ? smPath : fullPath;
+            return textureLoader.load(
+                primary,
+                undefined,
+                undefined,
+                () => {
+                    if (primary !== fullPath) {
+                        return textureLoader.load(fullPath, undefined, undefined, () => {
+                            console.warn(`${baseName} missing, procedural fallback`);
+                            return createProceduralWaterNormal(proceduralOffset);
+                        });
+                    }
+                    console.warn(`${baseName} missing, procedural fallback`);
+                    return createProceduralWaterNormal(proceduralOffset);
+                }
+            );
+        };
+        let normalMap1 = loadNormal('waterNormals1', 0);
+        let normalMap2 = loadNormal('waterNormals2', 0.5);
         
-        // Try to load normal maps, but create procedural fallbacks if they fail
         try {
-            normalMap1 = textureLoader.load(
-                "/assets/textures/waterNormals1.jpg",
-                undefined,
-                undefined,
-                () => {
-                    // onError - create procedural fallback
-                    console.warn('waterNormals1.jpg not found, creating procedural normal map');
-                    normalMap1 = createProceduralWaterNormal();
-                }
-            );
-            
-            normalMap2 = textureLoader.load(
-                "/assets/textures/waterNormals2.jpg",
-                undefined,
-                undefined,
-                () => {
-                    // onError - create procedural fallback
-                    console.warn('waterNormals2.jpg not found, creating procedural normal map');
-                    normalMap2 = createProceduralWaterNormal(0.5); // Slightly different pattern
-                }
-            );
-            
             // If textures aren't loaded yet, create procedural fallbacks as backup
             if (!normalMap1 || !normalMap1.image) {
                 normalMap1 = createProceduralWaterNormal();
@@ -859,6 +874,12 @@ export class Water2Lake {
                 uniforms[`rippleTime${slot}`].value = 0.0001; // start ripple
             }
         };
+
+        this.ambientSplashes = createAmbientSplashRings(
+            this.sceneRef.scene,
+            this.waterY,
+            5
+        );
         
         // Calculate visible bounds - keep within camera view
         // Camera shows area roughly -60 to +60 in X and Z, centered at dock
@@ -876,6 +897,14 @@ export class Water2Lake {
 
     update(delta) {
         this.time = (this.time || 0) + delta;
+
+        tickCausticsLayer(this.causticsLayer, delta);
+        tickAmbientSplashes(
+            this.ambientSplashes,
+            delta,
+            this,
+            (x, z) => this.mesh?.splashAt?.(x, z)
+        );
         
         if (this.water && this.water.material && this.water.material.uniforms) {
             // Update time uniform for wave animation

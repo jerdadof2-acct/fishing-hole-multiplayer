@@ -353,19 +353,10 @@ export class Platform {
         const hullOuterEdge = boatWidth * 0.42 + 0.03;
         const railThick = 0.08;
         const railCenterX = hullOuterEdge - 0.04 - railThick * 0.5;
-        
-        // Transom (back of boat - vertical, properly attached)
-        // Align transom with shortened side rails - it should be inside the back rail
-        const transomWidth = Math.min(boatWidth * 0.85, railCenterX * 2 - 0.05);
-        const transomGeometry = new THREE.BoxGeometry(transomWidth, hullHeight * 0.7, 0.12);
-        transomGeometry.name = 'largeBoat-transomGeometry';
-        const transom = new THREE.Mesh(transomGeometry, hullMaterial);
-        transom.name = 'largeBoat-transom';
-        // Position transom inside where back rail will be (backRailZ from gunwale calculation)
-        // Since backRailZ is calculated later, use the same calculation: -(boatLength * 0.88 * 0.5) - railThick
-        const backRailZCalc = -(boatLength * 0.88 * 0.5) - 0.03; // Slightly inside back rail position
-        transom.position.set(0, -hullHeight * 0.15, backRailZCalc); // Inside back rail
-        boatGroup.add(transom);
+        const sideLen = boatLength * 0.88;
+        const sideRailEndZ = sideLen * 0.5;
+        const frontRailZ = sideRailEndZ + railThick * 0.5;
+        const backRailZ = -sideRailEndZ - railThick * 0.5;
         
         // Bow (front of boat - pointed/tapered shape)
         // Align bow with shortened side rails - it should be inside the front rail
@@ -382,49 +373,63 @@ export class Platform {
         bowGeometry.translate(0, -hullHeight * 0.15, 0);
         
         const bow = new THREE.Mesh(bowGeometry, hullMaterial);
-        // Position bow inside where front rail will be (frontRailZ from gunwale calculation)
-        // Since frontRailZ is calculated later, use the same calculation: (boatLength * 0.88 * 0.5) + railThick
-        const frontRailZCalc = (boatLength * 0.88 * 0.5) + 0.03; // Slightly inside front rail position
-        bow.position.set(0, 0, frontRailZCalc); // Inside front rail
-        bow.rotation.x = -Math.PI / 12; // Tilt forward slightly
+        bow.position.set(0, 0, frontRailZ);
+        bow.rotation.x = -Math.PI / 12;
         boatGroup.add(bow);
         
-        // Deck (sunken into hull to create boat interior)
-        // Use PlaneGeometry for seamless rendering to prevent visible seams
-        const deckWidth = Math.max(0.1, hullOuterEdge * 2 - 0.3); // Slight margin to stay inside hull
-        const deckLength = Math.max(0.2, smallBottomLength - 0.002);
-        
-        // Create deck as seamless top surface using PlaneGeometry (prevents visible seams)
-        const deckTopGeometry = new THREE.PlaneGeometry(deckWidth - 0.04, deckLength);
-        deckTopGeometry.name = 'smallBoat-deckTopGeometry';
-        const deckTop = new THREE.Mesh(deckTopGeometry, deckMaterial);
+        // Deck — solid box spanning gunwale rails (was shorter than rails, leaving stern gaps when pitching)
+        const deckWidth = Math.max(0.1, hullOuterEdge * 2 - 0.3);
+        const deckSpanZ = sideLen * 0.96;
+        const deckTopLocal = hullHeight * 0.35 + deckThickness * 0.5;
+        const deckTop = new THREE.Mesh(
+            new THREE.BoxGeometry(deckWidth - 0.04, deckThickness, deckSpanZ),
+            deckMaterial
+        );
         deckTop.name = 'smallBoat-deck';
-        deckTop.rotation.x = -Math.PI / 2; // Rotate to horizontal
-        const smallDeckFrontGap = (smallBottomLength * 0.5 - smallEndThickness * 0.5) - (deckLength * 0.5);
-        deckTop.position.y = hullHeight * 0.35 + deckThickness * 0.5; // Top surface
-        deckTop.position.z = smallDeckFrontGap > 0 ? smallDeckFrontGap : 0;
+        deckTop.position.set(0, deckTopLocal, 0);
         deckTop.castShadow = true;
         deckTop.receiveShadow = true;
         boatGroup.add(deckTop);
-        
-        // Store deck reference for compatibility
+
         const deck = deckTop;
-        
-        const smallSternGap = Math.max(0.0, smallBottomLength - Math.max(0.2, smallBottomLength - 0.002));
-        if (smallSternGap > 0.02) {
-            const sternFillerGeometry = new THREE.BoxGeometry(deckWidth - 0.06, deckThickness, smallSternGap);
-            const sternFiller = new THREE.Mesh(sternFillerGeometry, deckMaterial);
-            sternFiller.name = 'smallBoat-sternFiller';
-            sternFiller.position.set(0, deckTop.position.y - deckThickness * 0.5, smallBottomLength * 0.5 - smallSternGap * 0.5);
-            sternFiller.castShadow = true;
-            sternFiller.receiveShadow = true;
-            boatGroup.add(sternFiller);
-        }
-        
-        // Exact top surface (center + half height)
-        const deckTopLocal = deckTop.position.y;
-        // Store for getSurfacePosition or other code
         boatGroup.userData.deckTopLocal = deckTopLocal;
+
+        // Transom — full height from hull floor to deck underside, flush with back rail
+        const transomWidth = Math.min(boatWidth * 0.85, railCenterX * 2 - 0.05);
+        const hullFloorY = -hullHeight * 0.5;
+        const deckBottomY = deckTopLocal - deckThickness * 0.5;
+        const transomHeight = deckBottomY - hullFloorY + 0.03;
+        const transom = new THREE.Mesh(
+            new THREE.BoxGeometry(transomWidth, transomHeight, railThick + 0.06),
+            hullMaterial
+        );
+        transom.name = 'smallBoat-transom';
+        transom.position.set(0, hullFloorY + transomHeight * 0.5, backRailZ);
+        transom.castShadow = true;
+        transom.receiveShadow = true;
+        boatGroup.add(transom);
+
+        // Stern cap — seals the deck edge to the transom top (blocks water when boat pitches)
+        const sternCap = new THREE.Mesh(
+            new THREE.BoxGeometry(deckWidth - 0.02, deckThickness + 0.02, railThick + 0.08),
+            deckMaterial
+        );
+        sternCap.name = 'smallBoat-sternCap';
+        sternCap.position.set(0, deckTopLocal, backRailZ);
+        sternCap.castShadow = true;
+        sternCap.receiveShadow = true;
+        boatGroup.add(sternCap);
+
+        // Bow cap — same seal at the front rail
+        const bowCap = new THREE.Mesh(
+            new THREE.BoxGeometry(deckWidth - 0.02, deckThickness + 0.02, railThick + 0.08),
+            deckMaterial
+        );
+        bowCap.name = 'smallBoat-bowCap';
+        bowCap.position.set(0, deckTopLocal, frontRailZ);
+        bowCap.castShadow = true;
+        bowCap.receiveShadow = true;
+        boatGroup.add(bowCap);
         
         // Gunwale "cap" - L-cap that overlaps both hull and deck
         const gunwaleMaterial = new THREE.MeshStandardMaterial({
@@ -436,10 +441,9 @@ export class Platform {
         const gunwaleHeight = 1.1;       // Slightly taller for defined edge
         const gunwaleOut = 0.0;           // No outward overhang - align exactly with hull
         const gunwaleIn = 0.06;           // Inward overhang above the deck
-        // railThick and railCenterX defined above for transom/bow alignment
+        // railThick, railCenterX, sideLen, frontRailZ, backRailZ defined above
         
         // Sides (left/right) - shorten them to leave room for front/back rails
-        const sideLen = boatLength * 0.88; // Shortened from 0.95 to leave gap for front/back rails
         const sideRailGeom = new THREE.BoxGeometry(railThick, gunwaleHeight, sideLen);
         
         // y at which the rail sits so it clearly caps the hull and rises above the deck
@@ -466,12 +470,6 @@ export class Platform {
         // Side rails end at ±(boatLength * 0.88 * 0.5) = ±(boatLength * 0.44)
         const foreAftLen = railCenterX * 2;
         const foreAftGeom = new THREE.BoxGeometry(foreAftLen, gunwaleHeight, railThick);
-        
-        // Side rails end at ±sideLen/2 = ±(boatLength * 0.88 * 0.5)
-        // Position front/back rail centers to meet side rail ends exactly
-        const sideRailEndZ = (boatLength * 0.88) * 0.5; // End of side rail = boatLength * 0.44
-        const frontRailZ = sideRailEndZ + railThick * 0.5; // Position to meet side rail end
-        const backRailZ = -sideRailEndZ - railThick * 0.5; // Position to meet side rail end
         
         const frontRail = new THREE.Mesh(foreAftGeom, gunwaleMaterial);
         frontRail.name = 'smallBoat-frontRail';
@@ -702,6 +700,12 @@ export class Platform {
         ropeCoil.castShadow = true;
         ropeCoil.receiveShadow = true;
         boatGroup.add(ropeCoil);
+        
+        boatGroup.traverse((child) => {
+            if (child.isMesh) {
+                child.renderOrder = 5;
+            }
+        });
         
         this.platformMesh = boatGroup;
         
@@ -1633,9 +1637,9 @@ export class Platform {
             const slowWave2Phase = this.waveTime * 0.6; // Slower secondary wave
             const slowWave3Phase = this.waveTime * 0.9; // Slower tertiary wave
             
-            pitch = Math.sin(slowWave1Phase) * 0.05 + Math.sin(slowWave2Phase) * 0.02; // ~4 degrees max (reduced from ~10)
-            roll = Math.cos(slowWave1Phase * 0.8) * 0.03 + Math.sin(slowWave3Phase) * 0.02; // ~3 degrees max (reduced from ~8)
-            yOffset = Math.sin(slowWave1Phase * 1.2) * 0.01; // Very small up/down motion (reduced from 0.03)
+            pitch = Math.sin(slowWave1Phase) * 0.035 + Math.sin(slowWave2Phase) * 0.012;
+            roll = Math.cos(slowWave1Phase * 0.8) * 0.022 + Math.sin(slowWave3Phase) * 0.012;
+            yOffset = Math.sin(slowWave1Phase * 1.2) * 0.008;
         } else if (this.currentPlatformType === 'LARGE_BOAT') {
             // Large boat: Gentler rocking (slower like small boat to prevent deck dipping)
             // Slow down wave phases significantly like small boat

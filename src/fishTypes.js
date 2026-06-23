@@ -3,6 +3,8 @@
  * Defines all 33 fish types with their properties and facts
  */
 
+export { getFishImagePath, getFishImagePaths } from './utils/imageAssets.js';
+
 export const FishTypes = [
     // Common (0-4)
     { id: 0, name: 'Minnow', rarity: 'Common', minWeight: 0.1, maxWeight: 0.5, recordWeight: 0.6, value: 5, experience: 4, season: 'All' },
@@ -190,19 +192,3 @@ export function getFishFacts(fishName) {
 export function getAllFishTypes() {
     return FishTypes;
 }
-
-/**
- * Get fish image path
- * @param {string} fishName - Fish name
- * @returns {string} Image path
- */
-export function getFishImagePath(fishName) {
-    // Special cases for non-standard filenames
-    if (fishName === 'Starfish of Eternity') {
-        return 'assets/images/StarfishofEternity.jpg';
-    }
-    // Fish images are in assets/images/ with Title Case names (e.g., "Bass.png", "Ancient Sturgeon.png")
-    // Keep the fish name as-is (Title Case with spaces) since that's how the files are named
-    return `assets/images/${fishName}.png`;
-}
-

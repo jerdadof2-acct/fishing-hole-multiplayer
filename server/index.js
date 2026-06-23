@@ -5,6 +5,7 @@
 
 import dotenv from 'dotenv';
 import express from 'express';
+import compression from 'compression';
 import { Pool } from 'pg';
 import cors from 'cors';
 import path from 'path';
@@ -40,6 +41,7 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json());
+app.use(compression());
 
 // Serve static files (game files) — avoid stale HTML/JS on mobile browsers
 app.use(express.static(path.join(__dirname, '..'), {

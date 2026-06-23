@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { createGLTFLoader } from './utils/gltfLoader.js';
 import { AnimationMixer } from 'three';
 import {
     CAT_FACING_Y,
@@ -9,8 +9,29 @@ import {
     PORTRAIT_BLEND_ACTIVE_THRESHOLD
 } from './config/idlePortrait.js';
 
-const CAT_MODEL_URL = 'assets/glb/Cat.glb';
+const CAT_MODEL_URL = 'assets/glb/Cat.glb?v=meshopt1';
 const CAT_TARGET_HEIGHT = 1.75;
+
+/** Mesh-only bounds — optimized GLBs often have inflated armature/helper bounds. */
+function getMeshBounds(object3d) {
+    const box = new THREE.Box3();
+    let hasMesh = false;
+    object3d.updateMatrixWorld(true);
+    object3d.traverse((node) => {
+        if (!node.isMesh?.geometry) return;
+        const geometry = node.geometry;
+        if (!geometry.boundingBox) geometry.computeBoundingBox();
+        const meshBox = geometry.boundingBox.clone().applyMatrix4(node.matrixWorld);
+        if (!hasMesh) {
+            box.copy(meshBox);
+            hasMesh = true;
+        } else {
+            box.union(meshBox);
+        }
+    });
+    if (!hasMesh) box.setFromObject(object3d);
+    return box;
+}
 // Lake-facing rotation: see CAT_FACING_Y in src/config/idlePortrait.js (locked).
 
 export class Cat {
@@ -74,21 +95,21 @@ export class Cat {
                 reject(new Error('Cat model download timed out — check your connection and refresh.'));
             }, timeoutMs);
 
-            const loader = new GLTFLoader();
+            createGLTFLoader().then((loader) => {
             loader.load(
                 CAT_MODEL_URL,
                 (gltf) => {
                     clearTimeout(timeoutId);
                     this.model = gltf.scene;
-                    // Check model bounding box to determine appropriate scale
-                    const box = new THREE.Box3().setFromObject(this.model);
-                    const size = box.getSize(new THREE.Vector3());
-                    
-                    // Scale cat to a readable size on the dock (use actual height)
-                    const targetHeight = CAT_TARGET_HEIGHT;
-                    const scale = targetHeight / size.y;
+                    this.model.rotation.set(0, 0, 0);
+                    this.model.position.set(0, 0, 0);
+                    this.model.scale.set(1, 1, 1);
+
+                    const rawBox = getMeshBounds(this.model);
+                    const rawSize = rawBox.getSize(new THREE.Vector3());
+                    const scale = CAT_TARGET_HEIGHT / Math.max(rawSize.y, 0.01);
                     this.model.scale.setScalar(scale);
-                    console.log('Cat model size:', size, 'Scale applied:', scale);
+                    console.log('Cat mesh bounds:', rawSize, 'Scale applied:', scale);
                     
                     this.setupAnimations(gltf);
                     this.setupRodTip();
@@ -105,11 +126,9 @@ export class Cat {
                         this.findArmBones();
                     }
 
-                    this.model.rotation.set(0, 0, 0);
-                    this.model.position.set(0, 0, 0);
                     this.resetToBindPose();
 
-                    const bindBox = new THREE.Box3().setFromObject(this.model);
+                    const bindBox = getMeshBounds(this.model);
                     this.feetYOffset = -bindBox.min.y;
 
                     this.catAnchor = new THREE.Group();
@@ -167,6 +186,10 @@ export class Cat {
                     reject(error);
                 }
             );
+            }).catch((error) => {
+                clearTimeout(timeoutId);
+                reject(error);
+            });
         });
     }
 

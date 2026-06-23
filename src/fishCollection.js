@@ -3,6 +3,13 @@
  * Tracks which fish have been caught and unlocked in collection
  */
 
+import {
+    getFishImagePath as resolveFishImagePath,
+    getFishImagePaths
+} from './utils/imageAssets.js';
+
+export { resolveFishImagePath as getFishImagePath, getFishImagePaths };
+
 export class FishCollection {
     constructor(initialData = null) {
         // Structure: { fishId: {caught: boolean, firstCatchDate: timestamp, count: number} }
@@ -84,9 +91,7 @@ export class FishCollection {
      * @returns {string} Image path
      */
     getFishImagePath(fishName) {
-        // Fish images are in assets/images/ with Title Case names (e.g., "Bass.png", "Ancient Sturgeon.png")
-        // Keep the fish name as-is (Title Case with spaces) since that's how the files are named
-        return `assets/images/${fishName}.png`;
+        return resolveFishImagePath(fishName);
     }
     
     /**
