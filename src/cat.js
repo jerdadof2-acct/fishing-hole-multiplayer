@@ -14,6 +14,24 @@ const CAT_TARGET_HEIGHT = 2.0;
 const CAT_TARGET_HEIGHT_LARGE_BOAT = 2.2;
 // Lake-facing rotation: see CAT_FACING_Y in src/config/idlePortrait.js (locked).
 
+/** @param {Cat} cat @param {'DOCK'|'SMALL_BOAT'|'LARGE_BOAT'} platformType */
+export function applyCatPlatformHeight(cat, platformType) {
+    if (!cat?.model || !cat.bindHeight) return;
+
+    let height = CAT_TARGET_HEIGHT;
+    if (platformType === 'LARGE_BOAT') {
+        height = CAT_TARGET_HEIGHT_LARGE_BOAT;
+    } else if (platformType === 'SMALL_BOAT') {
+        height = CAT_TARGET_HEIGHT * 1.04;
+    }
+
+    cat.targetHeight = height;
+    cat.model.scale.setScalar(height / cat.bindHeight);
+    cat.model.updateMatrixWorld(true);
+    const bindBox = new THREE.Box3().setFromObject(cat.model);
+    cat.feetYOffset = -bindBox.min.y;
+}
+
 export class Cat {
     constructor(scene, dock) {
         this.sceneRef = scene;
@@ -456,23 +474,7 @@ export class Cat {
      * @param {'DOCK'|'SMALL_BOAT'|'LARGE_BOAT'} platformType
      */
     setTargetHeightForPlatform(platformType) {
-        if (!this.model || !this.bindHeight) return;
-
-        let height = CAT_TARGET_HEIGHT;
-        if (platformType === 'LARGE_BOAT') {
-            height = CAT_TARGET_HEIGHT_LARGE_BOAT;
-        } else if (platformType === 'SMALL_BOAT') {
-            height = CAT_TARGET_HEIGHT * 1.04;
-        }
-
-        this.targetHeight = height;
-        this.model.scale.setScalar(height / this.bindHeight);
-
-        if (this.model) {
-            this.model.updateMatrixWorld(true);
-            const bindBox = new THREE.Box3().setFromObject(this.model);
-            this.feetYOffset = -bindBox.min.y;
-        }
+        applyCatPlatformHeight(this, platformType);
     }
 
     /**

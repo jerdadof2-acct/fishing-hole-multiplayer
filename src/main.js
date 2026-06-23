@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Scene } from './scene.js';
-import { Cat } from './cat.js';
+import { Cat, applyCatPlatformHeight } from './cat.js?v=20250622-14';
 import { Water2Lake } from './water2.js';
 import { Grass } from './grass.js';
 import { Dock } from './dock.js';
@@ -344,7 +344,7 @@ export class Game {
             // Position cat on platform (feet aligned to dock surface)
             const platformPos = this.platform.getSurfacePosition();
             this.cat.positionOnSurface(platformPos);
-            this.cat.setTargetHeightForPlatform(currentLocation.platformType);
+            applyCatPlatformHeight(this.cat, currentLocation.platformType);
             console.log('[PLATFORM] Cat positioned at:', this.cat.savedPosition);
             
             loadingProgress.update(92, 'Rigging fishing line and bobber...');
@@ -1071,7 +1071,7 @@ export class Game {
         const newPlatformPos = this.platform.getSurfacePosition();
         if (this.cat) {
             this.cat.positionOnSurface(newPlatformPos);
-            this.cat.setTargetHeightForPlatform(location.platformType);
+            applyCatPlatformHeight(this.cat, location.platformType);
             console.log('[LOCATION SWITCH] Cat repositioned to:', this.cat.savedPosition);
         }
     }
