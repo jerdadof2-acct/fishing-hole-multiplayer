@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Scene } from './scene.js';
-import { Cat, applyCatPlatformHeight } from './cat.js?v=20250622-18';
+import { Cat, applyCatPlatformHeight } from './cat.js?v=20260622-deploy';
 import { Water2Lake } from './water2.js';
 import { Grass } from './grass.js';
 import { Dock } from './dock.js';
