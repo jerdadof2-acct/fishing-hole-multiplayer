@@ -1,7 +1,7 @@
 import Game from './main.js?v=20250624-pack-vo';
 import { api } from './api.js';
 import { initAdRotator } from './ads.js';
-import { ensureAssetPack } from './assetPack.js';
+import { ensureBootPack, startDeferredPackDownload } from './assetPack.js';
 import { loadingProgress } from './loadingProgress.js';
 import {
     markPrologueSeenForVersion,
@@ -68,6 +68,8 @@ async function startOfflineGame(reason) {
 }
 
 async function launchGame(gameOptions) {
+    startDeferredPackDownload({ silent: true });
+
     const playFullPrologue = shouldPlayStoryPrologue();
     const playReturnSplash = shouldShowReturnSplash();
     const needsPreEntry = playFullPrologue || playReturnSplash;
@@ -585,13 +587,15 @@ async function bootstrapGameInner() {
     loadingProgress.update(2, 'Connecting to server...');
 
     try {
-        await ensureAssetPack({
+        await ensureBootPack({
             onProgress: (percent, message) => {
-                loadingProgress.update(Math.min(42, Math.round(percent * 0.4)), message);
+                loadingProgress.update(Math.min(25, Math.round(percent * 0.25)), message);
             }
         });
+        startDeferredPackDownload({ silent: true });
     } catch (error) {
-        console.warn('[BOOTSTRAP] Asset pack download failed (continuing online):', error);
+        console.warn('[BOOTSTRAP] Boot asset pack failed (continuing online):', error);
+        startDeferredPackDownload({ silent: true });
     }
 
     const health = await api.healthCheck(10000);

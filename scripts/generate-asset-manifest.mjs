@@ -10,20 +10,23 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 
 /** Bump when adding/removing pack files — clients re-download on change. */
-export const PACK_VERSION = '20250624-2';
+export const PACK_VERSION = '20250624-3';
+
+/** Prologue-only — must finish before first paint / story starts. */
+const BOOT_URLS = [
+    '/images/prologue-background.png',
+    '/images/halley-splash.png',
+    '/assets/audio/halleys-big-catch-intro.mp3',
+    '/assets/audio/prologue-ocean-seagulls.mp3',
+    '/assets/audio/prologue-music.mp3'
+];
 
 const EXTRA_URLS = [
     '/',
     '/index.html',
     '/manifest.json',
     '/css/styles.css',
-    '/images/halley-splash.png',
-    '/images/prologue-background.png',
     '/assets/glb/Cat.glb',
-    '/assets/audio/halleys-big-catch-intro.mp3',
-    '/assets/audio/halleys-big-catch-intro.wav',
-    '/assets/audio/prologue-ocean-seagulls.mp3',
-    '/assets/audio/prologue-music.mp3',
     '/assets/audio/splash-6213.mp3',
     '/assets/audio/water-splashing-202979.mp3',
     '/assets/audio/tug.wav',
@@ -37,7 +40,6 @@ const EXTRA_URLS = [
     '/assets/icons/icon-192.png',
     '/assets/icons/icon-512.png'
 ];
-
 const MEDIA_EXTENSIONS = new Set([
     '.png', '.jpg', '.jpeg', '.webp', '.gif',
     '.mp3', '.wav', '.ogg',
@@ -74,17 +76,26 @@ const fromImages = walkFiles(path.join(ROOT, 'images'), '/images');
 
 const urls = [...new Set([
     ...EXTRA_URLS,
+    ...BOOT_URLS,
     ...fromAssets,
     ...fromImages
 ])].sort();
+
+const bootSet = new Set(BOOT_URLS);
+const boot = BOOT_URLS.filter((url) => urls.includes(url));
+const deferred = urls.filter((url) => !bootSet.has(url));
 
 const manifest = {
     version: PACK_VERSION,
     generatedAt: new Date().toISOString(),
     count: urls.length,
+    bootCount: boot.length,
+    deferredCount: deferred.length,
+    boot,
+    deferred,
     urls
 };
 
 const outPath = path.join(ROOT, 'asset-manifest.json');
 fs.writeFileSync(outPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
-console.log(`Wrote ${urls.length} URLs to asset-manifest.json (${PACK_VERSION})`);
+console.log(`Wrote ${urls.length} URLs (${boot.length} boot, ${deferred.length} deferred) to asset-manifest.json (${PACK_VERSION})`);
