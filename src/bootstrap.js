@@ -17,6 +17,7 @@ import {
     switchToDifferentAccount,
     validatePinInput
 } from './savePinSetup.js';
+import { readIsAdmin } from './admin/adminAuth.js';
 
 const AUTH_STORAGE_KEY = 'kittyCreekAuth';
 
@@ -686,7 +687,8 @@ async function bootstrapGameInner() {
         const playerContext = {
             userId: profile?.id ?? auth?.userId,
             username: profile?.username ?? auth?.username,
-            friendCode: profile?.friend_code ?? profile?.friendCode ?? auth?.friendCode
+            friendCode: profile?.friend_code ?? profile?.friendCode ?? auth?.friendCode,
+            isAdmin: readIsAdmin(profile)
         };
 
         api.setUserId(playerContext.userId);

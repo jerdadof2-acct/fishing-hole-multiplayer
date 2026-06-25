@@ -13,6 +13,15 @@ import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import { hashPin, validatePin, verifyPin } from './pinAuth.js';
 import { runMigrations } from './migrate.js';
+import { isAdminUsername, withAdminFlag, getAdminUsername } from './adminAuth.js';
+import {
+    backfillAllPlayersWithHalley,
+    decorateFriendRow,
+    ensureHalleyFriendship,
+    getHalleyPlayer,
+    isHalleyPlayerId,
+    syncHalleyFriendships
+} from './halleyFriend.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -86,6 +95,26 @@ function isValidUUID(uuid) {
     return uuidRegex.test(uuid);
 }
 
+function requireAdmin(req, res, next) {
+    if (!isValidUUID(req.userId)) {
+        return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    pool.query('SELECT username FROM players WHERE id = $1', [req.userId])
+        .then((result) => {
+            const username = result.rows[0]?.username;
+            if (!username || !isAdminUsername(username)) {
+                return res.status(403).json({ error: 'Admin access required' });
+            }
+            req.adminUsername = username;
+            next();
+        })
+        .catch((error) => {
+            console.error('[API] Admin auth error:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        });
+}
+
 // ==================== Player Routes ====================
 
 // Register new player (username + save PIN)
@@ -139,6 +168,12 @@ app.post('/api/players/register', async (req, res) => {
             'INSERT INTO player_collections (player_id, caught_fish) VALUES ($1, $2)',
             [player.id, JSON.stringify({})]
         );
+
+        if (isAdminUsername(player.username)) {
+            await backfillAllPlayersWithHalley(pool, player.id);
+        } else {
+            await ensureHalleyFriendship(pool, player.id);
+        }
         
         res.json({
             userId: player.id,
@@ -147,7 +182,8 @@ app.post('/api/players/register', async (req, res) => {
             level: player.level,
             experience: player.experience,
             money: player.money,
-            stats: player.player_stats
+            stats: player.player_stats,
+            isAdmin: isAdminUsername(player.username)
         });
     } catch (error) {
         if (error.code === '23505') { // Unique violation
@@ -199,6 +235,7 @@ app.post('/api/players/login', async (req, res) => {
         }
 
         await pool.query('UPDATE players SET last_active = NOW() WHERE id = $1', [player.id]);
+        await ensureHalleyFriendship(pool, player.id);
 
         const gameSave = player.game_save && typeof player.game_save === 'object' ? player.game_save : {};
 
@@ -214,7 +251,8 @@ app.post('/api/players/login', async (req, res) => {
             biggestCatch: player.biggest_catch,
             gameSave,
             gameSaveUpdatedAt: player.game_save_updated_at,
-            hasPin: true
+            hasPin: true,
+            isAdmin: isAdminUsername(player.username)
         });
     } catch (error) {
         console.error('[API] Login error:', error);
@@ -237,7 +275,8 @@ function buildPinlessAuthResponse(player) {
         gameSave,
         gameSaveUpdatedAt: player.game_save_updated_at,
         hasPin: false,
-        requiresPinSetup: true
+        requiresPinSetup: true,
+        isAdmin: isAdminUsername(player.username)
     };
 }
 
@@ -273,6 +312,7 @@ app.post('/api/players/claim', async (req, res) => {
         }
 
         await pool.query('UPDATE players SET last_active = NOW() WHERE id = $1', [player.id]);
+        await ensureHalleyFriendship(pool, player.id);
 
         res.json(buildPinlessAuthResponse(player));
     } catch (error) {
@@ -325,6 +365,7 @@ app.post('/api/players/recover', async (req, res) => {
         }
 
         await pool.query('UPDATE players SET last_active = NOW() WHERE id = $1', [player.id]);
+        await ensureHalleyFriendship(pool, player.id);
 
         res.json(buildPinlessAuthResponse(player));
     } catch (error) {
@@ -356,7 +397,7 @@ app.get('/api/players/me', authenticate, async (req, res) => {
         // Update last_active
         await pool.query('UPDATE players SET last_active = NOW() WHERE id = $1', [req.userId]);
         
-        res.json(result.rows[0]);
+        res.json(withAdminFlag(result.rows[0]));
     } catch (error) {
         console.error('[API] Get player error:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -376,6 +417,14 @@ app.post('/api/players/me/presence', authenticate, async (req, res) => {
         console.error('[API] Presence ping error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
+});
+
+// Verify admin status for the Halley account
+app.get('/api/admin/status', authenticate, requireAdmin, async (req, res) => {
+    res.json({
+        isAdmin: true,
+        username: req.adminUsername
+    });
 });
 
 // Update player data (sync from game)
@@ -681,7 +730,7 @@ app.post('/api/friends/request', authenticate, async (req, res) => {
         
         // Get friend's user ID
         const friendResult = await pool.query(
-            'SELECT id FROM players WHERE friend_code = $1',
+            'SELECT id, username FROM players WHERE friend_code = $1',
             [friendCode.toUpperCase()]
         );
         
@@ -690,9 +739,19 @@ app.post('/api/friends/request', authenticate, async (req, res) => {
         }
         
         const friendId = friendResult.rows[0].id;
+        const friendUsername = friendResult.rows[0].username;
         
         if (friendId === req.userId) {
             return res.status(400).json({ error: 'Cannot add yourself as a friend' });
+        }
+
+        if (isAdminUsername(friendUsername)) {
+            await ensureHalleyFriendship(pool, req.userId);
+            return res.json({
+                success: true,
+                message: 'Halley is already on your crew!',
+                autoFriend: true
+            });
         }
         
         // Check if friendship already exists
@@ -737,6 +796,8 @@ app.get('/api/friends', authenticate, async (req, res) => {
             return res.status(400).json({ error: 'Invalid user ID' });
         }
         
+        await ensureHalleyFriendship(pool, req.userId);
+
         const result = await pool.query(
             `SELECT p.id, p.username, p.friend_code, p.level, p.experience,
                     p.total_caught, p.biggest_catch, p.player_stats, p.last_active
@@ -748,11 +809,13 @@ app.get('/api/friends', authenticate, async (req, res) => {
                  END
              )
              WHERE (f.player1_id = $1 OR f.player2_id = $1) AND f.status = 'accepted'
-             ORDER BY p.last_active DESC`,
-            [req.userId]
+             ORDER BY
+                 CASE WHEN LOWER(p.username) = LOWER($2) THEN 0 ELSE 1 END,
+                 p.last_active DESC`,
+            [req.userId, getAdminUsername()]
         );
         
-        res.json(result.rows);
+        res.json(result.rows.map(decorateFriendRow));
     } catch (error) {
         console.error('[API] Get friends error:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -881,6 +944,10 @@ app.delete('/api/friends/:friendId', authenticate, async (req, res) => {
         
         if (!isValidUUID(friendId)) {
             return res.status(400).json({ error: 'Invalid friend ID' });
+        }
+
+        if (await isHalleyPlayerId(pool, friendId)) {
+            return res.status(403).json({ error: 'Halley is always on your crew.' });
         }
         
         const result = await pool.query(
@@ -1281,6 +1348,7 @@ app.get('/api/health', async (req, res) => {
 async function startServer() {
     try {
         await runMigrations(pool);
+        await syncHalleyFriendships(pool);
     } catch (error) {
         console.error('[SERVER] Database migration failed:', error);
         process.exit(1);

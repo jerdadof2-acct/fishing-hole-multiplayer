@@ -122,6 +122,9 @@ export class Player {
         /** @type {Record<string, number>} casts without finding each relic (pity tracker) */
         this.relicCastAttempts = {};
 
+        /** @type {boolean} Server-verified Halley admin account */
+        this.isAdmin = false;
+
         /** First-time dock tour after entering the main game window. */
         this.hasSeenGameplayOnboarding = false;
 
@@ -504,7 +507,7 @@ export class Player {
 
     /**
      * Update user context (userId, username, friend code)
-     * @param {{ userId?: string, username?: string, friendCode?: string }} context
+     * @param {{ userId?: string, username?: string, friendCode?: string, isAdmin?: boolean }} context
      */
     setUserContext(context = {}) {
         if (context.userId) {
@@ -515,6 +518,11 @@ export class Player {
         }
         if (context.friendCode) {
             this.friendCode = context.friendCode;
+        }
+        if (context.isAdmin === true) {
+            this.isAdmin = true;
+        } else if (context.isAdmin === false) {
+            this.isAdmin = false;
         }
 
         // Persist context locally without triggering sync back to server
@@ -568,6 +576,9 @@ export class Player {
         }
         if (userId) {
             this.userId = userId;
+        }
+        if (serverData.isAdmin === true || serverData.is_admin === true) {
+            this.isAdmin = true;
         }
 
         this.recalculateStats(stats && typeof stats === 'object' ? stats : null);

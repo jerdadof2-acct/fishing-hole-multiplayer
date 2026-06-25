@@ -781,6 +781,20 @@ canvas {
     color: #ffffff;
 }
 
+.friends-entry-halley {
+    border-color: rgba(253, 230, 138, 0.45);
+    background: rgba(253, 230, 138, 0.08);
+}
+
+.friends-entry-star-label {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #fde68a;
+}
+
 .friends-entry-meta {
     font-size: 11px;
     color: rgba(255, 255, 255, 0.6);
@@ -2474,6 +2488,105 @@ canvas {
 }
 
 .story-test-boat-grid button {
+    margin-bottom: 0;
+}
+
+/* Halley admin command panel — production account only */
+#halley-command-panel,
+.halley-command-panel {
+    position: fixed;
+    left: 12px;
+    bottom: 72px;
+    z-index: 11000;
+    width: min(92vw, 260px);
+    max-height: min(70vh, 560px);
+    overflow-y: auto;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(12, 18, 40, 0.96);
+    border: 1px solid rgba(253, 230, 138, 0.55);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+    font-family: 'Poppins', 'Arial', sans-serif;
+    color: #f8f4e8;
+}
+
+#halley-command-panel.hidden {
+    display: none;
+}
+
+.halley-command-toggle {
+    position: fixed;
+    left: 12px;
+    bottom: 24px;
+    z-index: 11001;
+    width: 44px;
+    height: 44px;
+    border: 1px solid rgba(253, 230, 138, 0.55);
+    border-radius: 50%;
+    background: rgba(12, 18, 40, 0.94);
+    color: #fde68a;
+    font-size: 1.25rem;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.halley-command-toggle:hover,
+.halley-command-toggle.active {
+    background: rgba(253, 230, 138, 0.22);
+}
+
+.command-panel-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #fde68a;
+    margin-bottom: 8px;
+}
+
+.command-panel-section {
+    margin: 10px 0 6px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #93c5fd;
+}
+
+.command-panel-hint {
+    margin: 8px 0 0;
+    font-size: 0.65rem;
+    line-height: 1.35;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.command-panel-grid {
+    display: grid;
+    gap: 4px;
+}
+
+#halley-command-panel button,
+.halley-command-panel button {
+    display: block;
+    width: 100%;
+    margin: 0 0 6px;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 220, 140, 0.18);
+    color: #fff8e8;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+}
+
+#halley-command-panel button:hover,
+.halley-command-panel button:hover {
+    background: rgba(255, 220, 140, 0.32);
+}
+
+.command-panel-grid button {
     margin-bottom: 0;
 }
 

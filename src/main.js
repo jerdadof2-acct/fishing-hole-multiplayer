@@ -7,6 +7,7 @@ import { Dock } from './dock.js';
 import { Platform } from './platform.js';
 import { Locations } from './locations.js';
 import { applyDevOceanUnlocks, isDevMode } from './dev/devMode.js';
+import { hasPrivilegedAccess } from './admin/adminAuth.js';
 import { Fishing } from './fishing.js';
 import { Fish } from './fish.js';
 import { UI } from './ui.js';
@@ -521,13 +522,19 @@ export class Game {
             }, this.sfx);
             this.ui.init();
 
-            if (isDevMode()) {
+            if (isDevMode() || this.player?.isAdmin) {
                 this.ui.updateLocationSelector?.();
             }
 
             if (typeof window !== 'undefined' && isDevMode()) {
                 import('./dev/storyTestPanel.js').then(({ initStoryTestPanel }) => {
                     initStoryTestPanel(this);
+                });
+            }
+
+            if (typeof window !== 'undefined' && this.player?.isAdmin) {
+                import('./admin/halleyCommandPanel.js').then(({ initHalleyCommandPanel }) => {
+                    initHalleyCommandPanel(this);
                 });
             }
 
@@ -1156,7 +1163,7 @@ export class Game {
             return false;
         }
 
-        if (location.waterBodyType === 'CELESTIAL' && !isDevMode() && !this.player?.canAccessCelestialDepths()) {
+        if (location.waterBodyType === 'CELESTIAL' && !hasPrivilegedAccess(this.player) && !this.player?.canAccessCelestialDepths()) {
             console.warn('[LOCATION SWITCH] Celestial Depths locked — collect all relics and forge the Starlight Lure first');
             return false;
         }

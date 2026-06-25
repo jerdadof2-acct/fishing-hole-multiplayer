@@ -19,7 +19,8 @@ export function isDevMode() {
  * @returns {boolean} whether any unlock was added
  */
 export function applyDevOceanUnlocks(player, locations) {
-    if (!isDevMode() || !player || !locations?.locations) return false;
+    if (!player || !locations?.locations) return false;
+    if (!isDevMode() && !player.isAdmin) return false;
 
     let added = false;
     for (const index of DEV_OCEAN_BOAT_LOCATION_INDICES) {

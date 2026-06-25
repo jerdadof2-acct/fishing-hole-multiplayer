@@ -6,7 +6,7 @@ import { isCelestialStarfishHook } from './config/starfishEncounter.js';
 import { getFishImagePaths, getRelicImagePaths } from './utils/imageAssets.js';
 import { switchToDifferentAccount } from './savePinSetup.js';
 import { pickMissMessage } from './config/missMessages.js';
-import { isDevMode } from './dev/devMode.js';
+import { hasPrivilegedAccess } from './admin/adminAuth.js';
 
 const FRIEND_ONLINE_THRESHOLD_MS = 5 * 60 * 1000;
 const FRIEND_CATCH_TOAST_RARITIES = new Set(['Epic', 'Legendary', 'Trophy']);
@@ -828,7 +828,7 @@ export class UI {
         if (!listEl) return;
 
         if (!friends.length) {
-            this.setFriendsPlaceholder('friends-list', 'No friends yet. Share your code to build your crew!');
+            this.setFriendsPlaceholder('friends-list', 'No friends yet. Halley joins your crew automatically — share your code to add more anglers!');
             this.activeFriendId = null;
             this.setFriendDetailMessage('Add a friend to view their collection.');
             return;
@@ -1106,7 +1106,10 @@ export class UI {
 
     buildFriendEntry(friend) {
         const id = this.safeAttr(friend?.id ?? '');
+        const isHalleyCrew = friend?.is_auto_friend === true
+            || String(friend?.username || '').toLowerCase() === 'halley';
         const name = this.safeText(friend?.username || 'Unknown angler');
+        const displayName = isHalleyCrew ? `☄ ${name}` : name;
         const code = this.safeText(friend?.friend_code || '------');
         const level = friend?.level ?? '-';
         const statusInfo = this.getFriendStatus(friend);
@@ -1131,9 +1134,10 @@ export class UI {
         }
 
         return `
-            <div class="friends-entry" data-friend-id="${id}">
+            <div class="friends-entry${isHalleyCrew ? ' friends-entry-halley' : ''}" data-friend-id="${id}"${isHalleyCrew ? ' data-auto-friend="true"' : ''}>
                 <div class="friends-entry-info">
-                    <span class="friends-entry-name">${name}</span>
+                    <span class="friends-entry-name">${displayName}</span>
+                    ${isHalleyCrew ? '<span class="friends-entry-star-label">Star of the creek</span>' : ''}
                     <div class="friends-entry-status">
                         <span class="friends-status-dot ${statusInfo.statusClass}"></span>
                         <span class="friends-entry-meta">Code ${code}${metaPieces.length ? ' · ' + metaPieces.join(' · ') : ''}</span>
@@ -1143,7 +1147,7 @@ export class UI {
                 </div>
                 <div class="friends-entry-actions">
                     <button class="friend-action-button neutral" data-action="copy" data-code="${code}">Copy</button>
-                    <button class="friend-action-button decline" data-action="remove" data-id="${id}">Remove</button>
+                    ${isHalleyCrew ? '' : `<button class="friend-action-button decline" data-action="remove" data-id="${id}">Remove</button>`}
                 </div>
             </div>
         `;
@@ -1635,6 +1639,12 @@ export class UI {
                 const friendId = actionTarget.dataset.id;
             if (!friendId) return;
 
+            const autoFriendEntry = actionTarget.closest('[data-auto-friend="true"]');
+            if (autoFriendEntry) {
+                this.showFriendMessage('Halley is always on your crew.', 'error');
+                return;
+            }
+
             try {
                     actionTarget.disabled = true;
                 await this.api.removeFriend(friendId);
@@ -2077,11 +2087,11 @@ export class UI {
         // Add options for unlocked locations only
         locations.forEach((location, index) => {
             const isUnlocked = this.player.locationUnlocks.includes(index);
-            if (!isUnlocked && !isDevMode()) return;
+            if (!isUnlocked && !hasPrivilegedAccess(this.player)) return;
 
             const option = document.createElement('option');
             option.value = index;
-            option.textContent = isUnlocked ? location.name : `${location.name} (dev)`;
+            option.textContent = isUnlocked ? location.name : `${location.name} (preview)`;
             if (index === currentLocationIndex) {
                 option.selected = true;
             }
@@ -2111,12 +2121,12 @@ export class UI {
         }
         
         // Check if location is unlocked
-        if (!isDevMode() && !this.player.locationUnlocks.includes(locationIndex)) {
+        if (!hasPrivilegedAccess(this.player) && !this.player.locationUnlocks.includes(locationIndex)) {
             console.warn('[UI] Location not unlocked:', location.name);
             return;
         }
 
-        if (location.waterBodyType === 'CELESTIAL' && !isDevMode() && !this.player.canAccessCelestialDepths()) {
+        if (location.waterBodyType === 'CELESTIAL' && !hasPrivilegedAccess(this.player) && !this.player.canAccessCelestialDepths()) {
             this.showToast({
                 type: 'error',
                 title: 'Celestial Depths locked',
@@ -2127,7 +2137,7 @@ export class UI {
         }
         
         // Check if player can afford the location
-        if (!isDevMode() && this.player.money < location.cost) {
+        if (!hasPrivilegedAccess(this.player) && this.player.money < location.cost) {
             this.showToast({
                 type: 'error',
                 title: 'Not enough money',
@@ -2146,7 +2156,7 @@ export class UI {
         }
         
         // Deduct cost if not free
-        if (!isDevMode() && location.cost > 0) {
+        if (!hasPrivilegedAccess(this.player) && location.cost > 0) {
             this.player.spendMoney(location.cost);
             this.updatePlayerInfo();
         }
