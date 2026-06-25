@@ -12,7 +12,7 @@ import { Fish } from './fish.js';
 import { UI } from './ui.js';
 import { Camera } from './camera.js';
 import { Splash } from './splash.js';
-import { buildLakeMask } from './buildLakeMask.js';
+import { buildLakeMaskForWaterBody } from './buildLakeMask.js';
 import { SoundManager } from './sound.js';
 import { addWaterParticles } from './effects/waterParticles.js';
 import { Sfx } from './audio/sfx.js';
@@ -31,7 +31,15 @@ import {
     PORTRAIT_BOBBER_TRACKING_CUTOFF
 } from './config/idlePortrait.js';
 import { preloadDockWoodTexture } from './scene/dockTextures.js';
+import { preloadFarShoreGroundTextures } from './scene/farShoreGroundTextures.js';
 import { loadSkyEnvironment, applySkyEnvironment } from './environment/loadSkyEnvironment.js';
+import {
+    createCrescentPondFarShore,
+    rebuildCrescentPondFarShore,
+    updateCrescentPondFarShore,
+    isCrescentPondLocation,
+    CRESCENT_POND_NAME
+} from './scene/crescentPondFarShore.js';
 
 export class Game {
     constructor(options = {}) {
@@ -72,6 +80,7 @@ export class Game {
         this.deferReveal = options.deferReveal === true;
         this._revealed = false;
         this.skyEnv = null;
+        this.crescentFarShore = null;
         if (this.deferReveal) {
             document.getElementById('game-container')?.classList.add('pre-entry');
         }
@@ -239,7 +248,7 @@ export class Game {
             }
             
             loadingProgress.update(30, 'Shaping the lake...');
-            this.lakeMask = buildLakeMask(1024, {x: 0.5, y: 0.5}, 0.42, 0.34, 0.2);
+            this.lakeMask = buildLakeMaskForWaterBody('LAKE');
             
             loadingProgress.update(38, 'Building water and shoreline...');
             this.water = new Water2Lake(this.scene, this.lakeMask);
@@ -332,12 +341,18 @@ export class Game {
             
             // Set water type based on current location
             this.water.setWaterBodyType(currentLocation.waterBodyType);
+            this.applyLakeMaskForWaterBody(currentLocation.waterBodyType);
             this.applyLocationEnvironment(currentLocation);
             this.applyCelestialBaitPreference(currentLocation);
             this.syncLocationMusic(currentLocation);
             
             loadingProgress.update(56, 'Loading dock textures...');
-            await preloadDockWoodTexture();
+            await Promise.all([
+                preloadDockWoodTexture(),
+                preloadFarShoreGroundTextures()
+            ]);
+
+            this.crescentFarShore = createCrescentPondFarShore(this.scene.scene);
 
             loadingProgress.update(58, `Building ${currentLocation.name}...`);
             this.platform = new Platform(this.scene, this.water);
@@ -655,6 +670,12 @@ export class Game {
         const portraitBlend = this._portraitIdleActive
             ? (this.camera?.portraitBlend ?? 0)
             : 0;
+
+        updateCrescentPondFarShore(
+            this.crescentFarShore,
+            portraitBlend,
+            isCrescentPondLocation(this.locations)
+        );
 
         // Lake-facing reset before animation (portrait keeps turned pose); feet aligned after update
         if (this.cat && this.platform) {
@@ -992,6 +1013,18 @@ export class Game {
         }
     }
 
+    applyLakeMaskForWaterBody(waterBodyType) {
+        if (!this.water) return;
+
+        const previous = this.lakeMask;
+        this.lakeMask = buildLakeMaskForWaterBody(waterBodyType);
+        if (previous && previous !== this.lakeMask) {
+            previous.dispose();
+        }
+
+        this.water.setLakeMask(this.lakeMask);
+    }
+
     applyLocationEnvironment(location) {
         if (!location) {
             return;
@@ -1135,6 +1168,10 @@ export class Game {
         
         // Switch water type
         this.water.setWaterBodyType(location.waterBodyType);
+        this.applyLakeMaskForWaterBody(location.waterBodyType);
+        if (location.name === CRESCENT_POND_NAME) {
+            this.crescentFarShore = rebuildCrescentPondFarShore(this.scene.scene, this.crescentFarShore);
+        }
         this.applyLocationEnvironment(location);
         this.applyCelestialBaitPreference(location);
         this.syncLocationMusic(location);

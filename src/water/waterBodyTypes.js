@@ -74,12 +74,13 @@ export const WaterBodyTypes = {
         turbidity: 0.2,                           // Slightly murkier (was 0.15)
         absorption: 0.9,                         // Very strong light absorption (was 0.8)
         opacity: 0.97,                           // More opaque (was 0.95)
-        sparkleStrength: 0.35,                   // Strong sparkle (large surface)
-        waveScale: 2.5,                          // Much bigger waves (ocean-specific)
-        waveSpeed: 3.0,                          // Faster waves (ocean-specific)
-        waveAmplitude: 0.15,                     // Larger wave amplitude (ocean-specific)
-        windScroll1: new THREE.Vector2(0.035, 0.018),
-        windScroll2: new THREE.Vector2(-0.02, 0.026)
+        sparkleStrength: 0.4,                    // Extra glints on chop
+        waveScale: 3.2,                          // Larger swell
+        waveSpeed: 3.6,                          // Faster chop
+        waveAmplitude: 0.22,                     // Taller waves (was 0.15)
+        chopMultiplier: 1.65,                    // High-frequency chop on top of swell
+        windScroll1: new THREE.Vector2(0.045, 0.022),
+        windScroll2: new THREE.Vector2(-0.028, 0.032)
     },
 
     CELESTIAL: {

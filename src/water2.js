@@ -417,6 +417,21 @@ export class Water2Lake {
     }
     
     /**
+     * Swap the shoreline mask (pond vs lake-sized water).
+     */
+    setLakeMask(lakeMask) {
+        if (!lakeMask) return;
+        if (this.lakeMask && this.lakeMask !== lakeMask) {
+            this.lakeMask.dispose();
+        }
+        this.lakeMask = lakeMask;
+        if (this.mesh?.material?.uniforms?.lakeMask) {
+            this.mesh.material.uniforms.lakeMask.value = lakeMask;
+            lakeMask.needsUpdate = true;
+        }
+    }
+
+    /**
      * Change water body type (e.g., 'POND', 'RIVER', 'LAKE', 'OCEAN')
      */
     setWaterBodyType(type) {
@@ -448,6 +463,9 @@ export class Water2Lake {
             }
             if (this.waterBodyConfig.waveAmplitude !== undefined) {
                 material.uniforms.waveAmplitude.value = this.waterBodyConfig.waveAmplitude;
+            }
+            if (material.uniforms.chopMultiplier) {
+                material.uniforms.chopMultiplier.value = this.waterBodyConfig.chopMultiplier || 1.0;
             }
             if (material.uniforms.rippleAmp) {
                 material.uniforms.rippleAmp.value = type === 'POND' ? 0.06 : 0.12;
@@ -681,6 +699,9 @@ export class Water2Lake {
         waterMaterial.uniforms.waveSpeed = { value: this.waterBodyConfig.waveSpeed || 2.0 };
         waterMaterial.uniforms.waveScale = { value: this.waterBodyConfig.waveScale || 1.1 };
         waterMaterial.uniforms.waveAmplitude = { value: this.waterBodyConfig.waveAmplitude || 0.07 };
+        waterMaterial.uniforms.chopMultiplier = {
+            value: this.waterBodyConfig.chopMultiplier || 1.0
+        };
         
         // Apply flow direction and speed ONLY for rivers (left to right)
         // For non-river types (LAKE, POND, OCEAN), keep default scrolls and no flow
@@ -744,6 +765,7 @@ export class Water2Lake {
             uniform float waveSpeed;
             uniform float waveScale;
             uniform float waveAmplitude;
+            uniform float chopMultiplier;
             uniform vec2 ripplePos0;
             uniform vec2 ripplePos1;
             uniform vec2 ripplePos2;
@@ -778,8 +800,10 @@ export class Water2Lake {
               float wave4 = sin((position.x - position.z + flowOffsetX * 0.3) * 2.0 + uTime * waveSpeed * 0.37) * waveAmplitude * 0.7;
               // Additional choppy waves for ocean (higher frequency, smaller amplitude)
               // For rivers, add flow-affected choppy waves that move with flow
-              float chop1 = sin((position.x + flowOffsetX * 0.6) * 5.0 + uTime * waveSpeed * 1.5) * waveAmplitude * 0.4;
-              float chop2 = sin((position.z + flowOffsetZ * 0.6) * 4.5 + uTime * waveSpeed * 1.3) * waveAmplitude * 0.4;
+              float chop1 = sin((position.x + flowOffsetX * 0.6) * 5.0 + uTime * waveSpeed * 1.5) * waveAmplitude * 0.4 * chopMultiplier;
+              float chop2 = sin((position.z + flowOffsetZ * 0.6) * 4.5 + uTime * waveSpeed * 1.3) * waveAmplitude * 0.4 * chopMultiplier;
+              float chop3 = sin((position.x - position.z) * 6.8 + uTime * waveSpeed * 1.85) * waveAmplitude * 0.32 * max(chopMultiplier - 1.0, 0.0);
+              float chop4 = sin((position.x + position.z * 0.7) * 7.2 + uTime * waveSpeed * 2.1) * waveAmplitude * 0.26 * max(chopMultiplier - 1.0, 0.0);
               
               // Flow-specific waves for rivers (make water look like it's moving left to right)
               float flowWave = 0.0;
@@ -792,7 +816,7 @@ export class Water2Lake {
                   flowWave += sin((position.x * uFlowDirection.x) * 8.0 + uTime * waveSpeed * 2.0) * waveAmplitude * 0.4;
               }
               
-              float base = (wave1 + wave2 + wave3 + wave4 + chop1 + chop2 + flowWave) * waveScale;
+              float base = (wave1 + wave2 + wave3 + wave4 + chop1 + chop2 + chop3 + chop4 + flowWave) * waveScale;
               
               // Ripples
               float rip = 0.0;
@@ -819,9 +843,11 @@ export class Water2Lake {
               float dx = 3.0 * waveAmplitude * cos(position.x * 3.0 + uTime * waveSpeed);
               float dz = 3.0 * waveAmplitude * cos(position.z * 3.0 + uTime * waveSpeed * 0.8);
               // Add choppy wave normals
-              float dxChop = 5.0 * waveAmplitude * 0.4 * cos(position.x * 5.0 + uTime * waveSpeed * 1.5);
-              float dzChop = 4.5 * waveAmplitude * 0.4 * cos(position.z * 4.5 + uTime * waveSpeed * 1.3);
-              vNormal = normalize(normalMatrix * normalize(vec3(-(dx + dxChop), 1.0, -(dz + dzChop))));
+              float dxChop = 5.0 * waveAmplitude * 0.4 * chopMultiplier * cos(position.x * 5.0 + uTime * waveSpeed * 1.5);
+              float dzChop = 4.5 * waveAmplitude * 0.4 * chopMultiplier * cos(position.z * 4.5 + uTime * waveSpeed * 1.3);
+              float dxChop3 = 6.8 * waveAmplitude * 0.32 * max(chopMultiplier - 1.0, 0.0) * cos((position.x - position.z) * 6.8 + uTime * waveSpeed * 1.85);
+              float dzChop3 = -6.8 * waveAmplitude * 0.32 * max(chopMultiplier - 1.0, 0.0) * cos((position.x - position.z) * 6.8 + uTime * waveSpeed * 1.85);
+              vNormal = normalize(normalMatrix * normalize(vec3(-(dx + dxChop + dxChop3), 1.0, -(dz + dzChop + dzChop3))));
               
               vec4 wp = modelMatrix * vec4(pos, 1.0);
               vWorldPos = wp.xyz;
