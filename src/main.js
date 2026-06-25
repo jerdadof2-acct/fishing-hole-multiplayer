@@ -93,6 +93,10 @@ export class Game {
             this.syncLocationMusic(this.locations.getCurrentLocation());
         }
         this.animate();
+
+        if (this.ui && typeof this.ui.maybeStartGameplayOnboarding === 'function') {
+            this.ui.maybeStartGameplayOnboarding();
+        }
     }
 
     showCatBark(text) {
@@ -137,6 +141,10 @@ export class Game {
 
         const prologue = document.getElementById('story-prologue');
         if (prologue && !prologue.classList.contains('hidden')) {
+            return false;
+        }
+
+        if (document.body.classList.contains('gameplay-onboarding-active')) {
             return false;
         }
 
@@ -555,6 +563,8 @@ export class Game {
 
         const prologue = document.getElementById('story-prologue');
         if (prologue && !prologue.classList.contains('hidden')) return false;
+
+        if (document.body.classList.contains('gameplay-onboarding-active')) return false;
 
         const activeTab = document.querySelector('.tab-button.active')?.getAttribute('data-tab');
         if (activeTab && activeTab !== 'game') return false;

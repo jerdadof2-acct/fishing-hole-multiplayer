@@ -2457,3 +2457,156 @@ canvas {
     color: rgba(255, 255, 255, 0.55);
 }
 
+/* First-time gameplay onboarding — dock tour */
+.gameplay-onboarding {
+    position: fixed;
+    inset: 0;
+    z-index: 10950;
+    pointer-events: none;
+}
+
+.gameplay-onboarding-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(4, 8, 22, 0.55);
+    pointer-events: auto;
+}
+
+.gameplay-onboarding-spotlight {
+    position: fixed;
+    border-radius: 14px;
+    box-shadow: 0 0 0 9999px rgba(4, 8, 22, 0.72);
+    border: 2px solid rgba(125, 211, 252, 0.85);
+    pointer-events: none;
+    transition: top 0.2s ease, left 0.2s ease, width 0.2s ease, height 0.2s ease;
+    z-index: 1;
+}
+
+.gameplay-onboarding-spotlight.hidden {
+    display: none;
+}
+
+.gameplay-onboarding-card {
+    position: fixed;
+    z-index: 2;
+    width: min(92vw, 380px);
+    padding: 20px 22px 18px;
+    border-radius: 16px;
+    background: linear-gradient(165deg, rgba(18, 28, 58, 0.98), rgba(10, 16, 36, 0.98));
+    border: 1px solid rgba(125, 211, 252, 0.35);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+    color: #f0f9ff;
+    font-family: 'Poppins', 'Arial', sans-serif;
+    pointer-events: auto;
+}
+
+.gameplay-onboarding-card--center {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.gameplay-onboarding-step-label {
+    margin: 0 0 8px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(186, 230, 253, 0.75);
+}
+
+.gameplay-onboarding-icon {
+    font-size: 2rem;
+    line-height: 1;
+    margin-bottom: 6px;
+}
+
+.gameplay-onboarding-icon.hidden {
+    display: none;
+}
+
+.gameplay-onboarding-title {
+    margin: 0 0 10px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.gameplay-onboarding-body {
+    margin: 0 0 18px;
+    font-size: 0.95rem;
+    line-height: 1.55;
+    color: rgba(224, 242, 254, 0.92);
+    white-space: pre-line;
+}
+
+.gameplay-onboarding-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.gameplay-onboarding-back,
+.gameplay-onboarding-skip,
+.gameplay-onboarding-next {
+    border: none;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.gameplay-onboarding-back {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.gameplay-onboarding-skip {
+    margin-left: auto;
+    background: transparent;
+    color: rgba(186, 230, 253, 0.8);
+}
+
+.gameplay-onboarding-next {
+    background: linear-gradient(135deg, #4a90e2, #2563eb);
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+}
+
+.gameplay-onboarding-next:hover,
+.gameplay-onboarding-back:hover {
+    filter: brightness(1.06);
+}
+
+body.gameplay-onboarding-active #cast-button,
+body.gameplay-onboarding-active .tab-button,
+body.gameplay-onboarding-active .location-select {
+    pointer-events: none;
+}
+
+@media (max-width: 480px) {
+    .gameplay-onboarding-card:not(.gameplay-onboarding-card--center) {
+        width: min(94vw, 360px);
+        max-height: 42vh;
+        overflow-y: auto;
+    }
+
+    .gameplay-onboarding-actions {
+        justify-content: stretch;
+    }
+
+    .gameplay-onboarding-skip {
+        margin-left: 0;
+        order: 3;
+        width: 100%;
+        text-align: center;
+    }
+
+    .gameplay-onboarding-next {
+        flex: 1;
+    }
+}
+

@@ -122,6 +122,9 @@ export class Player {
         /** @type {Record<string, number>} casts without finding each relic (pity tracker) */
         this.relicCastAttempts = {};
 
+        /** First-time dock tour after entering the main game window. */
+        this.hasSeenGameplayOnboarding = false;
+
         // Server sync context
         this.api = null;
         this.userId = null;
@@ -457,7 +460,8 @@ export class Player {
                 currentLocationIndex: this.currentLocationIndex,
                 hiddenRelicsCollected: this.hiddenRelicsCollected,
                 starlightLureCrafted: this.starlightLureCrafted,
-                relicCastAttempts: this.relicCastAttempts
+                relicCastAttempts: this.relicCastAttempts,
+                hasSeenGameplayOnboarding: this.hasSeenGameplayOnboarding === true
             };
             
             if (this.userId) {
@@ -661,6 +665,7 @@ export class Player {
                 this.relicCastAttempts = playerData.relicCastAttempts && typeof playerData.relicCastAttempts === 'object'
                     ? playerData.relicCastAttempts
                     : {};
+                this.hasSeenGameplayOnboarding = playerData.hasSeenGameplayOnboarding === true;
 
                 if (playerData.userId) {
                     this.userId = playerData.userId;

@@ -120,6 +120,35 @@ export class UI {
             this.updatePlayerInfo();
         }, 1000);
     }
+
+    maybeStartGameplayOnboarding() {
+        if (!this.player) {
+            return;
+        }
+
+        import('./onboarding.js').then(({ shouldShowGameplayOnboarding, startGameplayOnboarding }) => {
+            if (!shouldShowGameplayOnboarding(this.player)) {
+                return;
+            }
+            window.setTimeout(() => {
+                startGameplayOnboarding({ player: this.player, ui: this });
+            }, 500);
+        }).catch((error) => {
+            console.warn('[UI] Gameplay onboarding failed to load:', error);
+        });
+    }
+
+    replayGameplayOnboarding() {
+        import('./onboarding.js').then(({ startGameplayOnboarding }) => {
+            startGameplayOnboarding({ player: this.player, ui: this, force: true });
+        }).catch((error) => {
+            console.warn('[UI] Gameplay onboarding replay failed:', error);
+        });
+    }
+
+    isGameplayOnboardingActive() {
+        return document.body.classList.contains('gameplay-onboarding-active');
+    }
     
     initTabs() {
         const tabButtons = document.querySelectorAll('.tab-button');
@@ -1931,6 +1960,12 @@ export class UI {
                         </button>
                         <span class="settings-story-caption">Watch the opening story again</span>
                     </div>
+                    <div class="settings-story-row">
+                        <button type="button" id="replay-onboarding-btn" class="settings-story-link">
+                            🎣 Dock tour
+                        </button>
+                        <span class="settings-story-caption">How to play and what each tab does</span>
+                    </div>
                     <div class="settings-danger-zone">
                         <div class="settings-danger-title">⚠️ Danger Zone</div>
                         <p class="settings-danger-copy">
@@ -1958,6 +1993,14 @@ export class UI {
                     } finally {
                         replayBtn.disabled = false;
                     }
+                });
+            }
+
+            const onboardingBtn = document.getElementById('replay-onboarding-btn');
+            if (onboardingBtn) {
+                onboardingBtn.addEventListener('click', () => {
+                    this.closeModal('inventory-modal');
+                    this.replayGameplayOnboarding();
                 });
             }
 
@@ -2098,6 +2141,10 @@ export class UI {
     }
 
     handleCastOrSetHook() {
+        if (this.isGameplayOnboardingActive()) {
+            return;
+        }
+
         const castButton = document.getElementById('cast-button');
         const currentState = castButton?.getAttribute('data-state');
 
