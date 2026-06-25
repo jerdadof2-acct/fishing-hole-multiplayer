@@ -2,10 +2,13 @@
  * Prologue audio bed — ocean SFX + background music + voiceover on one Web Audio graph.
  */
 
-function createLoopLayer(ctx, destination, url, peakVolume, duckRatio) {
-    const audio = new Audio(url);
-    audio.loop = true;
-    audio.preload = 'auto';
+function createLoopLayer(ctx, destination, audioOrUrl, peakVolume, duckRatio) {
+    const audio = typeof audioOrUrl === 'string'
+        ? Object.assign(new Audio(audioOrUrl), { loop: true, preload: 'auto' })
+        : audioOrUrl;
+    if (!audio.loop) {
+        audio.loop = true;
+    }
 
     const source = ctx.createMediaElementSource(audio);
     const gain = ctx.createGain();
@@ -68,10 +71,12 @@ export class PrologueAudioBed {
 
         const oceanUrl = this.oceanConfig?.url;
         const musicUrl = this.musicConfig?.url;
+        const oceanAudio = this.oceanConfig?.audio;
+        const musicAudio = this.musicConfig?.audio;
         const voiceoverAudio = this.voiceoverConfig?.audio;
         const voiceoverUrl = this.voiceoverConfig?.url;
 
-        if (!oceanUrl && !musicUrl && !voiceoverAudio && !voiceoverUrl) {
+        if (!oceanUrl && !musicUrl && !oceanAudio && !musicAudio && !voiceoverAudio && !voiceoverUrl) {
             return Promise.resolve();
         }
 
@@ -89,21 +94,21 @@ export class PrologueAudioBed {
         this.masterGain.gain.setValueAtTime(1, this.ctx.currentTime);
         this.masterGain.connect(this.ctx.destination);
 
-        if (oceanUrl) {
+        if (oceanUrl || oceanAudio) {
             this.oceanLayer = createLoopLayer(
                 this.ctx,
                 this.masterGain,
-                oceanUrl,
+                oceanAudio ?? oceanUrl,
                 this.oceanConfig.volume ?? 0.32,
                 this.oceanConfig.duckRatio ?? 0.38
             );
         }
 
-        if (musicUrl) {
+        if (musicUrl || musicAudio) {
             this.musicLayer = createLoopLayer(
                 this.ctx,
                 this.masterGain,
-                musicUrl,
+                musicAudio ?? musicUrl,
                 this.musicConfig.volume ?? 0.24,
                 this.musicConfig.duckRatio ?? 0.34
             );

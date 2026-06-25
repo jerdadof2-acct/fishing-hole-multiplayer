@@ -70,6 +70,20 @@ export const PROLOGUE_ENTRANCE_IMAGE = 'images/halley-splash.png';
 /** Full-screen art behind scrolling story credits. */
 export const PROLOGUE_SCROLL_BACKGROUND = 'images/prologue-background.png';
 
+/** All media required before the full story prologue can start (~2.8 MB compressed). */
+export const PROLOGUE_FULL_PACK = [
+    { key: 'background', type: 'image', path: PROLOGUE_SCROLL_BACKGROUND, label: 'story background' },
+    { key: 'splash', type: 'image', path: PROLOGUE_ENTRANCE_IMAGE, label: 'title art' },
+    { key: 'voiceover', type: 'audio', path: PROLOGUE_VOICEOVER_URL, label: 'narration', loop: false },
+    { key: 'ocean', type: 'audio', path: PROLOGUE_AMBIENCE_URL, label: 'ocean sounds', loop: true },
+    { key: 'music', type: 'audio', path: PROLOGUE_MUSIC_URL, label: 'music', loop: true }
+];
+
+/** Return-visit splash only needs the title image. */
+export const PROLOGUE_SPLASH_PACK = [
+    { key: 'splash', type: 'image', path: PROLOGUE_ENTRANCE_IMAGE, label: 'title art' }
+];
+
 export const PROLOGUE_STORY_PARAGRAPHS = [
     'Forty years ago, a comet crossed the sky — a streak of light that touched both sea and shore.',
     'On that night, a kitten named Halley was born… and the ocean hasn\'t been quiet since.',

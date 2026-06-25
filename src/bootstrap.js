@@ -1,7 +1,7 @@
 import Game from './main.js?v=20250624-pack-vo';
 import { api } from './api.js';
 import { initAdRotator } from './ads.js';
-import { ensureBootPack, prefetchPrologueImages, startDeferredPackDownload } from './assetPack.js';
+import { ensureProloguePack, prefetchProloguePack, startDeferredPackDownload } from './assetPack.js';
 import { loadingProgress } from './loadingProgress.js';
 import {
     markPrologueSeenForVersion,
@@ -72,15 +72,23 @@ async function launchGame(gameOptions) {
     const playReturnSplash = shouldShowReturnSplash();
     const needsPreEntry = playFullPrologue || playReturnSplash;
 
+    let prologuePack = null;
+
     if (needsPreEntry) {
         loadingProgress.suppress(false);
-        loadingProgress.update(16, 'Preparing story…');
-        await ensureBootPack({
-            timeoutMs: 5000,
-            onProgress: (percent, message) => {
-                loadingProgress.update(16 + Math.round(percent * 0.08), message);
-            }
-        });
+        loadingProgress.update(16, 'Loading story…');
+        try {
+            prologuePack = await ensureProloguePack({
+                full: playFullPrologue,
+                onProgress: (percent, message) => {
+                    loadingProgress.update(16 + Math.round(percent * 0.14), message);
+                }
+            });
+        } catch (error) {
+            console.error('[BOOTSTRAP] Prologue pack failed:', error);
+            loadingProgress.fail('Could not load story assets. Check your connection and refresh.');
+            throw error;
+        }
         loadingProgress.suppress(true);
         loadingProgress.update(18, 'Loading Halley\'s Big Catch…');
     } else {
@@ -106,6 +114,7 @@ async function launchGame(gameOptions) {
 
     if (playFullPrologue) {
         await playStoryPrologue({
+            preloadedPack: prologuePack,
             waitForReady: () => game.ready,
             onLoadProgress: () => loadingProgress.getPercent()
         });
@@ -118,6 +127,7 @@ async function launchGame(gameOptions) {
 
     if (playReturnSplash) {
         await playStoryPrologue({
+            preloadedPack: prologuePack,
             skipCredits: true,
             waitForReady: () => game.ready,
             onLoadProgress: () => loadingProgress.getPercent()
@@ -594,8 +604,12 @@ async function bootstrapGameInner() {
     loadingProgress.show('Connecting to Halley\'s Big Catch...');
     loadingProgress.update(2, 'Connecting to server...');
 
-    // Warm prologue images in parallel — never blocks server connect or auth.
-    prefetchPrologueImages();
+    // Begin loading prologue media during auth — does not block server connect.
+    if (shouldPlayStoryPrologue()) {
+        prefetchProloguePack({ full: true });
+    } else if (shouldShowReturnSplash()) {
+        prefetchProloguePack({ full: false });
+    }
 
     const health = await api.healthCheck(10000);
     if (!health || health.status !== 'ok') {

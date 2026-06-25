@@ -10,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 
 /** Bump when adding/removing pack files — clients re-download on change. */
-export const PACK_VERSION = '20250624-5';
+export const PACK_VERSION = '20250624-6';
 
 /** Prologue-only — two images (~310 KB); audio streams when the story plays. */
 const BOOT_URLS = [

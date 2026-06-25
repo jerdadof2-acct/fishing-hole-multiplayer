@@ -1,23 +1,39 @@
 /**
- * Game pack — only prologue images block startup; everything else streams or loads in background.
+ * Game pack — prologue media loads fully before the story plays; lake assets load in background.
  */
 
+import {
+    PROLOGUE_FULL_PACK,
+    PROLOGUE_SPLASH_PACK
+} from './config/prologue.js';
+
 const CACHE_NAME = 'halleys-big-catch-media-v8';
-const BOOT_STORAGE_KEY = 'kittyCreekBootPackVersion';
+const PROLOGUE_STORAGE_KEY = 'kittyCreekProloguePackVersion';
 const FULL_STORAGE_KEY = 'kittyCreekAssetPackVersion';
 const DOWNLOAD_CONCURRENCY = 6;
-const FETCH_TIMEOUT_MS = 12000;
+const FETCH_TIMEOUT_MS = 20000;
+const AUDIO_READY_TIMEOUT_MS = 45000;
 const DEFERRED_START_DELAY_MS = 4000;
-
-/** Only these block the story from appearing (~310 KB total). */
-const INSTANT_BOOT_URLS = [
-    '/images/prologue-background.png',
-    '/images/halley-splash.png'
-];
 
 let manifestCache = null;
 let deferredPromise = null;
-let imagePrefetchPromise = null;
+let prologuePackPromise = null;
+let prologuePackResult = null;
+let prologuePackMode = null;
+
+function toAbsoluteUrl(path) {
+    if (!path) {
+        return path;
+    }
+    return path.startsWith('/') ? path : `/${path}`;
+}
+
+function packItems(full) {
+    return (full ? PROLOGUE_FULL_PACK : PROLOGUE_SPLASH_PACK).map((item) => ({
+        ...item,
+        url: toAbsoluteUrl(item.path)
+    }));
+}
 
 async function loadManifest() {
     if (manifestCache) {
@@ -33,19 +49,12 @@ async function loadManifest() {
     return manifestCache;
 }
 
-function getBootUrls(manifest) {
-    if (Array.isArray(manifest.boot) && manifest.boot.length > 0) {
-        return manifest.boot;
-    }
-    return INSTANT_BOOT_URLS;
-}
-
 function getDeferredUrls(manifest) {
     if (Array.isArray(manifest.deferred) && manifest.deferred.length > 0) {
         return manifest.deferred;
     }
-    const bootSet = new Set(getBootUrls(manifest));
-    return (manifest.urls || []).filter((url) => !bootSet.has(url));
+    const prologueUrls = new Set(PROLOGUE_FULL_PACK.map((item) => toAbsoluteUrl(item.path)));
+    return (manifest.urls || []).filter((url) => !prologueUrls.has(url));
 }
 
 export function getCachedPackVersion() {
@@ -56,9 +65,9 @@ export function getCachedPackVersion() {
     }
 }
 
-function markBootReady(version) {
+function markProloguePackReady(version) {
     try {
-        localStorage.setItem(BOOT_STORAGE_KEY, version);
+        localStorage.setItem(PROLOGUE_STORAGE_KEY, version);
     } catch {
         /* ignore */
     }
@@ -67,7 +76,7 @@ function markBootReady(version) {
 function markFullPackReady(version) {
     try {
         localStorage.setItem(FULL_STORAGE_KEY, version);
-        localStorage.setItem(BOOT_STORAGE_KEY, version);
+        localStorage.setItem(PROLOGUE_STORAGE_KEY, version);
     } catch {
         /* ignore */
     }
@@ -93,117 +102,184 @@ async function fetchWithTimeout(url, timeoutMs = FETCH_TIMEOUT_MS) {
     const timer = window.setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-        const response = await fetch(url, { signal: controller.signal, cache: 'default' });
-        return response;
+        return await fetch(url, { signal: controller.signal, cache: 'default' });
     } finally {
         window.clearTimeout(timer);
     }
 }
 
-/** Warm browser + Cache API without blocking on slow cache.put writes. */
-async function warmUrl(cache, url) {
-    if (cache && await isUrlCached(cache, url)) {
-        return { url, cached: true };
+async function fetchBlob(url) {
+    const cache = await openCache();
+    let response = cache ? await cache.match(url) : null;
+
+    if (!response) {
+        response = await fetchWithTimeout(url);
     }
 
-    const response = await fetchWithTimeout(url);
     if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error(`HTTP ${response.status} for ${url}`);
     }
+
+    const blob = await response.blob();
 
     if (cache) {
-        const clone = response.clone();
-        void cache.put(url, clone).catch(() => {});
+        void cache.put(url, new Response(blob.slice())).catch(() => {});
     }
 
-    return { url, cached: false };
+    return blob;
 }
 
-async function warmUrls(urls, { onProgress, label = 'Loading' } = {}) {
-    const cache = await openCache();
-    const total = urls.length;
-    let completed = 0;
-    let failed = 0;
+async function preloadImageItem(url) {
+    const blob = await fetchBlob(url);
+    const blobUrl = URL.createObjectURL(blob);
+    const img = new Image();
 
-    await Promise.all(urls.map(async (url) => {
-        try {
-            await warmUrl(cache, url);
-        } catch (error) {
-            failed += 1;
-            console.warn('[ASSET PACK] Warm failed:', url, error);
-        } finally {
-            completed += 1;
-            if (onProgress) {
-                const percent = Math.round((completed / total) * 100);
-                onProgress(percent, `${label} (${completed}/${total})…`);
-            }
+    await new Promise((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error(`Image failed: ${url}`));
+        img.src = blobUrl;
+    });
+
+    if (img.decode) {
+        await img.decode();
+    }
+
+    return { img, blobUrl };
+}
+
+async function preloadAudioItem(url, { loop = false } = {}) {
+    const blob = await fetchBlob(url);
+    const blobUrl = URL.createObjectURL(blob);
+    const audio = new Audio(blobUrl);
+    audio.preload = 'auto';
+    audio.loop = loop;
+
+    await new Promise((resolve, reject) => {
+        const timer = window.setTimeout(() => {
+            cleanup();
+            reject(new Error(`Audio timed out: ${url}`));
+        }, AUDIO_READY_TIMEOUT_MS);
+
+        const onReady = () => {
+            cleanup();
+            resolve();
+        };
+
+        const onError = () => {
+            cleanup();
+            reject(new Error(`Audio failed: ${url}`));
+        };
+
+        const cleanup = () => {
+            window.clearTimeout(timer);
+            audio.removeEventListener('canplaythrough', onReady);
+            audio.removeEventListener('error', onError);
+        };
+
+        audio.addEventListener('canplaythrough', onReady, { once: true });
+        audio.addEventListener('error', onError, { once: true });
+        audio.load();
+    });
+
+    return { audio, blobUrl };
+}
+
+async function loadProloguePackItems(items, { onProgress } = {}) {
+    const total = items.length;
+    let completed = 0;
+    const result = {};
+
+    const report = (item) => {
+        completed += 1;
+        const percent = Math.round((completed / total) * 100);
+        onProgress?.(percent, `Loading ${item.label} (${completed}/${total})…`);
+    };
+
+    await Promise.all(items.map(async (item) => {
+        if (item.type === 'image') {
+            result[item.key] = await preloadImageItem(item.url);
+        } else {
+            result[item.key] = await preloadAudioItem(item.url, { loop: item.loop === true });
         }
+        report(item);
     }));
 
-    return { completed, failed, total };
+    try {
+        const manifest = await loadManifest();
+        markProloguePackReady(manifest.version || 'unknown');
+    } catch {
+        /* ignore */
+    }
+
+    return result;
 }
 
 /**
- * Start loading prologue images immediately (non-blocking). Safe to call at bootstrap start.
+ * Begin loading prologue media during auth (non-blocking).
  */
-export function prefetchPrologueImages(options = {}) {
-    if (imagePrefetchPromise) {
-        return imagePrefetchPromise;
+export function prefetchProloguePack(options = {}) {
+    const full = options.full !== false;
+    const mode = full ? 'full' : 'splash';
+
+    if (prologuePackPromise && prologuePackMode === mode) {
+        return prologuePackPromise;
     }
 
-    imagePrefetchPromise = (async () => {
-        let urls = INSTANT_BOOT_URLS;
-        try {
-            const manifest = await loadManifest();
-            urls = getBootUrls(manifest);
-            const version = manifest.version || 'unknown';
-            if (localStorage.getItem(BOOT_STORAGE_KEY) === version) {
-                const cache = await openCache();
-                if (cache) {
-                    const hits = await Promise.all(urls.map((url) => isUrlCached(cache, url)));
-                    if (hits.every(Boolean)) {
-                        return { cached: true, version, count: urls.length };
-                    }
-                }
-            }
-        } catch {
-            /* use defaults */
-        }
+    if (prologuePackResult && prologuePackMode === mode) {
+        return Promise.resolve(prologuePackResult);
+    }
 
-        const result = await warmUrls(urls, {
-            label: 'Loading story art',
-            onProgress: options.onProgress
+    prologuePackMode = mode;
+    const items = packItems(full);
+
+    prologuePackPromise = loadProloguePackItems(items, { onProgress: options.onProgress })
+        .then((result) => {
+            prologuePackResult = result;
+            prologuePackPromise = null;
+            return result;
+        })
+        .catch((error) => {
+            prologuePackPromise = null;
+            throw error;
         });
 
-        try {
-            const manifest = await loadManifest();
-            markBootReady(manifest.version || 'unknown');
-        } catch {
-            /* ignore */
-        }
-
-        return result;
-    })().catch((error) => {
-        console.warn('[ASSET PACK] Image prefetch failed (continuing):', error);
-        imagePrefetchPromise = null;
-        return { failed: true };
-    });
-
-    return imagePrefetchPromise;
+    return prologuePackPromise;
 }
 
-async function isBootPackCached(version, bootUrls) {
-    if (localStorage.getItem(BOOT_STORAGE_KEY) === version) {
-        return true;
+/**
+ * Block until all prologue media is buffered and ready to play.
+ */
+export async function ensureProloguePack(options = {}) {
+    const full = options.full !== false;
+    const mode = full ? 'full' : 'splash';
+    const onProgress = options.onProgress ?? (() => {});
+
+    if (prologuePackResult && prologuePackMode === mode) {
+        onProgress(100, 'Story ready');
+        return prologuePackResult;
     }
 
-    const cache = await openCache();
-    if (!cache) {
-        return false;
+    if (prologuePackPromise && prologuePackMode === mode) {
+        onProgress(0, 'Loading story…');
+        const result = await prologuePackPromise;
+        onProgress(100, 'Story ready');
+        return result;
     }
 
-    const checks = await Promise.all(bootUrls.map((url) => isUrlCached(cache, url)));
-    return checks.every(Boolean);
+    onProgress(0, 'Loading story…');
+    const result = await prefetchProloguePack({ full, onProgress });
+    onProgress(100, 'Story ready');
+    return result;
+}
+
+/** @deprecated Use prefetchProloguePack */
+export function prefetchPrologueImages(options = {}) {
+    return prefetchProloguePack({ full: true, ...options });
+}
+
+/** @deprecated Use ensureProloguePack */
+export async function ensureBootPack(options = {}) {
+    return ensureProloguePack({ full: true, ...options });
 }
 
 async function isFullPackCached(version, allUrls) {
@@ -269,33 +345,7 @@ async function cacheUrlsParallel(cache, urls, { onProgress, label = 'Downloading
 }
 
 /**
- * Wait briefly for prologue images before showing the story (never blocks forever).
- */
-export async function ensureBootPack(options = {}) {
-    const onProgress = options.onProgress ?? (() => {});
-    const timeoutMs = options.timeoutMs ?? 6000;
-
-    prefetchPrologueImages({ onProgress });
-
-    const result = await Promise.race([
-        imagePrefetchPromise ?? prefetchPrologueImages({ onProgress }),
-        new Promise((resolve) => {
-            window.setTimeout(() => resolve({ timedOut: true }), timeoutMs);
-        })
-    ]);
-
-    if (result?.timedOut) {
-        console.warn('[ASSET PACK] Image prefetch timed out — starting prologue anyway');
-        onProgress(100, 'Starting story…');
-    } else {
-        onProgress(100, 'Story art ready');
-    }
-
-    return result;
-}
-
-/**
- * Download remaining assets in the background (after prologue / gameplay has started).
+ * Download lake / gameplay assets in the background after the prologue starts.
  */
 export function startDeferredPackDownload(options = {}) {
     const silent = options.silent === true;
@@ -332,10 +382,6 @@ export function startDeferredPackDownload(options = {}) {
             return { skipped: true };
         }
 
-        if (!silent) {
-            onProgress(0, `Caching game assets (0/${deferredUrls.length})…`);
-        }
-
         const result = await cacheUrlsParallel(cache, deferredUrls, {
             label: silent ? 'Caching game assets' : 'Downloading game assets',
             onProgress: silent ? undefined : onProgress
@@ -344,8 +390,6 @@ export function startDeferredPackDownload(options = {}) {
         markFullPackReady(version);
 
         if (!silent) {
-            onProgress(100, 'Game assets ready');
-        } else {
             console.log(`[ASSET PACK] Background cache done (${deferredUrls.length} files, ${result.failed} failed)`);
         }
 
@@ -357,38 +401,20 @@ export function startDeferredPackDownload(options = {}) {
     return deferredPromise;
 }
 
-/** @deprecated Use ensureBootPack + startDeferredPackDownload */
+/** @deprecated Use ensureProloguePack + startDeferredPackDownload */
 export async function ensureAssetPack(options = {}) {
-    await ensureBootPack(options);
+    await ensureProloguePack(options);
     return startDeferredPackDownload(options);
 }
 
-/** Light voiceover warm-up — streams from URL, does not block on full download. */
+/** @deprecated Prologue pack preloads voiceover — kept for replay fallback. */
 export async function preloadPrologueVoiceover(url) {
     if (!url) {
         return null;
     }
 
-    const audio = new Audio(url);
-    audio.preload = 'auto';
-
-    return new Promise((resolve) => {
-        const finish = () => resolve(audio);
-        const timer = window.setTimeout(finish, 4000);
-
-        audio.addEventListener('loadeddata', () => {
-            window.clearTimeout(timer);
-            finish();
-        }, { once: true });
-
-        audio.addEventListener('error', () => {
-            window.clearTimeout(timer);
-            console.warn('[ASSET PACK] Voiceover stream failed — will retry on play');
-            finish();
-        }, { once: true });
-
-        audio.load();
-    });
+    const { audio } = await preloadAudioItem(url, { loop: false });
+    return audio;
 }
 
 export { CACHE_NAME as ASSET_PACK_CACHE_NAME };

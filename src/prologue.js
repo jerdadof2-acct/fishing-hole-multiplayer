@@ -23,7 +23,7 @@ import {
     PROLOGUE_VOICEOVER_VOLUME
 } from './config/prologue.js';
 import { PrologueAudioBed } from './audio/prologueAmbience.js';
-import { preloadPrologueVoiceover } from './assetPack.js';
+import { ensureProloguePack } from './assetPack.js';
 import { loadingProgress } from './loadingProgress.js';
 
 /** True when this build's prologue has not been shown yet (replay on each PROLOGUE_GAME_VERSION bump). */
@@ -63,13 +63,26 @@ export function shouldShowReturnSplash() {
  * Full-screen cinematic prologue: scrolling story → interstitial card → splash art → tap anywhere to enter.
  * @param {{
  *   skipCredits?: boolean,
+ *   preloadedPack?: object,
  *   waitForReady?: () => Promise<unknown>,
  *   onLoadProgress?: (percent: number) => void
  * }} options
  * @returns {Promise<void>}
  */
-export function playStoryPrologue(options = {}) {
+export async function playStoryPrologue(options = {}) {
     const skipCredits = options.skipCredits === true;
+
+    let pack = options.preloadedPack;
+    if (!pack) {
+        pack = await ensureProloguePack({ full: !skipCredits });
+    }
+
+    const preloadedVoiceover = pack.voiceover?.audio ?? null;
+    const preloadedOcean = pack.ocean?.audio ?? null;
+    const preloadedMusic = pack.music?.audio ?? null;
+    const backgroundUrl = pack.background?.blobUrl ?? PROLOGUE_SCROLL_BACKGROUND;
+    const splashUrl = pack.splash?.blobUrl ?? PROLOGUE_ENTRANCE_IMAGE;
+
     const overlay = document.getElementById('story-prologue');
     const creditsPhase = document.getElementById('prologue-credits-phase');
     const interstitialPhase = document.getElementById('prologue-interstitial-phase');
@@ -99,8 +112,6 @@ export function playStoryPrologue(options = {}) {
     let interstitialTimer = null;
     let lastCreditLine = null;
     let creditsFinished = false;
-    let preloadedVoiceover = null;
-    let voiceoverLoadPromise = null;
 
     const scheduleAmbienceFadeAfterVoiceover = () => {
         if (ambienceFadeTimer) {
@@ -131,16 +142,18 @@ export function playStoryPrologue(options = {}) {
         }
 
         const tracks = {};
-        if (PROLOGUE_AMBIENCE_URL) {
+        if (PROLOGUE_AMBIENCE_URL || preloadedOcean) {
             tracks.ocean = {
-                url: PROLOGUE_AMBIENCE_URL,
+                audio: preloadedOcean ?? undefined,
+                url: preloadedOcean ? undefined : PROLOGUE_AMBIENCE_URL,
                 volume: PROLOGUE_AMBIENCE_VOLUME,
                 duckRatio: PROLOGUE_AMBIENCE_DUCK_RATIO
             };
         }
-        if (PROLOGUE_MUSIC_URL) {
+        if (PROLOGUE_MUSIC_URL || preloadedMusic) {
             tracks.music = {
-                url: PROLOGUE_MUSIC_URL,
+                audio: preloadedMusic ?? undefined,
+                url: preloadedMusic ? undefined : PROLOGUE_MUSIC_URL,
                 volume: PROLOGUE_MUSIC_VOLUME,
                 duckRatio: PROLOGUE_MUSIC_DUCK_RATIO
             };
@@ -163,31 +176,6 @@ export function playStoryPrologue(options = {}) {
         audioBed.startFromUserGesture();
     };
 
-    const beginVoiceoverPreload = () => {
-        if (skipCredits || !PROLOGUE_VOICEOVER_URL || voiceoverLoadPromise) {
-            return;
-        }
-
-        const gateHint = startGate?.querySelector('.prologue-start-gate-hint');
-        if (gateHint) {
-            gateHint.textContent = 'Loading narration…';
-        }
-
-        voiceoverLoadPromise = preloadPrologueVoiceover(PROLOGUE_VOICEOVER_URL)
-            .then((audio) => {
-                preloadedVoiceover = audio;
-                if (gateHint) {
-                    gateHint.textContent = 'Tap to begin';
-                }
-            })
-            .catch((error) => {
-                console.warn('[PROLOGUE] Voiceover preload failed:', error);
-                if (gateHint) {
-                    gateHint.textContent = 'Tap to begin (narration may be delayed)';
-                }
-            });
-    };
-
     const loading = document.getElementById('loading');
     if (loading) {
         loading.classList.add('hidden');
@@ -202,12 +190,12 @@ export function playStoryPrologue(options = {}) {
     const creditsViewport = creditsPhase.querySelector('.prologue-credits-viewport');
     if (creditsViewport) {
         creditsViewport.style.backgroundImage =
-            `linear-gradient(to bottom, rgba(0, 8, 28, 0.55) 0%, rgba(0, 12, 40, 0.25) 40%, rgba(0, 8, 28, 0.45) 100%), url('${PROLOGUE_SCROLL_BACKGROUND}')`;
+            `linear-gradient(to bottom, rgba(0, 8, 28, 0.55) 0%, rgba(0, 12, 40, 0.25) 40%, rgba(0, 8, 28, 0.45) 100%), url('${backgroundUrl}')`;
     }
 
     const titleImg = document.getElementById('prologue-title-image');
     if (titleImg) {
-        titleImg.src = PROLOGUE_ENTRANCE_IMAGE;
+        titleImg.src = splashUrl;
         titleImg.alt = "Halley's Big Catch — Adventure awaits";
     }
 
@@ -450,7 +438,6 @@ export function playStoryPrologue(options = {}) {
             startGate.classList.remove('hidden');
             startGate.addEventListener('click', onStart);
             startGate.addEventListener('keydown', onStartKey);
-            beginVoiceoverPreload();
         });
 
         if (skipCredits) {
@@ -496,7 +483,10 @@ export async function replayStoryPrologue() {
         ? () => game.ready
         : () => Promise.resolve();
 
+    const pack = await ensureProloguePack({ full: true });
+
     await playStoryPrologue({
+        preloadedPack: pack,
         waitForReady,
         onLoadProgress: () => loadingProgress.getPercent()
     });
