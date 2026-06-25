@@ -46,24 +46,32 @@ export class PrologueAudioBed {
     }
 
     async start() {
+        return this.startFromUserGesture();
+    }
+
+    /**
+     * Start playback from a user gesture (tap/click). Must be called synchronously
+     * inside the gesture handler so mobile browsers allow audio.
+     */
+    startFromUserGesture() {
         if (this.running) {
-            return;
+            return Promise.resolve();
         }
 
         const oceanUrl = this.oceanConfig?.url;
         const musicUrl = this.musicConfig?.url;
         if (!oceanUrl && !musicUrl) {
-            return;
+            return Promise.resolve();
         }
 
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         if (!AudioCtx) {
-            return;
+            return Promise.resolve();
         }
 
         this.ctx = new AudioCtx();
         if (this.ctx.state === 'suspended') {
-            await this.ctx.resume();
+            this.ctx.resume();
         }
 
         this.masterGain = this.ctx.createGain();
@@ -91,13 +99,7 @@ export class PrologueAudioBed {
         }
 
         const playTargets = [this.oceanLayer, this.musicLayer].filter(Boolean);
-        try {
-            await Promise.all(playTargets.map((layer) => layer.audio.play()));
-        } catch (error) {
-            console.warn('[PROLOGUE] Audio bed play failed:', error);
-            this.stop();
-            return;
-        }
+        const playPromises = playTargets.map((layer) => layer.audio.play());
 
         const now = this.ctx.currentTime;
         playTargets.forEach((layer) => {
@@ -105,6 +107,11 @@ export class PrologueAudioBed {
         });
 
         this.running = true;
+
+        return Promise.all(playPromises).catch((error) => {
+            console.warn('[PROLOGUE] Audio bed play failed:', error);
+            this.stop();
+        });
     }
 
     _duckLayer(layer) {

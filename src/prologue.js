@@ -77,6 +77,7 @@ export function playStoryPrologue(options = {}) {
     const interstitialText = interstitialPhase?.querySelector('.prologue-interstitial-text');
     const tapHint = document.getElementById('prologue-tap-hint');
     const loadHint = document.getElementById('prologue-load-hint');
+    const startGate = document.getElementById('prologue-start-gate');
 
     if (!overlay || !creditsPhase || !interstitialPhase || !titlePhase || !creditsInner) {
         console.warn('[PROLOGUE] Missing DOM — skipping prologue');
@@ -100,6 +101,37 @@ export function playStoryPrologue(options = {}) {
     let interstitialTimer = null;
     let lastCreditLine = null;
     let creditsFinished = false;
+    let voiceoverPrimed = false;
+
+    const primeVoiceoverForPlayback = () => {
+        if (skipCredits || !PROLOGUE_VOICEOVER_URL || voiceoverPrimed) {
+            return;
+        }
+
+        stopVoiceover();
+        voiceoverAudio = new Audio(PROLOGUE_VOICEOVER_URL);
+        voiceoverAudio.preload = 'auto';
+        voiceoverAudio.volume = PROLOGUE_VOICEOVER_VOLUME;
+        voiceoverAudio.load();
+
+        voiceoverEndedHandler = () => {
+            scheduleAmbienceFadeAfterVoiceover();
+        };
+        voiceoverAudio.addEventListener('ended', voiceoverEndedHandler);
+
+        const unlockVolume = voiceoverAudio.volume;
+        voiceoverAudio.volume = 0.001;
+        voiceoverAudio.play()
+            .then(() => {
+                voiceoverAudio.pause();
+                voiceoverAudio.currentTime = 0;
+                voiceoverAudio.volume = unlockVolume;
+                voiceoverPrimed = true;
+            })
+            .catch((error) => {
+                console.warn('[PROLOGUE] Voiceover unlock failed:', error);
+            });
+    };
 
     const stopVoiceover = () => {
         if (voiceoverTimer) {
@@ -119,6 +151,7 @@ export function playStoryPrologue(options = {}) {
             voiceoverAudio.currentTime = 0;
             voiceoverAudio = null;
         }
+        voiceoverPrimed = false;
     };
 
     const scheduleAmbienceFadeAfterVoiceover = () => {
@@ -170,26 +203,13 @@ export function playStoryPrologue(options = {}) {
         }
 
         audioBed = new PrologueAudioBed(tracks);
-        audioBed.start().catch((error) => {
-            console.warn('[PROLOGUE] Audio bed failed to start:', error);
-        });
+        audioBed.startFromUserGesture();
     };
 
     const scheduleVoiceover = () => {
-        if (skipCredits || !PROLOGUE_VOICEOVER_URL) {
+        if (skipCredits || !PROLOGUE_VOICEOVER_URL || !voiceoverAudio) {
             return;
         }
-
-        stopVoiceover();
-        voiceoverAudio = new Audio(PROLOGUE_VOICEOVER_URL);
-        voiceoverAudio.preload = 'auto';
-        voiceoverAudio.volume = PROLOGUE_VOICEOVER_VOLUME;
-        voiceoverAudio.load();
-
-        voiceoverEndedHandler = () => {
-            scheduleAmbienceFadeAfterVoiceover();
-        };
-        voiceoverAudio.addEventListener('ended', voiceoverEndedHandler);
 
         voiceoverTimer = window.setTimeout(() => {
             voiceoverTimer = null;
@@ -280,6 +300,7 @@ export function playStoryPrologue(options = {}) {
             canEnter = false;
             creditsInner.style.transform = '';
             loadHint?.classList.add('hidden');
+            startGate?.classList.add('hidden');
         };
 
         const finish = () => {
@@ -427,6 +448,41 @@ export function playStoryPrologue(options = {}) {
         updateLoadHint();
         loadPollId = window.setInterval(updateLoadHint, 350);
 
+        const beginCreditsSequence = () => {
+            startGate?.classList.add('hidden');
+            primeVoiceoverForPlayback();
+            startAudioBed();
+            scheduleVoiceover();
+            lastTs = 0;
+            rafId = requestAnimationFrame(tick);
+        };
+
+        const waitForPrologueStart = () => new Promise((resolveStart) => {
+            if (!startGate) {
+                beginCreditsSequence();
+                resolveStart();
+                return;
+            }
+
+            const onStart = () => {
+                startGate.removeEventListener('click', onStart);
+                startGate.removeEventListener('keydown', onStartKey);
+                beginCreditsSequence();
+                resolveStart();
+            };
+
+            const onStartKey = (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onStart();
+                }
+            };
+
+            startGate.classList.remove('hidden');
+            startGate.addEventListener('click', onStart);
+            startGate.addEventListener('keydown', onStartKey);
+        });
+
         if (skipCredits) {
             overlay.classList.remove('hidden', 'is-title-phase', 'is-fading', 'is-fading-credits', 'is-fading-interstitial', 'is-interstitial-phase', 'can-enter');
             creditsPhase.classList.add('hidden');
@@ -456,11 +512,7 @@ export function playStoryPrologue(options = {}) {
         creditsInner.style.transform = `translate3d(0, ${scrollY}px, 0)`;
         lastTs = 0;
 
-        startAudioBed();
-        requestAnimationFrame(() => {
-            rafId = requestAnimationFrame(tick);
-        });
-        scheduleVoiceover();
+        waitForPrologueStart();
     });
 }
 

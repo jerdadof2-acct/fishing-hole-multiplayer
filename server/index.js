@@ -189,7 +189,8 @@ app.post('/api/players/login', async (req, res) => {
 
         if (!player.pin_hash) {
             return res.status(403).json({
-                error: 'This account does not have a save PIN yet. Open the game on your original device and set one in Friends → Save PIN.'
+                error: 'No save PIN on this account yet. Use "No PIN yet" with your username and friend code, or set a PIN on your current device.',
+                code: 'NO_SAVE_PIN'
             });
         }
 
@@ -217,6 +218,74 @@ app.post('/api/players/login', async (req, res) => {
         });
     } catch (error) {
         console.error('[API] Login error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Recover account without a save PIN (username + friend code) — only when pin_hash is NULL
+app.post('/api/players/recover', async (req, res) => {
+    try {
+        const { username, friendCode } = req.body;
+
+        if (!username || typeof username !== 'string') {
+            return res.status(400).json({ error: 'Username is required' });
+        }
+        if (!friendCode || typeof friendCode !== 'string') {
+            return res.status(400).json({ error: 'Friend code is required' });
+        }
+
+        const normalizedCode = friendCode.trim().toUpperCase();
+        if (!/^[A-Z0-9]{6,8}$/.test(normalizedCode)) {
+            return res.status(400).json({ error: 'Enter a valid friend code' });
+        }
+
+        const result = await pool.query(
+            `SELECT id, username, friend_code, display_name, level, experience, money,
+                    total_caught, biggest_catch, player_stats, pin_hash, game_save,
+                    game_save_updated_at, last_active, created_at
+             FROM players
+             WHERE username = $1`,
+            [username.trim()]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(401).json({ error: 'Username or friend code is incorrect.' });
+        }
+
+        const player = result.rows[0];
+
+        if (player.pin_hash) {
+            return res.status(403).json({
+                error: 'This account already has a save PIN. Sign in with your username and save PIN instead.',
+                code: 'HAS_SAVE_PIN'
+            });
+        }
+
+        if ((player.friend_code || '').toUpperCase() !== normalizedCode) {
+            return res.status(401).json({ error: 'Username or friend code is incorrect.' });
+        }
+
+        await pool.query('UPDATE players SET last_active = NOW() WHERE id = $1', [player.id]);
+
+        const gameSave = player.game_save && typeof player.game_save === 'object' ? player.game_save : {};
+
+        res.json({
+            userId: player.id,
+            username: player.username,
+            friendCode: player.friend_code,
+            level: player.level,
+            experience: player.experience,
+            money: player.money,
+            stats: player.player_stats,
+            totalCaught: player.total_caught,
+            biggestCatch: player.biggest_catch,
+            gameSave,
+            gameSaveUpdatedAt: player.game_save_updated_at,
+            hasPin: false,
+            requiresPinSetup: true
+        });
+    } catch (error) {
+        console.error('[API] Recover error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

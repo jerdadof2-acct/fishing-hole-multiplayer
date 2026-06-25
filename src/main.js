@@ -249,6 +249,13 @@ export class Game {
                 this.player.setAPI(this.api);
             }
 
+            if (this.api && this.playerContext?.userId) {
+                const { ensureSavePin } = await import('./savePinSetup.js');
+                await ensureSavePin(this.api).catch((error) => {
+                    console.warn('[GAME] Save PIN check failed:', error);
+                });
+            }
+
             this.inventory = new Inventory();
             this.leaderboard = new Leaderboard();
             this.fishCollection = new FishCollection(this.initialFishCollection);

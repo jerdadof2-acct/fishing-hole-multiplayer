@@ -586,6 +586,8 @@ export class UI {
 
                 try {
                     await this.api.setSavePin(pin);
+                    const { uploadCloudSaveAfterPin } = await import('./savePinSetup.js');
+                    await uploadCloudSaveAfterPin(this.api);
                     if (savePinInput) savePinInput.value = '';
                     if (savePinConfirm) savePinConfirm.value = '';
                     this.showSavePinMessage('Save PIN set. Keep it private — use it with your username on a new device.');
@@ -1420,11 +1422,12 @@ export class UI {
 
         try {
             const saveInfo = await this.api.getGameSave();
-            if (saveInfo?.hasPin) {
-                statusEl.textContent = 'Save PIN is set. On a new device, choose Returning fisher and sign in with your username and PIN.';
+            const hasPin = saveInfo?.hasPin === true || saveInfo?.hasPin === 't';
+            if (hasPin) {
+                statusEl.textContent = 'Save PIN is set. On a new device, choose Returning and sign in with your username and PIN.';
                 formEl?.classList.add('hidden');
             } else {
-                statusEl.textContent = 'Set a private save PIN so you can restore progress on a new device. Your friend code is only for adding friends.';
+                statusEl.textContent = 'Set a save PIN now — required to restore progress on a new device. Until then, use No PIN yet with your friend code below.';
                 formEl?.classList.remove('hidden');
             }
         } catch (error) {

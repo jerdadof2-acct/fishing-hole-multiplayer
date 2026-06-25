@@ -106,6 +106,17 @@ export class API {
         });
     }
 
+    /**
+     * Recover an account that never got a save PIN (username + friend code).
+     * Disabled once a save PIN is set on the account.
+     */
+    async recoverAccount(username, friendCode) {
+        return this.request('/players/recover', {
+            method: 'POST',
+            body: JSON.stringify({ username, friendCode })
+        });
+    }
+
     async getGameSave() {
         return this.request('/players/me/save');
     }

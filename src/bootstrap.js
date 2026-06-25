@@ -1,4 +1,4 @@
-import Game from './main.js?v=20260622-deploy';
+import Game from './main.js?v=20250624-recover-pin';
 import { api } from './api.js';
 import { initAdRotator } from './ads.js';
 import { loadingProgress } from './loadingProgress.js';
@@ -9,6 +9,12 @@ import {
     shouldShowReturnSplash
 } from './prologue.js';
 import { applyGameSaveToLocal, captureLocalGameSave, getNewerGameSave } from './cloudSave.js';
+import {
+    ensureSavePin,
+    normalizeHasPin,
+    promptForSavePin,
+    validatePinInput
+} from './savePinSetup.js';
 
 const AUTH_STORAGE_KEY = 'kittyCreekAuth';
 
@@ -72,8 +78,12 @@ async function launchGame(gameOptions) {
     }
 
     const modal = document.getElementById('username-modal');
+    const pinModal = document.getElementById('save-pin-setup-modal');
     if (modal) {
         modal.classList.add('hidden');
+    }
+    if (pinModal) {
+        pinModal.classList.add('hidden');
     }
 
     const game = new Game({
@@ -209,46 +219,71 @@ async function fetchPlayerState(userId) {
             collection = { ...collection, ...localCollection };
         }
 
-        return { profile, collection, hasPin: profile?.has_pin ?? saveResponse?.hasPin ?? false };
+        return {
+            profile,
+            collection,
+            hasPin: normalizeHasPin(profile?.has_pin) || normalizeHasPin(saveResponse?.hasPin)
+        };
     } catch (error) {
         console.error('[BOOTSTRAP] Failed to fetch player state:', error);
         throw error;
     }
 }
 
-function validatePinInput(pin) {
-    if (!/^\d{4,6}$/.test(pin)) {
-        return 'Save PIN must be 4–6 digits.';
-    }
-    return null;
-}
-
 function setAuthMode(mode) {
+    const isNew = mode === 'new';
     const isReturning = mode === 'returning';
+    const isRecover = mode === 'recover';
     const helper = document.getElementById('username-helper');
+    const pinInput = document.getElementById('pin-input');
     const pinConfirm = document.getElementById('pin-confirm-input');
+    const friendCodeInput = document.getElementById('friend-code-input');
     const submitButton = document.getElementById('username-submit');
     const tabNew = document.getElementById('auth-tab-new');
     const tabReturning = document.getElementById('auth-tab-returning');
+    const tabRecover = document.getElementById('auth-tab-recover');
 
-    tabNew?.classList.toggle('active', !isReturning);
+    tabNew?.classList.toggle('active', isNew);
     tabReturning?.classList.toggle('active', isReturning);
-    tabNew?.setAttribute('aria-selected', String(!isReturning));
+    tabRecover?.classList.toggle('active', isRecover);
+    tabNew?.setAttribute('aria-selected', String(isNew));
     tabReturning?.setAttribute('aria-selected', String(isReturning));
+    tabRecover?.setAttribute('aria-selected', String(isRecover));
 
     if (helper) {
-        helper.textContent = isReturning
-            ? 'Enter your username and save PIN to restore your fisher cat on this device.'
-            : 'Pick a username and a private save PIN. You\'ll use both to restore progress on a new device.';
+        if (isRecover) {
+            helper.textContent =
+                'Played before but never set a save PIN? Enter your username and friend code (Friends → Your Friend Code). You\'ll set a PIN right after.';
+        } else if (isReturning) {
+            helper.textContent = 'Enter your username and save PIN to restore your fisher cat on this device.';
+        } else {
+            helper.textContent = 'Pick a username and a private save PIN. You\'ll use both to restore progress on a new device.';
+        }
     }
 
-    pinConfirm?.classList.toggle('hidden', isReturning);
+    pinInput?.classList.toggle('hidden', isRecover);
+    pinConfirm?.classList.toggle('hidden', !isNew);
+    friendCodeInput?.classList.toggle('hidden', !isRecover);
+
+    if (pinInput) {
+        pinInput.required = !isRecover;
+        pinInput.placeholder = isRecover ? '' : 'Save PIN (4–6 digits)';
+    }
     if (pinConfirm) {
-        pinConfirm.required = !isReturning;
+        pinConfirm.required = isNew;
+    }
+    if (friendCodeInput) {
+        friendCodeInput.required = isRecover;
     }
 
     if (submitButton) {
-        submitButton.textContent = isReturning ? 'Restore My Save' : 'Create Profile';
+        if (isRecover) {
+            submitButton.textContent = 'Recover My Save';
+        } else if (isReturning) {
+            submitButton.textContent = 'Restore My Save';
+        } else {
+            submitButton.textContent = 'Create Profile';
+        }
     }
 }
 
@@ -281,11 +316,13 @@ async function promptForUsername(options = {}) {
     const input = document.getElementById('username-input');
     const pinInput = document.getElementById('pin-input');
     const pinConfirmInput = document.getElementById('pin-confirm-input');
+    const friendCodeInput = document.getElementById('friend-code-input');
     const errorElement = document.getElementById('username-error');
     const submitButton = document.getElementById('username-submit');
     const helperText = document.getElementById('username-helper');
     const tabNew = document.getElementById('auth-tab-new');
     const tabReturning = document.getElementById('auth-tab-returning');
+    const tabRecover = document.getElementById('auth-tab-recover');
 
     if (!modal || !form || !input || !pinInput || !submitButton) {
         throw new Error('Username modal elements are missing');
@@ -299,14 +336,18 @@ async function promptForUsername(options = {}) {
     input.value = '';
     pinInput.value = '';
     if (pinConfirmInput) pinConfirmInput.value = '';
+    if (friendCodeInput) friendCodeInput.value = '';
 
     if (offline) {
         tabNew?.classList.add('hidden');
         tabReturning?.classList.add('hidden');
+        tabRecover?.classList.add('hidden');
         pinInput.classList.add('hidden');
         pinInput.required = false;
         pinConfirmInput?.classList.add('hidden');
+        friendCodeInput?.classList.add('hidden');
         if (pinConfirmInput) pinConfirmInput.required = false;
+        if (friendCodeInput) friendCodeInput.required = false;
         if (helperText) {
             helperText.textContent = 'Pick a username — progress saves on this device only while offline.';
         }
@@ -314,9 +355,9 @@ async function promptForUsername(options = {}) {
     } else {
         tabNew?.classList.remove('hidden');
         tabReturning?.classList.remove('hidden');
+        tabRecover?.classList.remove('hidden');
         pinInput.classList.remove('hidden');
-        pinInput.required = true;
-        pinConfirmInput?.classList.remove('hidden');
+        friendCodeInput?.classList.remove('hidden');
         setAuthMode('new');
     }
 
@@ -328,8 +369,10 @@ async function promptForUsername(options = {}) {
             input.removeEventListener('input', handleInput);
             pinInput.removeEventListener('input', handleInput);
             pinConfirmInput?.removeEventListener('input', handleInput);
+            friendCodeInput?.removeEventListener('input', handleInput);
             tabNew?.removeEventListener('click', onNewTab);
             tabReturning?.removeEventListener('click', onReturningTab);
+            tabRecover?.removeEventListener('click', onRecoverTab);
         };
 
         const onNewTab = () => {
@@ -344,12 +387,19 @@ async function promptForUsername(options = {}) {
             hideError(errorElement);
         };
 
+        const onRecoverTab = () => {
+            authMode = 'recover';
+            setAuthMode('recover');
+            hideError(errorElement);
+        };
+
         const handleSubmit = async (event) => {
             event.preventDefault();
             hideError(errorElement);
 
             const username = input.value.trim();
             const pin = pinInput.value.trim();
+            const friendCode = friendCodeInput?.value?.trim().toUpperCase() || '';
 
             if (!username) {
                 showError(errorElement, 'Please enter a username.');
@@ -374,24 +424,69 @@ async function promptForUsername(options = {}) {
                 return;
             }
 
-            const pinError = validatePinInput(pin);
-            if (pinError) {
-                showError(errorElement, pinError);
-                return;
-            }
+            if (authMode === 'recover') {
+                if (!friendCode) {
+                    showError(errorElement, 'Enter your friend code.');
+                    return;
+                }
+            } else {
+                const pinError = validatePinInput(pin);
+                if (pinError) {
+                    showError(errorElement, pinError);
+                    return;
+                }
 
-            if (authMode === 'new' && pin !== pinConfirmInput?.value?.trim()) {
-                showError(errorElement, 'Save PINs do not match.');
-                return;
+                if (authMode === 'new' && pin !== pinConfirmInput?.value?.trim()) {
+                    showError(errorElement, 'Save PINs do not match.');
+                    return;
+                }
             }
 
             disableForm(input, submitButton);
             pinInput.disabled = true;
             pinConfirmInput && (pinConfirmInput.disabled = true);
+            friendCodeInput && (friendCodeInput.disabled = true);
             helperText?.classList.add('hidden');
-            submitButton.textContent = authMode === 'returning' ? 'Restoring...' : 'Creating profile...';
+            submitButton.textContent =
+                authMode === 'recover' ? 'Recovering...' :
+                authMode === 'returning' ? 'Restoring...' : 'Creating profile...';
 
             try {
+                if (authMode === 'recover') {
+                    const recovered = await api.recoverAccount(username, friendCode);
+                    if (!recovered?.userId) {
+                        throw new Error('Recovery failed');
+                    }
+
+                    api.setUserId(recovered.userId);
+                    setAuthStorage({
+                        userId: recovered.userId,
+                        username: recovered.username,
+                        friendCode: recovered.friendCode
+                    });
+
+                    if (recovered.gameSave) {
+                        applyGameSaveToLocal(recovered.gameSave);
+                    }
+
+                    modal.classList.add('hidden');
+                    cleanupListeners();
+
+                    await promptForSavePin(api, { friendCode: recovered.friendCode });
+
+                    const { profile, collection } = await fetchPlayerState(recovered.userId);
+                    resolve({
+                        profile,
+                        collection,
+                        auth: {
+                            userId: recovered.userId,
+                            username: recovered.username,
+                            friendCode: recovered.friendCode
+                        }
+                    });
+                    return;
+                }
+
                 if (authMode === 'returning') {
                     const login = await api.loginPlayer(username, pin);
                     if (!login?.userId) {
@@ -456,7 +551,10 @@ async function promptForUsername(options = {}) {
                 enableForm(input, submitButton);
                 pinInput.disabled = false;
                 if (pinConfirmInput) pinConfirmInput.disabled = false;
-                submitButton.textContent = authMode === 'returning' ? 'Restore My Save' : 'Create Profile';
+                if (friendCodeInput) friendCodeInput.disabled = false;
+                submitButton.textContent =
+                    authMode === 'recover' ? 'Recover My Save' :
+                    authMode === 'returning' ? 'Restore My Save' : 'Create Profile';
                 helperText?.classList.remove('hidden');
             }
         };
@@ -467,10 +565,12 @@ async function promptForUsername(options = {}) {
 
         tabNew?.addEventListener('click', onNewTab);
         tabReturning?.addEventListener('click', onReturningTab);
+        tabRecover?.addEventListener('click', onRecoverTab);
         form.addEventListener('submit', handleSubmit);
         input.addEventListener('input', handleInput);
         pinInput.addEventListener('input', handleInput);
         pinConfirmInput?.addEventListener('input', handleInput);
+        friendCodeInput?.addEventListener('input', handleInput);
     });
 }
 
@@ -501,6 +601,7 @@ async function bootstrapGameInner() {
         let auth = getAuthStorage();
         let profile = null;
         let collection = null;
+        let hasPin = false;
 
         if (auth?.userId) {
             api.setUserId(auth.userId);
@@ -509,6 +610,7 @@ async function bootstrapGameInner() {
                 const result = await fetchPlayerState(auth.userId);
                 profile = result.profile;
                 collection = result.collection;
+                hasPin = normalizeHasPin(result.hasPin);
 
                 // Update stored data with latest canonical values
                 auth = {
@@ -523,6 +625,7 @@ async function bootstrapGameInner() {
                 auth = null;
                 profile = null;
                 collection = null;
+                hasPin = false;
             }
         }
 
@@ -532,6 +635,12 @@ async function bootstrapGameInner() {
             auth = result.auth;
             profile = result.profile;
             collection = result.collection;
+            hasPin = true;
+        } else if (!hasPin) {
+            loadingProgress.update(14, 'Set your save PIN...');
+            const friendCode = profile?.friend_code ?? profile?.friendCode ?? auth?.friendCode ?? null;
+            await promptForSavePin(api, { friendCode });
+            hasPin = true;
         }
 
         const playerContext = {
@@ -541,6 +650,10 @@ async function bootstrapGameInner() {
         };
 
         api.setUserId(playerContext.userId);
+
+        await ensureSavePin(api).catch((error) => {
+            console.warn('[BOOTSTRAP] Save PIN safety check failed:', error);
+        });
 
         await launchGame({
             api,

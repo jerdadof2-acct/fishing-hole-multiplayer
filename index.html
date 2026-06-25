@@ -217,7 +217,8 @@
                 <div class="modal-body">
                     <div class="auth-mode-tabs" role="tablist" aria-label="Account type">
                         <button type="button" id="auth-tab-new" class="auth-mode-tab active" data-auth-mode="new" role="tab" aria-selected="true">New fisher</button>
-                        <button type="button" id="auth-tab-returning" class="auth-mode-tab" data-auth-mode="returning" role="tab" aria-selected="false">Returning fisher</button>
+                        <button type="button" id="auth-tab-returning" class="auth-mode-tab" data-auth-mode="returning" role="tab" aria-selected="false">Returning</button>
+                        <button type="button" id="auth-tab-recover" class="auth-mode-tab" data-auth-mode="recover" role="tab" aria-selected="false">No PIN yet</button>
                     </div>
                     <p id="username-helper" class="modal-helper-text">
                         Pick a username and a private save PIN. You'll use both to restore progress on a new device.
@@ -254,11 +255,61 @@
                             autocomplete="new-password"
                             required
                         />
+                        <input
+                            type="text"
+                            id="friend-code-input"
+                            class="username-input auth-friend-code hidden"
+                            placeholder="Friend code (6 letters)"
+                            maxlength="8"
+                            autocomplete="off"
+                        />
                         <button type="submit" id="username-submit" class="username-submit">
                             Create Profile
                         </button>
                     </form>
                     <p id="username-error" class="username-error hidden"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Required save PIN for existing accounts (created before PIN feature) -->
+        <div id="save-pin-setup-modal" class="modal hidden">
+            <div class="modal-content username-modal">
+                <div class="modal-header">
+                    <h2>Set Your Save PIN</h2>
+                </div>
+                <div class="modal-body">
+                    <p id="save-pin-setup-helper" class="modal-helper-text">
+                        Your account needs a private save PIN so you can restore progress on a new device. Keep it secret — it's not your friend code.
+                    </p>
+                    <form id="save-pin-setup-form" class="username-form">
+                        <input
+                            type="password"
+                            id="save-pin-setup-input"
+                            class="username-input"
+                            placeholder="Save PIN (4–6 digits)"
+                            maxlength="6"
+                            inputmode="numeric"
+                            pattern="[0-9]*"
+                            autocomplete="new-password"
+                            required
+                        />
+                        <input
+                            type="password"
+                            id="save-pin-setup-confirm"
+                            class="username-input"
+                            placeholder="Confirm save PIN"
+                            maxlength="6"
+                            inputmode="numeric"
+                            pattern="[0-9]*"
+                            autocomplete="new-password"
+                            required
+                        />
+                        <button type="submit" id="save-pin-setup-submit" class="username-submit">
+                            Save PIN &amp; Continue
+                        </button>
+                    </form>
+                    <p id="save-pin-setup-error" class="username-error hidden"></p>
                 </div>
             </div>
         </div>
@@ -281,6 +332,11 @@
                     <div class="prologue-title-vignette" aria-hidden="true"></div>
                 </div>
                 <p id="prologue-tap-hint" class="prologue-tap-hint hidden">Tap anywhere to cast off</p>
+            </div>
+
+            <div id="prologue-start-gate" class="prologue-start-gate hidden" role="button" tabindex="0" aria-label="Tap to begin the story">
+                <p class="prologue-start-gate-title">Halley's Big Catch</p>
+                <p class="prologue-start-gate-hint">Tap to begin</p>
             </div>
 
             <p id="prologue-load-hint" class="prologue-load-hint hidden" aria-live="polite"></p>
@@ -322,7 +378,7 @@
             });
         })();
     </script>
-    <script type="module" src="src/bootstrap.js?v=20260622-deploy"></script>
+    <script type="module" src="src/bootstrap.js?v=20250624-recover-pin"></script>
 </body>
 </html>
 
