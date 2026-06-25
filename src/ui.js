@@ -12,6 +12,7 @@ const FRIEND_ONLINE_THRESHOLD_MS = 5 * 60 * 1000;
 const FRIEND_CATCH_TOAST_RARITIES = new Set(['Epic', 'Legendary', 'Trophy']);
 const FRIEND_ACTIVITY_POLL_MS = 12000;
 const PRESENCE_PING_MS = 90 * 1000;
+const ANNOUNCEMENT_POLL_MS = 12000;
 
 export class UI {
     constructor(fishing, fish, water, game, gameplaySystems = null, sfx = null) {
@@ -37,6 +38,7 @@ export class UI {
         this.friendMessageTimer = null;
         this.friendRefreshTimer = null;
         this.presencePingTimer = null;
+        this.announcementPollTimer = null;
         this.lastFriendSnapshot = { friends: new Map(), activities: new Set() };
         this.affordableNotified = new Set();
         this.notificationState = {
@@ -119,6 +121,7 @@ export class UI {
         this.renderFriends();
         this.ensureFriendActivityPolling();
         this.startPresencePing();
+        this.ensureAnnouncementPolling();
         
         // Check achievements on game start (in case player already met conditions)
         setTimeout(() => {
@@ -755,6 +758,58 @@ export class UI {
 
         ping();
         this.presencePingTimer = setInterval(ping, PRESENCE_PING_MS);
+    }
+
+    ensureAnnouncementPolling() {
+        if (!this.isOnline() || this.announcementPollTimer || !this.api?.getPendingAnnouncements) {
+            return;
+        }
+
+        const poll = () => {
+            if (this.isOnline()) {
+                this.pollServerAnnouncements().catch(() => {});
+            }
+        };
+
+        poll();
+        this.announcementPollTimer = setInterval(poll, ANNOUNCEMENT_POLL_MS);
+    }
+
+    async pollServerAnnouncements() {
+        if (!this.api?.getPendingAnnouncements) {
+            return;
+        }
+
+        const pending = await this.api.getPendingAnnouncements();
+        if (!Array.isArray(pending) || pending.length === 0) {
+            return;
+        }
+
+        for (const announcement of pending) {
+            if (!announcement?.id) continue;
+            this.showServerAnnouncement(announcement);
+            await this.api.ackAnnouncement(announcement.id).catch(() => {});
+        }
+    }
+
+    showServerAnnouncement(announcement) {
+        const title = announcement.title || 'Halley';
+        const body = announcement.body || '';
+        const duration = Number(announcement.durationMs) || 6000;
+
+        if (announcement.displayType === 'banner') {
+            const color = announcement.bannerColor || '#fde68a';
+            const message = body ? `${title} — ${body}` : title;
+            this.showBannerNotification(message, color, duration);
+            return;
+        }
+
+        this.showToast({
+            type: announcement.toastType || 'info',
+            title,
+            body,
+            duration
+        });
     }
 
     async refreshFriends(force = false) {

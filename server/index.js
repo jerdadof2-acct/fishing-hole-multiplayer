@@ -12,6 +12,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import { hashPin, validatePin, verifyPin } from './pinAuth.js';
+import { mapAnnouncementRow, normalizeAnnouncementInput } from './adminAnnouncements.js';
 import { runMigrations } from './migrate.js';
 import { isAdminUsername, withAdminFlag, getAdminUsername } from './adminAuth.js';
 import {
@@ -425,6 +426,215 @@ app.get('/api/admin/status', authenticate, requireAdmin, async (req, res) => {
         isAdmin: true,
         username: req.adminUsername
     });
+});
+
+// How many players were active recently (for Halley live ops)
+app.get('/api/admin/online-count', authenticate, requireAdmin, async (req, res) => {
+    try {
+        const minutes = Math.min(Math.max(Number(req.query.minutes) || 5, 1), 60);
+        const result = await pool.query(
+            `SELECT COUNT(*)::int AS count
+             FROM players
+             WHERE last_active >= NOW() - ($1::text || ' minutes')::interval`,
+            [String(minutes)]
+        );
+        res.json({
+            onlineCount: result.rows[0]?.count ?? 0,
+            windowMinutes: minutes
+        });
+    } catch (error) {
+        console.error('[API] Admin online count error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Send a toast or banner to every player (delivered on their next poll)
+app.post('/api/admin/announcements', authenticate, requireAdmin, async (req, res) => {
+    try {
+        const parsed = normalizeAnnouncementInput(req.body);
+        if (!parsed.ok) {
+            return res.status(400).json({ error: parsed.error });
+        }
+
+        const { title, body, displayType, toastType, bannerColor, durationMs, expiresAt } = parsed.value;
+
+        const result = await pool.query(
+            `INSERT INTO admin_announcements
+                (created_by, title, body, display_type, toast_type, banner_color, duration_ms, expires_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             RETURNING id, title, body, display_type, toast_type, banner_color, duration_ms, expires_at, created_at`,
+            [req.userId, title, body || null, displayType, toastType, bannerColor, durationMs, expiresAt]
+        );
+
+        res.json({
+            success: true,
+            announcement: mapAnnouncementRow(result.rows[0])
+        });
+    } catch (error) {
+        console.error('[API] Admin announcement create error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Recent broadcasts Halley has sent
+app.get('/api/admin/announcements/recent', authenticate, requireAdmin, async (req, res) => {
+    try {
+        const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 30);
+        const result = await pool.query(
+            `SELECT id, title, body, display_type, toast_type, banner_color, duration_ms, expires_at, created_at
+             FROM admin_announcements
+             ORDER BY created_at DESC
+             LIMIT $1`,
+            [limit]
+        );
+        res.json(result.rows.map(mapAnnouncementRow));
+    } catch (error) {
+        console.error('[API] Admin announcement list error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Look up a player by username or friend code (Halley admin only)
+app.get('/api/admin/players/lookup', authenticate, requireAdmin, async (req, res) => {
+    try {
+        const query = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+        if (!query || query.length < 2) {
+            return res.status(400).json({ error: 'Enter a username or friend code to look up.' });
+        }
+
+        const result = await pool.query(
+            `SELECT id, username, friend_code, level, experience, total_caught, biggest_catch, last_active, created_at
+             FROM players
+             WHERE LOWER(username) = LOWER($1) OR UPPER(friend_code) = UPPER($1)
+             LIMIT 1`,
+            [query]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'No player found with that username or friend code.' });
+        }
+
+        const player = result.rows[0];
+        res.json({
+            id: player.id,
+            username: player.username,
+            friendCode: player.friend_code,
+            level: player.level,
+            experience: player.experience,
+            totalCaught: player.total_caught,
+            biggestCatch: player.biggest_catch,
+            lastActive: player.last_active,
+            createdAt: player.created_at,
+            isAdmin: isAdminUsername(player.username),
+            isSelf: player.id === req.userId
+        });
+    } catch (error) {
+        console.error('[API] Admin player lookup error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Permanently delete a player account (requires exact username confirmation)
+app.delete('/api/admin/players/:playerId', authenticate, requireAdmin, async (req, res) => {
+    try {
+        const { playerId } = req.params;
+        const confirmUsername = typeof req.body?.confirmUsername === 'string'
+            ? req.body.confirmUsername.trim()
+            : '';
+
+        if (!isValidUUID(playerId)) {
+            return res.status(400).json({ error: 'Invalid player ID' });
+        }
+
+        if (!confirmUsername) {
+            return res.status(400).json({ error: 'Type the exact username to confirm deletion.' });
+        }
+
+        if (playerId === req.userId) {
+            return res.status(403).json({ error: 'You cannot delete your own Halley account.' });
+        }
+
+        const result = await pool.query(
+            `SELECT id, username FROM players WHERE id = $1`,
+            [playerId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Player not found' });
+        }
+
+        const player = result.rows[0];
+
+        if (isAdminUsername(player.username)) {
+            return res.status(403).json({ error: 'The Halley admin account cannot be deleted.' });
+        }
+
+        if (player.username !== confirmUsername) {
+            return res.status(400).json({ error: 'Confirmation username does not match.' });
+        }
+
+        await pool.query('DELETE FROM players WHERE id = $1', [playerId]);
+
+        res.json({
+            success: true,
+            deletedUsername: player.username
+        });
+    } catch (error) {
+        console.error('[API] Admin player delete error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Pending announcements for the signed-in player
+app.get('/api/announcements/pending', authenticate, async (req, res) => {
+    try {
+        if (!isValidUUID(req.userId)) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+
+        const result = await pool.query(
+            `SELECT a.id, a.title, a.body, a.display_type, a.toast_type, a.banner_color, a.duration_ms, a.expires_at, a.created_at
+             FROM admin_announcements a
+             LEFT JOIN announcement_acks ack
+                 ON ack.announcement_id = a.id AND ack.player_id = $1
+             WHERE ack.announcement_id IS NULL
+               AND (a.expires_at IS NULL OR a.expires_at > NOW())
+             ORDER BY a.created_at ASC
+             LIMIT 10`,
+            [req.userId]
+        );
+
+        res.json(result.rows.map(mapAnnouncementRow));
+    } catch (error) {
+        console.error('[API] Pending announcements error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Mark an announcement as shown to this player
+app.post('/api/announcements/:announcementId/ack', authenticate, async (req, res) => {
+    try {
+        if (!isValidUUID(req.userId)) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+
+        const { announcementId } = req.params;
+        if (!isValidUUID(announcementId)) {
+            return res.status(400).json({ error: 'Invalid announcement ID' });
+        }
+
+        await pool.query(
+            `INSERT INTO announcement_acks (announcement_id, player_id)
+             VALUES ($1, $2)
+             ON CONFLICT (announcement_id, player_id) DO NOTHING`,
+            [announcementId, req.userId]
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('[API] Announcement ack error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 // Update player data (sync from game)

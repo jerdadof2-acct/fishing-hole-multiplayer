@@ -318,6 +318,41 @@ export class API {
     async getFriendActivities(limit = 20) {
         return this.request(`/activities/friends?limit=${limit}`);
     }
+
+    async getPendingAnnouncements() {
+        return this.request('/announcements/pending');
+    }
+
+    async ackAnnouncement(announcementId) {
+        return this.request(`/announcements/${announcementId}/ack`, { method: 'POST' });
+    }
+
+    async getAdminOnlineCount(minutes = 5) {
+        return this.request(`/admin/online-count?minutes=${minutes}`);
+    }
+
+    async sendAdminAnnouncement(payload) {
+        return this.request('/admin/announcements', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+    }
+
+    async getRecentAdminAnnouncements(limit = 10) {
+        return this.request(`/admin/announcements/recent?limit=${limit}`);
+    }
+
+    async lookupAdminPlayer(query) {
+        const encoded = encodeURIComponent(query);
+        return this.request(`/admin/players/lookup?q=${encoded}`);
+    }
+
+    async deleteAdminPlayer(playerId, confirmUsername) {
+        return this.request(`/admin/players/${playerId}`, {
+            method: 'DELETE',
+            body: JSON.stringify({ confirmUsername })
+        });
+    }
     
     // ==================== Utility Methods ====================
     

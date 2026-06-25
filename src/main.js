@@ -522,7 +522,7 @@ export class Game {
             }, this.sfx);
             this.ui.init();
 
-            if (isDevMode() || this.player?.isAdmin) {
+            if (isDevMode()) {
                 this.ui.updateLocationSelector?.();
             }
 
@@ -533,8 +533,8 @@ export class Game {
             }
 
             if (typeof window !== 'undefined' && this.player?.isAdmin) {
-                import('./admin/halleyCommandPanel.js').then(({ initHalleyCommandPanel }) => {
-                    initHalleyCommandPanel(this);
+                import('./admin/halleyAdminPanel.js').then(({ initHalleyAdminPanel }) => {
+                    initHalleyAdminPanel(this);
                 });
             }
 

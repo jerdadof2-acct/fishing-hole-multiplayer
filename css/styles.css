@@ -2491,15 +2491,19 @@ canvas {
     margin-bottom: 0;
 }
 
-/* Halley admin command panel — production account only */
+/* Halley admin live-ops panel */
+#halley-admin-panel,
+.halley-admin-panel,
 #halley-command-panel,
 .halley-command-panel {
     position: fixed;
-    left: 12px;
-    bottom: 72px;
+    top: 72px;
+    right: 12px;
+    left: auto;
+    bottom: auto;
     z-index: 11000;
-    width: min(92vw, 260px);
-    max-height: min(70vh, 560px);
+    width: min(88vw, 280px);
+    max-height: min(65vh, 520px);
     overflow-y: auto;
     padding: 10px 12px;
     border-radius: 12px;
@@ -2508,16 +2512,217 @@ canvas {
     box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
     font-family: 'Poppins', 'Arial', sans-serif;
     color: #f8f4e8;
+    pointer-events: auto;
 }
 
+#halley-admin-panel.hidden,
 #halley-command-panel.hidden {
-    display: none;
+    display: none !important;
+}
+
+.halley-admin-intro,
+.command-panel-intro {
+    margin: 0 0 10px;
+    font-size: 0.72rem;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.halley-admin-stat-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 0.75rem;
+    color: #bfdbfe;
+}
+
+.halley-admin-mini-btn {
+    width: auto !important;
+    margin: 0 !important;
+    padding: 6px 10px !important;
+    font-size: 0.7rem !important;
+}
+
+.halley-admin-label {
+    display: block;
+    margin: 8px 0 4px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.halley-admin-input,
+.halley-admin-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 220, 140, 0.25);
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff8e8;
+    font-size: 0.78rem;
+    font-family: inherit;
+    resize: vertical;
+}
+
+.halley-admin-row {
+    margin-top: 6px;
+}
+
+.halley-admin-send-btn {
+    margin-top: 10px !important;
+    background: rgba(74, 222, 128, 0.22) !important;
+}
+
+.halley-admin-send-btn:hover {
+    background: rgba(74, 222, 128, 0.34) !important;
+}
+
+.halley-admin-recent {
+    display: grid;
+    gap: 8px;
+}
+
+.halley-admin-recent-item {
+    padding: 8px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    font-size: 0.72rem;
+}
+
+.halley-admin-recent-item strong {
+    display: block;
+    color: #fde68a;
+    margin-bottom: 2px;
+}
+
+.halley-admin-recent-item span {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.65rem;
+}
+
+.halley-admin-recent-item p {
+    margin: 4px 0 0;
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.halley-admin-recent-empty {
+    margin: 0;
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.halley-admin-travel-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px;
+    align-items: center;
+}
+
+.halley-admin-travel-row .halley-admin-input {
+    margin: 0;
+}
+
+.halley-admin-player-card {
+    margin-top: 8px;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(248, 113, 113, 0.35);
+    background: rgba(127, 29, 29, 0.18);
+}
+
+.halley-admin-player-card.hidden {
+    display: none !important;
+}
+
+.halley-admin-player-name {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #fecaca;
+}
+
+.halley-admin-player-meta {
+    margin-top: 4px;
+    font-size: 0.68rem;
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.halley-admin-player-blocked {
+    margin: 8px 0 0;
+    font-size: 0.7rem;
+    color: #fde68a;
+}
+
+.halley-admin-danger-btn {
+    margin-top: 10px !important;
+    background: rgba(248, 113, 113, 0.28) !important;
+    color: #fee2e2 !important;
+}
+
+.halley-admin-danger-btn:hover:not(:disabled) {
+    background: rgba(248, 113, 113, 0.42) !important;
+}
+
+.halley-admin-danger-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.halley-admin-confirm-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 12000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.halley-admin-confirm-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(4, 8, 22, 0.72);
+}
+
+.halley-admin-confirm-dialog {
+    position: relative;
+    width: min(92vw, 360px);
+    padding: 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(248, 113, 113, 0.45);
+    background: rgba(12, 18, 40, 0.98);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+    color: #f8f4e8;
+}
+
+.halley-admin-confirm-dialog h4 {
+    margin: 0 0 8px;
+    font-size: 1rem;
+    color: #fecaca;
+}
+
+.halley-admin-confirm-dialog p {
+    margin: 0 0 12px;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.halley-admin-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 12px;
 }
 
 .halley-command-toggle {
     position: fixed;
-    left: 12px;
-    bottom: 24px;
+    top: 16px;
+    right: 16px;
+    left: auto;
+    bottom: auto;
     z-index: 11001;
     width: 44px;
     height: 44px;
@@ -2528,6 +2733,7 @@ canvas {
     font-size: 1.25rem;
     cursor: pointer;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+    pointer-events: auto;
 }
 
 .halley-command-toggle:hover,
@@ -2541,7 +2747,58 @@ canvas {
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: #fde68a;
+    margin-bottom: 0;
+}
+
+.command-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     margin-bottom: 8px;
+}
+
+.command-panel-close {
+    flex: 0 0 auto;
+    width: 28px !important;
+    height: 28px;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 8px !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #fde68a !important;
+    font-size: 0.9rem !important;
+    line-height: 1;
+    text-align: center !important;
+}
+
+.command-panel-close:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.command-panel-travel-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.command-panel-select {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 220, 140, 0.25);
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff8e8;
+    font-size: 0.78rem;
+    font-family: inherit;
+}
+
+.command-panel-travel-row button {
+    width: auto !important;
+    min-width: 44px;
+    margin-bottom: 0 !important;
+    text-align: center !important;
 }
 
 .command-panel-section {
@@ -2565,6 +2822,8 @@ canvas {
     gap: 4px;
 }
 
+#halley-admin-panel button,
+.halley-admin-panel button,
 #halley-command-panel button,
 .halley-command-panel button {
     display: block;
@@ -2581,6 +2840,8 @@ canvas {
     text-align: left;
 }
 
+#halley-admin-panel button:hover,
+.halley-admin-panel button:hover,
 #halley-command-panel button:hover,
 .halley-command-panel button:hover {
     background: rgba(255, 220, 140, 0.32);

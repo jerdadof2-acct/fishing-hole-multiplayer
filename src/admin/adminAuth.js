@@ -13,13 +13,10 @@ export function readIsAdmin(source) {
 }
 
 /**
- * Localhost dev tools or the Halley admin account (server-verified).
+ * Localhost dev tools only — admin Halley plays like everyone else.
  * @param {{ isAdmin?: boolean }|null|undefined} player
  * @returns {boolean}
  */
 export function hasPrivilegedAccess(player = null) {
-    if (isDevMode()) {
-        return true;
-    }
-    return player?.isAdmin === true;
+    return isDevMode();
 }
