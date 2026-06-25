@@ -1,10 +1,116 @@
 import * as THREE from 'three';
 import {
     createDockWoodMaterial,
+    createLogEndCapMaterial,
     createRopeMaterial,
     getDockWoodTexture,
     createProceduralDockWoodTexture
 } from './dockTextures.js';
+
+/**
+ * World-space XZ bounds for caustics exclusion (minX, maxX, minZ, maxZ).
+ * @param {{ dockWidth?: number, dockDepth?: number, groupZ?: number, margin?: number }} [options]
+ */
+export function getStylizedDockWorldBounds(options = {}) {
+    const {
+        dockWidth = 3,
+        dockDepth = 14,
+        groupZ = -1.5,
+        margin = 0.45
+    } = options;
+    const plankCount = 13;
+    const plankGap = 0.01;
+    const plankDepth = (dockDepth * 0.94) / plankCount - plankGap;
+    const zStart = -dockDepth * 0.47;
+    const deckFrontZ = zStart + plankCount * plankDepth + (plankCount - 1) * plankGap;
+
+    return new THREE.Vector4(
+        -dockWidth * 0.55 - margin,
+        dockWidth * 0.55 + margin,
+        groupZ + zStart - margin,
+        groupZ + deckFrontZ + 0.25 + margin
+    );
+}
+
+function computeDeckFrontZ(dockDepth, plankCount) {
+    const plankGap = 0.01;
+    const plankDepth = (dockDepth * 0.94) / plankCount - plankGap;
+    const zStart = -dockDepth * 0.47;
+    return zStart + plankCount * plankDepth + (plankCount - 1) * plankGap;
+}
+
+/**
+ * World XZ positions for gentle ripple rings where dock posts meet the water.
+ * @param {string} [waterBodyType='POND']
+ * @returns {{ x: number, z: number, innerRadius: number }[]}
+ */
+export function getDockPostSplashPositions(waterBodyType = 'POND') {
+    const dockWidth = 3;
+    const dockDepth = 14;
+    const groupZ = -1.5;
+    const isPond = waterBodyType === 'POND';
+    const isRiver = waterBodyType === 'RIVER';
+    const plankCount = isRiver ? 13 : 11;
+    const railWidth = 0.09;
+    const deckFrontZ = computeDeckFrontZ(dockDepth, plankCount);
+    const cornerZ = deckFrontZ - railWidth * 0.15;
+    const cornerPostTopRadius = isPond ? 0.17 : 0.23;
+    const postRadius = isPond ? 0.07 : 0.11;
+
+    const positions = [];
+
+    [-1, 1].forEach((side) => {
+        positions.push({
+            x: side * dockWidth * 0.48,
+            z: groupZ + cornerZ,
+            innerRadius: cornerPostTopRadius * 1.02,
+            primary: true
+        });
+    });
+
+    const supportLocal = isPond ? [
+        { x: -dockWidth * 0.32, z: dockDepth * 0.35 },
+        { x: dockWidth * 0.32, z: dockDepth * 0.35 },
+        { x: -dockWidth * 0.32, z: -dockDepth * 0.35 },
+        { x: dockWidth * 0.32, z: -dockDepth * 0.35 }
+    ] : [
+        { x: -dockWidth * 0.38, z: dockDepth * 0.35 },
+        { x: 0, z: dockDepth * 0.35 },
+        { x: dockWidth * 0.38, z: dockDepth * 0.35 },
+        { x: -dockWidth * 0.38, z: -dockDepth * 0.35 },
+        { x: 0, z: -dockDepth * 0.35 },
+        { x: dockWidth * 0.38, z: -dockDepth * 0.35 },
+        { x: -dockWidth * 0.38, z: 0 },
+        { x: dockWidth * 0.38, z: 0 }
+    ];
+
+    supportLocal.forEach((pos) => {
+        positions.push({
+            x: pos.x,
+            z: groupZ + pos.z,
+            innerRadius: postRadius * 1.12
+        });
+    });
+
+    return positions;
+}
+
+function finishDockMesh(mesh) {
+    mesh.renderOrder = 20;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    materials.forEach((mat) => {
+        if (!mat) return;
+        mat.depthWrite = true;
+        mat.polygonOffset = true;
+        mat.polygonOffsetFactor = 1;
+        mat.polygonOffsetUnits = 1;
+        if (mat.map) {
+            mat.map.offset.set(0, 0);
+        }
+    });
+}
 
 /**
  * Lightweight stylized fishing dock — planks, posts, beams, rope. No GLB required.
@@ -90,8 +196,7 @@ export function buildStylizedDock(options) {
         const post = new THREE.Mesh(postGeometry, postMaterial);
         post.scale.y = actualPostHeight / postHeightBase;
         post.position.set(pos.x, postCenterY, pos.z);
-        post.castShadow = true;
-        post.receiveShadow = true;
+        finishDockMesh(post);
         dockGroup.add(post);
     });
 
@@ -111,8 +216,7 @@ export function buildStylizedDock(options) {
             deckPlankCenterY,
             zStart + plankDepth * 0.5 + i * (plankDepth + plankGap)
         );
-        plank.castShadow = true;
-        plank.receiveShadow = true;
+        finishDockMesh(plank);
         dockGroup.add(plank);
     }
 
@@ -127,8 +231,7 @@ export function buildStylizedDock(options) {
             beamMaterial
         );
         beam.position.set(dockWidth * xFactor, beamY, 0);
-        beam.castShadow = true;
-        beam.receiveShadow = true;
+        finishDockMesh(beam);
         dockGroup.add(beam);
     });
 
@@ -144,9 +247,46 @@ export function buildStylizedDock(options) {
         deckTopY + railHeight * 0.5,
         frontRailZ
     );
-    frontRail.castShadow = true;
-    frontRail.receiveShadow = true;
+    finishDockMesh(frontRail);
     dockGroup.add(frontRail);
+
+    const pillarAboveDeck = isRiver ? 0.18 : 0.14;
+    const pillarBuriedBelowWater = 0.2;
+    const pillarTopY = deckTopY + pillarAboveDeck;
+    const pillarBottomY = waterSurfaceY - pillarBuriedBelowWater;
+    const cornerPillarHeight = pillarTopY - pillarBottomY;
+    const cornerPillarCenterY = (pillarTopY + pillarBottomY) * 0.5;
+    const cornerPostTopRadius = isPond ? 0.17 : 0.23;
+    const cornerPostBaseRadius = cornerPostTopRadius * 1.22;
+    const cornerPostGeo = new THREE.CylinderGeometry(
+        cornerPostTopRadius,
+        cornerPostBaseRadius,
+        cornerPillarHeight,
+        12
+    );
+    const logEndCapMaterial = createLogEndCapMaterial();
+    const logEndCapGeo = new THREE.CircleGeometry(cornerPostTopRadius * 1.02, 24);
+    const cornerZ = deckFrontZ - railWidth * 0.15;
+    [-1, 1].forEach((side) => {
+        const cornerPost = new THREE.Mesh(cornerPostGeo, postMaterial);
+        cornerPost.position.set(
+            side * dockWidth * 0.48,
+            cornerPillarCenterY,
+            cornerZ
+        );
+        finishDockMesh(cornerPost);
+        dockGroup.add(cornerPost);
+
+        const logEndCap = new THREE.Mesh(logEndCapGeo, logEndCapMaterial);
+        logEndCap.rotation.x = -Math.PI / 2;
+        logEndCap.position.set(
+            side * dockWidth * 0.48,
+            pillarTopY + 0.004,
+            cornerZ
+        );
+        finishDockMesh(logEndCap);
+        dockGroup.add(logEndCap);
+    });
 
     const railY = deckTopY + railHeight * 0.82;
     addRopeBetween(
@@ -196,13 +336,17 @@ export function buildStylizedDock(options) {
             deckTopY + railHeight * 0.42,
             frontRailZ + railWidth * 0.5 + 0.07
         );
-        bumper.castShadow = true;
+        finishDockMesh(bumper);
         dockGroup.add(bumper);
     }
 
     dockGroup.position.set(0, 0, -1.5);
-    dockGroup.castShadow = true;
-    dockGroup.receiveShadow = true;
+    dockGroup.userData.isDock = true;
+    dockGroup.traverse((child) => {
+        if (child.isMesh) {
+            child.userData.isDock = true;
+        }
+    });
 
     return dockGroup;
 }
@@ -222,6 +366,7 @@ function addRopeBetween(group, start, end, material, options = {}) {
         material
     );
     tube.castShadow = true;
+    finishDockMesh(tube);
     group.add(tube);
 }
 
@@ -241,5 +386,6 @@ function wrapPostRope(group, x, y, z, radius, material) {
         material
     );
     tube.castShadow = true;
+    finishDockMesh(tube);
     group.add(tube);
 }

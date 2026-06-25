@@ -7,6 +7,7 @@ import {
     tickAmbientSplashes,
     tickCausticsLayer
 } from './effects/waterAmbience.js';
+import { getDockPostSplashPositions, getStylizedDockWorldBounds } from './scene/stylizedDock.js';
 
 // Create procedural water normal map if texture is missing
 function createProceduralWaterNormal(offset = 0) {
@@ -233,99 +234,65 @@ export class Water2Lake {
      * Creates animated ring meshes that simulate water flowing around posts
      */
     createDockPostSplashes() {
-        // Create splash system for POND docks only (not rivers)
-        // Rivers use particle streams instead
-        // Only create for pond water body type
-        
-        // Dock parameters (matching platform.js)
-        const dockWidth = 3; // From platform.js
-        const dockDepth = 14; // From platform.js
-        const dockCenterZ = -1.5; // Dock position offset
-        
-        // POND dock post positions (from platform.js createDock)
-        // Pond has 4 posts: 2 on front edge (water side), 2 on back edge
-        // Dock group is positioned at (0, raisedDockY, -1.5), and posts are positioned relative to dock group
-        // Post positions from platform.js are relative to dock group origin (z=0 at group center)
-        // Dock is at z=-1.5 in world space, so posts are at world z = -1.5 + (dockDepth * 0.35 or -dockDepth * 0.35)
-        const dockWorldZ = -1.5; // Dock center Z position in world space (from platform.js)
-        const postPositions = [
-            // Front edge (water side) - 2 posts for pond
-            { x: -dockWidth * 0.3, z: dockWorldZ + dockDepth * 0.35 },
-            { x: dockWidth * 0.3, z: dockWorldZ + dockDepth * 0.35 },
-            // Back edge - 2 posts for pond
-            { x: -dockWidth * 0.3, z: dockWorldZ - dockDepth * 0.35 },
-            { x: dockWidth * 0.3, z: dockWorldZ - dockDepth * 0.35 }
-        ];
-        
-        // Create splash group
+        const postPositions = getDockPostSplashPositions(this.waterBodyType);
+        const isPond = this.waterBodyType === 'POND';
+        const activePosts = isPond
+            ? postPositions.filter((post) => post.primary)
+            : postPositions.filter((post) => post.primary);
+
         const splashGroup = new THREE.Group();
         splashGroup.name = 'DockPostSplashes';
-        
-        // Material for splash rings (white/light blue, semi-transparent, additive)
-        // Make more visible for pond (higher opacity, brighter color)
+        splashGroup.renderOrder = 1003;
+
         const splashMaterial = new THREE.MeshBasicMaterial({
-            color: 0xccddff, // Brighter light blue-white (increased from 0xaaccff)
+            color: isPond ? 0xb8d4ec : 0xc0daf0,
             transparent: true,
-            opacity: 0.8, // Increased from 0.6 for better visibility
+            opacity: isPond ? 0.28 : 0.38,
             blending: THREE.AdditiveBlending,
             side: THREE.DoubleSide,
-            depthWrite: false
+            depthWrite: false,
+            depthTest: true
         });
-        
-        // Create 2-3 rings per post (to create wake effect)
-        // Make MUCH bigger so they're clearly visible above deck
-        const ringsPerPost = 3;
-        const baseRadius = 0.35; // Inner radius (much larger: was 0.20, original 0.15)
-        const ringThickness = 0.20; // Ring thickness (much thicker: was 0.12, original 0.08)
-        const ringSpacing = 0.25; // Space between rings (larger spacing: was 0.15, original 0.12)
-        
-        postPositions.forEach((post, postIndex) => {
-            // Create multiple rings around each post
+
+        const ringsPerPost = isPond ? 2 : 3;
+        const ringThickness = isPond ? 0.038 : 0.05;
+        const ringSpacing = isPond ? 0.05 : 0.065;
+        const maxExpansion = isPond ? 0.28 : 0.4;
+        const surfaceY = this.waterY + 0.04;
+
+        activePosts.forEach((post, postIndex) => {
             for (let ringIndex = 0; ringIndex < ringsPerPost; ringIndex++) {
-                const ringRadius = baseRadius + ringIndex * ringSpacing;
+                const ringRadius = post.innerRadius + ringIndex * ringSpacing;
                 const ring = new THREE.Mesh(
-                    new THREE.RingGeometry(ringRadius, ringRadius + ringThickness, 32),
+                    new THREE.RingGeometry(ringRadius, ringRadius + ringThickness, 28),
                     splashMaterial.clone()
                 );
-                
-                // Rotate to lay flat on water surface
+
                 ring.rotation.x = -Math.PI / 2;
-                
-                // Position at water surface around post
-                // CRITICAL: Position HIGHER above water to ensure visibility above dock
-                ring.position.set(
-                    post.x,
-                    this.waterY + 0.05, // Higher above water surface (was 0.02) to ensure visibility
-                    post.z
-                );
-                
-                // For pond, splashes are symmetrical (no downstream offset needed)
-                // Just position rings around posts
-                
-                // Store animation data
-                // Make each ring completely independent with random timing
-                // For outward expansion that dissipates: track life cycle
+                ring.position.set(post.x, surfaceY, post.z);
+                ring.renderOrder = 1003;
+
                 ring.userData = {
                     postIndex,
                     ringIndex,
-                    baseRadius: ringRadius, // Starting radius
-                    maxRadius: ringRadius + 0.8, // Maximum expansion before reset (each ring expands to this)
-                    speed: 0.3 + Math.random() * 0.5, // Expansion speed (0.3 to 0.8)
-                    startTime: Math.random() * 5.0, // Random start time offset (0 to 5 seconds)
-                    lifetime: 2.5 + Math.random() * 2.0, // Lifetime before reset (2.5 to 4.5 seconds)
-                    fadeStart: 0.6 // Start fading at 60% of lifetime
+                    baseRadius: ringRadius,
+                    maxRadius: ringRadius + maxExpansion,
+                    ringThickness,
+                    peakOpacity: isPond ? 0.26 : 0.36,
+                    startTime: postIndex * 1.4 + ringIndex * 3.2 + Math.random() * 4.5,
+                    lifetime: isPond
+                        ? 6.5 + ringIndex * 2.0 + Math.random() * 3.0
+                        : 4.5 + ringIndex * 1.2 + Math.random() * 2.0,
+                    fadeStart: isPond ? 0.62 : 0.5
                 };
-                
+
                 splashGroup.add(ring);
             }
         });
-        
-        // Only show splashes for POND (not RIVER)
-        splashGroup.visible = (this.waterBodyType === 'POND');
+
+        splashGroup.visible = this.waterBodyType === 'POND' || this.waterBodyType === 'RIVER';
         this.dockPostSplashes = splashGroup;
         this.sceneRef.scene.add(splashGroup);
-        
-        console.log('[DOCK] Post splashes created for', this.waterBodyType, ':', postPositions.length, 'posts,', ringsPerPost, 'rings per post, visible:', splashGroup.visible);
     }
     
     /**
@@ -505,7 +472,7 @@ export class Water2Lake {
                 
                 // Update splash visibility for POND only (not rivers)
                 if (this.dockPostSplashes) {
-                    const splashShouldBeVisible = (type === 'POND');
+                    const splashShouldBeVisible = type === 'POND' || type === 'RIVER';
                     if (this.dockPostSplashes.visible !== splashShouldBeVisible) {
                         this.dockPostSplashes.visible = splashShouldBeVisible;
                         console.log('[DOCK] Splash visibility changed to:', splashShouldBeVisible, 'type:', type);
@@ -573,7 +540,10 @@ export class Water2Lake {
             this.sceneRef.scene,
             this.groundSize,
             this.waterY,
-            { skipOnMobile: false }
+            {
+                skipOnMobile: false,
+                excludeBounds: getStylizedDockWorldBounds()
+            }
         );
 
         // Create water geometry with enough detail for waves
@@ -989,8 +959,7 @@ export class Water2Lake {
         // Update dock post splash effects (animated wakes) - only for POND
         // CRITICAL: Always check visibility based on current water type, not just creation time
         if (this.dockPostSplashes) {
-            // Ensure visibility matches current water type
-            const shouldBeVisible = (this.waterBodyType === 'POND');
+            const shouldBeVisible = this.waterBodyType === 'POND' || this.waterBodyType === 'RIVER';
             if (this.dockPostSplashes.visible !== shouldBeVisible) {
                 this.dockPostSplashes.visible = shouldBeVisible;
             }
@@ -1002,42 +971,30 @@ export class Water2Lake {
                 // Animate each splash ring
                 this.dockPostSplashes.children.forEach(ring => {
                     if (!ring.userData) return;
-                    
-                    const { baseRadius, maxRadius, speed, startTime, lifetime, fadeStart } = ring.userData;
-                    
-                    // Calculate current age of this ring
-                    let age = (time - startTime) % lifetime;
-                    
-                    // Normalized progress (0 to 1) through lifetime
+
+                    const { baseRadius, maxRadius, ringThickness, startTime, lifetime, fadeStart, peakOpacity } = ring.userData;
+
+                    const age = ((time - startTime) % lifetime + lifetime) % lifetime;
                     const progress = age / lifetime;
-                    
-                    // Expand outward monotonically (only outward, not oscillating)
-                    // Use smooth ease-out curve for natural expansion
-                    const expansionProgress = 1.0 - Math.pow(1.0 - progress, 2); // Ease-out curve
+                    const expansionProgress = 1.0 - Math.pow(1.0 - progress, 3);
                     const currentRadius = baseRadius + (maxRadius - baseRadius) * expansionProgress;
-                    const ringThickness = 0.20; // Match creation value
-                    
-                    // Update ring geometry size
+                    const thickness = ringThickness ?? 0.038;
+
                     ring.geometry.dispose();
                     ring.geometry = new THREE.RingGeometry(
                         currentRadius,
-                        currentRadius + ringThickness,
-                        32
+                        currentRadius + thickness,
+                        28
                     );
-                    
-                    // Fade opacity as ring expands and dissipates
-                    // Start at full opacity, fade out starting at fadeStart point
+
                     let opacity = 1.0;
                     if (progress >= fadeStart) {
-                        // Fade out in the remaining portion of lifetime
                         const fadeProgress = (progress - fadeStart) / (1.0 - fadeStart);
-                        opacity = 1.0 - fadeProgress; // Fade from 1.0 to 0.0
+                        opacity = 1.0 - fadeProgress;
                     }
-                    opacity = Math.max(0.0, opacity); // Ensure opacity doesn't go negative
-                    ring.material.opacity = opacity * 0.9; // Scale to max 0.9 for visibility
-                    
-                    // Slight rotation for dynamic look (slower, more subtle)
-                    ring.rotation.z = Math.sin(time * 0.3 + baseRadius) * 0.05;
+                    ring.material.opacity = Math.max(0.0, opacity) * (peakOpacity ?? 0.26);
+
+                    ring.rotation.z = Math.sin(time * 0.12 + baseRadius) * 0.015;
                 });
             }
         }

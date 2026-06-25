@@ -41,6 +41,10 @@ export function updateFishShadowSprite(shadow, fishPosition, waterY = 0, visible
 
 /**
  * Scrolling caustics on the lake bed (additive plane just under the surface).
+ * @param {object} scene
+ * @param {number} groundSize
+ * @param {number} waterY
+ * @param {{ skipOnMobile?: boolean, excludeBounds?: import('three').Vector4 }} [options]
  */
 export function createCausticsLayer(scene, groundSize, waterY, options = {}) {
     const isMobile = typeof navigator !== 'undefined'
@@ -62,19 +66,49 @@ export function createCausticsLayer(scene, groundSize, waterY, options = {}) {
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(6, 6);
 
+    const excludeBounds = options.excludeBounds || null;
+    const material = new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        opacity: isMobile ? 0.18 : 0.32,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        depthTest: true
+    });
+
+    if (excludeBounds) {
+        material.onBeforeCompile = (shader) => {
+            shader.uniforms.uExcludeBounds = { value: excludeBounds };
+            shader.vertexShader = `varying vec3 vCausticsWorldPos;\n${shader.vertexShader}`;
+            shader.vertexShader = shader.vertexShader.replace(
+                '#include <worldpos_vertex>',
+                `#include <worldpos_vertex>
+                vCausticsWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;`
+            );
+            shader.fragmentShader = `varying vec3 vCausticsWorldPos;\nuniform vec4 uExcludeBounds;\n${shader.fragmentShader}`;
+            shader.fragmentShader = shader.fragmentShader.replace(
+                '#include <map_fragment>',
+                `#include <map_fragment>
+                if (
+                    vCausticsWorldPos.x > uExcludeBounds.x &&
+                    vCausticsWorldPos.x < uExcludeBounds.y &&
+                    vCausticsWorldPos.z > uExcludeBounds.z &&
+                    vCausticsWorldPos.z < uExcludeBounds.w
+                ) {
+                    discard;
+                }`
+            );
+        };
+        material.customProgramCacheKey = () => 'caustics-dock-exclude';
+    }
+
     const mesh = new THREE.Mesh(
         new THREE.PlaneGeometry(groundSize * 0.92, groundSize * 0.92),
-        new THREE.MeshBasicMaterial({
-            map: texture,
-            transparent: true,
-            opacity: isMobile ? 0.18 : 0.32,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false
-        })
+        material
     );
     mesh.rotation.x = -Math.PI / 2;
     mesh.position.y = waterY - 0.035;
-    mesh.renderOrder = 0;
+    mesh.renderOrder = -1;
     mesh.name = 'WaterCaustics';
     mesh.userData.scrollSpeed = new THREE.Vector2(0.0005, 0.0003);
     scene.add(mesh);
