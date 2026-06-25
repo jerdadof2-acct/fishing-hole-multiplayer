@@ -10,15 +10,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 
 /** Bump when adding/removing pack files — clients re-download on change. */
-export const PACK_VERSION = '20250624-3';
+export const PACK_VERSION = '20250624-4';
 
-/** Prologue-only — must finish before first paint / story starts. */
+/** Prologue-only — two images (~310 KB); audio streams when the story plays. */
 const BOOT_URLS = [
     '/images/prologue-background.png',
-    '/images/halley-splash.png',
-    '/assets/audio/halleys-big-catch-intro.mp3',
-    '/assets/audio/prologue-ocean-seagulls.mp3',
-    '/assets/audio/prologue-music.mp3'
+    '/images/halley-splash.png'
 ];
 
 const EXTRA_URLS = [

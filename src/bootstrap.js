@@ -1,7 +1,7 @@
 import Game from './main.js?v=20250624-pack-vo';
 import { api } from './api.js';
 import { initAdRotator } from './ads.js';
-import { ensureBootPack, startDeferredPackDownload } from './assetPack.js';
+import { ensureBootPack, prefetchPrologueImages, startDeferredPackDownload } from './assetPack.js';
 import { loadingProgress } from './loadingProgress.js';
 import {
     markPrologueSeenForVersion,
@@ -68,18 +68,26 @@ async function startOfflineGame(reason) {
 }
 
 async function launchGame(gameOptions) {
-    startDeferredPackDownload({ silent: true });
-
     const playFullPrologue = shouldPlayStoryPrologue();
     const playReturnSplash = shouldShowReturnSplash();
     const needsPreEntry = playFullPrologue || playReturnSplash;
 
     if (needsPreEntry) {
+        loadingProgress.suppress(false);
+        loadingProgress.update(16, 'Preparing story…');
+        await ensureBootPack({
+            timeoutMs: 5000,
+            onProgress: (percent, message) => {
+                loadingProgress.update(16 + Math.round(percent * 0.08), message);
+            }
+        });
         loadingProgress.suppress(true);
         loadingProgress.update(18, 'Loading Halley\'s Big Catch…');
     } else {
         loadingProgress.update(18, 'Starting the lake...');
     }
+
+    startDeferredPackDownload({ silent: true, delayMs: 5000 });
 
     const modal = document.getElementById('username-modal');
     const pinModal = document.getElementById('save-pin-setup-modal');
@@ -586,17 +594,8 @@ async function bootstrapGameInner() {
     loadingProgress.show('Connecting to Halley\'s Big Catch...');
     loadingProgress.update(2, 'Connecting to server...');
 
-    try {
-        await ensureBootPack({
-            onProgress: (percent, message) => {
-                loadingProgress.update(Math.min(25, Math.round(percent * 0.25)), message);
-            }
-        });
-        startDeferredPackDownload({ silent: true });
-    } catch (error) {
-        console.warn('[BOOTSTRAP] Boot asset pack failed (continuing online):', error);
-        startDeferredPackDownload({ silent: true });
-    }
+    // Warm prologue images in parallel — never blocks server connect or auth.
+    prefetchPrologueImages();
 
     const health = await api.healthCheck(10000);
     if (!health || health.status !== 'ok') {

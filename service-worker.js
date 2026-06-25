@@ -1,8 +1,8 @@
 const CACHE_PREFIX = 'halleys-big-catch-media';
-const CACHE_VERSION = 'v7';
+const CACHE_VERSION = 'v8';
 const CACHE_NAME = `${CACHE_PREFIX}-${CACHE_VERSION}`;
 
-/** Shell + prologue only — full pack is downloaded by the client in background. */
+/** App shell + prologue images only — audio and game assets load on demand. */
 const BOOT_ASSETS = [
     '/',
     '/index.html',
@@ -12,10 +12,7 @@ const BOOT_ASSETS = [
     '/images/prologue-background.png',
     '/images/halley-splash.png',
     '/assets/icons/icon-192.png',
-    '/assets/icons/icon-512.png',
-    '/assets/audio/halleys-big-catch-intro.mp3',
-    '/assets/audio/prologue-ocean-seagulls.mp3',
-    '/assets/audio/prologue-music.mp3'
+    '/assets/icons/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -89,7 +86,7 @@ self.addEventListener('fetch', (event) => {
                 try {
                     const response = await fetch(request);
                     if (response.ok) {
-                        cache.put(request, response.clone());
+                        void cache.put(request, response.clone());
                     }
                     return response;
                 } catch (error) {
@@ -117,7 +114,7 @@ self.addEventListener('fetch', (event) => {
             try {
                 const response = await fetch(request);
                 if (response && response.status === 200) {
-                    cache.put(request, response.clone());
+                    void cache.put(request, response.clone());
                 }
                 return response;
             } catch (error) {

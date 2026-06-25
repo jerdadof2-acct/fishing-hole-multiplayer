@@ -1,21 +1,21 @@
 {
-  "version": "20250624-3",
-  "generatedAt": "2026-06-25T01:43:55.517Z",
+  "version": "20250624-4",
+  "generatedAt": "2026-06-25T01:54:57.492Z",
   "count": 193,
-  "bootCount": 5,
-  "deferredCount": 188,
+  "bootCount": 2,
+  "deferredCount": 191,
   "boot": [
     "/images/prologue-background.png",
-    "/images/halley-splash.png",
-    "/assets/audio/halleys-big-catch-intro.mp3",
-    "/assets/audio/prologue-ocean-seagulls.mp3",
-    "/assets/audio/prologue-music.mp3"
+    "/images/halley-splash.png"
   ],
   "deferred": [
     "/",
     "/assets/audio/fish-splashing-release-1-96870.mp3",
     "/assets/audio/fishing-reel-302355.mp3",
+    "/assets/audio/halleys-big-catch-intro.mp3",
     "/assets/audio/halleys-big-catch-intro.wav",
+    "/assets/audio/prologue-music.mp3",
+    "/assets/audio/prologue-ocean-seagulls.mp3",
     "/assets/audio/reel_clicks.wav",
     "/assets/audio/splash-6213.mp3",
     "/assets/audio/splash-sound-228915.mp3",
