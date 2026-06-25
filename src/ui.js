@@ -10,7 +10,7 @@ import { hasPrivilegedAccess } from './admin/adminAuth.js';
 
 const FRIEND_ONLINE_THRESHOLD_MS = 5 * 60 * 1000;
 const FRIEND_CATCH_TOAST_RARITIES = new Set(['Epic', 'Legendary', 'Trophy']);
-const FRIEND_ACTIVITY_POLL_MS = 12000;
+const FRIEND_ACTIVITY_POLL_MS = 30000;
 const PRESENCE_PING_MS = 90 * 1000;
 const ANNOUNCEMENT_POLL_MS = 12000;
 
@@ -339,7 +339,12 @@ export class UI {
         } else if (tab === 'friends') {
             gameArea?.classList.add('hidden');
             this.openModal('friends-modal');
-            this.renderFriends(true);
+            if (this.friendDataLoaded) {
+                this.renderFriendsLists();
+                this.pollFriendUpdates().catch(() => {});
+            } else {
+                this.refreshFriends(true);
+            }
         } else if (tab === 'leaderboard') {
             gameArea?.classList.add('hidden');
             this.openModal('leaderboard-modal');
@@ -739,9 +744,79 @@ export class UI {
 
         this.friendRefreshTimer = setInterval(() => {
             if (this.isOnline()) {
-                this.refreshFriends(true);
+                this.pollFriendUpdates().catch(() => {});
             }
         }, FRIEND_ACTIVITY_POLL_MS);
+    }
+
+    isFriendsModalOpen() {
+        const modal = document.getElementById('friends-modal');
+        return Boolean(modal && !modal.classList.contains('hidden'));
+    }
+
+    getFriendDataFingerprint(data = this.friendData) {
+        const friends = data?.friends ?? [];
+        const pending = data?.pending ?? { sent: [], received: [] };
+        const activities = data?.activities ?? [];
+        return JSON.stringify({
+            friends: friends.map((friend) => [
+                friend?.id,
+                friend?.last_active,
+                friend?.level,
+                friend?.total_caught
+            ]),
+            received: (pending.received ?? []).map((item) => item?.id),
+            sent: (pending.sent ?? []).map((item) => item?.id),
+            activities: activities.map((item) => item?.id)
+        });
+    }
+
+    async pollFriendUpdates() {
+        if (!this.isOnline() || !this.api) {
+            return;
+        }
+
+        const wasLoaded = this.friendDataLoaded;
+        const previousFingerprint = this.getFriendDataFingerprint();
+
+        try {
+            const activityLimit = 20;
+            const activitiesPromise = this.api.getFriendActivities
+                ? this.api.getFriendActivities(activityLimit)
+                : Promise.resolve([]);
+
+            const [friendList, pending, activityList] = await Promise.all([
+                this.api.getFriends(),
+                this.api.getPendingRequests(),
+                activitiesPromise
+            ]);
+
+            const nextData = {
+                friends: Array.isArray(friendList) ? friendList : [],
+                pending: {
+                    sent: pending?.sent ?? [],
+                    received: pending?.received ?? []
+                },
+                activities: Array.isArray(activityList) ? activityList : []
+            };
+
+            this.friendData = nextData;
+            this.friendDataLoaded = true;
+
+            const dataChanged = this.getFriendDataFingerprint(nextData) !== previousFingerprint;
+            if (dataChanged && this.isFriendsModalOpen()) {
+                this.renderFriendsLists();
+            }
+
+            this.detectFriendNotifications(
+                nextData.friends,
+                nextData.pending,
+                nextData.activities,
+                wasLoaded
+            );
+        } catch (error) {
+            console.warn('[UI] Background friends sync failed:', error);
+        }
     }
 
     startPresencePing() {
