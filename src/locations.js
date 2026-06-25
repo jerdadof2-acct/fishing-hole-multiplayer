@@ -3,6 +3,8 @@
  * Region names match DOCS/halleys-big-catch-story.md
  */
 
+export const AMAZON_DEPTHS_NAME = 'Amazon Depths';
+
 export class Locations {
     constructor() {
         this.locations = [
@@ -17,7 +19,7 @@ export class Locations {
                 platformType: 'DOCK'
             },
             {
-                name: 'Amazon Depths',
+                name: AMAZON_DEPTHS_NAME,
                 difficulty: 'Easy',
                 fish: [0, 1, 2, 3],
                 cost: 0,

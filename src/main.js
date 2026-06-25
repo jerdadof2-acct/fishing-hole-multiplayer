@@ -5,7 +5,7 @@ import { Water2Lake } from './water2.js';
 import { Grass } from './grass.js';
 import { Dock } from './dock.js';
 import { Platform } from './platform.js';
-import { Locations } from './locations.js';
+import { Locations, AMAZON_DEPTHS_NAME } from './locations.js';
 import { applyDevOceanUnlocks, isDevMode } from './dev/devMode.js';
 import { hasPrivilegedAccess } from './admin/adminAuth.js';
 import { Fishing } from './fishing.js';
@@ -18,7 +18,7 @@ import { SoundManager } from './sound.js';
 import { addWaterParticles } from './effects/waterParticles.js';
 import { Sfx } from './audio/sfx.js';
 import { Voiceover } from './audio/voiceover.js';
-import { CelestialDepthsMusic } from './audio/locationMusic.js';
+import { CelestialDepthsMusic, AmazonDepthsAmbience } from './audio/locationMusic.js';
 import { VOICEOVER_TAP_COOLDOWN_MS } from './config/voiceover.js';
 import { Player } from './player.js';
 import { Inventory } from './inventory.js';
@@ -65,6 +65,7 @@ export class Game {
         this.soundManager = null;
         this.sfx = null;
         this.celestialMusic = new CelestialDepthsMusic();
+        this.amazonAmbience = new AmazonDepthsAmbience();
         
         // Gameplay systems
         this.player = null;
@@ -589,6 +590,7 @@ export class Game {
     markActivity() {
         this.lastActivityTime = performance.now();
         this.celestialMusic?.resumeAfterGesture?.();
+        this.amazonAmbience?.resumeAfterGesture?.();
         if (this._portraitIdleActive && this.camera) {
             this._portraitIdleActive = false;
             this.camera.setPortraitMode(false);
@@ -1134,18 +1136,24 @@ export class Game {
     }
 
     syncLocationMusic(location) {
-        if (!this.celestialMusic) {
+        const playCelestial = location?.waterBodyType === 'CELESTIAL'
+            && this.player?.canAccessCelestialDepths?.() === true;
+        const playAmazon = location?.name === AMAZON_DEPTHS_NAME;
+
+        if (playCelestial) {
+            this.amazonAmbience?.stop();
+            this.celestialMusic?.start();
             return;
         }
 
-        const playCelestial = location?.waterBodyType === 'CELESTIAL'
-            && this.player?.canAccessCelestialDepths?.() === true;
-
-        if (playCelestial) {
-            this.celestialMusic.start();
-        } else {
-            this.celestialMusic.stop();
+        if (playAmazon) {
+            this.celestialMusic?.stop();
+            this.amazonAmbience?.start();
+            return;
         }
+
+        this.celestialMusic?.stop();
+        this.amazonAmbience?.stop();
     }
     
     /**

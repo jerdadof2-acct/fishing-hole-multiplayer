@@ -1,5 +1,5 @@
 /**
- * Celestial Depths ambient loop — reuses the prologue music track.
+ * Looping location ambience (Celestial Depths music, Amazon river flow, etc.)
  */
 
 import {
@@ -11,8 +11,16 @@ import { getPrologueMusicSource } from '../assetPack.js';
 const FADE_IN_SEC = 2.5;
 const FADE_OUT_SEC = 1.8;
 
-export class CelestialDepthsMusic {
-    constructor() {
+export const AMAZON_DEPTHS_AMBIENCE_URL = '/src/audio/lookingnorth-river-flow-473686.mp3';
+export const AMAZON_DEPTHS_AMBIENCE_VOLUME = 0.38;
+
+export class LoopingLocationAmbience {
+    /**
+     * @param {{ resolveSource: () => string, peakVolume: number }} options
+     */
+    constructor({ resolveSource, peakVolume }) {
+        this.resolveSource = resolveSource;
+        this.peakVolume = peakVolume;
         this.audio = null;
         this.active = false;
         this._fading = false;
@@ -21,16 +29,22 @@ export class CelestialDepthsMusic {
         this._gestureHandler = null;
     }
 
-    _resolveSource() {
-        return getPrologueMusicSource() ?? PROLOGUE_MUSIC_URL;
+    _getSource() {
+        return this.resolveSource();
     }
 
     _ensureAudio() {
+        const source = this._getSource();
+        if (this.audio && this.audio.src && !this.audio.src.endsWith(source)) {
+            this.audio.pause();
+            this.audio = null;
+        }
+
         if (this.audio) {
             return this.audio;
         }
 
-        const audio = new Audio(this._resolveSource());
+        const audio = new Audio(source);
         audio.loop = true;
         audio.preload = 'auto';
         this.audio = audio;
@@ -112,7 +126,7 @@ export class CelestialDepthsMusic {
         const playAttempt = audio.play();
         if (!playAttempt) {
             this._pendingStart = false;
-            this._fadeVolume(0, CELESTIAL_DEPTHS_MUSIC_VOLUME, FADE_IN_SEC);
+            this._fadeVolume(0, this.peakVolume, FADE_IN_SEC);
             return;
         }
 
@@ -121,7 +135,7 @@ export class CelestialDepthsMusic {
                 this.active = true;
                 this._pendingStart = false;
                 this._unbindGestureRetry();
-                this._fadeVolume(0, CELESTIAL_DEPTHS_MUSIC_VOLUME, FADE_IN_SEC);
+                this._fadeVolume(0, this.peakVolume, FADE_IN_SEC);
             })
             .catch(() => {
                 this._pendingStart = true;
@@ -160,6 +174,24 @@ export class CelestialDepthsMusic {
         this._fadeVolume(from, 0, FADE_OUT_SEC, () => {
             audio.pause();
             this.active = false;
+        });
+    }
+}
+
+export class CelestialDepthsMusic extends LoopingLocationAmbience {
+    constructor() {
+        super({
+            resolveSource: () => getPrologueMusicSource() ?? PROLOGUE_MUSIC_URL,
+            peakVolume: CELESTIAL_DEPTHS_MUSIC_VOLUME
+        });
+    }
+}
+
+export class AmazonDepthsAmbience extends LoopingLocationAmbience {
+    constructor() {
+        super({
+            resolveSource: () => AMAZON_DEPTHS_AMBIENCE_URL,
+            peakVolume: AMAZON_DEPTHS_AMBIENCE_VOLUME
         });
     }
 }
