@@ -3,6 +3,12 @@
  * Handles all tackle items (rods, reels, lines, hooks, baits) with costs, bonuses, and unlocks
  */
 
+import {
+    STARLIGHT_LURE_BAIT_ID,
+    STARLIGHT_LURE_BAIT_NAME,
+    isStarlightLureBait
+} from './config/hiddenRelics.js';
+
 export const TackleShop = {
     rods: [
         { id: 0, name: 'Basic Rod', cost: 0, catchBonus: 0, strength: 10, description: 'Starting rod', unlockLevel: 1 },
@@ -47,7 +53,16 @@ export const TackleShop = {
         { id: 3, name: 'Premium Bait', cost: 1000, catchBonus: 12, durability: 20, description: 'High-quality bait', unlockLevel: 6 },
         { id: 4, name: 'Specialty Bait', cost: 4000, catchBonus: 18, durability: 15, description: 'Rare fish attractant', unlockLevel: 10 },
         { id: 5, name: 'Trophy Bait', cost: 15000, catchBonus: 25, durability: 10, description: 'Trophy fish magnet', unlockLevel: 15 },
-        { id: 6, name: 'Starlight Lure', cost: 0, catchBonus: 0, durability: 9999, description: 'Comet-forged lure that awakens the Celestial Depths.', unlockLevel: 1 }
+        {
+            id: STARLIGHT_LURE_BAIT_ID,
+            name: STARLIGHT_LURE_BAIT_NAME,
+            cost: 0,
+            catchBonus: 0,
+            durability: 9999,
+            description: 'Comet-forged lure that awakens the Celestial Depths.',
+            unlockLevel: 1,
+            forgeOnly: true
+        }
     ]
 };
 
@@ -113,6 +128,10 @@ export function purchase(player, category, itemId) {
     if (!item) {
         return { success: false, message: 'Item not found' };
     }
+
+    if (item.forgeOnly) {
+        return { success: false, message: 'This lure can only be forged by collecting all ten sea relics.' };
+    }
     
     // Check if already owned (unlocked)
     if (player.tackleUnlocks[category].includes(itemId)) {
@@ -147,14 +166,24 @@ export function purchase(player, category, itemId) {
  * @param {Object} player - Player instance
  * @param {string} category - Category name
  * @param {number} itemId - Item ID
+ * @param {{ location?: object }} [options]
  * @returns {Object} {success: boolean, message: string}
  */
-export function equip(player, category, itemId) {
+export function equip(player, category, itemId, options = {}) {
     const items = getTackleByCategory(category);
     const item = items.find(i => i.id === itemId);
     
     if (!item) {
         return { success: false, message: 'Item not found' };
+    }
+
+    if (category === 'baits' && isStarlightLureBait(item)) {
+        if (!player.starlightLureCrafted) {
+            return { success: false, message: 'Forge the Starlight Lure by collecting all ten sea relics.' };
+        }
+        if (options.location?.waterBodyType !== 'CELESTIAL') {
+            return { success: false, message: 'The Starlight Lure can only be equipped at the Celestial Depths.' };
+        }
     }
     
     // Check if owned

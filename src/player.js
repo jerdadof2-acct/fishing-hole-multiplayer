@@ -1,5 +1,10 @@
 import { TackleShop, getTackleByName } from './tackleShop.js';
-import { CELESTIAL_DEPTHS_LOCATION_INDEX, HIDDEN_RELICS, STARLIGHT_LURE_BAIT_ID } from './config/hiddenRelics.js';
+import {
+    CELESTIAL_DEPTHS_LOCATION_INDEX,
+    HIDDEN_RELICS,
+    STARLIGHT_LURE_BAIT_ID,
+    isStarlightLureBait
+} from './config/hiddenRelics.js';
 
 /**
  * Player State Management System
@@ -287,7 +292,7 @@ export class Player {
 
                 if (tackleShop[category] && Array.isArray(ownedList)) {
                     const availableItems = tackleShop[category]
-                        .filter(item => this.level >= item.unlockLevel)
+                        .filter(item => this.level >= item.unlockLevel && !item.forgeOnly)
                         .sort((a, b) => a.unlockLevel - b.unlockLevel)
                         .filter(item => !ownedList.includes(item.id) && !notifiedList.includes(item.id));
 
@@ -772,10 +777,23 @@ export class Player {
                     (id) => id !== STARLIGHT_LURE_BAIT_ID
                 );
             }
-            if (this.gear?.bait === 'Starlight Lure') {
+            if (isStarlightLureBait(this.gear?.bait)) {
                 this.gear.bait = 'Basic Bait';
             }
         }
+    }
+
+    /** Remove Starlight Lure from gear when not at the Celestial Depths. */
+    syncStarlightBaitForLocation(location) {
+        if (!this.gear || !isStarlightLureBait(this.gear.bait)) {
+            return false;
+        }
+        if (location?.waterBodyType === 'CELESTIAL') {
+            return false;
+        }
+        this.gear.bait = this.__previousBait || 'Basic Bait';
+        delete this.__previousBait;
+        return true;
     }
 
     normalizeTackleState() {
@@ -794,6 +812,13 @@ export class Player {
             this.tackleUnlocks[category] = Array.isArray(owned) ? Array.from(new Set(owned)) : [];
             this.tackleNotified[category] = Array.isArray(notified) ? Array.from(new Set(notified)) : [];
         });
+
+        if (!this.starlightLureCrafted && Array.isArray(this.tackleUnlocks.baits)) {
+            this.tackleUnlocks.baits = this.tackleUnlocks.baits.filter((id) => id !== STARLIGHT_LURE_BAIT_ID);
+        }
+        if (!this.starlightLureCrafted && isStarlightLureBait(this.gear?.bait)) {
+            this.gear.bait = 'Basic Bait';
+        }
     }
 
     getEquippedItem(category) {

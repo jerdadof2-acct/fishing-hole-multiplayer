@@ -4,7 +4,19 @@
  */
 
 export const STARLIGHT_LURE_BAIT_ID = 6;
+export const STARLIGHT_LURE_BAIT_NAME = 'Starlight Lure';
 export const CELESTIAL_DEPTHS_LOCATION_INDEX = 9;
+
+/** True when the item/id/name is the relic-forged Starlight Lure bait. */
+export function isStarlightLureBait(itemOrId) {
+    if (typeof itemOrId === 'number') {
+        return itemOrId === STARLIGHT_LURE_BAIT_ID;
+    }
+    if (typeof itemOrId === 'string') {
+        return itemOrId === STARLIGHT_LURE_BAIT_NAME;
+    }
+    return itemOrId?.id === STARLIGHT_LURE_BAIT_ID || itemOrId?.name === STARLIGHT_LURE_BAIT_NAME;
+}
 
 /** Art for the forged Starlight Lure (shop, forge popup, relics logbook). */
 export const STARLIGHT_LURE_IMAGE = 'images/hiddenitems/starlightlure.png';

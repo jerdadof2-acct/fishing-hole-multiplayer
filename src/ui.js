@@ -1,7 +1,7 @@
 import { TackleShop } from './tackleShop.js';
 import { ACHIEVEMENTS, evaluateAchievements as evaluateAchievementDefs, getAchievementStatuses } from './achievements.js';
 import { replayStoryPrologue } from './prologue.js';
-import { STARLIGHT_LURE_IMAGE } from './config/hiddenRelics.js';
+import { STARLIGHT_LURE_IMAGE, isStarlightLureBait } from './config/hiddenRelics.js';
 import { isCelestialStarfishHook } from './config/starfishEncounter.js';
 import { getFishImagePaths, getRelicImagePaths } from './utils/imageAssets.js';
 import { switchToDifferentAccount } from './savePinSetup.js';
@@ -1646,22 +1646,34 @@ export class UI {
             const shopItems = document.getElementById('shop-items');
             if (!shopItems) return;
             
-            const items = getTackleByCategory(category);
+            const items = getTackleByCategory(category).filter((item) => {
+                if (isStarlightLureBait(item)) {
+                    return this.player.starlightLureCrafted === true;
+                }
+                return true;
+            });
             const categorySingular = category.slice(0, -1); // Remove 's' from 'rods' -> 'rod'
             const currentGear = this.player.gear[categorySingular] || this.player.gear[category];
+            const currentLocation = this.game?.locations?.getCurrentLocation?.() ?? null;
+            const atCelestialDepths = currentLocation?.waterBodyType === 'CELESTIAL';
             
             shopItems.innerHTML = items.map(item => {
                 const isOwned = this.player.tackleUnlocks[category].includes(item.id);
                 const isEquipped = currentGear === item.name;
                 const isUnlocked = canUnlock(item.unlockLevel, this.player.level, this.player.tackleUnlocks[category], item.id);
                 const canBuy = canAfford(item.cost, this.player.money);
+                const isForgedLure = isStarlightLureBait(item);
                 
                 let buttonText = 'Equip';
                 let buttonClass = 'shop-button';
                 let buttonDisabled = false;
                 
                 if (!isOwned) {
-                    if (!isUnlocked) {
+                    if (item.forgeOnly) {
+                        buttonText = 'Relic forge only';
+                        buttonClass += ' locked';
+                        buttonDisabled = true;
+                    } else if (!isUnlocked) {
                         buttonText = `Locked (Lv ${item.unlockLevel})`;
                         buttonClass += ' locked';
                         buttonDisabled = true;
@@ -1676,6 +1688,10 @@ export class UI {
                 } else if (isEquipped) {
                     buttonText = 'Equipped';
                     buttonClass += ' equipped';
+                    buttonDisabled = true;
+                } else if (isForgedLure && !atCelestialDepths) {
+                    buttonText = 'Celestial Depths only';
+                    buttonClass += ' locked';
                     buttonDisabled = true;
                 }
                 
@@ -1692,11 +1708,13 @@ export class UI {
                     ? `<div class="shop-item-stats">${stats.map(s => `<span class="shop-item-stat">${s}</span>`).join('')}</div>` 
                     : '';
                 
+                const costLabel = item.forgeOnly ? 'Relic forge' : `$${item.cost}`;
+                
                 return `
                     <div class="shop-item">
                         <div class="shop-item-header">
                             <div class="shop-item-name">${item.name}</div>
-                            <div class="shop-item-cost">$${item.cost}</div>
+                            <div class="shop-item-cost">${costLabel}</div>
                         </div>
                         <div class="shop-item-description">${item.description}</div>
                         ${statsHtml}
@@ -1718,6 +1736,10 @@ export class UI {
                     const isOwned = this.player.tackleUnlocks[category].includes(itemId);
                     
                     if (!isOwned) {
+                        if (item?.forgeOnly) {
+                            alert('This lure can only be forged by collecting all ten sea relics.');
+                            return;
+                        }
                         // Purchase
                         const result = purchase(this.player, category, itemId);
                         if (result.success) {
@@ -1733,7 +1755,8 @@ export class UI {
                         }
                     } else {
                         // Equip
-                        const result = equip(this.player, category, itemId);
+                        const location = this.game?.locations?.getCurrentLocation?.() ?? null;
+                        const result = equip(this.player, category, itemId, { location });
                         if (result.success) {
                             // Play click sound for equipment change
                             if (this.sfx) {
@@ -2396,7 +2419,7 @@ export class UI {
             <div class="relic-popup-glow" aria-hidden="true"></div>
             <p class="relic-popup-eyebrow">Relics logbook</p>
             <h2 class="relic-popup-title">Starlight Lure</h2>
-            <p class="relic-popup-location">Forged from <strong>ten sea relics</strong></p>
+            <p class="relic-popup-location">Forged from <strong>ten sea relics</strong> · equip only at <strong>Celestial Depths</strong></p>
             <div class="relic-popup-image-wrap">
                 <img class="relic-popup-image relic-popup-image--lure" src="${lureImg}" alt="Starlight Lure" decoding="async" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${lureFallback}';}">
             </div>
