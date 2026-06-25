@@ -568,6 +568,7 @@ export class UI {
 
     applyFriendsAdminLayout() {
         const isAdmin = this.isHalleyAdmin();
+        document.getElementById('friends-code-section')?.classList.toggle('hidden', isAdmin);
         document.getElementById('friends-add-section')?.classList.toggle('hidden', isAdmin);
         document.getElementById('friends-pending-section')?.classList.toggle('hidden', isAdmin);
 
