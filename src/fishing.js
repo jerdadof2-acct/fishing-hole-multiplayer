@@ -12,6 +12,7 @@ import {
 import { attachRodToHand } from './fishing/attachRod.js';
 import { aimRodForwardAt45 } from './fishing/aimRod.js';
 import { STARFISH_LANDING_REEL_RATE } from './config/starfishEncounter.js';
+import { BobberWake } from './effects/bobberWake.js';
 
 // Apply tug visual to bobber when fish pulls
 export function applyTug(bobber, intensity = 1.0, sfx = null, scene = null) {
@@ -68,7 +69,7 @@ export class Fishing {
         this.fishOnLine = false; // True when fighting a fish
         this.bobberJiggleTime = 0; // Time for bobber jiggling animation
         this.fightSplashTimer = 0; // Timer for continuous splashes during fight
-        this.fightSplashRing = null; // Splash ring around bobber during fight
+        this.bobberWake = null; // V-shaped wake trailing bobber during fight
         // Rod bending state for smooth interpolation
         this.rodBendState = {}; // Stores target rotation for each section for smooth lerping
         this.rodBendTime = 0; // Time accumulator for fluid sway animation
@@ -199,48 +200,7 @@ export class Fishing {
             this.fishingLine.visible = false; // Use rope instead
         }
         
-        // Create fight splash ring (visible only during HOOKED_FIGHT)
-        this.createFightSplashRing();
-    }
-    
-    createFightSplashRing() {
-        // Create a group to hold both rings
-        this.fightSplashRing = new THREE.Group();
-        this.fightSplashRing.name = 'FightSplashRing';
-        this.fightSplashRing.visible = false; // Hidden by default
-        this.fightSplashRing.renderOrder = 998; // Render above water but below other effects
-        
-        // Outer ring: bigger, light blue/white
-        const outerRingGeometry = new THREE.RingGeometry(0.20, 0.35, 64);
-        const outerRingMaterial = new THREE.MeshBasicMaterial({
-            color: 0x88ccff,
-            transparent: true,
-            opacity: 0.6,
-            depthWrite: false,
-            side: THREE.DoubleSide,
-            blending: THREE.AdditiveBlending // Makes it stand out against water
-        });
-        const outerRing = new THREE.Mesh(outerRingGeometry, outerRingMaterial);
-        outerRing.rotation.x = -Math.PI / 2; // Lay flat on water (horizontal)
-        outerRing.name = 'OuterSplashRing';
-        this.fightSplashRing.add(outerRing);
-        
-        // Inner ring: darker, more visible contrast
-        const innerRingGeometry = new THREE.RingGeometry(0.12, 0.20, 64);
-        const innerRingMaterial = new THREE.MeshBasicMaterial({
-            color: 0x113355, // Much darker blue, almost black-blue
-            transparent: true,
-            opacity: 0.9, // More opaque for better visibility
-            depthWrite: false,
-            side: THREE.DoubleSide,
-            blending: THREE.AdditiveBlending
-        });
-        const innerRing = new THREE.Mesh(innerRingGeometry, innerRingMaterial);
-        innerRing.rotation.x = -Math.PI / 2; // Lay flat on water (horizontal)
-        innerRing.name = 'InnerSplashRing';
-        this.fightSplashRing.add(innerRing);
-        
-        this.sceneRef.scene.add(this.fightSplashRing);
+        this.bobberWake = new BobberWake(this.sceneRef.scene);
     }
 
     createRadialTexture(innerColor = 'rgba(255,255,255,1)', outerColor = 'rgba(255,255,255,0)') {
@@ -1344,26 +1304,22 @@ export class Fishing {
                 this.updateReel(delta);
             }
             
-            // Update fight splash ring position every frame during HOOKED_FIGHT (independent of reeling)
-            // fishInstance is already declared above (line 1140), so reuse it here
-            if (fishInstance && fishInstance.state === 'HOOKED_FIGHT' && this.fightSplashRing && this.bobber && this.bobber.visible) {
-                if (fishInstance._gentleReunion) {
-                    this.fightSplashRing.visible = false;
-                } else {
-                // Continuously update ring position to follow bobber
-                const waterHeight = this.water.getWaterHeight(this.bobber.position.x, this.bobber.position.z);
-                this.fightSplashRing.position.set(
-                    this.bobber.position.x,
-                    waterHeight + 0.01, // Slightly above water surface to prevent z-fighting
-                    this.bobber.position.z
+            // Bobber wake: V-shaped ripples trailing the bobber during HOOKED_FIGHT
+            if (this.bobberWake && this.bobber) {
+                const fightWake = fishInstance
+                    && fishInstance.state === 'HOOKED_FIGHT'
+                    && !fishInstance._gentleReunion
+                    && this.bobber.visible;
+                const shaderRipple = (this.water?.mesh?.splashAt)
+                    ? (x, z) => this.water.mesh.splashAt(x, z)
+                    : null;
+                this.bobberWake.update(
+                    delta,
+                    this.bobber.position,
+                    !!fightWake,
+                    (x, z) => this.water.getWaterHeight(x, z),
+                    shaderRipple
                 );
-                this.fightSplashRing.visible = true;
-                }
-            } else if (this.fightSplashRing) {
-                // Hide ring when fish is not fighting
-                if (fishInstance && fishInstance.state !== 'HOOKED_FIGHT') {
-                    this.fightSplashRing.visible = false;
-                }
             }
             
             // Pass camera and time for screen clamping and surface height
