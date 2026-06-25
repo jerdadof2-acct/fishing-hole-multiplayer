@@ -562,9 +562,25 @@ export class UI {
         }
     }
     
+    isHalleyAdmin() {
+        return this.player?.isAdmin === true;
+    }
+
+    applyFriendsAdminLayout() {
+        const isAdmin = this.isHalleyAdmin();
+        document.getElementById('friends-add-section')?.classList.toggle('hidden', isAdmin);
+        document.getElementById('friends-pending-section')?.classList.toggle('hidden', isAdmin);
+
+        const friendsHeading = document.querySelector('.friends-list-section h3');
+        if (friendsHeading) {
+            friendsHeading.textContent = isAdmin ? 'Creek Crew' : 'Your Friends';
+        }
+    }
+
     initFriendsUI() {
         this.renderFriendCode();
         this.renderSavePinSection();
+        this.applyFriendsAdminLayout();
 
         const copyButton = document.getElementById('friends-copy-code');
         const addForm = document.getElementById('friends-add-form');
@@ -771,6 +787,31 @@ export class UI {
         });
     }
 
+    async fetchFriendData(activityLimit = 20) {
+        const activitiesPromise = this.api.getFriendActivities
+            ? this.api.getFriendActivities(activityLimit)
+            : Promise.resolve([]);
+
+        const pendingPromise = this.isHalleyAdmin()
+            ? Promise.resolve({ sent: [], received: [] })
+            : this.api.getPendingRequests();
+
+        const [friendList, pending, activityList] = await Promise.all([
+            this.api.getFriends(),
+            pendingPromise,
+            activitiesPromise
+        ]);
+
+        return {
+            friends: Array.isArray(friendList) ? friendList : [],
+            pending: {
+                sent: pending?.sent ?? [],
+                received: pending?.received ?? []
+            },
+            activities: Array.isArray(activityList) ? activityList : []
+        };
+    }
+
     async pollFriendUpdates() {
         if (!this.isOnline() || !this.api) {
             return;
@@ -780,25 +821,7 @@ export class UI {
         const previousFingerprint = this.getFriendDataFingerprint();
 
         try {
-            const activityLimit = 20;
-            const activitiesPromise = this.api.getFriendActivities
-                ? this.api.getFriendActivities(activityLimit)
-                : Promise.resolve([]);
-
-            const [friendList, pending, activityList] = await Promise.all([
-                this.api.getFriends(),
-                this.api.getPendingRequests(),
-                activitiesPromise
-            ]);
-
-            const nextData = {
-                friends: Array.isArray(friendList) ? friendList : [],
-                pending: {
-                    sent: pending?.sent ?? [],
-                    received: pending?.received ?? []
-                },
-                activities: Array.isArray(activityList) ? activityList : []
-            };
+            const nextData = await this.fetchFriendData(20);
 
             this.friendData = nextData;
             this.friendDataLoaded = true;
@@ -907,33 +930,24 @@ export class UI {
         }
 
         this.setFriendsPlaceholder('friends-list', 'Loading friends...');
-        this.setFriendsPlaceholder('friends-pending-received', 'Loading requests...');
-        this.setFriendsPlaceholder('friends-pending-sent', 'Loading requests...');
+        if (!this.isHalleyAdmin()) {
+            this.setFriendsPlaceholder('friends-pending-received', 'Loading requests...');
+            this.setFriendsPlaceholder('friends-pending-sent', 'Loading requests...');
+        }
 
         try {
-            const activityLimit = 20;
-            const activitiesPromise = this.api.getFriendActivities
-                ? this.api.getFriendActivities(activityLimit)
-                : Promise.resolve([]);
+            const friendData = await this.fetchFriendData(20);
 
-            const [friendList, pending, activityList] = await Promise.all([
-                this.api.getFriends(),
-                this.api.getPendingRequests(),
-                activitiesPromise
-            ]);
-
-            this.friendData = {
-                friends: Array.isArray(friendList) ? friendList : [],
-                pending: {
-                    sent: pending?.sent ?? [],
-                    received: pending?.received ?? []
-                },
-                activities: Array.isArray(activityList) ? activityList : []
-            };
+            this.friendData = friendData;
 
             this.friendDataLoaded = true;
             this.renderFriendsLists();
-            this.detectFriendNotifications(friendList, this.friendData.pending, activityList, wasLoaded);
+            this.detectFriendNotifications(
+                friendData.friends,
+                friendData.pending,
+                friendData.activities,
+                wasLoaded
+            );
         } catch (error) {
             console.warn('[UI] Failed to load friends:', error);
             this.friendDataLoaded = false;
@@ -943,13 +957,17 @@ export class UI {
     }
 
     renderFriendsLists() {
+        this.applyFriendsAdminLayout();
+
         const friends = this.friendData?.friends ?? [];
         const pending = this.friendData?.pending ?? { sent: [], received: [] };
 
         this.renderFriendList(friends);
         this.syncFriendDetailState(friends);
-        this.renderPendingList('friends-pending-received', pending.received, 'received');
-        this.renderPendingList('friends-pending-sent', pending.sent, 'sent');
+        if (!this.isHalleyAdmin()) {
+            this.renderPendingList('friends-pending-received', pending.received, 'received');
+            this.renderPendingList('friends-pending-sent', pending.sent, 'sent');
+        }
         this.renderFriendActivities();
     }
 
@@ -958,7 +976,10 @@ export class UI {
         if (!listEl) return;
 
         if (!friends.length) {
-            this.setFriendsPlaceholder('friends-list', 'No friends yet. Halley joins your crew automatically — share your code to add more anglers!');
+            const emptyMessage = this.isHalleyAdmin()
+                ? 'Every angler in the creek shows up here automatically.'
+                : 'No friends yet. Halley joins your crew automatically — share your code to add more anglers!';
+            this.setFriendsPlaceholder('friends-list', emptyMessage);
             this.activeFriendId = null;
             this.setFriendDetailMessage('Add a friend to view their collection.');
             return;
