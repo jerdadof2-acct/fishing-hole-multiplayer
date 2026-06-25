@@ -1,7 +1,7 @@
 # Water Effects Specifications
 
 ## Overview
-This document tracks the water implementation and effects for Kitty Creek Fishing Club.
+This document tracks the water implementation and effects for Halley's Big Catch.
 
 ## Current Implementation
 
@@ -21,6 +21,7 @@ This document tracks the water implementation and effects for Kitty Creek Fishin
 
 ## Future Additions
 (Add water effects and improvements here as we develop)
+
 
 
 

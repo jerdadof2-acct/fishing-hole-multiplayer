@@ -1,3 +1,42 @@
+# === USER INSTRUCTIONS ===
+# main-overview
+## Development Guidelines
+- Only modify code directly relevant to the specific request. Avoid changing unrelated functionality.
+- Never replace code with placeholders like `# ... rest of the processing ...`. Always include complete code.
+- Break problems into smaller steps. Think through each step separately before implementing.
+- Always provide a complete PLAN with REASONING based on evidence from code and logs before making changes.
+- Explain your OBSERVATIONS clearly, then provide REASONING to identify the exact issue. Add console logs when needed to gather more information.
+The project implements a multiplayer fishing game with progression-based mechanics and tournament systems.
+Core Business Components:
+## Fishing Mechanics
+- Progressive difficulty system based on player levels
+- Four distinct timing tiers affecting gameplay complexity:
+  - Entry level (1-5): Quick catches 
+  - Intermediate (6-10): Moderate timing
+  - Advanced (11-15): Complex timing
+  - Expert (16+): Maximum challenge
+## Economy Design
+- Seven-tier equipment progression model
+- Exponential pricing structure from free to premium ($100,000)
+- Strategic price points for player progression gates
+## Experience System
+- Four-tier progression model with exponential scaling
+- Custom XP thresholds designed for extended gameplay engagement
+- Milestone-based unlocks tied to level progression
+## Multiplayer Infrastructure
+- 8-player room system optimized for fishing competitions
+- Tournament-specific catch multipliers
+- Real-time achievement broadcasting
+- Live leaderboard system
+## AI Competition
+- Themed bot system with personality-driven competitors
+- Dynamic difficulty scaling based on player progression
+- Competitive catch rate balancing
+Importance Score: 75/100
+This system represents a specialized implementation of fishing game mechanics with unique progression and multiplayer elements, though utilizing standard gaming patterns for core functionality.
+$END$
+# === END USER INSTRUCTIONS ===
+
 
 # main-overview
 
@@ -10,41 +49,36 @@
 - Explain your OBSERVATIONS clearly, then provide REASONING to identify the exact issue. Add console logs when needed to gather more information.
 
 
-The project implements a multiplayer fishing game with progression-based mechanics and tournament systems.
+## Core Fishing Systems
 
-Core Business Components:
+### Water Body Simulation
+The water system (`src/water/waterBodyTypes.js`) defines distinct water environments (Pond, River, Lake, Ocean) with unique characteristics affecting gameplay through flow dynamics, wave patterns, depth parameters and surface properties. Advanced rendering (`src/water/waterMaterial.js`) handles directional flow, depth-based transitions and environmental effects.
 
-## Fishing Mechanics
-- Progressive difficulty system based on player levels
-- Four distinct timing tiers affecting gameplay complexity:
-  - Entry level (1-5): Quick catches 
-  - Intermediate (6-10): Moderate timing
-  - Advanced (11-15): Complex timing
-  - Expert (16+): Maximum challenge
+### Fishing Mechanics
+Rod physics (`src/fishing/rod.js`, `src/fishing/aimRod.js`) implements spring-based tip animation responding to tension, natural micro-sway, and 45-degree forward aiming with environmental awareness. The camera system (`src/camera/cameraSpring.js`) provides fishing-specific positioning with water-aware constraints.
 
-## Economy Design
-- Seven-tier equipment progression model
-- Exponential pricing structure from free to premium ($100,000)
-- Strategic price points for player progression gates
+### Player Systems
+The core progression mechanics include:
+- 33 fish types across 5 rarity tiers
+- Complex weight calculations based on player level/location
+- Progressive difficulty scaling
+- Dynamic experience rewards
+- Multi-tiered achievement progression
+- Category-specific completion tracking
+- Location-based unlocking system
+- Non-linear experience curves
+- Multi-stat system affecting fishing success
+- Dynamic fight duration based on fish properties
 
-## Experience System
-- Four-tier progression model with exponential scaling
-- Custom XP thresholds designed for extended gameplay engagement
-- Milestone-based unlocks tied to level progression
+### Equipment 
+Comprehensive tackle system organizing equipment into categories (rods, reels, lines, hooks, baits) with:
+- Tier-based progression
+- Level-gated unlocks
+- Catch bonus calculations
+- Custom timing windows
+- Unique properties per category affecting gameplay mechanics
 
-## Multiplayer Infrastructure
-- 8-player room system optimized for fishing competitions
-- Tournament-specific catch multipliers
-- Real-time achievement broadcasting
-- Live leaderboard system
-
-## AI Competition
-- Themed bot system with personality-driven competitors
-- Dynamic difficulty scaling based on player progression
-- Competitive catch rate balancing
-
-Importance Score: 75/100
-This system represents a specialized implementation of fishing game mechanics with unique progression and multiplayer elements, though utilizing standard gaming patterns for core functionality.
+The business logic creates an integrated fishing simulation where water environments, equipment choices, player progression and fish behavior systems work together to create meaningful gameplay variation and progression.
 
 $END$
 

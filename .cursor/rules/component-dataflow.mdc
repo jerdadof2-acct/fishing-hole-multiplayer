@@ -1,58 +1,68 @@
 ---
-description: Documentation for data flow analysis between core fishing game components and systems
+description: Guidelines for documenting data flow between core fishing game systems and mechanics
 ---
 
 
 # component-dataflow
 
-Primary data flows connect the following core systems:
+Primary data flow paths between core fishing game systems:
 
-## Water Simulation → Fishing Mechanics
-- `src/water/waterBodyTypes.js` provides physical water properties that affect:
-  - Fish behavior patterns
-  - Fishing line physics
-  - Casting trajectory calculations
-- Flow importance: 85/100
+1. Water System → Fishing Mechanics
+- Water body types (Pond, River, Lake, Ocean) define physics parameters
+- Flow dynamics and wave patterns affect rod behavior
+- Depth and visibility parameters influence fish behavior
+- Surface characteristics impact casting mechanics
 
-## Fishing Rod → Water Physics
-- `src/fishing/rod.js` calculates rod tip deformation which feeds into:
-  - Line entry point calculations
-  - Water surface interaction physics  
-  - Wave pattern disturbances
-- Flow importance: 80/100
+2. Rod Physics → Fish Behavior 
+- Spring-based tip animation responds to fish tension
+- Natural micro-sway influences bait presentation
+- 45-degree aiming system affects catch probability
+- Tension forces modify fish fight patterns
 
-## Camera System → Rod Aiming
-- `src/camera/cameraSpring.js` tracking data influences:
-  - Rod positioning constraints
-  - Casting arc visualization
-  - Target zone calculations
-- Flow importance: 75/100
+3. Fish AI → Water Physics
+- Fish movement patterns adapt to water body type
+- Depth parameters affect spawn locations
+- Flow dynamics influence fish positioning
+- Turbidity impacts fish visibility and catch rates
 
-## Rod Aiming → Water Material
-- `src/fishing/aimRod.js` targeting data affects:
-  - Water surface rendering at target point
-  - Depth-based color transitions
-  - Wave pattern modifications
-- Flow importance: 70/100
+4. Camera System → Fishing Feedback
+- Spring follow system tracks rod position
+- Water-aware positioning prevents clipping
+- Smooth targeting provides casting feedback
+- Fishing-specific offsets enhance immersion
 
-Core State Management:
-1. Water Body State
-- Current flow direction/speed
-- Wave pattern configuration
-- Turbidity and visibility levels
-- Light absorption properties
+Critical Data Flows:
+- Water characteristics → Fish spawn patterns → Catch probability
+- Rod physics → Line tension → Fish fight behavior 
+- Water flow → Fish movement → Required casting position
+- Surface dynamics → Lure presentation → Bite probability
 
-2. Fishing State  
-- Rod tension and flexibility
-- Line entry point and angles
-- Cast trajectory and power
-- Target zone position
+Component States:
+```
+WaterBody {
+  type: POND | RIVER | LAKE | OCEAN
+  flowDirection: Vector3
+  waveAmplitude: float
+  depth: float
+  turbidity: float
+}
 
-3. Camera State
-- Spring dampening values
-- Target tracking position
-- Water level constraints
-- View angle limits
+RodState {
+  tension: float
+  sway: float
+  aimAngle: float
+  tipPosition: Vector3
+}
+
+FishBehavior {
+  movePattern: pattern
+  depthPreference: float
+  activeTime: timeRange
+  fightResponse: behavior
+}
+```
+
+State flows enforce realistic fishing simulation through interconnected systems rather than isolated mechanics.
 
 $END$
 

@@ -27,15 +27,16 @@ export const WaterBodyTypes = {
     
     RIVER: {
         name: 'River',
-        deepColor: new THREE.Color(0x003d66),
-        shallowColor: new THREE.Color(0x006699),
-        fogColor: new THREE.Color(0x005577),
-        fogDepth: 10.0,
-        fogIntensity: 0.5,
-        turbidity: 0.5,
-        absorption: 0.7,
-        opacity: 0.94,
-        sparkleStrength: 0.16,
+        /** Milky Amazon coffee-brown water */
+        deepColor: new THREE.Color(0x3c2a18),
+        shallowColor: new THREE.Color(0x9a7d5c),
+        fogColor: new THREE.Color(0x6b5340),
+        fogDepth: 9.0,
+        fogIntensity: 0.55,
+        turbidity: 0.78,
+        absorption: 0.82,
+        opacity: 0.97,
+        sparkleStrength: 0.07,
         /** No lake swell — only directional flow ripples in the vertex shader. */
         riverMode: true,
         waveScale: 1.0,

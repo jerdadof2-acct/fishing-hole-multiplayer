@@ -1,9 +1,9 @@
-# Kitty Creek Fishing Club - Project Structure
+# Halley's Big Catch - Project Structure
 
 ## Directory Structure
 
 ```
-Kitty Creek/
+Halley's Big Catch/
 ├── index.html              # Main HTML entry point
 ├── manifest.json           # PWA manifest
 ├── WATER_EFFECTS_SPEC.md   # Water effects documentation
@@ -79,6 +79,7 @@ All JavaScript modules use ES6 imports/exports:
 - Three.js loaded from CDN
 - Custom modules import from local `src/` directory
 - No global namespace pollution
+
 
 
 

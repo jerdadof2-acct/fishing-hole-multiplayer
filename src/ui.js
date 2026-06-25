@@ -8,6 +8,11 @@ import { switchToDifferentAccount } from './savePinSetup.js';
 import { pickMissMessage } from './config/missMessages.js';
 import { isDevMode } from './dev/devMode.js';
 
+const FRIEND_ONLINE_THRESHOLD_MS = 5 * 60 * 1000;
+const FRIEND_CATCH_TOAST_RARITIES = new Set(['Epic', 'Legendary', 'Trophy']);
+const FRIEND_ACTIVITY_POLL_MS = 12000;
+const PRESENCE_PING_MS = 90 * 1000;
+
 export class UI {
     constructor(fishing, fish, water, game, gameplaySystems = null, sfx = null) {
         this.fishing = fishing;
@@ -31,6 +36,7 @@ export class UI {
         this.friendDataLoaded = false;
         this.friendMessageTimer = null;
         this.friendRefreshTimer = null;
+        this.presencePingTimer = null;
         this.lastFriendSnapshot = { friends: new Map(), activities: new Set() };
         this.affordableNotified = new Set();
         this.notificationState = {
@@ -111,6 +117,8 @@ export class UI {
         this.initFriendsUI();
         this.updatePlayerInfo();
         this.renderFriends();
+        this.ensureFriendActivityPolling();
+        this.startPresencePing();
         
         // Check achievements on game start (in case player already met conditions)
         setTimeout(() => {
@@ -333,11 +341,6 @@ export class UI {
             gameArea?.classList.add('hidden');
             this.openModal('leaderboard-modal');
             this.renderLeaderboard('local'); // Default to local top 10
-        }
-
-        if (this.friendRefreshTimer) {
-            clearInterval(this.friendRefreshTimer);
-            this.friendRefreshTimer = null;
         }
     }
 
@@ -724,14 +727,34 @@ export class UI {
         } else {
             this.renderFriendsLists();
         }
+    }
 
-        if (!this.friendRefreshTimer && this.isOnline()) {
-            this.friendRefreshTimer = setInterval(() => {
-                if (this.isOnline()) {
-                    this.refreshFriends(true);
-                }
-            }, 15000);
+    ensureFriendActivityPolling() {
+        if (!this.isOnline() || this.friendRefreshTimer) {
+            return;
         }
+
+        this.friendRefreshTimer = setInterval(() => {
+            if (this.isOnline()) {
+                this.refreshFriends(true);
+            }
+        }, FRIEND_ACTIVITY_POLL_MS);
+    }
+
+    startPresencePing() {
+        if (!this.isOnline() || this.presencePingTimer) {
+            return;
+        }
+
+        const ping = () => {
+            if (!this.isOnline() || !this.api?.pingPresence) {
+                return;
+            }
+            this.api.pingPresence().catch(() => {});
+        };
+
+        ping();
+        this.presencePingTimer = setInterval(ping, PRESENCE_PING_MS);
     }
 
     async refreshFriends(force = false) {
@@ -4265,32 +4288,31 @@ export class UI {
 
         this.lastFriendSnapshot.activities = currentActivityIds;
 
-        if (wasLoaded && newActivities.length > 0) {
+        const onlineFriendIds = new Set();
+        friendList.forEach(friend => {
+            if (friend?.id && this.isFriendOnline(friend)) {
+                onlineFriendIds.add(friend.id);
+            }
+        });
+
+        const toastableActivities = newActivities.filter(activity =>
+            this.shouldToastFriendCatch(activity, onlineFriendIds)
+        );
+
+        if (wasLoaded && toastableActivities.length > 0) {
             const maxToShow = 3;
-            newActivities.slice(0, maxToShow).forEach(activity => {
-                const angler = this.safeText(activity.username || 'A friend');
-                const fishName = this.safeText(activity.fish_name || 'a fish');
-                const weight = activity.fish_weight ? `${Number(activity.fish_weight).toFixed(2)} lbs` : null;
-                const rarity = activity.fish_rarity && activity.fish_rarity !== 'Common' ? activity.fish_rarity : null;
-                const location = activity.location_name ? this.safeText(activity.location_name) : null;
-
-                const bodyLines = [];
-                if (weight) bodyLines.push(`Weight: ${weight}`);
-                if (rarity) bodyLines.push(`Rarity: ${rarity}`);
-                if (location) bodyLines.push(`Location: ${location}`);
-
-                this.showToast({
-                    type: 'info',
-                    title: `${angler} caught ${fishName}!`,
-                    body: bodyLines.join('\n')
-                });
+            toastableActivities.slice(0, maxToShow).forEach(activity => {
+                const toast = this.buildFriendCatchToast(activity);
+                if (toast) {
+                    this.showToast(toast);
+                }
             });
 
-            if (newActivities.length > maxToShow) {
+            if (toastableActivities.length > maxToShow) {
                 this.showToast({
                     type: 'info',
-                    title: 'More friend catches',
-                    body: `+${newActivities.length - maxToShow} more friends hooked big fish!`
+                    title: 'More trophy catches from friends',
+                    body: `+${toastableActivities.length - maxToShow} more Epic, Legendary, or Trophy hooks online!`
                 });
             }
         }
@@ -4301,7 +4323,7 @@ export class UI {
         if (pendingCount > 0) {
             badgeText = pendingCount > 9 ? '9+' : `${pendingCount}`;
             showBadge = true;
-        } else if (newActivities.length > 0) {
+        } else if (toastableActivities.length > 0) {
             badgeText = '•';
             showBadge = true;
         }
@@ -4344,14 +4366,13 @@ export class UI {
     getFriendStatus(friend) {
         const lastActive = friend?.last_active ? new Date(friend.last_active).getTime() : null;
         const now = Date.now();
-        const ONLINE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
         let statusClass = 'offline';
         let meta = '';
 
         if (lastActive) {
             const diff = now - lastActive;
-            if (diff < ONLINE_THRESHOLD_MS) {
+            if (diff < FRIEND_ONLINE_THRESHOLD_MS) {
                 statusClass = 'online';
                 meta = 'Online now';
             } else {
@@ -4373,6 +4394,45 @@ export class UI {
         }
 
         return { statusClass, meta };
+    }
+
+    isFriendOnline(friend) {
+        const lastActive = friend?.last_active ? new Date(friend.last_active).getTime() : null;
+        if (!lastActive) {
+            return false;
+        }
+        return (Date.now() - lastActive) < FRIEND_ONLINE_THRESHOLD_MS;
+    }
+
+    shouldToastFriendCatch(activity, onlineFriendIds) {
+        if (!activity || activity.fish_rarity === 'LEVEL_UP' || activity.fish_name === 'Level Up') {
+            return false;
+        }
+        if (!FRIEND_CATCH_TOAST_RARITIES.has(activity.fish_rarity)) {
+            return false;
+        }
+        const playerId = activity.player_id;
+        return Boolean(playerId && onlineFriendIds.has(playerId));
+    }
+
+    buildFriendCatchToast(activity) {
+        const angler = this.safeText(activity.username || 'A friend');
+        const fishName = this.safeText(activity.fish_name || 'a trophy fish');
+        const rarity = activity.fish_rarity || 'Trophy';
+        const weightValue = Number(activity.fish_weight ?? activity.weight);
+        const weight = Number.isFinite(weightValue) ? `${weightValue.toFixed(2)} lbs` : null;
+        const location = activity.location_name ? this.safeText(activity.location_name) : null;
+
+        const bodyLines = [`${rarity} catch · online now`];
+        if (weight) bodyLines.push(weight);
+        if (location) bodyLines.push(location);
+
+        const titlePrefix = rarity === 'Legendary' ? '🏆' : (rarity === 'Epic' ? '💎' : '✨');
+        return {
+            type: rarity === 'Legendary' ? 'success' : 'info',
+            title: `${titlePrefix} ${angler} hooked a ${fishName}!`,
+            body: bodyLines.join('\n')
+        };
     }
 
     parsePlayerStats(rawStats) {

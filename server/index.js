@@ -363,6 +363,21 @@ app.get('/api/players/me', authenticate, async (req, res) => {
     }
 });
 
+// Lightweight heartbeat so friends see this player as online
+app.post('/api/players/me/presence', authenticate, async (req, res) => {
+    try {
+        if (!isValidUUID(req.userId)) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+
+        await pool.query('UPDATE players SET last_active = NOW() WHERE id = $1', [req.userId]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('[API] Presence ping error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Update player data (sync from game)
 app.put('/api/players/me', authenticate, async (req, res) => {
     try {
@@ -970,7 +985,7 @@ app.get('/api/friends/:friendId/collection', authenticate, async (req, res) => {
 
 // ==================== Activity Routes ====================
 
-// Log a catch (for activity feed)
+// Log a catch (for activity feed) — Epic, Legendary, and Trophy only
 app.post('/api/activities/catch', authenticate, async (req, res) => {
     try {
         if (!isValidUUID(req.userId)) {
@@ -978,20 +993,19 @@ app.post('/api/activities/catch', authenticate, async (req, res) => {
         }
         
         const { fishName, fishWeight, fishRarity, locationName, experienceGained } = req.body;
+        const notableRarities = ['Epic', 'Legendary', 'Trophy'];
         
-        // Only log big catches or rare fish (Epic, Legendary, Trophy, or >6 lbs)
-        const isRare = ['Epic', 'Legendary', 'Trophy'].includes(fishRarity);
-        const isLarge = fishWeight > 6.0;
-        
-        if (isRare || isLarge) {
-            await pool.query(
-                `INSERT INTO friend_activities (player_id, fish_name, fish_weight, fish_rarity, location_name, experience_gained)
-                 VALUES ($1, $2, $3, $4, $5, $6)`,
-                [req.userId, fishName, fishWeight, fishRarity, locationName, experienceGained || 0]
-            );
+        if (!notableRarities.includes(fishRarity)) {
+            return res.json({ success: true, logged: false });
         }
+
+        await pool.query(
+            `INSERT INTO friend_activities (player_id, fish_name, fish_weight, fish_rarity, location_name, experience_gained)
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [req.userId, fishName, fishWeight, fishRarity, locationName, experienceGained || 0]
+        );
         
-        res.json({ success: true });
+        res.json({ success: true, logged: true });
     } catch (error) {
         console.error('[API] Log catch error:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -1231,7 +1245,8 @@ app.get('/api/activities/friends', authenticate, async (req, res) => {
         const limit = parseInt(req.query.limit) || 20;
         
         const result = await pool.query(
-            `SELECT fa.id, fa.player_id, p.username, fa.fish_name, fa.fish_weight,
+            `SELECT fa.id, fa.player_id, p.username, p.last_active,
+                    fa.fish_name, fa.fish_weight,
                     fa.fish_rarity, fa.location_name, fa.experience_gained, fa.created_at
              FROM friend_activities fa
              JOIN players p ON fa.player_id = p.id

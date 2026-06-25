@@ -205,11 +205,11 @@ export function makeWaterMaterial({
         float streak2 = texture2D(uFlowMap, flowUV2).r;
         float streak3 = texture2D(uFlowMap, flowUV3).r;
         float streak = pow(clamp(streak1 * 0.7 + streak2 * 0.55 + streak3 * 0.35, 0.0, 1.0), 1.1);
-        vec3 flowTint = vec3(0.52, 0.74, 0.9);
-        color += flowTint * streak * uFlowMapStrength * (0.42 + fres * 0.85);
-        color = mix(color, color + vec3(0.08, 0.12, 0.14) * streak, uFlowMapStrength * 0.52);
+        vec3 flowTint = vec3(0.78, 0.64, 0.46);
+        color += flowTint * streak * uFlowMapStrength * (0.38 + fres * 0.72);
+        color = mix(color, color + vec3(0.14, 0.09, 0.05) * streak, uFlowMapStrength * 0.48);
         float vein = smoothstep(0.35, 0.92, streak);
-        color += vec3(0.18, 0.26, 0.32) * vein * uFlowMapStrength * 0.22;
+        color += vec3(0.12, 0.08, 0.04) * vein * uFlowMapStrength * 0.2;
       } else if (uFlowSpeed > 0.0 && uHasFlowMap > 0.5 && uFlowMapStrength > 0.0) {
         vec2 fPerp2 = vec2(-fDir.y, fDir.x);
         float along2 = dot(worldXZ, fDir);
@@ -230,7 +230,9 @@ export function makeWaterMaterial({
         vec3 bed = texture2D(uLakeBed, bedUV).rgb;
         float shallow = 1.0 - depth;
         shallow = pow(shallow, 2.2);
-        color = mix(color, bed * vec3(0.72, 0.86, 0.98), shallow * 0.38);
+        vec3 bedTint = uRiverMode > 0.5 ? vec3(0.9, 0.74, 0.52) : vec3(0.72, 0.86, 0.98);
+        float bedMix = uRiverMode > 0.5 ? shallow * 0.24 : shallow * 0.38;
+        color = mix(color, bed * bedTint, bedMix);
       }
 
       float fogAmount = depth * uFogIntensity;

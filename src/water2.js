@@ -6,6 +6,7 @@ import {
     createRiverDockPostWake,
     updateRiverDockPostWake,
     getRiverWakePosts,
+    getRiverDownstreamDir,
     spawnRiverPostBubble,
     updateRiverPostBubbleMotion
 } from './effects/riverDockPostWake.js';
@@ -116,6 +117,56 @@ export class Water2Lake {
     }
     
     /**
+     * Visible downstream axis for Amazon river (matches water streaks, bobber drift).
+     */
+    _riverDriftDir() {
+        return getRiverDownstreamDir(this.waterBodyConfig?.flowDirection || new THREE.Vector2(1, 0));
+    }
+
+    _setRiverParticleVelocity(velocities, i3, speed) {
+        const drift = this._riverDriftDir();
+        velocities[i3] = drift.x * speed;
+        velocities[i3 + 1] = 0;
+        velocities[i3 + 2] = drift.y * speed;
+    }
+
+    _wrapRiverParticle(positions, velocities, i3, halfSize) {
+        const drift = this._riverDriftDir();
+        const len = Math.hypot(drift.x, drift.y) || 1;
+        const dx = drift.x / len;
+        const dz = drift.y / len;
+        const px = positions[i3];
+        const pz = positions[i3 + 2];
+        const along = px * dx + pz * dz;
+        if (along <= halfSize) {
+            return false;
+        }
+
+        const perpX = -dz;
+        const perpZ = dx;
+        const perp = px * perpX + pz * perpZ;
+        const spawnAlong = -halfSize * (0.92 + Math.random() * 0.08);
+        positions[i3] = dx * spawnAlong + perpX * perp;
+        positions[i3 + 2] = dz * spawnAlong + perpZ * perp;
+        this._setRiverParticleVelocity(velocities, i3, 0.22 + Math.random() * 0.28);
+        return true;
+    }
+
+    _applyRiverParticleMaterialStyle() {
+        if (!this.riverParticles?.material) return;
+        const isRiver = this.waterBodyConfig?.riverMode === true;
+        const mat = this.riverParticles.material;
+        if (isRiver) {
+            mat.color.setHex(0xddd0b0);
+            mat.opacity = 0.48;
+        } else {
+            mat.color.setHex(0x88ddff);
+            mat.opacity = 1.0;
+        }
+        mat.needsUpdate = true;
+    }
+
+    /**
      * Create river particle system for flow visualization
      */
     createRiverParticles() {
@@ -137,20 +188,17 @@ export class Water2Lake {
             
             // Flow velocity (left to right for rivers)
             // Default to left-to-right flow, will be updated when river type is active
-            const flowDir = this.waterBodyConfig?.flowDirection || new THREE.Vector2(1, 0);
             const speed = 0.22 + Math.random() * 0.28;
-            velocities[i3] = flowDir.x * speed; // X velocity (left to right)
-            velocities[i3 + 1] = 0; // Y velocity (floating on surface)
-            velocities[i3 + 2] = flowDir.y * speed; // Z velocity
+            this._setRiverParticleVelocity(velocities, i3, speed);
         }
         
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         
         const material = new THREE.PointsMaterial({
-            color: 0x88ddff, // Light blue-white for better visibility on water
-            size: 1.0, // Much larger: 1.0 (was 0.5) for very visible flow
+            color: 0xddd0b0,
+            size: 1.0,
             transparent: true,
-            opacity: 1.0, // Full opacity for maximum visibility
+            opacity: 0.48,
             blending: THREE.AdditiveBlending,
             depthWrite: false,
             sizeAttenuation: false, // Keep size consistent regardless of distance
@@ -163,6 +211,7 @@ export class Water2Lake {
         this.riverParticles.visible = this.waterBodyConfig.hasFlow === true; // Show if river type
         this.riverParticles.renderOrder = 1000; // Render on top of water
         this.sceneRef.scene.add(this.riverParticles);
+        this._applyRiverParticleMaterialStyle();
         
         // Debug: Log particle visibility
         console.log('[RIVER] Particles created:', particleCount, 'Visible:', this.riverParticles.visible, 'HasFlow:', this.waterBodyConfig.hasFlow);
@@ -490,7 +539,9 @@ export class Water2Lake {
             material.uniforms.uOpacity.value = this.waterBodyConfig.opacity;
             material.uniforms.uSparkleStrength.value = this.waterBodyConfig.sparkleStrength;
             if (material.uniforms.uEnvIntensity) {
-                material.uniforms.uEnvIntensity.value = type === 'CELESTIAL' ? 0.12 : 0.44;
+                material.uniforms.uEnvIntensity.value = type === 'CELESTIAL'
+                    ? 0.12
+                    : (type === 'RIVER' ? 0.2 : 0.44);
             }
             if (material.uniforms.uHasLakeBed) {
                 material.uniforms.uHasLakeBed.value = type === 'CELESTIAL' ? 0.0 : 1.0;
@@ -564,18 +615,15 @@ export class Water2Lake {
                     }
                 }
                 
-                // Rebuild particle velocities when switching to river type
-                if (this.waterBodyConfig.hasFlow) {
-                    const flowDir = this.waterBodyConfig.flowDirection || new THREE.Vector2(1, 0);
-                    const velocities = this.riverParticles.userData.velocities;
-                    if (velocities) {
+                // Rebuild surface fleck velocities when entering/leaving river
+                if (this.riverParticles) {
+                    if (this.waterBodyConfig.hasFlow && this.riverParticles.userData?.velocities) {
+                        const velocities = this.riverParticles.userData.velocities;
                         for (let i = 0; i < velocities.length; i += 3) {
-                            const speed = 0.22 + Math.random() * 0.28;
-                            velocities[i] = flowDir.x * speed; // X velocity (flowDir.x = -1 for left-to-right screen movement)
-                            velocities[i + 1] = 0; // Y velocity (floating on surface)
-                            velocities[i + 2] = flowDir.y * speed; // Z velocity
+                            this._setRiverParticleVelocity(velocities, i, 0.22 + Math.random() * 0.28);
                         }
                     }
+                    this._applyRiverParticleMaterialStyle();
                 }
             }
             
@@ -689,7 +737,9 @@ export class Water2Lake {
         }
         
         const envMap = this.sceneRef.scene?.environment || null;
-        const envIntensity = this.waterBodyType === 'CELESTIAL' ? 0.12 : 0.44;
+        const envIntensity = this.waterBodyType === 'CELESTIAL'
+            ? 0.12
+            : (this.waterBodyType === 'RIVER' ? 0.2 : 0.44);
         
         // Get actual sun direction from scene's directional light
         // Directional light position: (-10, 20, 10) = upper left
@@ -1020,49 +1070,26 @@ export class Water2Lake {
             }
         }
         
-        // Update river particles (flow left to right)
+        // Update river surface flecks (downstream with visible current)
         if (this.riverParticles && this.riverParticles.visible && this.waterBodyConfig.hasFlow) {
             const positions = this.riverParticles.userData.positions;
             const velocities = this.riverParticles.userData.velocities;
-            const flowDir = this.waterBodyConfig.flowDirection || new THREE.Vector2(1, 0);
             
             // Debug: Log updates occasionally (very rare)
             if (Math.random() < 0.0001) {
                 console.log('[RIVER] Updating particles, visible:', this.riverParticles.visible, 'count:', positions.length / 3, 'first particle pos:', positions[0], positions[1], positions[2]);
             }
             
+            const halfSize = this.groundSize * 0.4;
             for (let i = 0; i < positions.length / 3; i++) {
                 const i3 = i * 3;
-                let x = positions[i3];
-                let z = positions[i3 + 2];
                 
-                // Update position based on flow
-                positions[i3] += velocities[i3] * delta; // X (flow direction)
-                positions[i3 + 2] += velocities[i3 + 2] * delta; // Z
+                positions[i3] += velocities[i3] * delta;
+                positions[i3 + 2] += velocities[i3 + 2] * delta;
                 
-                // Reset position if it flows off-screen (wrap around)
-                // For left-to-right flow (flowDir.x = 1): particles come from left (negative X), exit right (positive X)
-                const halfSize = this.groundSize * 0.4;
-                if (flowDir.x > 0 && positions[i3] > halfSize) {
-                    // Flowed off right side, reset to left side
-                    positions[i3] = -halfSize; // Reset to left side
-                    positions[i3 + 2] = (Math.random() - 0.5) * this.groundSize * 0.8; // Random Z
-                    // Reset velocity to base flow speed (positive X = left to right)
-                    const baseSpeed = 0.22 + Math.random() * 0.28;
-                    velocities[i3] = flowDir.x * baseSpeed; // Positive X = left to right
-                    velocities[i3 + 2] = flowDir.y * baseSpeed;
-                } else if (flowDir.x < 0 && positions[i3] < -halfSize) {
-                    // Flowed off left side, reset to right side
-                    positions[i3] = halfSize; // Reset to right side
-                    positions[i3 + 2] = (Math.random() - 0.5) * this.groundSize * 0.8; // Random Z
-                    // Reset velocity to base flow speed (negative X = right to left)
-                    const baseSpeed = 0.22 + Math.random() * 0.28;
-                    velocities[i3] = flowDir.x * baseSpeed; // Negative X = right to left
-                    velocities[i3 + 2] = flowDir.y * baseSpeed;
-                }
+                this._wrapRiverParticle(positions, velocities, i3, halfSize);
                 
-                // Keep particles on water surface - higher above water for visibility
-                positions[i3 + 1] = this.waterY + 0.15 + Math.sin(this.time * 2 + i) * 0.01; // Higher above water with gentle bob
+                positions[i3 + 1] = this.waterY + 0.15 + Math.sin(this.time * 2 + i) * 0.01;
             }
             
             // Update geometry

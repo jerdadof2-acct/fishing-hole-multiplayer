@@ -325,6 +325,171 @@ export class Platform {
         backRail.castShadow = true;
         backRail.receiveShadow = true;
         boatGroup.add(backRail);
+
+        // --- Small boat stern visual upgrade (visible rear / rowboat fishing detail) ---
+        const sternWood = new THREE.MeshStandardMaterial({
+            color: 0x7a4f28,
+            roughness: 0.75,
+            metalness: 0.03
+        });
+        const darkTrim = new THREE.MeshStandardMaterial({
+            color: 0x3a2412,
+            roughness: 0.7,
+            metalness: 0.02
+        });
+        const ropeMat = new THREE.MeshStandardMaterial({
+            color: 0x9a815f,
+            roughness: 0.9,
+            metalness: 0.0
+        });
+        const metalMat = new THREE.MeshStandardMaterial({
+            color: 0x8d8d8d,
+            roughness: 0.35,
+            metalness: 0.65
+        });
+        const tackleBoxMat = new THREE.MeshStandardMaterial({
+            color: 0x2f6f5e,
+            roughness: 0.65,
+            metalness: 0.05
+        });
+
+        const addSmallBoatBox = (w, h, d, mat, x, y, z, name = '') => {
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+            mesh.position.set(x, y, z);
+            if (name) mesh.name = name;
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            boatGroup.add(mesh);
+            return mesh;
+        };
+
+        const addSmallBoatCyl = (r, len, mat, x, y, z, rot = {}, name = '') => {
+            const mesh = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 10), mat);
+            mesh.position.set(x, y, z);
+            mesh.rotation.set(rot.x || 0, rot.y || 0, rot.z || 0);
+            if (name) mesh.name = name;
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            boatGroup.add(mesh);
+            return mesh;
+        };
+
+        const sternZ = backRailZ;
+        const deckSurfaceY = smallDeckSurfaceY;
+
+        addSmallBoatBox(
+            deckWidth * 0.95,
+            0.42,
+            0.12,
+            sternWood,
+            0,
+            deckSurfaceY + 0.20,
+            sternZ + 0.02,
+            'smallBoat-visible-stern-transom'
+        );
+
+        addSmallBoatBox(
+            deckWidth,
+            0.08,
+            0.16,
+            darkTrim,
+            0,
+            deckSurfaceY + 0.45,
+            sternZ + 0.02,
+            'smallBoat-stern-dark-cap'
+        );
+
+        addSmallBoatBox(
+            0.16,
+            0.55,
+            0.16,
+            darkTrim,
+            -deckWidth * 0.46,
+            deckSurfaceY + 0.30,
+            sternZ + 0.05,
+            'smallBoat-left-stern-post'
+        );
+
+        addSmallBoatBox(
+            0.16,
+            0.55,
+            0.16,
+            darkTrim,
+            deckWidth * 0.46,
+            deckSurfaceY + 0.30,
+            sternZ + 0.05,
+            'smallBoat-right-stern-post'
+        );
+
+        for (let i = -2; i <= 2; i++) {
+            addSmallBoatBox(
+                0.025,
+                0.012,
+                1.4,
+                darkTrim,
+                i * 0.32,
+                deckSurfaceY + 0.018,
+                sternZ + 0.75,
+                'smallBoat-rear-plank-line'
+            );
+        }
+
+        const sternRopeCoil = new THREE.Mesh(
+            new THREE.TorusGeometry(0.18, 0.035, 10, 18),
+            ropeMat
+        );
+        sternRopeCoil.name = 'smallBoat-stern-rope-coil';
+        sternRopeCoil.rotation.x = -Math.PI / 2;
+        sternRopeCoil.position.set(-deckWidth * 0.32, deckSurfaceY + 0.06, sternZ + 0.55);
+        sternRopeCoil.castShadow = true;
+        sternRopeCoil.receiveShadow = true;
+        boatGroup.add(sternRopeCoil);
+
+        addSmallBoatBox(
+            0.55,
+            0.26,
+            0.34,
+            tackleBoxMat,
+            deckWidth * 0.30,
+            deckSurfaceY + 0.14,
+            sternZ + 0.60,
+            'smallBoat-tackle-box'
+        );
+
+        addSmallBoatBox(
+            0.58,
+            0.05,
+            0.36,
+            metalMat,
+            deckWidth * 0.30,
+            deckSurfaceY + 0.30,
+            sternZ + 0.60,
+            'smallBoat-tackle-box-lid'
+        );
+
+        for (const side of [-1, 1]) {
+            addSmallBoatCyl(
+                0.035,
+                2.4,
+                sternWood,
+                side * deckWidth * 0.42,
+                deckSurfaceY + 0.18,
+                sternZ + 1.05,
+                { x: Math.PI / 2, z: side * 0.18 },
+                'smallBoat-oar-handle'
+            );
+
+            addSmallBoatBox(
+                0.16,
+                0.035,
+                0.42,
+                sternWood,
+                side * deckWidth * 0.42,
+                deckSurfaceY + 0.16,
+                sternZ + 2.15,
+                'smallBoat-oar-paddle'
+            );
+        }
         
         // Inner coaming lip (vertical strip just inside rail so gunwale & deck look bonded)
         const coamH = gunwaleHeight * 0.65;
@@ -530,17 +695,6 @@ export class Platform {
         navLight.position.set(0, railY + gunwaleHeight * 0.65, -boatLength * 0.88 * 0.5 - 0.15);
         navLight.castShadow = true;
         boatGroup.add(navLight);
-        
-        // Rope coil on deck (emergency/tool rope) - larger
-        const ropeCoil = new THREE.Mesh(
-            new THREE.TorusGeometry(0.12, 0.025, 12, 20), // Much larger: 0.12 radius (was 0.06), 0.025 tube (was 0.012)
-            mooringRopeMat
-        );
-        ropeCoil.rotation.x = -Math.PI / 2; // Lay flat on deck
-        ropeCoil.position.set(-boatWidth * 0.3, deckTopLocal + 0.02, -boatLength * 0.2);
-        ropeCoil.castShadow = true;
-        ropeCoil.receiveShadow = true;
-        boatGroup.add(ropeCoil);
         
         boatGroup.traverse((child) => {
             if (child.isMesh) {

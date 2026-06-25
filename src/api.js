@@ -164,6 +164,11 @@ export class API {
             body: JSON.stringify(data)
         });
     }
+
+    /** Keep last_active fresh so friends see you as online while playing. */
+    async pingPresence() {
+        return this.request('/players/me/presence', { method: 'POST' });
+    }
     
     /**
      * Get player by friend code
