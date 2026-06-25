@@ -579,13 +579,13 @@ export class Water2Lake {
         // Create water geometry with enough detail for waves
         const waterGeometry = new THREE.PlaneGeometry(this.groundSize, this.groundSize, 128, 128);
         
-        // Load normal maps — mobile uses smaller -sm variants when available
+        // Load normal map — one seamless texture, dual scroll in shader (mobile uses -sm)
         const textureLoader = new THREE.TextureLoader();
         const isMobile = typeof navigator !== 'undefined'
             && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-        const loadNormal = (baseName, proceduralOffset = 0) => {
-            const fullPath = `/assets/textures/${baseName}.jpg`;
-            const smPath = `/assets/textures/${baseName}-sm.jpg`;
+        const loadWaterNormal = () => {
+            const fullPath = '/assets/textures/waterNormals1.jpg';
+            const smPath = '/assets/textures/waterNormals1-sm.jpg';
             const primary = isMobile ? smPath : fullPath;
             return textureLoader.load(
                 primary,
@@ -594,31 +594,26 @@ export class Water2Lake {
                 () => {
                     if (primary !== fullPath) {
                         return textureLoader.load(fullPath, undefined, undefined, () => {
-                            console.warn(`${baseName} missing, procedural fallback`);
-                            return createProceduralWaterNormal(proceduralOffset);
+                            console.warn('waterNormals1 missing, procedural fallback');
+                            return createProceduralWaterNormal(0);
                         });
                     }
-                    console.warn(`${baseName} missing, procedural fallback`);
-                    return createProceduralWaterNormal(proceduralOffset);
+                    console.warn('waterNormals1 missing, procedural fallback');
+                    return createProceduralWaterNormal(0);
                 }
             );
         };
-        let normalMap1 = loadNormal('waterNormals1', 0);
-        let normalMap2 = loadNormal('waterNormals2', 0.5);
+        let normalMap1 = loadWaterNormal();
         
         try {
-            // If textures aren't loaded yet, create procedural fallbacks as backup
             if (!normalMap1 || !normalMap1.image) {
                 normalMap1 = createProceduralWaterNormal();
             }
-            if (!normalMap2 || !normalMap2.image) {
-                normalMap2 = createProceduralWaterNormal(0.5);
-            }
         } catch (e) {
-            console.warn('Error loading water normal maps, using procedural fallbacks');
+            console.warn('Error loading water normal map, using procedural fallback');
             normalMap1 = createProceduralWaterNormal();
-            normalMap2 = createProceduralWaterNormal(0.5);
         }
+        const normalMap2 = normalMap1;
         
         // Get actual sun direction from scene's directional light
         // Directional light position: (-10, 20, 10) = upper left

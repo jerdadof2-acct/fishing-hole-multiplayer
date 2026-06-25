@@ -34,6 +34,8 @@ const EXTRA_URLS = [
     '/assets/textures/waterNormals2.jpg',
     '/assets/textures/waterNormals1-sm.jpg',
     '/assets/textures/waterNormals2-sm.jpg',
+    '/assets/textures/dockWood-sm.jpg',
+    '/assets/textures/dockWood.jpg',
     '/assets/icons/icon-192.png',
     '/assets/icons/icon-512.png'
 ];

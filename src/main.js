@@ -29,6 +29,7 @@ import {
     IDLE_PORTRAIT_DELAY_SEC,
     PORTRAIT_BOBBER_TRACKING_CUTOFF
 } from './config/idlePortrait.js';
+import { preloadDockWoodTexture } from './scene/dockTextures.js';
 
 export class Game {
     constructor(options = {}) {
@@ -322,6 +323,9 @@ export class Game {
             this.applyCelestialBaitPreference(currentLocation);
             this.syncLocationMusic(currentLocation);
             
+            loadingProgress.update(56, 'Loading dock textures...');
+            await preloadDockWoodTexture();
+
             loadingProgress.update(58, `Building ${currentLocation.name}...`);
             this.platform = new Platform(this.scene, this.water);
             this.platform.createPlatform(currentLocation.platformType);

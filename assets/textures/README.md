@@ -47,6 +47,15 @@ This directory should contain the following texture files:
 ## Note
 If these files are missing, the application will automatically generate procedural fallbacks, but actual textures will look much better!
 
+### Dock wood (`dockWood-sm.jpg`, `dockWood.jpg`)
+- Project-generated seamless plank texture (~7–24 KB). Regenerate: `npm run generate:dock-wood`
+- CC0 / no attribution required.
+
+### Water normal (`waterNormals1-sm.jpg`)
+- One normal map is used with dual UV scroll in the water shader (mobile loads `-sm` only).
+
+
+
 
 
 

@@ -82,7 +82,7 @@ async function main() {
 
     console.log('[compress] Textures (mobile -sm variants)…');
     const texDir = path.join(ROOT, 'assets', 'textures');
-    for (const name of ['waterNormals1.jpg', 'waterNormals2.jpg', 'caustics_loop.jpg']) {
+    for (const name of ['waterNormals1.jpg', 'waterNormals2.jpg', 'caustics_loop.jpg', 'dockWood.jpg']) {
         const input = path.join(texDir, name);
         if (!fs.existsSync(input)) continue;
         const smOut = path.join(texDir, name.replace(/(\.\w+)$/, '-sm$1'));

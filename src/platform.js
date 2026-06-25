@@ -3,6 +3,7 @@ import {
     PORTRAIT_CAMERA_OFFSET,
     PORTRAIT_CAMERA_OFFSET_LARGE_BOAT
 } from './config/idlePortrait.js';
+import { buildStylizedDock } from './scene/stylizedDock.js';
 
 /**
  * Platform system - manages dock and boats where cat stands
@@ -72,210 +73,16 @@ export class Platform {
      * Different styles for pond vs river locations
      */
     createDock() {
-        // Check water body type to differentiate pond vs river docks
-        const waterType = this.water?.waterBodyType || 'LAKE'; // Fallback to LAKE if not set
-        const isPond = waterType === 'POND';
-        const isRiver = waterType === 'RIVER';
-        console.log('[DOCK] Creating dock - waterBodyType:', waterType, 'isPond:', isPond, 'isRiver:', isRiver);
-        
-        const geometry = new THREE.BoxGeometry(this.dockWidth, this.dockHeight, this.dockDepth);
-        
-        // Create wood texture procedurally - different colors for pond vs river
-        const canvas = document.createElement('canvas');
-        canvas.width = 256;
-        canvas.height = 256;
-        const ctx = canvas.getContext('2d');
-        
-        // Pond: Lighter, more rustic wood (weathered but cleaner)
-        // River: Darker, more weathered wood (sturdier, more used) but not too dark for shadows
-        const baseColor = isPond ? '#b89570' : '#6b4f2a'; // Pond: lighter brown, River: medium-dark brown (lightened from 4a3428)
-        const grainColor = isPond ? '#9d7a55' : '#4a3428'; // Pond: lighter grain, River: darker grain (lightened from 2a1f14)
-        
-        ctx.fillStyle = baseColor;
-        ctx.fillRect(0, 0, 256, 256);
-        
-        // Add wood grain lines - more visible on river dock
-        ctx.strokeStyle = grainColor;
-        ctx.lineWidth = isRiver ? 3 : 2; // Thicker lines for river
-        const grainCount = isRiver ? 25 : 20; // More grain lines for river (more weathered)
-        for (let i = 0; i < grainCount; i++) {
-            ctx.beginPath();
-            const y = Math.random() * 256;
-            ctx.moveTo(0, y);
-            ctx.quadraticCurveTo(128 + (Math.random() - 0.5) * 50, y + (Math.random() - 0.5) * 30, 256, y);
-            ctx.stroke();
-        }
-        
-        const woodTexture = new THREE.CanvasTexture(canvas);
-        woodTexture.wrapS = THREE.RepeatWrapping;
-        woodTexture.wrapT = THREE.RepeatWrapping;
-        woodTexture.repeat.set(1, 5);
-        
-        // Material colors - pond lighter, river medium-dark (lightened so shadows are visible)
-        const deckColor = isPond ? 0xb89570 : 0x6b4f2a; // River lightened from 0x4a3428 to 0x6b4f2a
-        const material = new THREE.MeshStandardMaterial({
-            map: woodTexture,
-            roughness: isRiver ? 0.9 : 0.8, // River more weathered/rough
-            metalness: 0.1,
-            color: deckColor
+        const waterType = this.water?.waterBodyType || 'LAKE';
+        console.log('[DOCK] Creating stylized dock - waterBodyType:', waterType);
+
+        this.platformMesh = buildStylizedDock({
+            water: this.water,
+            dockWidth: this.dockWidth,
+            dockDepth: this.dockDepth,
+            dockHeight: this.dockHeight,
+            waterBodyType: waterType
         });
-        
-        // Create dock as a group to hold platform and supports
-        const dockGroup = new THREE.Group();
-        
-        // Support posts/pilings underneath the dock (wooden posts extending into water)
-        // Pond: Thinner, lighter posts | River: Thicker, darker, sturdier posts
-        const postColor = isPond ? 0x9d7a55 : 0x3a2818; // Pond: lighter, River: much darker/weathered
-        const postRadius = isPond ? 0.06 : 0.12; // Pond: thinner posts (0.06), River: much thicker/sturdier posts (0.12)
-        const postMaterial = new THREE.MeshStandardMaterial({
-            color: postColor,
-            roughness: 0.9,
-            metalness: 0.0
-        });
-        
-        const postHeight = 1.5; // Posts extend from water surface up to dock bottom
-        const postGeometry = new THREE.CylinderGeometry(postRadius, postRadius * 1.1, postHeight, isRiver ? 16 : 12); // River: more segments for smoother look
-        
-        // Create multiple support posts along the dock length and width
-        // Pond: Fewer, simpler posts | River: More posts for sturdier construction
-        const postPositions = isPond ? [
-            // Front edge (water side) - 2 posts for pond
-            { x: -this.dockWidth * 0.3, z: this.dockDepth * 0.35 },
-            { x: this.dockWidth * 0.3, z: this.dockDepth * 0.35 },
-            // Back edge - 2 posts for pond
-            { x: -this.dockWidth * 0.3, z: -this.dockDepth * 0.35 },
-            { x: this.dockWidth * 0.3, z: -this.dockDepth * 0.35 }
-        ] : [
-            // Front edge (water side) - 3 posts for river (sturdier)
-            { x: -this.dockWidth * 0.4, z: this.dockDepth * 0.35 },
-            { x: 0, z: this.dockDepth * 0.35 },
-            { x: this.dockWidth * 0.4, z: this.dockDepth * 0.35 },
-            // Back edge - 3 posts for river
-            { x: -this.dockWidth * 0.4, z: -this.dockDepth * 0.35 },
-            { x: 0, z: -this.dockDepth * 0.35 },
-            { x: this.dockWidth * 0.4, z: -this.dockDepth * 0.35 },
-            // Middle supports - 2 posts for river
-            { x: -this.dockWidth * 0.4, z: 0 },
-            { x: this.dockWidth * 0.4, z: 0 }
-        ];
-        
-        const raisedDockY = this.water.waterY + 1.0; // Dock top position
-        const waterSurfaceY = this.water.waterY;
-        const postTopY = raisedDockY - this.dockHeight * 0.5; // Top of posts (where dock bottom sits)
-        const postCenterY = (waterSurfaceY + postTopY) / 2; // Center of posts
-        const actualPostHeight = postTopY - waterSurfaceY; // Actual height from water to dock bottom
-        
-        postPositions.forEach(pos => {
-            const post = new THREE.Mesh(postGeometry, postMaterial);
-            // Scale post height to match actual needed height
-            post.scale.y = actualPostHeight / postHeight;
-            // Position post: extends from water surface to dock bottom (where dock sits on top)
-            post.position.set(pos.x, postCenterY, pos.z);
-            post.castShadow = true;
-            post.receiveShadow = true;
-            dockGroup.add(post);
-        });
-        
-        // Dock platform sits ON TOP of the posts
-        const dockPlatform = new THREE.Mesh(geometry, material);
-        // Platform center Y = dock top Y - half height
-        dockPlatform.position.y = raisedDockY - this.dockHeight * 0.5;
-        dockPlatform.castShadow = true;
-        dockPlatform.receiveShadow = true; // Enable shadow receiving on dock deck
-        dockGroup.add(dockPlatform);
-        
-        // Cross-beams/joists underneath the dock (supporting structure)
-        // These sit between the posts and the dock bottom
-        // Pond: Simpler, lighter beams | River: More substantial beams
-        const beamColor = isPond ? 0x8a6f4a : 0x6a4f3a; // Pond: lighter, River: darker
-        const beamMaterial = new THREE.MeshStandardMaterial({
-            color: beamColor,
-            roughness: 0.9,
-            metalness: 0.0
-        });
-        
-        // Longitudinal beams (running along dock length)
-        // Pond: Thinner beams | River: Thicker, sturdier beams
-        const beamHeight = isPond ? 0.10 : 0.12;
-        const beamWidth = isPond ? 0.06 : 0.08;
-        const beamY = postTopY - beamHeight * 0.5; // Just below dock bottom, on top of posts
-        
-        // Left beam
-        const leftBeam = new THREE.Mesh(
-            new THREE.BoxGeometry(beamWidth, beamHeight, this.dockDepth * 0.95),
-            beamMaterial
-        );
-        leftBeam.position.set(-this.dockWidth * 0.45, beamY, 0);
-        leftBeam.castShadow = true;
-        leftBeam.receiveShadow = true;
-        dockGroup.add(leftBeam);
-        
-        // Right beam
-        const rightBeam = new THREE.Mesh(
-            new THREE.BoxGeometry(beamWidth, beamHeight, this.dockDepth * 0.95),
-            beamMaterial
-        );
-        rightBeam.position.set(this.dockWidth * 0.45, beamY, 0);
-        rightBeam.castShadow = true;
-        rightBeam.receiveShadow = true;
-        dockGroup.add(rightBeam);
-        
-        // Center beam
-        const centerBeam = new THREE.Mesh(
-            new THREE.BoxGeometry(beamWidth, beamHeight, this.dockDepth * 0.95),
-            beamMaterial
-        );
-        centerBeam.position.set(0, beamY, 0);
-        centerBeam.castShadow = true;
-        centerBeam.receiveShadow = true;
-        dockGroup.add(centerBeam);
-        
-        // Edge rails/rims around the dock (gives it a finished look)
-        const railHeight = 0.12; // Increased from 0.06 to 0.12 (twice as tall)
-        const railWidth = 0.10; // Increased from 0.05 to 0.10 (twice as thick)
-        
-        // Front rail (water side) - align inner edge with dock front edge
-        const frontRail = new THREE.Mesh(
-            new THREE.BoxGeometry(this.dockWidth, railHeight, railWidth),
-            postMaterial
-        );
-        // Position so inner edge aligns with dock front edge, brought in slightly to close gap
-        frontRail.position.set(0, raisedDockY + this.dockHeight * 0.5 + railHeight * 0.5, this.dockDepth * 0.5 - railWidth * 0.5 - 0.04);
-        frontRail.castShadow = true;
-        frontRail.receiveShadow = true;
-        dockGroup.add(frontRail);
-        
-        // Side rails intentionally omitted to avoid protruding boards in camera framing
-        
-        // Realistic details for dock
-        // Dock bumpers/fenders (protection along front edge, on outside of rail, facing outward toward water)
-        const bumperMaterial = new THREE.MeshStandardMaterial({
-            color: 0x2a4a6a, // Navy blue rubber
-            roughness: 0.9,
-            metalness: 0.0
-        });
-        for (let i = 0; i < 3; i++) {
-            const xPos = -this.dockWidth * 0.3 + i * (this.dockWidth * 0.3);
-            const bumper = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.08, 0.08, 0.2, 12), // Half as long: 0.2 (was 0.4)
-                bumperMaterial
-            );
-            bumper.rotation.x = Math.PI / 2; // Horizontal, pointing forward (+Z toward water)
-            // Position on outside of front rail (outside the end rail, toward water)
-            // Front rail is at z = this.dockDepth * 0.5 - railWidth * 0.5 - 0.04
-            // Bumper should be outside (forward) of the rail
-            const frontRailZ = this.dockDepth * 0.5 - railWidth * 0.5 - 0.04;
-            bumper.position.set(xPos, raisedDockY + this.dockHeight * 0.5 - 0.02, frontRailZ + railWidth * 0.5 + 0.1);
-            bumper.castShadow = true;
-            dockGroup.add(bumper);
-        }
-        
-        // Position dock group
-        dockGroup.position.set(0, 0, -1.5);
-        dockGroup.castShadow = true;
-        dockGroup.receiveShadow = true;
-        
-        this.platformMesh = dockGroup;
     }
     
     /**

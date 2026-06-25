@@ -14,6 +14,7 @@
     "reset:leaderboards": "node scripts/reset-leaderboards.mjs",
     "compress:assets": "node scripts/compress-assets.mjs",
     "compress:cat": "node scripts/compress-cat-glb.mjs",
+    "generate:dock-wood": "node scripts/generate-dock-wood-texture.mjs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
