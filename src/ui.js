@@ -4,6 +4,7 @@ import { replayStoryPrologue } from './prologue.js';
 import { STARLIGHT_LURE_IMAGE } from './config/hiddenRelics.js';
 import { isCelestialStarfishHook } from './config/starfishEncounter.js';
 import { getFishImagePaths, getRelicImagePaths } from './utils/imageAssets.js';
+import { switchToDifferentAccount } from './savePinSetup.js';
 
 export class UI {
     constructor(fishing, fish, water, game, gameplaySystems = null, sfx = null) {
@@ -1870,6 +1871,16 @@ export class UI {
                 <div class="settings-panel">
                     <h3 class="settings-heading">Game Settings</h3>
                     <section class="settings-account-section">
+                        <h4 class="settings-account-title">Switch account</h4>
+                        <p class="settings-account-copy">
+                            Signed in as <strong id="settings-current-username">…</strong>.
+                            Use another username and save PIN to load a different fisher cat's progress on this device.
+                        </p>
+                        <button type="button" id="settings-switch-account-btn" class="settings-switch-account-btn">
+                            Sign in as a different account
+                        </button>
+                    </section>
+                    <section class="settings-account-section">
                         <h4 class="settings-account-title">Claim older account</h4>
                         <p class="settings-account-copy">
                             Played before save PINs existed? Enter that username to load your cloud save and set a PIN.
@@ -1909,6 +1920,7 @@ export class UI {
                 </div>
             `;
 
+            this.wireSettingsSwitchAccount();
             this.wireSettingsAccountSection();
 
             const replayBtn = document.getElementById('replay-prologue-btn');
@@ -3578,6 +3590,35 @@ export class UI {
             });
         }).catch(error => {
             console.error('[UI] Failed to load fishTypes:', error);
+        });
+    }
+
+    wireSettingsSwitchAccount() {
+        const usernameEl = document.getElementById('settings-current-username');
+        const switchBtn = document.getElementById('settings-switch-account-btn');
+
+        if (usernameEl) {
+            const name = this.player?.name || 'Guest';
+            usernameEl.textContent = name;
+        }
+
+        if (!switchBtn) {
+            return;
+        }
+
+        switchBtn.addEventListener('click', () => {
+            const current = this.player?.name || 'this account';
+            const confirmed = window.confirm(
+                `Sign in as a different account?\n\n` +
+                `You'll leave ${current} and return to the login screen. ` +
+                'Enter another username and save PIN to load that progress.'
+            );
+            if (!confirmed) {
+                return;
+            }
+
+            this.closeModal('inventory-modal');
+            switchToDifferentAccount();
         });
     }
 

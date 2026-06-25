@@ -2013,6 +2013,25 @@ canvas {
     font-size: 16px;
 }
 
+.settings-switch-account-btn {
+    display: block;
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 2px solid rgba(74, 144, 226, 0.55);
+    background: rgba(74, 144, 226, 0.12);
+    color: #dbeafe;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.settings-switch-account-btn:hover {
+    background: rgba(74, 144, 226, 0.22);
+    border-color: rgba(74, 144, 226, 0.75);
+}
+
 .settings-claim-btn {
     padding: 12px 16px;
     border: none;
