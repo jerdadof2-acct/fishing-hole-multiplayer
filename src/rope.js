@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { getRiverDownstreamDir } from './effects/riverDockPostWake.js';
 
 export class FishingRope {
     constructor(scene, rodTipGetter, bobber, water, castBounds) {
@@ -183,6 +184,19 @@ export class FishingRope {
                     n.pos.add(vel).addScaledVector(this.GRAVITY, dtSub * dtSub * 0.5);
                 } else {
                     n.pos.add(vel);
+                }
+
+                // Gentle downstream drift while bobber waits on a river (Amazon Depths)
+                if (
+                    this._riverDriftPerSec
+                    && i === this.rope.length - 1
+                    && this.floating
+                    && !this.reeling
+                    && !this.fightingMode
+                    && !this.landingMode
+                ) {
+                    n.pos.x += this._riverDriftPerSec.x * dtSub;
+                    n.pos.z += this._riverDriftPerSec.z * dtSub;
                 }
             }
         }
@@ -709,6 +723,31 @@ export class FishingRope {
             // Just update line geometry (simple 3-point curve)
             this.updateLineGeometry(dt);
             return;
+        }
+
+        this._riverDriftPerSec = null;
+        if (
+            this.floating
+            && this.water?.waterBodyConfig?.riverMode
+            && !this.reeling
+            && !this.fightingMode
+            && !this.landingMode
+        ) {
+            const ud = this.bobber?.userData;
+            const waitingOnRiver = ud
+                && !ud.isHooked
+                && !ud.biteStrike
+                && !ud.relicStrike
+                && (ud.freeze ?? 0) <= 0;
+            if (waitingOnRiver) {
+                const downstream = getRiverDownstreamDir(this.water.waterBodyConfig.flowDirection);
+                const flowSpeed = this.water.waterBodyConfig.flowSpeed ?? 0.62;
+                const speed = flowSpeed * 0.2;
+                this._riverDriftPerSec = {
+                    x: downstream.x * speed,
+                    z: downstream.y * speed
+                };
+            }
         }
         
         // Decay tug timer if active (so tug effect persists and fades smoothly)

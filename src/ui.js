@@ -2836,6 +2836,7 @@ export class UI {
         this.waitingForBite = false;
         this.biteStrikeTime = null;
         this.hookSetSuccess = false;
+        this.fishing?.clearBobberWaitFlags?.();
         
         // Reset button for next cast
         setTimeout(() => {

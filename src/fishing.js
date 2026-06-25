@@ -716,6 +716,45 @@ export class Fishing {
         console.log('Fishing line created - thickness:', 0.008);
     }
 
+    /** Clear bobber flags that block river drift / idle float between casts. */
+    clearBobberWaitFlags() {
+        if (!this.bobber?.userData) return;
+        const ud = this.bobber.userData;
+        ud.biteStrike = false;
+        ud.biteStrikeTime = null;
+        delete ud.relicStrike;
+        delete ud.relicStrikeTime;
+        ud.isHooked = false;
+        ud.tugActive = false;
+        ud.tugTime = 0;
+        this.bobber.rotation.z = 0;
+    }
+
+    /** Expire bite/relic strike flags (rope path never hit the fallback bobber updater). */
+    tickBobberStrikeAnimations(time) {
+        if (!this.bobber?.userData) return;
+
+        const ud = this.bobber.userData;
+
+        if (ud.biteStrike) {
+            const strikeElapsed = time - (ud.biteStrikeTime || 0);
+            if (strikeElapsed >= 0.8) {
+                ud.biteStrike = false;
+                ud.biteStrikeTime = null;
+                this.bobber.rotation.z = 0;
+            }
+        }
+
+        if (ud.relicStrike) {
+            const relicElapsed = time - (ud.relicStrikeTime || 0);
+            if (relicElapsed >= 1.4) {
+                delete ud.relicStrike;
+                delete ud.relicStrikeTime;
+                this.bobber.rotation.z = 0;
+            }
+        }
+    }
+
     cast() {
         console.log('Cast called! isCasting:', this.isCasting, 'isReeling:', this.isReeling);
         
@@ -729,6 +768,7 @@ export class Fishing {
         
         this.isCasting = true;
         this.castT = 0;
+        this.clearBobberWaitFlags();
         this.updateStarlightMode();
         this.cat?.playThrow?.();
         
@@ -864,6 +904,8 @@ export class Fishing {
     update(delta) {
         this.updateStarlightMode();
         this.updateStarlightEffect(delta);
+        const elapsedTime = this.sceneRef?.clock?.elapsedTime ?? 0;
+        this.tickBobberStrikeAnimations(elapsedTime);
         if (this.starfishCelebration?.active) {
             this.starfishCelebration.timer += delta;
             if (this.starfishCelebration.timer >= this.starfishCelebration.duration) {
@@ -1960,6 +2002,7 @@ export class Fishing {
                     this.fishingLine.visible = false;
                 }
                 this.bobber.userData.floating = false;
+                this.clearBobberWaitFlags();
                 
                 // Reset fish on line flag
                 this.fishOnLine = false;
@@ -2027,6 +2070,7 @@ export class Fishing {
                 if (this.fishingLine) this.fishingLine.visible = false;
                 if (this.rope && this.rope.lineMesh) this.rope.lineMesh.visible = false;
                 this.bobber.userData.floating = false;
+                this.clearBobberWaitFlags();
                 
                 // Reset wake tracking
                 this.wakeTimer = 0;

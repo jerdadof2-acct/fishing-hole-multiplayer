@@ -1,6 +1,14 @@
 import * as THREE from 'three';
 import { makeWaterMaterial } from './water/waterMaterial.js';
 import { getWaterBodyConfig, DEFAULT_WATER_BODY_TYPE, WaterBodyTypes } from './water/waterBodyTypes.js';
+import { createRiverFlowTexture } from './water/riverFlowTexture.js';
+import {
+    createRiverDockPostWake,
+    updateRiverDockPostWake,
+    getRiverWakePosts,
+    spawnRiverPostBubble,
+    updateRiverPostBubbleMotion
+} from './effects/riverDockPostWake.js';
 import {
     createAmbientSplashRings,
     createCausticsLayer,
@@ -130,7 +138,7 @@ export class Water2Lake {
             // Flow velocity (left to right for rivers)
             // Default to left-to-right flow, will be updated when river type is active
             const flowDir = this.waterBodyConfig?.flowDirection || new THREE.Vector2(1, 0);
-            const speed = 0.8 + Math.random() * 0.6; // Much faster: 0.8-1.4 (was 0.5-0.9) for very visible flow
+            const speed = 0.22 + Math.random() * 0.28;
             velocities[i3] = flowDir.x * speed; // X velocity (left to right)
             velocities[i3 + 1] = 0; // Y velocity (floating on surface)
             velocities[i3 + 2] = flowDir.y * speed; // Z velocity
@@ -230,41 +238,69 @@ export class Water2Lake {
     }
     
     /**
-     * Create splash/wake effects around dock posts for rivers
-     * Creates animated ring meshes that simulate water flowing around posts
+     * Remove dock post splash / wake meshes (pond rings or river swirls).
+     */
+    disposeDockPostSplashes() {
+        if (!this.dockPostSplashes) return;
+        this.sceneRef.scene.remove(this.dockPostSplashes);
+        this.dockPostSplashes.traverse((child) => {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) {
+                if (Array.isArray(child.material)) {
+                    child.material.forEach((m) => m.dispose());
+                } else {
+                    child.material.dispose();
+                }
+            }
+        });
+        this.dockPostSplashes = null;
+    }
+
+    /**
+     * Splash rings (pond) or downstream swirls (river) at dock posts.
      */
     createDockPostSplashes() {
+        this.disposeDockPostSplashes();
+
+        if (this.waterBodyConfig?.riverMode) {
+            const posts = getRiverWakePosts(this.waterBodyType);
+            const flow = this.waterBodyConfig.flowDirection || new THREE.Vector2(1, 0);
+            const wakeGroup = createRiverDockPostWake({
+                waterY: this.waterY,
+                flowDirection: flow,
+                posts
+            });
+            wakeGroup.visible = this.waterBodyType === 'RIVER';
+            this.dockPostSplashes = wakeGroup;
+            this.sceneRef.scene.add(wakeGroup);
+            return;
+        }
+
         const postPositions = getDockPostSplashPositions(this.waterBodyType);
-        const isPond = this.waterBodyType === 'POND';
-        const activePosts = isPond
-            ? postPositions.filter((post) => post.primary)
-            : postPositions.filter((post) => post.primary);
+        const activePosts = postPositions.filter((post) => post.primary);
 
         const splashGroup = new THREE.Group();
         splashGroup.name = 'DockPostSplashes';
+        splashGroup.userData.isRiverWake = false;
         splashGroup.renderOrder = 1003;
 
         const splashMaterial = new THREE.MeshBasicMaterial({
-            color: isPond ? 0xb8d4ec : 0xc0daf0,
+            color: 0xb8d4ec,
             transparent: true,
-            opacity: isPond ? 0.28 : 0.38,
+            opacity: 0.28,
             blending: THREE.AdditiveBlending,
             side: THREE.DoubleSide,
             depthWrite: false,
             depthTest: true
         });
 
-        const ringsPerPost = isPond ? 2 : 3;
-        const ringThickness = isPond ? 0.038 : 0.05;
-        const ringSpacing = isPond ? 0.05 : 0.065;
-        const maxExpansion = isPond ? 0.28 : 0.4;
         const surfaceY = this.waterY + 0.04;
 
         activePosts.forEach((post, postIndex) => {
-            for (let ringIndex = 0; ringIndex < ringsPerPost; ringIndex++) {
-                const ringRadius = post.innerRadius + ringIndex * ringSpacing;
+            for (let ringIndex = 0; ringIndex < 2; ringIndex++) {
+                const ringRadius = post.innerRadius + ringIndex * 0.05;
                 const ring = new THREE.Mesh(
-                    new THREE.RingGeometry(ringRadius, ringRadius + ringThickness, 28),
+                    new THREE.RingGeometry(ringRadius, ringRadius + 0.038, 28),
                     splashMaterial.clone()
                 );
 
@@ -276,21 +312,19 @@ export class Water2Lake {
                     postIndex,
                     ringIndex,
                     baseRadius: ringRadius,
-                    maxRadius: ringRadius + maxExpansion,
-                    ringThickness,
-                    peakOpacity: isPond ? 0.26 : 0.36,
+                    maxRadius: ringRadius + 0.28,
+                    ringThickness: 0.038,
+                    peakOpacity: 0.26,
                     startTime: postIndex * 1.4 + ringIndex * 3.2 + Math.random() * 4.5,
-                    lifetime: isPond
-                        ? 6.5 + ringIndex * 2.0 + Math.random() * 3.0
-                        : 4.5 + ringIndex * 1.2 + Math.random() * 2.0,
-                    fadeStart: isPond ? 0.62 : 0.5
+                    lifetime: 6.5 + ringIndex * 2.0 + Math.random() * 3.0,
+                    fadeStart: 0.62
                 };
 
                 splashGroup.add(ring);
             }
         });
 
-        splashGroup.visible = this.waterBodyType === 'POND' || this.waterBodyType === 'RIVER';
+        splashGroup.visible = this.waterBodyType === 'POND';
         this.dockPostSplashes = splashGroup;
         this.sceneRef.scene.add(splashGroup);
     }
@@ -300,107 +334,97 @@ export class Water2Lake {
      * Particles emit from posts and flow downstream with the current
      */
     createDockPostParticles() {
-        // Always create particle system, but only show for rivers
-        // This allows switching between water types dynamically
-        
-        // Dock parameters (matching platform.js)
-        const dockWidth = 3; // From platform.js
-        const dockDepth = 14; // From platform.js
-        const dockCenterZ = -1.5; // Dock position offset
-        
-        // River dock post positions (from platform.js createDock)
-        const postPositions = [
-            // Front edge (water side) - 3 posts
-            { x: -dockWidth * 0.4, z: dockCenterZ + dockDepth * 0.35 },
-            { x: 0, z: dockCenterZ + dockDepth * 0.35 },
-            { x: dockWidth * 0.4, z: dockCenterZ + dockDepth * 0.35 },
-            // Back edge - 3 posts
-            { x: -dockWidth * 0.4, z: dockCenterZ - dockDepth * 0.35 },
-            { x: 0, z: dockCenterZ - dockDepth * 0.35 },
-            { x: dockWidth * 0.4, z: dockCenterZ - dockDepth * 0.35 },
-            // Middle supports - 2 posts
-            { x: -dockWidth * 0.4, z: dockCenterZ },
-            { x: dockWidth * 0.4, z: dockCenterZ }
-        ];
-        
-        // Create particles from posts
-        // 5-8 particles per post, more from front posts (water hits them first)
-        const totalParticles = 50; // Total particles across all posts
+        const postPositions = getRiverWakePosts('RIVER');
+        const totalParticles = 88;
         const geometry = new THREE.BufferGeometry();
         const positions = new Float32Array(totalParticles * 3);
         const velocities = new Float32Array(totalParticles * 3);
-        const colors = new Float32Array(totalParticles * 3); // RGB colors
-        const spawnTimes = new Float32Array(totalParticles); // Track spawn time for each particle
-        const lifetimes = new Float32Array(totalParticles); // Random lifetime (2-2.5 seconds) for each particle
-        
-        // Get flow direction for downstream movement
-        const flowDir = this.waterBodyConfig?.flowDirection || new THREE.Vector2(-1, 0); // Left to right
-        
-        let particleIndex = 0;
-        
-        // Distribute particles across posts (more from front posts)
-        postPositions.forEach((post, postIndex) => {
-            const particlesPerPost = postIndex < 3 ? 8 : 6; // Front posts get more particles
-            
-            for (let i = 0; i < particlesPerPost && particleIndex < totalParticles; i++) {
-                const i3 = particleIndex * 3;
-                
-                // Start particles at post position with slight random offset
-                const offsetRadius = 0.08 + Math.random() * 0.04; // Small offset from post center
+        const colors = new Float32Array(totalParticles * 3);
+        const spawnTimes = new Float32Array(totalParticles);
+        const lifetimes = new Float32Array(totalParticles);
+
+        const flowDir = this.waterBodyConfig?.flowDirection || new THREE.Vector2(1, 0);
+        const useRiverBubbles = this.waterBodyConfig?.riverMode === true;
+
+        for (let particleIndex = 0; particleIndex < totalParticles; particleIndex++) {
+            const i3 = particleIndex * 3;
+            const post = postPositions[particleIndex % postPositions.length];
+
+            if (useRiverBubbles) {
+                spawnRiverPostBubble(positions, velocities, i3, post, flowDir, this.waterY);
+            } else {
+                const offsetRadius = 0.08 + Math.random() * 0.04;
                 const angle = Math.random() * Math.PI * 2;
-                positions[i3] = post.x + Math.cos(angle) * offsetRadius; // X
-                positions[i3 + 1] = this.waterY + 0.05 + Math.random() * 0.05; // Y (just below water surface)
-                positions[i3 + 2] = post.z + Math.sin(angle) * offsetRadius; // Z
-                
-                // Flow velocity: downstream direction with random variation
-                const baseSpeed = 0.4 + Math.random() * 0.3; // Slower than main river particles
-                const speedVariation = 0.1;
-                velocities[i3] = flowDir.x * baseSpeed + (Math.random() - 0.5) * speedVariation; // X (flow direction)
-                velocities[i3 + 1] = -0.02 + Math.random() * 0.02; // Y (slight downward drift)
-                velocities[i3 + 2] = flowDir.y * baseSpeed + (Math.random() - 0.5) * speedVariation; // Z
-                
-                // Random white/grey shades
-                const brightness = 0.6 + Math.random() * 0.4; // 0.6 to 1.0 (white to light grey)
-                colors[i3] = brightness;     // R
-                colors[i3 + 1] = brightness; // G
-                colors[i3 + 2] = brightness; // B
-                
-                // Set spawn time and lifetime for this particle
-                spawnTimes[particleIndex] = 0; // Will be set to current time when first updated
-                lifetimes[particleIndex] = 2.0 + Math.random() * 0.5; // Random lifetime: 2.0 to 2.5 seconds
-                
-                particleIndex++;
+                positions[i3] = post.x + Math.cos(angle) * offsetRadius;
+                positions[i3 + 1] = this.waterY + 0.05 + Math.random() * 0.05;
+                positions[i3 + 2] = post.z + Math.sin(angle) * offsetRadius;
+                const baseSpeed = 0.22 + Math.random() * 0.28;
+                velocities[i3] = flowDir.x * baseSpeed;
+                velocities[i3 + 1] = -0.02 + Math.random() * 0.02;
+                velocities[i3 + 2] = flowDir.y * baseSpeed;
             }
-        });
-        
-        // Set geometry attributes
+
+            const brightness = 0.75 + Math.random() * 0.25;
+            colors[i3] = brightness * 0.92;
+            colors[i3 + 1] = brightness;
+            colors[i3 + 2] = brightness;
+
+            spawnTimes[particleIndex] = 0;
+            lifetimes[particleIndex] = 1.4 + Math.random() * 0.9;
+        }
+
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-        
-        // Material: white/grey particles with reduced visibility
+
         const material = new THREE.PointsMaterial({
-            size: 0.8, // Slightly smaller than main river particles
+            size: useRiverBubbles ? 0.42 : 0.8,
             transparent: true,
-            opacity: 0.4, // Lower visibility (40% opacity)
-            vertexColors: true, // Use vertex colors (white/grey shades)
+            opacity: useRiverBubbles ? 0.62 : 0.4,
+            vertexColors: true,
             blending: THREE.AdditiveBlending,
             depthWrite: false,
             sizeAttenuation: false,
             fog: false
         });
-        
+
         this.dockPostParticles = new THREE.Points(geometry, material);
         this.dockPostParticles.userData.positions = positions;
         this.dockPostParticles.userData.velocities = velocities;
-        this.dockPostParticles.userData.postPositions = postPositions; // Store for respawning
-        this.dockPostParticles.userData.spawnTimes = spawnTimes; // Track spawn time for each particle
-        this.dockPostParticles.userData.lifetimes = lifetimes; // Track lifetime for each particle
-        this.dockPostParticles.userData.initialized = false; // Flag to initialize spawn times on first update
+        this.dockPostParticles.userData.postPositions = postPositions;
+        this.dockPostParticles.userData.spawnTimes = spawnTimes;
+        this.dockPostParticles.userData.lifetimes = lifetimes;
+        this.dockPostParticles.userData.useRiverBubbles = useRiverBubbles;
+        this.dockPostParticles.userData.initialized = false;
         this.dockPostParticles.visible = this.waterBodyConfig.hasFlow === true;
-        this.dockPostParticles.renderOrder = 1001; // Render above water and main particles
+        this.dockPostParticles.renderOrder = 1001;
         this.sceneRef.scene.add(this.dockPostParticles);
-        
-        console.log('[RIVER] Dock post particles created:', totalParticles, 'particles, visible:', this.dockPostParticles.visible);
+    }
+
+    resetDockPostParticlesForRiver() {
+        if (!this.dockPostParticles) return;
+
+        const useRiver = this.waterBodyConfig?.riverMode === true;
+        this.dockPostParticles.userData.useRiverBubbles = useRiver;
+        this.dockPostParticles.userData.postPositions = getRiverWakePosts('RIVER');
+        this.dockPostParticles.userData.initialized = false;
+
+        const mat = this.dockPostParticles.material;
+        if (mat) {
+            mat.size = useRiver ? 0.42 : 0.8;
+            mat.opacity = useRiver ? 0.62 : 0.4;
+        }
+
+        const { positions, velocities, postPositions } = this.dockPostParticles.userData;
+        const flowDir = this.waterBodyConfig?.flowDirection || new THREE.Vector2(1, 0);
+        const count = positions.length / 3;
+
+        for (let i = 0; i < count; i++) {
+            const i3 = i * 3;
+            const post = postPositions[i % postPositions.length];
+            if (useRiver) {
+                spawnRiverPostBubble(positions, velocities, i3, post, flowDir, this.waterY);
+            }
+        }
     }
     
     applyWindScrollUniforms(material) {
@@ -413,6 +437,21 @@ export class Water2Lake {
         }
         if (windScroll2 && material.uniforms.uScroll2) {
             material.uniforms.uScroll2.value.copy(windScroll2);
+        }
+    }
+
+    applyRiverModeUniforms(material) {
+        if (!material?.uniforms) {
+            return;
+        }
+        const river = this.waterBodyConfig?.riverMode === true;
+        if (material.uniforms.uRiverMode) {
+            material.uniforms.uRiverMode.value = river ? 1.0 : 0.0;
+        }
+        if (material.uniforms.uFlowMapStrength) {
+            material.uniforms.uFlowMapStrength.value = river
+                ? (this.waterBodyConfig.flowMapStrength ?? 0.95)
+                : 0.0;
         }
     }
     
@@ -435,6 +474,7 @@ export class Water2Lake {
      * Change water body type (e.g., 'POND', 'RIVER', 'LAKE', 'OCEAN')
      */
     setWaterBodyType(type) {
+        const prevType = this.waterBodyType;
         this.waterBodyType = type;
         this.waterBodyConfig = getWaterBodyConfig(type);
         if (this.mesh && this.mesh.material) {
@@ -476,16 +516,23 @@ export class Water2Lake {
                 const flowDir = this.waterBodyConfig.flowDirection;
                 material.uniforms.uFlowDirection.value.copy(flowDir);
                 material.uniforms.uFlowSpeed.value = this.waterBodyConfig.flowSpeed || 1.5;
-                
-                // Boost wave amplitude for stronger river effect
-                if (material.uniforms.waveAmplitude) {
-                    material.uniforms.waveAmplitude.value *= 1.15; // Small boost to moving terms
-                }
             } else {
                 material.uniforms.uFlowDirection.value.set(0, 0);
                 material.uniforms.uFlowSpeed.value = 0.0;
             }
+            this.applyRiverModeUniforms(material);
             this.applyWindScrollUniforms(material);
+
+            const prevRiver = prevType === 'RIVER';
+            const nextRiver = type === 'RIVER';
+            const prevPond = prevType === 'POND';
+            const nextPond = type === 'POND';
+            if (prevRiver !== nextRiver || prevPond !== nextPond) {
+                this.createDockPostSplashes();
+            }
+            if (prevRiver !== nextRiver) {
+                this.resetDockPostParticlesForRiver();
+            }
             
             // Show/hide and update river particles based on water body type
             if (this.riverParticles) {
@@ -500,7 +547,6 @@ export class Water2Lake {
                     const splashShouldBeVisible = type === 'POND' || type === 'RIVER';
                     if (this.dockPostSplashes.visible !== splashShouldBeVisible) {
                         this.dockPostSplashes.visible = splashShouldBeVisible;
-                        console.log('[DOCK] Splash visibility changed to:', splashShouldBeVisible, 'type:', type);
                     }
                 }
                 
@@ -524,7 +570,7 @@ export class Water2Lake {
                     const velocities = this.riverParticles.userData.velocities;
                     if (velocities) {
                         for (let i = 0; i < velocities.length; i += 3) {
-                            const speed = 0.8 + Math.random() * 0.6; // Match the faster speed from creation
+                            const speed = 0.22 + Math.random() * 0.28;
                             velocities[i] = flowDir.x * speed; // X velocity (flowDir.x = -1 for left-to-right screen movement)
                             velocities[i + 1] = 0; // Y velocity (floating on surface)
                             velocities[i + 2] = flowDir.y * speed; // Z velocity
@@ -660,7 +706,8 @@ export class Water2Lake {
         }
         
         // Create water material using the new system with water body type configuration
-        // Uses the configured water body type (POND, RIVER, LAKE, OCEAN) for distinct appearance
+        const riverFlowMap = createRiverFlowTexture();
+        this.riverFlowMap = riverFlowMap;
         const waterMaterial = makeWaterMaterial({
             normalMap1,
             normalMap2,
@@ -679,7 +726,10 @@ export class Water2Lake {
             opacity: this.waterBodyConfig.opacity,
             envMap,
             envIntensity,
-            lakeBedMap: this.waterBodyType === 'CELESTIAL' ? null : this.lakeBedMap
+            lakeBedMap: this.waterBodyType === 'CELESTIAL' ? null : this.lakeBedMap,
+            flowMap: riverFlowMap,
+            flowMapStrength: this.waterBodyConfig.riverMode ? (this.waterBodyConfig.flowMapStrength ?? 0.95) : 0.0,
+            riverMode: this.waterBodyConfig.riverMode === true
         });
         
         // Extend material to support lake mask and ripples (existing functionality)
@@ -709,16 +759,11 @@ export class Water2Lake {
             const flowDir = this.waterBodyConfig.flowDirection;
             waterMaterial.uniforms.uFlowDirection.value.copy(flowDir);
             waterMaterial.uniforms.uFlowSpeed.value = this.waterBodyConfig.flowSpeed || 1.5;
-            // Boost wave amplitude for stronger river effect (RIVER ONLY)
-            if (waterMaterial.uniforms.waveAmplitude) {
-                waterMaterial.uniforms.waveAmplitude.value *= 1.15;
-            }
         } else {
-            // Non-river types: no flow, keep default diagonal scrolls
             waterMaterial.uniforms.uFlowDirection.value.set(0, 0);
             waterMaterial.uniforms.uFlowSpeed.value = 0.0;
-            // Keep default scroll values from makeWaterMaterial (diagonal, works great for lakes/oceans)
         }
+        this.applyRiverModeUniforms(waterMaterial);
         this.applyWindScrollUniforms(waterMaterial);
         
         // Create procedural cloud texture for reflections
@@ -777,6 +822,7 @@ export class Water2Lake {
             uniform float rippleAmp;
             uniform vec2 uFlowDirection;
             uniform float uFlowSpeed;
+            uniform float uRiverMode;
             varying vec3 vWorldPos;
             varying vec3 vNormal;
             varying vec2 vUv;
@@ -788,37 +834,60 @@ export class Water2Lake {
               vec3 pos = position;
               vec2 p = pos.xz;
               
-              // Apply flow offset for rivers (makes waves move in flow direction)
               float flowOffsetX = uFlowDirection.x * uFlowSpeed * uTime;
               float flowOffsetZ = uFlowDirection.y * uFlowSpeed * uTime;
               
-              // Base waves - use waveAmplitude uniform for configurable wave size
-              // For rivers, add flow offset to make waves move in flow direction
-              float wave1 = sin((position.x + flowOffsetX * 0.5) * 3.0 + uTime * waveSpeed) * waveAmplitude;
-              float wave2 = sin((position.z + flowOffsetZ * 0.5) * 3.0 + uTime * waveSpeed * 0.8) * waveAmplitude;
-              float wave3 = sin((position.x + position.z + flowOffsetX * 0.3 + flowOffsetZ * 0.3) * 2.2 + uTime * waveSpeed * 0.55) * waveAmplitude * 0.85;
-              float wave4 = sin((position.x - position.z + flowOffsetX * 0.3) * 2.0 + uTime * waveSpeed * 0.37) * waveAmplitude * 0.7;
-              // Additional choppy waves for ocean (higher frequency, smaller amplitude)
-              // For rivers, add flow-affected choppy waves that move with flow
-              float chop1 = sin((position.x + flowOffsetX * 0.6) * 5.0 + uTime * waveSpeed * 1.5) * waveAmplitude * 0.4 * chopMultiplier;
-              float chop2 = sin((position.z + flowOffsetZ * 0.6) * 4.5 + uTime * waveSpeed * 1.3) * waveAmplitude * 0.4 * chopMultiplier;
-              float chop3 = sin((position.x - position.z) * 6.8 + uTime * waveSpeed * 1.85) * waveAmplitude * 0.32 * max(chopMultiplier - 1.0, 0.0);
-              float chop4 = sin((position.x + position.z * 0.7) * 7.2 + uTime * waveSpeed * 2.1) * waveAmplitude * 0.26 * max(chopMultiplier - 1.0, 0.0);
+              float base = 0.0;
+              float dx = 0.0;
+              float dz = 0.0;
               
-              // Flow-specific waves for rivers (make water look like it's moving left to right)
-              float flowWave = 0.0;
-              if (uFlowSpeed > 0.0) {
-                  // Add directional waves that move with the flow (stronger effect)
-                  flowWave = sin((position.x * uFlowDirection.x + position.z * uFlowDirection.y) * 4.5 + uTime * waveSpeed * 1.5) * waveAmplitude * 0.8;
-                  // Add perpendicular ripples that flow downstream (more visible)
-                  flowWave += sin(position.x * 7.0 + flowOffsetX * 3.0) * waveAmplitude * 0.5;
-                  // Add additional flow ripples for stronger visual effect
-                  flowWave += sin((position.x * uFlowDirection.x) * 8.0 + uTime * waveSpeed * 2.0) * waveAmplitude * 0.4;
+              if (uRiverMode > 0.5) {
+                vec2 fDir = uFlowDirection;
+                float fLen = length(fDir);
+                if (fLen > 0.001) {
+                  fDir /= fLen;
+                } else {
+                  fDir = vec2(-1.0, 0.0);
+                }
+                vec2 fPerp = vec2(-fDir.y, fDir.x);
+                float along = dot(p, fDir);
+                float across = dot(p, fPerp);
+                float scroll = uFlowSpeed * uTime * 1.15;
+                
+                float r1 = sin(along * 7.5 - scroll * 3.2) * waveAmplitude;
+                float r2 = sin(along * 13.0 - scroll * 5.5) * waveAmplitude * 0.45;
+                float r3 = sin(along * 4.2 - scroll * 1.8) * waveAmplitude * 0.65;
+                float cross = sin(across * 2.8 + scroll * 0.35) * waveAmplitude * 0.07;
+                base = (r1 + r2 + r3 + cross) * waveScale;
+                
+                float dAlong1 = 7.5 * waveAmplitude * waveScale * cos(along * 7.5 - scroll * 3.2);
+                float dAlong2 = 13.0 * waveAmplitude * waveScale * 0.45 * cos(along * 13.0 - scroll * 5.5);
+                float dAlong3 = 4.2 * waveAmplitude * waveScale * 0.65 * cos(along * 4.2 - scroll * 1.8);
+                float dAlong = dAlong1 + dAlong2 + dAlong3;
+                dx = -dAlong * fDir.x;
+                dz = -dAlong * fDir.y;
+              } else {
+                float wave1 = sin((position.x + flowOffsetX * 0.5) * 3.0 + uTime * waveSpeed) * waveAmplitude;
+                float wave2 = sin((position.z + flowOffsetZ * 0.5) * 3.0 + uTime * waveSpeed * 0.8) * waveAmplitude;
+                float wave3 = sin((position.x + position.z + flowOffsetX * 0.3 + flowOffsetZ * 0.3) * 2.2 + uTime * waveSpeed * 0.55) * waveAmplitude * 0.85;
+                float wave4 = sin((position.x - position.z + flowOffsetX * 0.3) * 2.0 + uTime * waveSpeed * 0.37) * waveAmplitude * 0.7;
+                float chop1 = sin((position.x + flowOffsetX * 0.6) * 5.0 + uTime * waveSpeed * 1.5) * waveAmplitude * 0.4 * chopMultiplier;
+                float chop2 = sin((position.z + flowOffsetZ * 0.6) * 4.5 + uTime * waveSpeed * 1.3) * waveAmplitude * 0.4 * chopMultiplier;
+                float chop3 = sin((position.x - position.z) * 6.8 + uTime * waveSpeed * 1.85) * waveAmplitude * 0.32 * max(chopMultiplier - 1.0, 0.0);
+                float chop4 = sin((position.x + position.z * 0.7) * 7.2 + uTime * waveSpeed * 2.1) * waveAmplitude * 0.26 * max(chopMultiplier - 1.0, 0.0);
+                base = (wave1 + wave2 + wave3 + wave4 + chop1 + chop2 + chop3 + chop4) * waveScale;
+                
+                dx = 3.0 * waveAmplitude * cos(position.x * 3.0 + uTime * waveSpeed);
+                dz = 3.0 * waveAmplitude * cos(position.z * 3.0 + uTime * waveSpeed * 0.8);
+                float dxChop = 5.0 * waveAmplitude * 0.4 * chopMultiplier * cos(position.x * 5.0 + uTime * waveSpeed * 1.5);
+                float dzChop = 4.5 * waveAmplitude * 0.4 * chopMultiplier * cos(position.z * 4.5 + uTime * waveSpeed * 1.3);
+                float dxChop3 = 6.8 * waveAmplitude * 0.32 * max(chopMultiplier - 1.0, 0.0) * cos((position.x - position.z) * 6.8 + uTime * waveSpeed * 1.85);
+                float dzChop3 = -6.8 * waveAmplitude * 0.32 * max(chopMultiplier - 1.0, 0.0) * cos((position.x - position.z) * 6.8 + uTime * waveSpeed * 1.85);
+                dx += dxChop + dxChop3;
+                dz += dzChop + dzChop3;
               }
               
-              float base = (wave1 + wave2 + wave3 + wave4 + chop1 + chop2 + chop3 + chop4 + flowWave) * waveScale;
-              
-              // Ripples
+              // Ripples (cast / splash — all water types)
               float rip = 0.0;
               float active0 = step(0.0, rippleTime0);
               float dist0 = length(p - ripplePos0);
@@ -839,15 +908,7 @@ export class Water2Lake {
               vElevation = base + rip;
               pos.y += vElevation;
               
-              // Calculate normal for proper lighting (using waveAmplitude)
-              float dx = 3.0 * waveAmplitude * cos(position.x * 3.0 + uTime * waveSpeed);
-              float dz = 3.0 * waveAmplitude * cos(position.z * 3.0 + uTime * waveSpeed * 0.8);
-              // Add choppy wave normals
-              float dxChop = 5.0 * waveAmplitude * 0.4 * chopMultiplier * cos(position.x * 5.0 + uTime * waveSpeed * 1.5);
-              float dzChop = 4.5 * waveAmplitude * 0.4 * chopMultiplier * cos(position.z * 4.5 + uTime * waveSpeed * 1.3);
-              float dxChop3 = 6.8 * waveAmplitude * 0.32 * max(chopMultiplier - 1.0, 0.0) * cos((position.x - position.z) * 6.8 + uTime * waveSpeed * 1.85);
-              float dzChop3 = -6.8 * waveAmplitude * 0.32 * max(chopMultiplier - 1.0, 0.0) * cos((position.x - position.z) * 6.8 + uTime * waveSpeed * 1.85);
-              vNormal = normalize(normalMatrix * normalize(vec3(-(dx + dxChop + dxChop3), 1.0, -(dz + dzChop + dzChop3))));
+              vNormal = normalize(normalMatrix * normalize(vec3(-dx, 1.0, -dz)));
               
               vec4 wp = modelMatrix * vec4(pos, 1.0);
               vWorldPos = wp.xyz;
@@ -987,7 +1048,7 @@ export class Water2Lake {
                     positions[i3] = -halfSize; // Reset to left side
                     positions[i3 + 2] = (Math.random() - 0.5) * this.groundSize * 0.8; // Random Z
                     // Reset velocity to base flow speed (positive X = left to right)
-                    const baseSpeed = 0.8 + Math.random() * 0.6;
+                    const baseSpeed = 0.22 + Math.random() * 0.28;
                     velocities[i3] = flowDir.x * baseSpeed; // Positive X = left to right
                     velocities[i3 + 2] = flowDir.y * baseSpeed;
                 } else if (flowDir.x < 0 && positions[i3] < -halfSize) {
@@ -995,7 +1056,7 @@ export class Water2Lake {
                     positions[i3] = halfSize; // Reset to right side
                     positions[i3 + 2] = (Math.random() - 0.5) * this.groundSize * 0.8; // Random Z
                     // Reset velocity to base flow speed (negative X = right to left)
-                    const baseSpeed = 0.8 + Math.random() * 0.6;
+                    const baseSpeed = 0.22 + Math.random() * 0.28;
                     velocities[i3] = flowDir.x * baseSpeed; // Negative X = right to left
                     velocities[i3 + 2] = flowDir.y * baseSpeed;
                 }
@@ -1036,39 +1097,42 @@ export class Water2Lake {
             if (this.dockPostSplashes.visible !== shouldBeVisible) {
                 this.dockPostSplashes.visible = shouldBeVisible;
             }
-            
-            // Animate splashes if visible
+
             if (this.dockPostSplashes.visible) {
-                const time = this.time || 0;
-                
-                // Animate each splash ring
-                this.dockPostSplashes.children.forEach(ring => {
-                    if (!ring.userData) return;
+                if (this.dockPostSplashes.userData?.isRiverWake) {
+                    const flow = this.waterBodyConfig?.flowDirection || new THREE.Vector2(1, 0);
+                    updateRiverDockPostWake(this.dockPostSplashes, this.time || 0, flow);
+                } else {
+                    const time = this.time || 0;
 
-                    const { baseRadius, maxRadius, ringThickness, startTime, lifetime, fadeStart, peakOpacity } = ring.userData;
+                    this.dockPostSplashes.children.forEach(ring => {
+                        if (!ring.userData) return;
 
-                    const age = ((time - startTime) % lifetime + lifetime) % lifetime;
-                    const progress = age / lifetime;
-                    const expansionProgress = 1.0 - Math.pow(1.0 - progress, 3);
-                    const currentRadius = baseRadius + (maxRadius - baseRadius) * expansionProgress;
-                    const thickness = ringThickness ?? 0.038;
+                        const { baseRadius, maxRadius, ringThickness, startTime, lifetime, fadeStart, peakOpacity } = ring.userData;
 
-                    ring.geometry.dispose();
-                    ring.geometry = new THREE.RingGeometry(
-                        currentRadius,
-                        currentRadius + thickness,
-                        28
-                    );
+                        const age = ((time - startTime) % lifetime + lifetime) % lifetime;
+                        const progress = age / lifetime;
+                        const expansionProgress = 1.0 - Math.pow(1.0 - progress, 3);
+                        const currentRadius = baseRadius + (maxRadius - baseRadius) * expansionProgress;
+                        const thickness = ringThickness ?? 0.038;
 
-                    let opacity = 1.0;
-                    if (progress >= fadeStart) {
-                        const fadeProgress = (progress - fadeStart) / (1.0 - fadeStart);
-                        opacity = 1.0 - fadeProgress;
-                    }
-                    ring.material.opacity = Math.max(0.0, opacity) * (peakOpacity ?? 0.26);
+                        ring.geometry.dispose();
+                        ring.geometry = new THREE.RingGeometry(
+                            currentRadius,
+                            currentRadius + thickness,
+                            28
+                        );
 
-                    ring.rotation.z = Math.sin(time * 0.12 + baseRadius) * 0.015;
-                });
+                        let opacity = 1.0;
+                        if (progress >= fadeStart) {
+                            const fadeProgress = (progress - fadeStart) / (1.0 - fadeStart);
+                            opacity = 1.0 - fadeProgress;
+                        }
+                        ring.material.opacity = Math.max(0.0, opacity) * (peakOpacity ?? 0.26);
+
+                        ring.rotation.z = Math.sin(time * 0.12 + baseRadius) * 0.015;
+                    });
+                }
             }
         }
         
@@ -1107,35 +1171,34 @@ export class Water2Lake {
                 }
                 
                 // Get flow direction - use fallback if config is undefined
-                const flowDir = (this.waterBodyConfig && this.waterBodyConfig.flowDirection) 
-                    ? this.waterBodyConfig.flowDirection 
-                    : new THREE.Vector2(-1, 0); // Default: left to right on screen
+                const flowDir = (this.waterBodyConfig && this.waterBodyConfig.flowDirection)
+                    ? this.waterBodyConfig.flowDirection
+                    : new THREE.Vector2(1, 0);
+                const useRiverBubbles = this.dockPostParticles.userData.useRiverBubbles === true;
                 const halfSize = this.groundSize * 0.4;
-                const maxDistanceFromPost = 30.0; // Max distance from ANY post before respawn (ensures continuous stream)
                 
                 const particleCount = positions.length / 3;
                 
                 // Helper function to respawn particle from a random post
                 const respawnParticle = (i3, particleIndex) => {
                     const randomPost = postPositions[Math.floor(Math.random() * postPositions.length)];
-                    const offsetRadius = 0.08 + Math.random() * 0.04;
-                    const angle = Math.random() * Math.PI * 2;
-                    
-                    // Start directly at post (normal emission)
-                    positions[i3] = randomPost.x + Math.cos(angle) * offsetRadius;
-                    positions[i3 + 1] = this.waterY + 0.05 + Math.random() * 0.05;
-                    positions[i3 + 2] = randomPost.z + Math.sin(angle) * offsetRadius;
-                    
-                    // Reset velocity
-                    const baseSpeed = 0.4 + Math.random() * 0.3;
-                    const speedVariation = 0.1;
-                    velocities[i3] = flowDir.x * baseSpeed + (Math.random() - 0.5) * speedVariation;
-                    velocities[i3 + 1] = -0.02 + Math.random() * 0.02;
-                    velocities[i3 + 2] = flowDir.y * baseSpeed + (Math.random() - 0.5) * speedVariation;
-                    
-                    // Reset spawn time and lifetime for this particle
+                    if (useRiverBubbles) {
+                        spawnRiverPostBubble(positions, velocities, i3, randomPost, flowDir, this.waterY);
+                    } else {
+                        const offsetRadius = 0.08 + Math.random() * 0.04;
+                        const angle = Math.random() * Math.PI * 2;
+                        positions[i3] = randomPost.x + Math.cos(angle) * offsetRadius;
+                        positions[i3 + 1] = this.waterY + 0.05 + Math.random() * 0.05;
+                        positions[i3 + 2] = randomPost.z + Math.sin(angle) * offsetRadius;
+                        const baseSpeed = 0.22 + Math.random() * 0.28;
+                        velocities[i3] = flowDir.x * baseSpeed + (Math.random() - 0.5) * 0.1;
+                        velocities[i3 + 1] = -0.02 + Math.random() * 0.02;
+                        velocities[i3 + 2] = flowDir.y * baseSpeed + (Math.random() - 0.5) * 0.1;
+                    }
                     spawnTimes[particleIndex] = currentTime;
-                    lifetimes[particleIndex] = 2.0 + Math.random() * 0.5; // Random lifetime: 2.0 to 2.5 seconds
+                    lifetimes[particleIndex] = useRiverBubbles
+                        ? 1.2 + Math.random() * 0.8
+                        : 2.0 + Math.random() * 0.5;
                 };
                 
                 for (let i = 0; i < particleCount; i++) {
@@ -1146,18 +1209,31 @@ export class Water2Lake {
                     const particleLifetime = lifetimes[i];
                     
                     if (particleAge >= particleLifetime) {
-                        // Particle has reached its lifetime, respawn at post
-                        respawnParticle(i3, i); // Start from post (normal emission)
-                        continue; // Skip position update for this frame (already respawned)
+                        respawnParticle(i3, i);
+                        continue;
                     }
-                    
-                    // Update position based on flow
-                    positions[i3] += velocities[i3] * delta; // X (flow direction)
-                    positions[i3 + 1] += velocities[i3 + 1] * delta; // Y
-                    positions[i3 + 2] += velocities[i3 + 2] * delta; // Z
-                    
-                    // Gentle bobbing on water surface
-                    positions[i3 + 1] = this.waterY + 0.05 + Math.sin(this.time * 1.5 + i) * 0.03;
+
+                    if (useRiverBubbles) {
+                        updateRiverPostBubbleMotion(
+                            positions,
+                            velocities,
+                            i3,
+                            delta,
+                            currentTime,
+                            i,
+                            this.waterY,
+                            flowDir
+                        );
+                    } else {
+                        positions[i3] += velocities[i3] * delta;
+                        positions[i3 + 1] += velocities[i3 + 1] * delta;
+                        positions[i3 + 2] += velocities[i3 + 2] * delta;
+                        positions[i3 + 1] = this.waterY + 0.05 + Math.sin(this.time * 1.5 + i) * 0.03;
+                    }
+
+                    if (useRiverBubbles && Math.abs(positions[i3]) > halfSize) {
+                        respawnParticle(i3, i);
+                    }
                 }
                 
                 // Always update geometry attributes (critical - ensures particles continue to animate)

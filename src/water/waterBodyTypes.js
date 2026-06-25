@@ -27,23 +27,27 @@ export const WaterBodyTypes = {
     
     RIVER: {
         name: 'River',
-        deepColor: new THREE.Color(0x003d66),      // Dark but vibrant blue (was 0x006994, made darker)
-        shallowColor: new THREE.Color(0x006699),   // Darker cyan-blue (was 0x00a8cc, made darker)
-        fogColor: new THREE.Color(0x005577),        // Blue fog
-        fogDepth: 10.0,                            // Medium depth
-        fogIntensity: 0.5,                         // More fog (moving water = murkier)
-        turbidity: 0.5,                           // More turbid (dirtier)
-        absorption: 0.7,                          // More light absorption
-        opacity: 0.94,                            // More opaque (dirtier water)
-        sparkleStrength: 0.25,                   // Moderate sparkle
-        waveScale: 1.2,                          // Moderate waves (river-specific)
-        waveSpeed: 2.5,                          // Faster waves (moving water)
-        waveAmplitude: 0.08,                      // Medium wave amplitude (river-specific)
-        flowDirection: new THREE.Vector2(-1, 0),  // Flow left to right (negative X = screen left to screen right)
-        flowSpeed: 1.5,                          // Flow speed for visual effect
-        hasFlow: true,                            // River has flow direction
-        windScroll1: new THREE.Vector2(-0.06, 0.0),
-        windScroll2: new THREE.Vector2(0.035, 0.012)
+        deepColor: new THREE.Color(0x003d66),
+        shallowColor: new THREE.Color(0x006699),
+        fogColor: new THREE.Color(0x005577),
+        fogDepth: 10.0,
+        fogIntensity: 0.5,
+        turbidity: 0.5,
+        absorption: 0.7,
+        opacity: 0.94,
+        sparkleStrength: 0.16,
+        /** No lake swell — only directional flow ripples in the vertex shader. */
+        riverMode: true,
+        waveScale: 1.0,
+        waveSpeed: 1.6,
+        waveAmplitude: 0.022,
+        flowDirection: new THREE.Vector2(1, 0),
+        /** Wide, slow current — Amazon-scale river, not a rapid. */
+        flowSpeed: 0.62,
+        flowMapStrength: 0.95,
+        hasFlow: true,
+        windScroll1: new THREE.Vector2(0.038, 0.0),
+        windScroll2: new THREE.Vector2(0.026, 0.0)
     },
     
     LAKE: {
