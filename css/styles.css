@@ -578,7 +578,7 @@ canvas {
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.8);
-    z-index: 1000;
+    z-index: 11150;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -603,7 +603,10 @@ canvas {
     justify-content: space-between;
     align-items: center;
     padding: 20px;
+    padding-right: 16px;
     border-bottom: 2px solid rgba(74, 144, 226, 0.3);
+    position: relative;
+    z-index: 1;
 }
 
 .modal-header h2 {
@@ -619,13 +622,18 @@ canvas {
     font-size: 32px;
     cursor: pointer;
     padding: 0;
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
     transition: all 0.2s;
+    position: relative;
+    z-index: 2;
+    flex-shrink: 0;
+    margin-left: 12px;
 }
 
 .modal-close:hover {
@@ -2498,8 +2506,8 @@ canvas {
 .halley-command-panel {
     position: fixed;
     top: 72px;
-    right: 12px;
-    left: auto;
+    left: 12px;
+    right: auto;
     bottom: auto;
     z-index: 11000;
     width: min(88vw, 280px);
@@ -2720,8 +2728,8 @@ canvas {
 .halley-command-toggle {
     position: fixed;
     top: 16px;
-    right: 16px;
-    left: auto;
+    left: 16px;
+    right: auto;
     bottom: auto;
     z-index: 11001;
     width: 44px;
@@ -2734,6 +2742,12 @@ canvas {
     cursor: pointer;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
     pointer-events: auto;
+}
+
+body.modal-open #halley-admin-toggle,
+body.modal-open #halley-admin-panel:not(.hidden) {
+    visibility: hidden;
+    pointer-events: none;
 }
 
 .halley-command-toggle:hover,

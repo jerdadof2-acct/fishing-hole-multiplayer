@@ -5,7 +5,7 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
  * Load a CC0 HDRI (Poly Haven) and build a PMREM environment map for reflections.
  * @param {THREE.WebGLRenderer} renderer
  * @param {{ mobile?: boolean }} [options]
- * @returns {Promise<{ envMap: THREE.Texture, background: THREE.Texture } | null>}
+ * @returns {Promise<{ envMap: THREE.Texture } | null>}
  */
 export async function loadSkyEnvironment(renderer, options = {}) {
     if (!renderer) return null;
@@ -29,11 +29,11 @@ export async function loadSkyEnvironment(renderer, options = {}) {
         const envMap = pmrem.fromEquirectangular(hdr).texture;
         envMap.colorSpace = THREE.LinearSRGBColorSpace;
 
-        const background = hdr;
-        background.colorSpace = THREE.LinearSRGBColorSpace;
-
+        hdr.dispose();
         pmrem.dispose();
-        return { envMap, background };
+
+        // envMap is a cube map — safe to use for both IBL and scene.background (same target).
+        return { envMap };
     } catch (err) {
         console.warn('[environment] HDRI load failed, using default sky:', err);
         return null;
@@ -43,7 +43,7 @@ export async function loadSkyEnvironment(renderer, options = {}) {
 /**
  * Apply environment lighting and soft sky background to the scene.
  * @param {THREE.Scene} scene
- * @param {{ envMap: THREE.Texture, background: THREE.Texture }} env
+ * @param {{ envMap: THREE.Texture }} env
  */
 export function applySkyEnvironment(scene, env) {
     if (!scene || !env?.envMap) return;
@@ -51,14 +51,13 @@ export function applySkyEnvironment(scene, env) {
     scene.environment = env.envMap;
     scene.environmentIntensity = 0.85;
 
-    if (env.background) {
-        scene.background = env.background;
-        if ('backgroundBlurriness' in scene) {
-            scene.backgroundBlurriness = 0.35;
-        }
-        if ('backgroundIntensity' in scene) {
-            scene.backgroundIntensity = 0.9;
-        }
+    // Cube background matches environment — avoids 2D equirect vs cube bind conflicts.
+    scene.background = env.envMap;
+    if ('backgroundBlurriness' in scene) {
+        scene.backgroundBlurriness = 0.35;
+    }
+    if ('backgroundIntensity' in scene) {
+        scene.backgroundIntensity = 0.9;
     }
 
     if (scene.fog) {

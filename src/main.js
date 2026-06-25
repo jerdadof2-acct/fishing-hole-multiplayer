@@ -18,7 +18,7 @@ import { SoundManager } from './sound.js';
 import { addWaterParticles } from './effects/waterParticles.js';
 import { Sfx } from './audio/sfx.js';
 import { Voiceover } from './audio/voiceover.js';
-import { CelestialDepthsMusic, AmazonDepthsAmbience } from './audio/locationMusic.js';
+import { CelestialDepthsMusic, AmazonDepthsAmbience } from './audio/locationMusic.js?v=20250625-amazon-ambience';
 import { VOICEOVER_TAP_COOLDOWN_MS } from './config/voiceover.js';
 import { Player } from './player.js';
 import { Inventory } from './inventory.js';
@@ -344,6 +344,7 @@ export class Game {
             // Set water type based on current location
             this.water.setWaterBodyType(currentLocation.waterBodyType);
             this.applyLakeMaskForWaterBody(currentLocation.waterBodyType);
+            this.water.setPondSubmergedGrassEnabled(isCrescentPondLocation(this.locations));
             this.applyLocationEnvironment(currentLocation);
             this.applyCelestialBaitPreference(currentLocation);
             this.syncLocationMusic(currentLocation);
@@ -1025,13 +1026,13 @@ export class Game {
     applyLakeMaskForWaterBody(waterBodyType) {
         if (!this.water) return;
 
-        const previous = this.lakeMask;
         this.lakeMask = buildLakeMaskForWaterBody(waterBodyType);
-        if (previous && previous !== this.lakeMask) {
-            previous.dispose();
-        }
-
         this.water.setLakeMask(this.lakeMask);
+
+        if (this.grass?.grass?.material?.uniforms?.uMask) {
+            this.grass.lakeMask = this.lakeMask;
+            this.grass.grass.material.uniforms.uMask.value = this.lakeMask;
+        }
     }
 
     applyLocationEnvironment(location) {
@@ -1184,6 +1185,7 @@ export class Game {
         // Switch water type
         this.water.setWaterBodyType(location.waterBodyType);
         this.applyLakeMaskForWaterBody(location.waterBodyType);
+        this.water.setPondSubmergedGrassEnabled(isCrescentPondLocation(this.locations));
         if (location.name === CRESCENT_POND_NAME) {
             this.crescentFarShore = rebuildCrescentPondFarShore(this.scene.scene, this.crescentFarShore);
         }

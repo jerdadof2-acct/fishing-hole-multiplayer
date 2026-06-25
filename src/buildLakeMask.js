@@ -28,7 +28,7 @@ export function buildLakeMask(size = 1024, center = { x: 0.5, y: 0.5 }, a = 0.42
     const cvs = document.createElement('canvas');
     cvs.width = cvs.height = size;
     
-    const ctx = cvs.getContext('2d');
+    const ctx = cvs.getContext('2d', { willReadFrequently: true });
     
     // Fill with black (land)
     ctx.fillStyle = '#000';
@@ -58,6 +58,25 @@ export function getLakeMaskProfile(waterBodyType) {
 export function buildLakeMaskForWaterBody(waterBodyType, size = 1024) {
     const profile = getLakeMaskProfile(waterBodyType);
     return buildLakeMask(size, profile.center, profile.a, profile.b, profile.rotate);
+}
+
+/**
+ * Separate GPU texture for material alphaMap slots (never share with shader uniforms).
+ * @param {THREE.Texture} mask
+ * @returns {THREE.CanvasTexture | null}
+ */
+export function cloneLakeMaskForAlpha(mask) {
+    if (!mask?.image) return null;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = mask.image.width;
+    canvas.height = mask.image.height;
+    canvas.getContext('2d').drawImage(mask.image, 0, 0);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = mask.wrapS ?? THREE.ClampToEdgeWrapping;
+    tex.wrapT = mask.wrapT ?? THREE.ClampToEdgeWrapping;
+    return tex;
 }
 
 

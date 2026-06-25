@@ -44,7 +44,7 @@ export function updateFishShadowSprite(shadow, fishPosition, waterY = 0, visible
  * @param {object} scene
  * @param {number} groundSize
  * @param {number} waterY
- * @param {{ skipOnMobile?: boolean, excludeBounds?: import('three').Vector4 }} [options]
+ * @param {{ skipOnMobile?: boolean, excludeBounds?: import('three').Vector4, lakeMask?: THREE.Texture }} [options]
  */
 export function createCausticsLayer(scene, groundSize, waterY, options = {}) {
     const isMobile = typeof navigator !== 'undefined'
@@ -67,13 +67,16 @@ export function createCausticsLayer(scene, groundSize, waterY, options = {}) {
     texture.repeat.set(6, 6);
 
     const excludeBounds = options.excludeBounds || null;
+    const lakeMask = options.lakeMask || null;
     const material = new THREE.MeshBasicMaterial({
         map: texture,
         transparent: true,
         opacity: isMobile ? 0.22 : 0.36,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
-        depthTest: true
+        depthTest: true,
+        alphaMap: lakeMask || null,
+        alphaTest: lakeMask ? 0.42 : 0
     });
 
     if (excludeBounds) {

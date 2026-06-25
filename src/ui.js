@@ -550,6 +550,7 @@ export class UI {
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.classList.remove('hidden');
+            document.body.classList.add('modal-open');
         }
     }
     
@@ -557,6 +558,9 @@ export class UI {
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.classList.add('hidden');
+            if (!document.querySelector('.modal:not(.hidden)')) {
+                document.body.classList.remove('modal-open');
+            }
             // Return to game tab when closing
             this.switchTab('game');
         }

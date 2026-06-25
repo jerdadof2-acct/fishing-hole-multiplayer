@@ -55,7 +55,12 @@ export function preloadFarShoreGroundTextures() {
 
 function cloneRepeatingTexture(texture, repeatX, repeatY) {
     if (!texture) return null;
-    const clone = texture.clone();
+    const clone = new THREE.Texture(texture.image);
+    clone.wrapS = clone.wrapT = THREE.RepeatWrapping;
+    clone.anisotropy = texture.anisotropy || 4;
+    if (texture.colorSpace) {
+        clone.colorSpace = texture.colorSpace;
+    }
     clone.repeat.set(repeatX, repeatY);
     clone.needsUpdate = true;
     return clone;

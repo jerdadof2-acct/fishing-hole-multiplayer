@@ -90,7 +90,7 @@ export function initHalleyAdminPanel(game) {
         <div class="halley-admin-player-card hidden" data-role="player-card"></div>
         <div class="command-panel-section">Recent</div>
         <div class="halley-admin-recent" data-role="recent-list">Loading…</div>
-        <p class="command-panel-hint">Tap ☄ top-right to hide · Ctrl+Shift+H</p>
+        <p class="command-panel-hint">Tap ☄ top-left to hide · Ctrl+Shift+H</p>
     `;
 
     const toggle = document.createElement('button');

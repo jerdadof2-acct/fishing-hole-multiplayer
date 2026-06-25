@@ -119,14 +119,20 @@ export function makeWaterMaterial({
 
     float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453123); }
 
+    float sampleFlow(vec2 uv) {
+      float s = texture2D(uFlowMap, uv).r;
+      s += texture2D(uFlowMap, uv + vec2(0.0, 0.008)).r;
+      s += texture2D(uFlowMap, uv - vec2(0.0, 0.008)).r;
+      return s / 3.0;
+    }
+
     vec3 sampleSky(vec3 R) {
-      if (uHasEnvMap > 0.5) {
-        return textureCube(uEnvMap, R).rgb;
-      }
+      vec3 cubeSky = textureCube(uEnvMap, R).rgb;
       float phi = atan(R.z, R.x);
       float theta = asin(clamp(R.y, -1.0, 1.0));
       vec2 skyUv = vec2(phi * 0.15915494 + 0.5, theta * 0.31830988 + 0.5);
-      return texture2D(uCloudTexture, skyUv).rgb;
+      vec3 cloudSky = texture2D(uCloudTexture, skyUv).rgb;
+      return mix(cloudSky, cubeSky, step(0.5, uHasEnvMap));
     }
 
     void main() {
@@ -198,18 +204,18 @@ export function makeWaterMaterial({
 
       if (uRiverMode > 0.5 && uHasFlowMap > 0.5 && uFlowMapStrength > 0.0) {
         float scroll = flowScrollT * 0.28;
-        vec2 flowUV1 = vec2(along * 0.085 + scroll, across * 0.17 + 0.31);
-        vec2 flowUV2 = vec2(along * 0.14 + scroll * 1.22 + 0.27, across * 0.24 + 0.08);
-        vec2 flowUV3 = vec2(along * 0.055 + scroll * 0.72 + 0.61, across * 0.11 + 0.52);
-        float streak1 = texture2D(uFlowMap, flowUV1).r;
-        float streak2 = texture2D(uFlowMap, flowUV2).r;
-        float streak3 = texture2D(uFlowMap, flowUV3).r;
-        float streak = pow(clamp(streak1 * 0.7 + streak2 * 0.55 + streak3 * 0.35, 0.0, 1.0), 1.1);
+        vec2 flowUV1 = vec2(along * 0.055 + scroll, across * 0.14 + 0.31);
+        vec2 flowUV2 = vec2(along * 0.09 + scroll * 1.22 + 0.27, across * 0.2 + 0.08);
+        vec2 flowUV3 = vec2(along * 0.038 + scroll * 0.72 + 0.61, across * 0.1 + 0.52);
+        float streak1 = sampleFlow(flowUV1);
+        float streak2 = sampleFlow(flowUV2);
+        float streak3 = sampleFlow(flowUV3);
+        float streak = pow(clamp(streak1 * 0.7 + streak2 * 0.55 + streak3 * 0.35, 0.0, 1.0), 1.05);
         vec3 flowTint = vec3(0.78, 0.64, 0.46);
         color += flowTint * streak * uFlowMapStrength * (0.38 + fres * 0.72);
         color = mix(color, color + vec3(0.14, 0.09, 0.05) * streak, uFlowMapStrength * 0.48);
-        float vein = smoothstep(0.35, 0.92, streak);
-        color += vec3(0.12, 0.08, 0.04) * vein * uFlowMapStrength * 0.2;
+        float vein = smoothstep(0.3, 0.82, streak);
+        color += vec3(0.12, 0.08, 0.04) * vein * uFlowMapStrength * 0.18;
       } else if (uFlowSpeed > 0.0 && uHasFlowMap > 0.5 && uFlowMapStrength > 0.0) {
         vec2 fPerp2 = vec2(-fDir.y, fDir.x);
         float along2 = dot(worldXZ, fDir);

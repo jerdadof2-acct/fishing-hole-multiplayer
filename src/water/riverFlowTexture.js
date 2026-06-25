@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 
 let cachedTexture = null;
+const TEXTURE_VERSION = 3;
 
 function seededRandom(seed) {
     let s = seed;
@@ -11,16 +12,80 @@ function seededRandom(seed) {
 }
 
 /**
- * Small procedural streak texture for river surface flow (left-to-right on screen).
+ * Blend left/right margin columns so RepeatWrapping has no hard seam.
+ */
+function blendHorizontalSeams(ctx, width, height, margin = 36) {
+    const img = ctx.getImageData(0, 0, width, height);
+    const d = img.data;
+
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < margin; x++) {
+            const t = x / margin;
+            const li = (y * width + x) * 4;
+            const ri = (y * width + (width - margin + x)) * 4;
+
+            for (let c = 0; c < 3; c++) {
+                const left = d[li + c];
+                const right = d[ri + c];
+                const blended = left * (1.0 - t) + right * t;
+                d[li + c] = blended;
+                d[ri + c] = blended;
+            }
+        }
+    }
+
+    ctx.putImageData(img, 0, 0);
+}
+
+/**
+ * Draw a horizontal flow streak that can wrap across the texture edge.
+ */
+function drawWrappedStreak(ctx, width, xStart, y, length, lineWidth, alpha) {
+    const drawSegment = (x0, x1) => {
+        if (x1 <= x0) return;
+
+        const grad = ctx.createLinearGradient(x0, y, x1, y);
+        grad.addColorStop(0.0, 'rgba(255,255,255,0)');
+        grad.addColorStop(0.12, `rgba(235,245,255,${alpha * 0.35})`);
+        grad.addColorStop(0.5, `rgba(255,255,255,${alpha})`);
+        grad.addColorStop(0.88, `rgba(235,245,255,${alpha * 0.35})`);
+        grad.addColorStop(1.0, 'rgba(255,255,255,0)');
+
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = lineWidth;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x0, y);
+        ctx.lineTo(x1, y);
+        ctx.stroke();
+    };
+
+    const xEnd = xStart + length;
+    if (xEnd <= width) {
+        drawSegment(xStart, xEnd);
+        return;
+    }
+
+    drawSegment(xStart, width);
+    drawSegment(0, xEnd - width);
+}
+
+/**
+ * Horizontal flow streaks for Amazon river (elongated along U, seamless wrap).
  * @returns {THREE.CanvasTexture}
  */
 export function createRiverFlowTexture() {
-    if (cachedTexture) {
+    if (cachedTexture?.userData?.version === TEXTURE_VERSION) {
         return cachedTexture;
     }
 
-    const width = 256;
-    const height = 128;
+    if (cachedTexture) {
+        cachedTexture.dispose();
+        cachedTexture = null;
+    }
+
+    const width = 512;
+    const height = 256;
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
@@ -30,63 +95,71 @@ export function createRiverFlowTexture() {
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, width, height);
 
-    for (let band = 0; band < 6; band++) {
-        const y = (band + rand() * 0.6) * (height / 6);
-        const bandH = 6 + rand() * 10;
-        const grad = ctx.createLinearGradient(0, y, 0, y + bandH);
+    // Soft horizontal bands — constant across U (no vertical striping), seamless by nature.
+    for (let band = 0; band < 8; band++) {
+        const y = (band + rand() * 0.55) * (height / 8);
+        const bandH = 10 + rand() * 18;
+        const grad = ctx.createLinearGradient(0, y - bandH * 0.5, 0, y + bandH * 0.5);
         grad.addColorStop(0, 'rgba(255,255,255,0)');
-        grad.addColorStop(0.45, `rgba(180,210,230,${0.04 + rand() * 0.05})`);
+        grad.addColorStop(0.5, `rgba(200,220,240,${0.03 + rand() * 0.04})`);
         grad.addColorStop(1, 'rgba(255,255,255,0)');
         ctx.fillStyle = grad;
-        ctx.fillRect(0, y, width, bandH);
+        ctx.fillRect(0, y - bandH * 0.5, width, bandH);
     }
 
-    for (let i = 0; i < 110; i++) {
+    // Long horizontal streaks with soft ends; wrap-aware so tiles cleanly.
+    for (let i = 0; i < 95; i++) {
         const y = rand() * height;
         const x = rand() * width;
-        const len = 28 + rand() * 200;
-        const alpha = 0.12 + rand() * 0.55;
-        const wobble = (rand() - 0.5) * 5;
+        const length = 80 + rand() * 320;
+        const alpha = 0.14 + rand() * 0.42;
+        const wobble = (rand() - 0.5) * 4;
 
-        const grad = ctx.createLinearGradient(x, y, x + len, y);
-        grad.addColorStop(0, 'rgba(255,255,255,0)');
-        grad.addColorStop(0.25, `rgba(210,235,255,${alpha * 0.55})`);
-        grad.addColorStop(0.5, `rgba(240,250,255,${alpha})`);
-        grad.addColorStop(0.75, `rgba(200,225,245,${alpha * 0.5})`);
-        grad.addColorStop(1, 'rgba(255,255,255,0)');
-
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = 0.8 + rand() * 2.2;
+        ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+        ctx.lineWidth = 0.9 + rand() * 2.4;
         ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.bezierCurveTo(
-            x + len * 0.25,
-            y + wobble,
-            x + len * 0.65,
-            y - wobble * 0.6,
-            x + len,
-            y + wobble * 0.25
-        );
-        ctx.stroke();
+
+        const xEnd = x + length;
+        const drawCurve = (x0, x1) => {
+            if (x1 <= x0) return;
+            const len = x1 - x0;
+            ctx.beginPath();
+            ctx.moveTo(x0, y);
+            ctx.bezierCurveTo(
+                x0 + len * 0.25,
+                y + wobble,
+                x0 + len * 0.65,
+                y - wobble * 0.55,
+                x1,
+                y + wobble * 0.2
+            );
+            ctx.stroke();
+        };
+
+        if (xEnd <= width) {
+            drawCurve(x, xEnd);
+        } else {
+            drawCurve(x, width);
+            drawCurve(0, xEnd - width);
+        }
     }
 
-    for (let i = 0; i < 40; i++) {
+    // Broad soft streaks with gradient caps (primary flow read).
+    for (let i = 0; i < 48; i++) {
         const y = rand() * height;
         const x = rand() * width;
-        const len = 60 + rand() * 140;
-        ctx.strokeStyle = `rgba(255,255,255,${0.04 + rand() * 0.08})`;
-        ctx.lineWidth = 3 + rand() * 5;
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + len, y + (rand() - 0.5) * 3);
-        ctx.stroke();
+        const length = 120 + rand() * 280;
+        const alpha = 0.08 + rand() * 0.18;
+        drawWrappedStreak(ctx, width, x, y, length, 3 + rand() * 6, alpha);
     }
+
+    blendHorizontalSeams(ctx, width, height, 40);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
     texture.colorSpace = THREE.SRGBColorSpace;
+    texture.userData.version = TEXTURE_VERSION;
     texture.needsUpdate = true;
     cachedTexture = texture;
     return texture;

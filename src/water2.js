@@ -17,6 +17,8 @@ import {
     tickCausticsLayer
 } from './effects/waterAmbience.js';
 import { getDockPostSplashPositions, getStylizedDockWorldBounds } from './scene/stylizedDock.js';
+import { PondSubmergedGrass } from './effects/pondSubmergedGrass.js';
+import { cloneLakeMaskForAlpha } from './buildLakeMask.js';
 
 // Create procedural water normal map if texture is missing
 function createProceduralWaterNormal(offset = 0) {
@@ -56,6 +58,7 @@ export class Water2Lake {
     constructor(scene, lakeMask, waterBodyType = DEFAULT_WATER_BODY_TYPE) {
         this.sceneRef = scene;
         this.lakeMask = lakeMask;
+        this.lakeMaskAlpha = cloneLakeMaskForAlpha(lakeMask);
         this.waterBodyType = waterBodyType;
         this.waterBodyConfig = getWaterBodyConfig(waterBodyType);
         this.water = null;
@@ -71,6 +74,9 @@ export class Water2Lake {
         this.celestialTime = 0; // Time accumulator for celestial twinkle
         this.causticsLayer = null;
         this.ambientSplashes = null;
+        this.lakeBedGround = null;
+        this.pondSubmergedGrass = null;
+        this._pondGrassLocationEnabled = false;
     }
     
     /**
@@ -509,14 +515,49 @@ export class Water2Lake {
      */
     setLakeMask(lakeMask) {
         if (!lakeMask) return;
-        if (this.lakeMask && this.lakeMask !== lakeMask) {
-            this.lakeMask.dispose();
-        }
+
+        const previous = this.lakeMask;
+        const previousAlpha = this.lakeMaskAlpha;
         this.lakeMask = lakeMask;
+        this.lakeMaskAlpha = cloneLakeMaskForAlpha(lakeMask);
+
         if (this.mesh?.material?.uniforms?.lakeMask) {
             this.mesh.material.uniforms.lakeMask.value = lakeMask;
-            lakeMask.needsUpdate = true;
         }
+        if (this.lakeBedGround?.material) {
+            this.lakeBedGround.material.alphaMap = this.lakeMaskAlpha;
+        }
+        if (this.causticsLayer?.material) {
+            this.causticsLayer.material.alphaMap = this.lakeMaskAlpha;
+        }
+        if (this.pondSubmergedGrass) {
+            this.pondSubmergedGrass.rebuild(lakeMask);
+        }
+
+        if (previous && previous !== lakeMask) {
+            previous.dispose();
+        }
+        if (previousAlpha && previousAlpha !== this.lakeMaskAlpha) {
+            previousAlpha.dispose();
+        }
+    }
+
+    /**
+     * Crescent Pond only — submerged grass patches under the surface.
+     * @param {boolean} enabled
+     */
+    setPondSubmergedGrassEnabled(enabled) {
+        this._pondGrassLocationEnabled = enabled === true;
+        this._syncPondSubmergedGrassVisibility();
+    }
+
+    _syncPondSubmergedGrassVisibility() {
+        if (!this.pondSubmergedGrass) {
+            return;
+        }
+        this.pondSubmergedGrass.setActive(
+            this._pondGrassLocationEnabled && this.waterBodyType === 'POND'
+        );
     }
 
     /**
@@ -638,6 +679,15 @@ export class Water2Lake {
                     this.celestialParticles.material.opacity = baseOpacity;
                 }
             }
+
+            if (this.causticsLayer?.material) {
+                const isMobile = typeof navigator !== 'undefined'
+                    && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+                const base = isMobile ? 0.22 : 0.36;
+                this.causticsLayer.material.opacity = type === 'POND' ? base * 0.55 : base;
+            }
+
+            this._syncPondSubmergedGrassVisibility();
         }
     }
 
@@ -668,13 +718,16 @@ export class Water2Lake {
                 roughnessMap: lakeBedRough,
                 roughness: 1,
                 metalness: 0,
-                envMapIntensity: 0.35
+                envMapIntensity: 0.35,
+                alphaMap: this.lakeMaskAlpha,
+                alphaTest: 0.42
             })
         );
         ground.rotation.x = -Math.PI / 2;
         ground.position.y = this.waterY - 0.08;
         ground.receiveShadow = true;
         this.sceneRef.scene.add(ground);
+        this.lakeBedGround = ground;
         this.lakeBedMap = lakeBedColor;
 
         this.causticsLayer = createCausticsLayer(
@@ -683,7 +736,8 @@ export class Water2Lake {
             this.waterY,
             {
                 skipOnMobile: false,
-                excludeBounds: getStylizedDockWorldBounds()
+                excludeBounds: getStylizedDockWorldBounds(),
+                lakeMask: this.lakeMaskAlpha
             }
         );
 
@@ -736,7 +790,7 @@ export class Water2Lake {
             normalMap2 = createProceduralWaterNormal(0.35);
         }
         
-        const envMap = this.sceneRef.scene?.environment || null;
+        const envMap = null;
         const envIntensity = this.waterBodyType === 'CELESTIAL'
             ? 0.12
             : (this.waterBodyType === 'RIVER' ? 0.2 : 0.44);
@@ -994,6 +1048,14 @@ export class Water2Lake {
         this.sceneRef.scene.add(this.water);
 
         this.mesh = this.water;
+
+        this.pondSubmergedGrass = new PondSubmergedGrass(this.sceneRef, {
+            lakeMask: this.lakeMask,
+            groundSize: this.groundSize,
+            waterY: this.waterY
+        });
+        this.pondSubmergedGrass.create();
+        this._syncPondSubmergedGrassVisibility();
         
         // Add helper methods for water animation and splashes
         // Material's tick function is already set up above
@@ -1046,6 +1108,10 @@ export class Water2Lake {
 
     update(delta) {
         this.time = (this.time || 0) + delta;
+
+        if (this.pondSubmergedGrass) {
+            this.pondSubmergedGrass.update(delta);
+        }
 
         tickCausticsLayer(this.causticsLayer, delta);
         tickAmbientSplashes(

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GROUND_SIZE, POND_MASK_PROFILE } from '../buildLakeMask.js';
-import { applyRockyGroundToMesh } from './farShoreGroundTextures.js';
+import { applyShoreRockToMesh } from './shoreRockMaterial.js';
+import { createPineTrunkMaterial, createPineFoliageMaterial } from './pineTreeMaterials.js';
 
 export const CRESCENT_POND_NAME = 'Crescent Pond';
 
@@ -8,8 +9,7 @@ const MASK_A = POND_MASK_PROFILE.a;
 const MASK_B = POND_MASK_PROFILE.b;
 const MASK_ROTATE = POND_MASK_PROFILE.rotate;
 
-const FOLIAGE_COLORS = [0x2d5a34, 0x356b3f, 0x3a7544];
-const TRUNK_COLOR = 0x4a3528;
+const FOLIAGE_COLORS = [0x4f9a58, 0x5aad64, 0x64ba6e];
 
 const PORTRAIT_FADE_START = 0.15;
 const PORTRAIT_FADE_END = 0.75;
@@ -96,51 +96,124 @@ function scatterFarBankTrees() {
     return trees;
 }
 
-function createFoliageMaterial(color) {
-    return new THREE.MeshStandardMaterial({
-        color,
-        roughness: 0.92,
-        metalness: 0,
-        flatShading: true
-    });
+function jitterConeGeometry(geometry, rand, amount) {
+    const pos = geometry.attributes.position;
+    const vertex = new THREE.Vector3();
+    let maxY = -Infinity;
+
+    for (let i = 0; i < pos.count; i++) {
+        vertex.fromBufferAttribute(pos, i);
+        if (vertex.y > maxY) maxY = vertex.y;
+    }
+
+    for (let i = 0; i < pos.count; i++) {
+        vertex.fromBufferAttribute(pos, i);
+        const heightT = maxY > 0 ? vertex.y / maxY : 0;
+        const edgeBias = 1.0 - heightT * 0.55;
+        const jitter = amount * edgeBias;
+
+        vertex.x += (rand() - 0.5) * jitter * 2.2;
+        vertex.z += (rand() - 0.5) * jitter * 2.2;
+        if (heightT > 0.35) {
+            vertex.y += (rand() - 0.5) * jitter * 0.65;
+        }
+        pos.setXYZ(i, vertex.x, vertex.y, vertex.z);
+    }
+
+    pos.needsUpdate = true;
+    geometry.computeVertexNormals();
 }
 
-function createTrunkMaterial() {
-    return new THREE.MeshStandardMaterial({
-        color: TRUNK_COLOR,
-        roughness: 0.88,
-        metalness: 0,
-        flatShading: true
-    });
+function addFoliageClump(parent, options) {
+    const {
+        x,
+        y,
+        z,
+        radius,
+        height,
+        material,
+        rand,
+        jitter = 0.1
+    } = options;
+
+    const segments = 7 + Math.floor(rand() * 5);
+    const rings = 2 + Math.floor(rand() * 2);
+    const geometry = new THREE.ConeGeometry(radius, height, segments, rings);
+    jitterConeGeometry(geometry, rand, jitter);
+
+    const clump = new THREE.Mesh(geometry, material);
+    clump.position.set(x, y, z);
+    clump.rotation.y = rand() * Math.PI * 2;
+    clump.rotation.z = (rand() - 0.5) * 0.18;
+    clump.rotation.x = (rand() - 0.5) * 0.12;
+    clump.scale.set(
+        0.82 + rand() * 0.38,
+        0.88 + rand() * 0.28,
+        0.82 + rand() * 0.38
+    );
+    parent.add(clump);
 }
 
 function makePineTree(scale = 1, foliageIndex = 0) {
     const tree = new THREE.Group();
     const h = 4.2 * scale;
-    const trunkH = h * 0.38;
+    const trunkH = h * 0.36;
+    const rand = mulberry32(0x5a1c0031 + foliageIndex * 97);
 
     const trunk = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.07 * scale, 0.11 * scale, trunkH, 6),
-        createTrunkMaterial()
+        new THREE.CylinderGeometry(0.07 * scale, 0.12 * scale, trunkH, 8),
+        createPineTrunkMaterial({ repeatV: 1.6 + rand() * 0.8 })
     );
     trunk.position.y = trunkH * 0.5;
+    trunk.rotation.z = (rand() - 0.5) * 0.05;
     tree.add(trunk);
 
-    const layers = [
-        { r: 0.95, h: 0.55, y: trunkH + 0.15 * scale },
-        { r: 0.75, h: 0.5, y: trunkH + 0.65 * scale },
-        { r: 0.52, h: 0.45, y: trunkH + 1.1 * scale }
-    ];
+    const tierCount = 5;
+    for (let tier = 0; tier < tierCount; tier++) {
+        const tierT = tier / Math.max(1, tierCount - 1);
+        const baseY = trunkH + (0.08 + tier * 0.2) * h;
+        const tierRadius = (0.88 - tierT * 0.52 + (rand() - 0.5) * 0.1) * scale;
+        const tierHeight = (0.34 - tierT * 0.08 + (rand() - 0.5) * 0.04) * h;
+        const tint = FOLIAGE_COLORS[(foliageIndex + tier) % FOLIAGE_COLORS.length];
+        const material = createPineFoliageMaterial(tint, {
+            repeat: 1.8 + rand() * 1.4,
+            variation: rand() - 0.5
+        });
 
-    layers.forEach((layer, i) => {
-        const cone = new THREE.Mesh(
-            new THREE.ConeGeometry(layer.r * scale, layer.h * h, 7),
-            createFoliageMaterial(FOLIAGE_COLORS[(foliageIndex + i) % FOLIAGE_COLORS.length])
-        );
-        cone.position.y = layer.y;
-        tree.add(cone);
+        const clumpCount = tier < 2 ? 3 : 2;
+        for (let c = 0; c < clumpCount; c++) {
+            const angle = rand() * Math.PI * 2;
+            const spread = (0.06 + tierT * 0.14) * scale;
+            const dist = rand() * spread;
+            addFoliageClump(tree, {
+                x: Math.cos(angle) * dist,
+                y: baseY + (rand() - 0.5) * 0.06 * h,
+                z: Math.sin(angle) * dist,
+                radius: tierRadius * (0.72 + rand() * 0.45),
+                height: tierHeight * (0.8 + rand() * 0.35),
+                material,
+                rand,
+                jitter: 0.08 * scale + tierT * 0.04
+            });
+        }
+    }
+
+    const tipTint = FOLIAGE_COLORS[(foliageIndex + tierCount) % FOLIAGE_COLORS.length];
+    addFoliageClump(tree, {
+        x: (rand() - 0.5) * 0.08 * scale,
+        y: trunkH + 1.02 * h,
+        z: (rand() - 0.5) * 0.08 * scale,
+        radius: 0.28 * scale * (0.85 + rand() * 0.3),
+        height: 0.22 * h * (0.9 + rand() * 0.25),
+        material: createPineFoliageMaterial(tipTint, {
+            repeat: 2.2 + rand(),
+            variation: rand() - 0.5
+        }),
+        rand,
+        jitter: 0.06 * scale
     });
 
+    tree.rotation.z = (rand() - 0.5) * 0.07;
     return tree;
 }
 
@@ -169,7 +242,7 @@ function buildFarBankMeshes(landY) {
     const landGeom = new THREE.ShapeGeometry(landShape);
     landGeom.rotateX(-Math.PI / 2);
     const land = new THREE.Mesh(landGeom);
-    applyRockyGroundToMesh(land, 0x8a9a7a, 3.0);
+    applyShoreRockToMesh(land, 0x7a6a58, 2.6);
     land.position.y = landY;
     land.renderOrder = 2;
 
@@ -186,7 +259,7 @@ function buildFarBankMeshes(landY) {
     const beachGeom = new THREE.ShapeGeometry(beachShape);
     beachGeom.rotateX(-Math.PI / 2);
     const beach = new THREE.Mesh(beachGeom);
-    applyRockyGroundToMesh(beach, 0xa89878, 2.4);
+    applyShoreRockToMesh(beach, 0x8f7d68, 2.2);
     beach.position.y = landY - 0.02;
     beach.renderOrder = 2;
 
@@ -201,9 +274,9 @@ function disposeObject3D(object) {
         if (obj.material) {
             const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
             mats.forEach((mat) => {
-                if (mat.map) mat.map.dispose();
-                if (mat.normalMap) mat.normalMap.dispose();
-                if (mat.roughnessMap) mat.roughnessMap.dispose();
+                if (mat.map && !mat.userData?.sharedMaps) mat.map.dispose();
+                if (mat.normalMap && !mat.userData?.sharedMaps) mat.normalMap.dispose();
+                if (mat.roughnessMap && !mat.userData?.sharedMaps) mat.roughnessMap.dispose();
                 mat.dispose();
             });
         }

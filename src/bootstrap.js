@@ -1,4 +1,4 @@
-import Game from './main.js?v=20250624-pack-vo';
+import Game from './main.js?v=20250625-pine-shape';
 import { api } from './api.js';
 import { initAdRotator } from './ads.js';
 import { ensureProloguePack, prefetchProloguePack, startDeferredPackDownload } from './assetPack.js';
