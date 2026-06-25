@@ -68,7 +68,7 @@ export const GAMEPLAY_ONBOARDING_STEPS = [
         id: 'done',
         icon: '🌟',
         title: "You're ready to cast!",
-        body: 'Try Crescent Pond and land your first fish. Good luck, Captain!',
+        body: 'Try Crescent Pond and land your first fish. The sea\'s ready when you are, Captain!',
         center: true
     }
 ];
