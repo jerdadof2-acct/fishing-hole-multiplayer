@@ -11,6 +11,10 @@ import { getPrologueMusicSource } from '../assetPack.js';
 const FADE_IN_SEC = 2.5;
 const FADE_OUT_SEC = 1.8;
 
+function clampVolume(value) {
+    return Math.min(1, Math.max(0, Number(value) || 0));
+}
+
 export const AMAZON_DEPTHS_AMBIENCE_URL = '/src/audio/lookingnorth-river-flow-473686.mp3';
 export const AMAZON_DEPTHS_AMBIENCE_VOLUME = 0.38;
 
@@ -25,6 +29,7 @@ export class LoopingLocationAmbience {
         this.active = false;
         this._fading = false;
         this._fadeFrame = null;
+        this._fadeId = 0;
         this._pendingStart = false;
         this._gestureHandler = null;
     }
@@ -57,20 +62,28 @@ export class LoopingLocationAmbience {
             this._fadeFrame = null;
         }
         this._fading = false;
+        this._fadeId += 1;
     }
 
     _fadeVolume(from, to, durationSec, onDone) {
         this._cancelFade();
+        const fadeId = this._fadeId;
         const audio = this._ensureAudio();
         const start = performance.now();
         const durationMs = Math.max(1, durationSec * 1000);
+        const startVol = clampVolume(from);
+        const endVol = clampVolume(to);
 
         this._fading = true;
-        audio.volume = from;
+        audio.volume = startVol;
 
         const step = (now) => {
+            if (fadeId !== this._fadeId) {
+                return;
+            }
+
             const t = Math.min(1, (now - start) / durationMs);
-            audio.volume = from + (to - from) * t;
+            audio.volume = clampVolume(startVol + (endVol - startVol) * t);
 
             if (t < 1) {
                 this._fadeFrame = requestAnimationFrame(step);
@@ -79,7 +92,7 @@ export class LoopingLocationAmbience {
 
             this._fadeFrame = null;
             this._fading = false;
-            audio.volume = to;
+            audio.volume = endVol;
             onDone?.();
         };
 
@@ -169,7 +182,7 @@ export class LoopingLocationAmbience {
 
         this._cancelFade();
         const audio = this.audio;
-        const from = audio.volume;
+        const from = clampVolume(audio.volume);
 
         this._fadeVolume(from, 0, FADE_OUT_SEC, () => {
             audio.pause();
