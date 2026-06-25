@@ -1869,6 +1869,28 @@ export class UI {
             inventoryContent.innerHTML = `
                 <div class="settings-panel">
                     <h3 class="settings-heading">Game Settings</h3>
+                    <section class="settings-account-section">
+                        <h4 class="settings-account-title">Claim older account</h4>
+                        <p class="settings-account-copy">
+                            Played before save PINs existed? Enter that username to load your cloud save and set a PIN.
+                            Once claimed, only your username and PIN can open it — nobody else can claim it again.
+                        </p>
+                        <p id="settings-account-status" class="settings-account-status">Checking account…</p>
+                        <form id="settings-claim-form" class="settings-claim-form">
+                            <input
+                                type="text"
+                                id="settings-claim-username"
+                                class="settings-claim-input"
+                                placeholder="Your old username"
+                                maxlength="20"
+                                autocomplete="username"
+                            />
+                            <button type="submit" id="settings-claim-btn" class="settings-claim-btn">
+                                Claim account &amp; set PIN
+                            </button>
+                        </form>
+                        <p id="settings-claim-message" class="settings-claim-message hidden"></p>
+                    </section>
                     <div class="settings-story-row">
                         <button type="button" id="replay-prologue-btn" class="settings-story-link">
                             ☄ Halley's tale
@@ -1886,6 +1908,8 @@ export class UI {
                     </div>
                 </div>
             `;
+
+            this.wireSettingsAccountSection();
 
             const replayBtn = document.getElementById('replay-prologue-btn');
             if (replayBtn) {
@@ -3554,6 +3578,94 @@ export class UI {
             });
         }).catch(error => {
             console.error('[UI] Failed to load fishTypes:', error);
+        });
+    }
+
+    async wireSettingsAccountSection() {
+        const statusEl = document.getElementById('settings-account-status');
+        const formEl = document.getElementById('settings-claim-form');
+        const usernameInput = document.getElementById('settings-claim-username');
+        const submitBtn = document.getElementById('settings-claim-btn');
+        const messageEl = document.getElementById('settings-claim-message');
+
+        const showClaimMessage = (text, tone = 'info') => {
+            if (!messageEl) return;
+            messageEl.textContent = text;
+            messageEl.classList.remove('hidden', 'error', 'success');
+            if (tone === 'error') messageEl.classList.add('error');
+            if (tone === 'success') messageEl.classList.add('success');
+        };
+
+        if (!formEl || !usernameInput || !submitBtn) {
+            return;
+        }
+
+        if (!this.isOnline()) {
+            if (statusEl) {
+                statusEl.textContent = 'Connect online to claim an older account.';
+            }
+            formEl.classList.add('hidden');
+            return;
+        }
+
+        try {
+            const { getAccountSecurityStatus } = await import('./accountClaim.js');
+            const status = await getAccountSecurityStatus(this.api);
+
+            if (statusEl) {
+                if (status.username && status.hasPin) {
+                    statusEl.textContent =
+                        `Currently signed in as ${status.username} (save PIN set). ` +
+                        'To claim a different older account, enter its username below.';
+                } else if (status.username) {
+                    statusEl.textContent =
+                        `Signed in as ${status.username} without a save PIN yet. ` +
+                        'You can claim that username here, or enter another old username.';
+                    if (!usernameInput.value) {
+                        usernameInput.value = status.username;
+                    }
+                } else {
+                    statusEl.textContent = 'Enter an older username that never had a save PIN.';
+                }
+            }
+        } catch (error) {
+            console.warn('[UI] Account status check failed:', error);
+            if (statusEl) {
+                statusEl.textContent = 'Enter an older username that never had a save PIN.';
+            }
+        }
+
+        formEl.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            showClaimMessage('');
+
+            const username = usernameInput.value.trim();
+            if (!username) {
+                showClaimMessage('Enter a username to claim.', 'error');
+                return;
+            }
+
+            const confirmed = window.confirm(
+                `Claim "${username}"?\n\nThis device will load that cloud save. ` +
+                'You\'ll set a private save PIN — after that, only you can sign in with that username and PIN.'
+            );
+            if (!confirmed) {
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Claiming…';
+
+            try {
+                this.closeModal('inventory-modal');
+                const { claimAccountByUsername } = await import('./accountClaim.js');
+                await claimAccountByUsername(this.api, username);
+            } catch (error) {
+                console.error('[UI] Claim account failed:', error);
+                showClaimMessage(error?.message || 'Could not claim that account.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Claim account & set PIN';
+            }
         });
     }
     

@@ -10,6 +10,23 @@ export function clearAuthStorage() {
     }
 }
 
+export function getAuthStorage() {
+    try {
+        const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+        return stored ? JSON.parse(stored) : null;
+    } catch {
+        return null;
+    }
+}
+
+export function setAuthStorage(auth) {
+    try {
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
+    } catch {
+        /* ignore */
+    }
+}
+
 export function switchToDifferentAccount() {
     clearAuthStorage();
     try {
