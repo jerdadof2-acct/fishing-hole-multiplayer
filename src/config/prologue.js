@@ -22,7 +22,7 @@ export const PROLOGUE_SCROLL_SPEED = 0.7;
 export const PROLOGUE_SCROLL_SPEED_DEFAULT = PROLOGUE_SCROLL_SPEED;
 
 /** Intro narration — plays after credits begin scrolling. */
-export const PROLOGUE_VOICEOVER_URL = '/assets/audio/halleys-big-catch-intro.wav';
+export const PROLOGUE_VOICEOVER_URL = '/assets/audio/halleys-big-catch-intro.mp3';
 
 /** Ocean + seagulls loop under the voiceover. */
 export const PROLOGUE_AMBIENCE_URL = '/assets/audio/prologue-ocean-seagulls.mp3';

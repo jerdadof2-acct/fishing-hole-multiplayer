@@ -10,7 +10,7 @@ const BOOT_ASSETS = [
     'assets/textures/particle.png',
     'assets/textures/waterNormals1.jpg',
     'assets/textures/waterNormals2.jpg',
-    '/assets/audio/halleys-big-catch-intro.wav',
+    '/assets/audio/halleys-big-catch-intro.mp3',
     '/assets/audio/prologue-ocean-seagulls.mp3',
     '/assets/audio/prologue-music.mp3'
 ];

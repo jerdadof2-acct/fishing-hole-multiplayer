@@ -10,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 
 /** Bump when adding/removing pack files — clients re-download on change. */
-export const PACK_VERSION = '20250624-1';
+export const PACK_VERSION = '20250624-2';
 
 const EXTRA_URLS = [
     '/',
@@ -20,6 +20,7 @@ const EXTRA_URLS = [
     '/images/halley-splash.png',
     '/images/prologue-background.png',
     '/assets/glb/Cat.glb',
+    '/assets/audio/halleys-big-catch-intro.mp3',
     '/assets/audio/halleys-big-catch-intro.wav',
     '/assets/audio/prologue-ocean-seagulls.mp3',
     '/assets/audio/prologue-music.mp3',
