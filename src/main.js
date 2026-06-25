@@ -31,6 +31,7 @@ import {
     PORTRAIT_BOBBER_TRACKING_CUTOFF
 } from './config/idlePortrait.js';
 import { preloadDockWoodTexture } from './scene/dockTextures.js';
+import { loadSkyEnvironment, applySkyEnvironment } from './environment/loadSkyEnvironment.js';
 
 export class Game {
     constructor(options = {}) {
@@ -70,6 +71,7 @@ export class Game {
         this._portraitIdleActive = false;
         this.deferReveal = options.deferReveal === true;
         this._revealed = false;
+        this.skyEnv = null;
         if (this.deferReveal) {
             document.getElementById('game-container')?.classList.add('pre-entry');
         }
@@ -228,6 +230,13 @@ export class Game {
             loadingProgress.update(22, 'Starting 3D engine...');
             this.scene = new Scene();
             await this.scene.init();
+
+            loadingProgress.update(26, 'Loading sky and reflections...');
+            const skyEnv = await loadSkyEnvironment(this.scene.renderer);
+            this.skyEnv = skyEnv;
+            if (skyEnv) {
+                applySkyEnvironment(this.scene.scene, skyEnv);
+            }
             
             loadingProgress.update(30, 'Shaping the lake...');
             this.lakeMask = buildLakeMask(1024, {x: 0.5, y: 0.5}, 0.42, 0.34, 0.2);
@@ -1030,6 +1039,10 @@ export class Game {
 
         if (this.scene?.setEnvironment) {
             this.scene.setEnvironment(profile.scene || {});
+        }
+
+        if (waterType !== 'CELESTIAL' && this.skyEnv) {
+            applySkyEnvironment(this.scene.scene, this.skyEnv);
         }
 
         if (profile.waterParticles) {

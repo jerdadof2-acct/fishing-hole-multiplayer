@@ -70,7 +70,7 @@ export function createCausticsLayer(scene, groundSize, waterY, options = {}) {
     const material = new THREE.MeshBasicMaterial({
         map: texture,
         transparent: true,
-        opacity: isMobile ? 0.18 : 0.32,
+        opacity: isMobile ? 0.22 : 0.36,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
         depthTest: true

@@ -434,8 +434,12 @@ export class Water2Lake {
             material.uniforms.uAbsorption.value = this.waterBodyConfig.absorption;
             material.uniforms.uOpacity.value = this.waterBodyConfig.opacity;
             material.uniforms.uSparkleStrength.value = this.waterBodyConfig.sparkleStrength;
-            
-            // Update wave parameters if they exist
+            if (material.uniforms.uEnvIntensity) {
+                material.uniforms.uEnvIntensity.value = type === 'CELESTIAL' ? 0.12 : 0.44;
+            }
+            if (material.uniforms.uHasLakeBed) {
+                material.uniforms.uHasLakeBed.value = type === 'CELESTIAL' ? 0.0 : 1.0;
+            }
             if (this.waterBodyConfig.waveSpeed !== undefined) {
                 material.uniforms.waveSpeed.value = this.waterBodyConfig.waveSpeed;
             }
@@ -444,6 +448,9 @@ export class Water2Lake {
             }
             if (this.waterBodyConfig.waveAmplitude !== undefined) {
                 material.uniforms.waveAmplitude.value = this.waterBodyConfig.waveAmplitude;
+            }
+            if (material.uniforms.rippleAmp) {
+                material.uniforms.rippleAmp.value = type === 'POND' ? 0.06 : 0.12;
             }
             
             // Update flow direction and speed for rivers
@@ -523,18 +530,40 @@ export class Water2Lake {
     }
 
     create() {
-        // Create ground plane (grass base)
+        const textureLoader = new THREE.TextureLoader();
+        const isMobile = typeof navigator !== 'undefined'
+            && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+        const bedRepeat = 72;
+
+        const configureBedTex = (tex) => {
+            if (!tex) return tex;
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(bedRepeat, bedRepeat);
+            return tex;
+        };
+
+        const lakeBedColor = configureBedTex(textureLoader.load('/assets/textures/lakeBed/clean_pebbles_diff_1k.jpg'));
+        lakeBedColor.colorSpace = THREE.SRGBColorSpace;
+        const lakeBedNormal = configureBedTex(textureLoader.load('/assets/textures/lakeBed/clean_pebbles_nor_gl_1k.jpg'));
+        const lakeBedRough = configureBedTex(textureLoader.load('/assets/textures/lakeBed/clean_pebbles_rough_1k.jpg'));
+
+        // Lake bed — visible through shallow water and under caustics
         const ground = new THREE.Mesh(
             new THREE.PlaneGeometry(this.groundSize, this.groundSize, 1, 1),
-            new THREE.MeshStandardMaterial({ 
-                color: 0x86a766, 
-                roughness: 1 
+            new THREE.MeshStandardMaterial({
+                map: lakeBedColor,
+                normalMap: lakeBedNormal,
+                roughnessMap: lakeBedRough,
+                roughness: 1,
+                metalness: 0,
+                envMapIntensity: 0.35
             })
         );
         ground.rotation.x = -Math.PI / 2;
-        ground.position.y = this.waterY - 0.05; // Slightly below water for clean edge
+        ground.position.y = this.waterY - 0.08;
         ground.receiveShadow = true;
         this.sceneRef.scene.add(ground);
+        this.lakeBedMap = lakeBedColor;
 
         this.causticsLayer = createCausticsLayer(
             this.sceneRef.scene,
@@ -549,13 +578,8 @@ export class Water2Lake {
         // Create water geometry with enough detail for waves
         const waterGeometry = new THREE.PlaneGeometry(this.groundSize, this.groundSize, 128, 128);
         
-        // Load normal map — one seamless texture, dual scroll in shader (mobile uses -sm)
-        const textureLoader = new THREE.TextureLoader();
-        const isMobile = typeof navigator !== 'undefined'
-            && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-        const loadWaterNormal = () => {
-            const fullPath = '/assets/textures/waterNormals1.jpg';
-            const smPath = '/assets/textures/waterNormals1-sm.jpg';
+        // Load normal map — dual scroll in shader (mobile uses -sm)
+        const loadWaterNormal = (fullPath, smPath, fallbackOffset = 0) => {
             const primary = isMobile ? smPath : fullPath;
             return textureLoader.load(
                 primary,
@@ -564,16 +588,20 @@ export class Water2Lake {
                 () => {
                     if (primary !== fullPath) {
                         return textureLoader.load(fullPath, undefined, undefined, () => {
-                            console.warn('waterNormals1 missing, procedural fallback');
-                            return createProceduralWaterNormal(0);
+                            console.warn('water normal missing, procedural fallback');
+                            return createProceduralWaterNormal(fallbackOffset);
                         });
                     }
-                    console.warn('waterNormals1 missing, procedural fallback');
-                    return createProceduralWaterNormal(0);
+                    console.warn('water normal missing, procedural fallback');
+                    return createProceduralWaterNormal(fallbackOffset);
                 }
             );
         };
-        let normalMap1 = loadWaterNormal();
+        let normalMap1 = loadWaterNormal(
+            '/assets/textures/waterNormals1.jpg',
+            '/assets/textures/waterNormals1-sm.jpg',
+            0
+        );
         
         try {
             if (!normalMap1 || !normalMap1.image) {
@@ -583,7 +611,21 @@ export class Water2Lake {
             console.warn('Error loading water normal map, using procedural fallback');
             normalMap1 = createProceduralWaterNormal();
         }
-        const normalMap2 = normalMap1;
+        let normalMap2 = loadWaterNormal(
+            '/assets/textures/waterNormals2.jpg',
+            '/assets/textures/waterNormals2-sm.jpg',
+            0.35
+        );
+        try {
+            if (!normalMap2 || !normalMap2.image) {
+                normalMap2 = createProceduralWaterNormal(0.35);
+            }
+        } catch (e) {
+            normalMap2 = createProceduralWaterNormal(0.35);
+        }
+        
+        const envMap = this.sceneRef.scene?.environment || null;
+        const envIntensity = this.waterBodyType === 'CELESTIAL' ? 0.12 : 0.44;
         
         // Get actual sun direction from scene's directional light
         // Directional light position: (-10, 20, 10) = upper left
@@ -616,7 +658,10 @@ export class Water2Lake {
             fogIntensity: this.waterBodyConfig.fogIntensity,
             turbidity: this.waterBodyConfig.turbidity,
             absorption: this.waterBodyConfig.absorption,
-            opacity: this.waterBodyConfig.opacity
+            opacity: this.waterBodyConfig.opacity,
+            envMap,
+            envIntensity,
+            lakeBedMap: this.waterBodyType === 'CELESTIAL' ? null : this.lakeBedMap
         });
         
         // Extend material to support lake mask and ripples (existing functionality)
@@ -629,7 +674,9 @@ export class Water2Lake {
         waterMaterial.uniforms.rippleTime1 = { value: 0.0 };
         waterMaterial.uniforms.rippleTime2 = { value: 0.0 };
         waterMaterial.uniforms.rippleTime3 = { value: 0.0 };
-        waterMaterial.uniforms.rippleAmp = { value: 0.12 };
+        waterMaterial.uniforms.rippleAmp = {
+            value: this.waterBodyType === 'POND' ? 0.06 : 0.12
+        };
         // Wave parameters from water body config (defaults for LAKE)
         waterMaterial.uniforms.waveSpeed = { value: this.waterBodyConfig.waveSpeed || 2.0 };
         waterMaterial.uniforms.waveScale = { value: this.waterBodyConfig.waveScale || 1.1 };
@@ -821,22 +868,22 @@ export class Water2Lake {
 
         this.mesh.splashAt = (worldX, worldZ) => {
             const uniforms = this.water.material.uniforms;
-            // Pick a free slot or overwrite the oldest
-            let slot = -1, oldest = -1;
+            let slot = -1;
+            let oldest = -1;
             for (let i = 0; i < 4; i++) {
                 const timer = uniforms[`rippleTime${i}`].value;
-                if (timer <= 0.0) { 
-                    slot = i; 
-                    break; 
+                if (timer <= 0.0) {
+                    slot = i;
+                    break;
                 }
-                if (timer > oldest) { 
-                    oldest = timer; 
-                    slot = i; 
+                if (timer > oldest) {
+                    oldest = timer;
+                    slot = i;
                 }
             }
             if (slot >= 0) {
                 uniforms[`ripplePos${slot}`].value.set(worldX, worldZ);
-                uniforms[`rippleTime${slot}`].value = 0.0001; // start ripple
+                uniforms[`rippleTime${slot}`].value = 0.0001;
             }
         };
 

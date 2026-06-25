@@ -150,8 +150,15 @@ export class Scene {
             ...overrides
         };
 
-        if (typeof env.background !== 'undefined') {
-            this.scene.background.set(env.background);
+        // Only change background when caller passes background explicitly (e.g. Celestial).
+        // After HDRI load, scene.background is a Texture — never call .set() on it.
+        if (Object.prototype.hasOwnProperty.call(overrides, 'background')) {
+            const bg = overrides.background;
+            if (this.scene.background?.isColor) {
+                this.scene.background.set(bg);
+            } else {
+                this.scene.background = new THREE.Color(bg);
+            }
         }
 
         if (!this.scene.fog) {

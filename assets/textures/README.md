@@ -47,6 +47,13 @@ This directory should contain the following texture files:
 ## Note
 If these files are missing, the application will automatically generate procedural fallbacks, but actual textures will look much better!
 
+### Lake bed (`lakeBed/` — CC0 Poly Haven "clean_pebbles", 1K JPG)
+- Visible through shallow water; under caustics layer.
+- License: `licenses/polyhaven-cc0.txt`
+
+### Sky HDRI (`hdri/` — CC0 Poly Haven "kloppenheim_06")
+- 1K on mobile, 2K on desktop — environment reflections on water.
+
 ### Dock wood (`dockWood-sm.jpg`, `dockWood.jpg`)
 - Project-generated seamless plank texture (~7–24 KB). Regenerate: `npm run generate:dock-wood`
 - CC0 / no attribution required.

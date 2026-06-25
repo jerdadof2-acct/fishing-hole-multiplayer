@@ -10,17 +10,17 @@ export const WaterBodyTypes = {
     POND: {
         name: 'Pond',
         deepColor: new THREE.Color(0x003d66),      // Dark but vibrant blue (was 0x006994, made darker)
-        shallowColor: new THREE.Color(0x006699),   // Darker cyan-blue (was 0x00a8cc, made darker)
+        shallowColor: new THREE.Color(0x1a9fd4),   // Brighter cyan shallows
         fogColor: new THREE.Color(0x005577),       // Blue fog
         fogDepth: 8.0,                             // Shallow fog (ponds aren't deep)
         fogIntensity: 0.4,                         // Moderate fog
         turbidity: 0.3,                           // Some murkiness
         absorption: 0.6,                          // Moderate light absorption
-        opacity: 0.92,                            // Slightly more opaque
-        sparkleStrength: 0.2,                     // Less sparkle (smaller surface)
-        waveScale: 0.8,                          // Smaller waves (pond-specific)
-        waveSpeed: 1.5,                          // Slower waves (pond-specific)
-        waveAmplitude: 0.04,                     // Small wave amplitude (pond-specific)
+        opacity: 0.88,                            // Slightly clearer for lake-bed read-through
+        sparkleStrength: 0.12,
+        waveScale: 0.65,
+        waveSpeed: 1.1,
+        waveAmplitude: 0.025,
         windScroll1: new THREE.Vector2(0.02, 0.01),
         windScroll2: new THREE.Vector2(-0.01, 0.015)
     },
@@ -49,13 +49,13 @@ export const WaterBodyTypes = {
     LAKE: {
         name: 'Lake',
         deepColor: new THREE.Color(0x004466),      // Dark but vibrant blue (was 0x006994, made darker)
-        shallowColor: new THREE.Color(0x0077aa),   // Darker cyan-blue (was 0x00a8cc, made darker)
+        shallowColor: new THREE.Color(0x2ab8e8),
         fogColor: new THREE.Color(0x006699),       // Blue fog
         fogDepth: 15.0,                           // Deep fog (lakes can be deep)
         fogIntensity: 0.45,                        // Moderate-heavy fog
         turbidity: 0.2,                           // Clearer than river
         absorption: 0.65,                         // Moderate absorption
-        opacity: 0.93,                           // Slightly opaque
+        opacity: 0.86,
         sparkleStrength: 0.3,                    // Good sparkle
         waveScale: 1.1,                          // Normal waves (lake-specific, default)
         waveSpeed: 2.0,                          // Normal wave speed (lake-specific, default)

@@ -14,10 +14,13 @@ export function makeWaterMaterial({
   sparkleStrength = 0.25,
   fogColor = new THREE.Color(0x88b5d6),
   fogDepth = 12.0,
-  fogIntensity = 0.5,        // How much fog affects color (0-1)
-  turbidity = 0.2,           // Water murkiness (0-1)
-  absorption = 0.7,          // Light absorption with depth (0-1)
-  opacity = 0.95             // Base water opacity
+  fogIntensity = 0.5,
+  turbidity = 0.2,
+  absorption = 0.7,
+  opacity = 0.95,
+  envMap = null,
+  envIntensity = 0.42,
+  lakeBedMap = null
 }) {
   normalMap1.wrapS = normalMap1.wrapT = THREE.RepeatWrapping;
   normalMap2.wrapS = normalMap2.wrapT = THREE.RepeatWrapping;
@@ -44,9 +47,14 @@ export function makeWaterMaterial({
     uScroll2: { value: new THREE.Vector2(-0.02, 0.03) },
     uUVScale1: { value: 4.0 },
     uUVScale2: { value: 8.0 },
-    uFlowDirection: { value: new THREE.Vector2(0, 0) },  // River flow direction (0,0 = no flow)
-    uFlowSpeed: { value: 0.0 },  // River flow speed
-    uCloudTexture: { value: null }  // Cloud/sky reflection texture
+    uFlowDirection: { value: new THREE.Vector2(0, 0) },
+    uFlowSpeed: { value: 0.0 },
+    uCloudTexture: { value: null },
+    uEnvMap: { value: envMap },
+    uHasEnvMap: { value: envMap ? 1.0 : 0.0 },
+    uEnvIntensity: { value: envIntensity },
+    uLakeBed: { value: lakeBedMap },
+    uHasLakeBed: { value: lakeBedMap ? 1.0 : 0.0 }
   };
 
   const vert = /* glsl */`
@@ -88,106 +96,84 @@ export function makeWaterMaterial({
     uniform vec2 uFlowDirection;
     uniform float uFlowSpeed;
     uniform sampler2D uCloudTexture;
+    uniform samplerCube uEnvMap;
+    uniform float uHasEnvMap;
+    uniform float uEnvIntensity;
+    uniform sampler2D uLakeBed;
+    uniform float uHasLakeBed;
 
     varying vec3 vWorldPos;
     varying vec3 vNormal;
     varying vec2 vUv;
 
-    // Hash/Noise for cheap sparkles
     float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453123); }
-    
-    // Simple noise for procedural clouds
-    float noise(vec2 p) {
-        return hash(p * 0.5) * 0.5 + hash(p * 0.25) * 0.25 + hash(p * 0.125) * 0.125;
+
+    vec3 sampleSky(vec3 R) {
+      if (uHasEnvMap > 0.5) {
+        return textureCube(uEnvMap, R).rgb;
+      }
+      float phi = atan(R.z, R.x);
+      float theta = asin(clamp(R.y, -1.0, 1.0));
+      vec2 skyUv = vec2(phi * 0.15915494 + 0.5, theta * 0.31830988 + 0.5);
+      return texture2D(uCloudTexture, skyUv).rgb;
     }
 
     void main() {
-      // Apply flow direction for rivers (left to right)
       vec2 flowOffset = uFlowDirection * uFlowSpeed * uTime;
-      
-      // Two scrolling normal maps (with flow direction applied for rivers)
-      // Flow direction makes waves scroll in the flow direction (left to right for rivers)
-      vec2 flowScroll = flowOffset * 2.0; // Amplify flow effect on normal maps (2x for visibility)
+      vec2 flowScroll = flowOffset * 2.0;
       vec2 uv1 = vUv * uUVScale1 + uScroll1 * uTime + flowScroll;
-      vec2 uv2 = vUv * uUVScale2 + uScroll2 * uTime + flowScroll;
+      vec2 uv2 = vUv * uUVScale2 + uScroll2 * uTime + flowScroll * 0.85 + vec2(0.17, 0.09);
       vec3 n1 = texture2D(uNormal1, uv1).xyz * 2.0 - 1.0;
       vec3 n2 = texture2D(uNormal2, uv2).xyz * 2.0 - 1.0;
-      vec3 n = normalize(mix(n1, n2, 0.5) + vNormal * 0.5);
+      vec3 n = normalize(vec3(n1.x + n2.x, n1.y * 0.7 + n2.y * 0.7, n1.z + n2.z) + vNormal * 0.35);
 
-      // Fresnel
       vec3 V = normalize(uCamPos - vWorldPos);
       float fres = clamp(uFresnelBias + uFresnelScale * pow(1.0 - max(dot(V, n), 0.0), uFresnelPower), 0.0, 1.0);
 
-      // Specular sparkle where sun hits
       float ndl = max(dot(n, normalize(uSunDir)), 0.0);
       float sparkle = pow(ndl, 64.0) * uSparkleStrength;
-      sparkle *= step(0.98, hash(vUv + uTime * 0.1)); // sparse glitter
+      sparkle *= step(0.98, hash(vUv + uTime * 0.1));
 
-      // Enhanced depth calculation
-      // Use distance from camera for more realistic depth perception
       float distFromCamera = length(uCamPos - vWorldPos);
-      
-      // Depth fog: combine Y-based depth and distance-based depth
-      // Y-based depth (vertical depth in water)
       float depthY = clamp(-vWorldPos.y / uFogDepth, 0.0, 1.0);
-      
-      // Distance-based depth (horizontal/forward depth perception)
-      // Makes water look deeper as it extends away from camera
       float depthDistance = clamp((distFromCamera - 10.0) / (uFogDepth * 3.0), 0.0, 1.0);
-      
-      // Combined depth (both vertical and distance contribute)
       float depth = max(depthY, depthDistance * 0.6);
-      
-      // Apply exponential curve for more dramatic depth transition
-      depth = pow(depth, 1.5);
+      depth = pow(depth, 1.35);
 
-      // Mix shallow vs deep with enhanced absorption
       vec3 base = mix(uColorShallow, uColorDeep, depth);
-      
-      // Apply light absorption (deeper = darker, more absorbed)
-      // Reduce absorption effect to keep blue vibrant
-      float absorptionFactor = 1.0 - (depth * uAbsorption * 0.5); // Reduce by 50% to maintain color
-      base *= max(absorptionFactor, 0.3); // Clamp to minimum brightness to keep blue visible
+      float absorptionFactor = 1.0 - (depth * uAbsorption * 0.45);
+      base *= max(absorptionFactor, 0.35);
 
-      // Real specular highlight from sun using Blinn-Phong
-      // Reuse existing V and ndl (already declared above)
-      vec3 L = normalize(uSunDir); // Light direction
-      // V is already declared above for fresnel calculation
-      vec3 H = normalize(L + V); // Halfway vector for Blinn-Phong
-      
-      // ndl is already calculated above for sparkle, reuse it
-      float ndh = max(dot(n, H), 0.0); // Dot product of normal and halfway vector
-      
-      // Shininess controls highlight size (120-240 for crisp sun streaks)
-      float shininess = 160.0;
-      float spec = pow(ndh, shininess);
-      
-      // Modulate with fresnel so it pops at glancing angles, and only where sun hits
-      // For rivers (uFlowSpeed > 0), increase sun reflection intensity for brighter river
-      float sunSpecIntensity = (uFlowSpeed > 0.0) ? 1.5 : 1.0; // Increase for rivers (brighter, more visible)
+      vec3 L = normalize(uSunDir);
+      vec3 H = normalize(L + V);
+      float ndh = max(dot(n, H), 0.0);
+      float spec = pow(ndh, 180.0);
+      float sunSpecIntensity = (uFlowSpeed > 0.0) ? 1.5 : 1.0;
       float sunSpec = spec * ndl * fres * sunSpecIntensity;
-      
-      // Warm sun tint
       vec3 sunColor = vec3(1.0, 0.96, 0.88);
       vec3 sunReflectionColor = sunColor * sunSpec;
 
-      // Add fresnel brights, specular, and sun reflection
-      // Reduce fresnel addition to avoid washing out blue
-      vec3 color = base + fres * 0.15 + sparkle + sunReflectionColor; // Real specular instead of fake blob
+      vec3 R = reflect(-V, n);
+      float skyFres = pow(1.0 - max(dot(V, n), 0.0), 2.4);
+      vec3 skyReflection = sampleSky(R) * skyFres * uEnvIntensity;
 
-      // Enhanced fog blending with turbidity (murky water effect)
-      // Deeper water gets more foggy and murky
+      vec3 color = base + fres * 0.22 + sparkle + sunReflectionColor + skyReflection;
+
+      if (uHasLakeBed > 0.5) {
+        vec2 bedUV = vWorldPos.xz * 0.042;
+        vec3 bed = texture2D(uLakeBed, bedUV).rgb;
+        float shallow = 1.0 - depth;
+        shallow = pow(shallow, 2.2);
+        color = mix(color, bed * vec3(0.72, 0.86, 0.98), shallow * 0.38);
+      }
+
       float fogAmount = depth * uFogIntensity;
       float turbidityAmount = depth * uTurbidity;
-      
-      // Blend toward fog color with depth - use minimal blending to preserve blue
-      color = mix(color, uFogColor, fogAmount * 0.3); // Reduced from 0.6 to 0.3 to maintain blue
-      
-      // Add turbidity (make it murkier/darker) but preserve blue saturation - minimal mixing
-      color = mix(color, uFogColor * 0.7, turbidityAmount * 0.2); // Reduced from 0.5 to 0.2 to keep blue vibrant
+      color = mix(color, uFogColor, fogAmount * 0.28);
+      color = mix(color, uFogColor * 0.7, turbidityAmount * 0.18);
 
-      // Opacity increases with depth (deeper = more opaque)
-      float finalOpacity = mix(uOpacity, uOpacity + (1.0 - uOpacity) * 0.5, depth);
+      float finalOpacity = mix(uOpacity, uOpacity + (1.0 - uOpacity) * 0.45, depth);
+      finalOpacity = mix(finalOpacity * 0.58, finalOpacity, depth);
 
       gl_FragColor = vec4(color, finalOpacity);
     }
@@ -207,4 +193,3 @@ export function makeWaterMaterial({
 
   return mat;
 }
-

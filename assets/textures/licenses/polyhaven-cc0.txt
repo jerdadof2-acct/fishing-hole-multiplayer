@@ -1,0 +1,9 @@
+Poly Haven assets used in Kitty Creek (CC0 1.0 — no attribution required)
+
+clean_pebbles — lake bed (Diffuse, Normal GL, Roughness, 1K JPG)
+  https://polyhaven.com/a/clean_pebbles
+
+kloppenheim_06 — outdoor sky HDRI (1K / 2K HDR)
+  https://polyhaven.com/a/kloppenheim_06
+
+License: https://polyhaven.com/license
