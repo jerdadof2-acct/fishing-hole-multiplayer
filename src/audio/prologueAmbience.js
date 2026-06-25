@@ -1,9 +1,8 @@
 /**
- * Prologue audio bed — ocean SFX + background music under voiceover.
- * Voiceover stays on top; bed layers duck and fade together after narration ends.
+ * Prologue audio bed — ocean SFX + background music + voiceover on one Web Audio graph.
  */
 
-function createLayer(ctx, destination, url, peakVolume, duckRatio) {
+function createLoopLayer(ctx, destination, url, peakVolume, duckRatio) {
     const audio = new Audio(url);
     audio.loop = true;
     audio.preload = 'auto';
@@ -25,21 +24,34 @@ function createLayer(ctx, destination, url, peakVolume, duckRatio) {
     };
 }
 
+function createVoiceoverLayer(ctx, destination, audioElement, peakVolume) {
+    const source = ctx.createMediaElementSource(audioElement);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    source.connect(gain);
+    gain.connect(destination);
+
+    return {
+        audio: audioElement,
+        source,
+        gain,
+        peakVolume,
+        ducked: false,
+        fadingOut: false
+    };
+}
+
 export class PrologueAudioBed {
-    /**
-     * @param {{
-     *   ocean?: { url: string, volume?: number, duckRatio?: number },
-     *   music?: { url: string, volume?: number, duckRatio?: number }
-     * }} tracks
-     */
     constructor(tracks = {}) {
         this.oceanConfig = tracks.ocean ?? null;
         this.musicConfig = tracks.music ?? null;
+        this.voiceoverConfig = tracks.voiceover ?? null;
 
         this.ctx = null;
         this.masterGain = null;
         this.oceanLayer = null;
         this.musicLayer = null;
+        this.voiceoverLayer = null;
         this.running = false;
         this._fadingOut = false;
         this._stopTimer = null;
@@ -49,10 +61,6 @@ export class PrologueAudioBed {
         return this.startFromUserGesture();
     }
 
-    /**
-     * Start playback from a user gesture (tap/click). Must be called synchronously
-     * inside the gesture handler so mobile browsers allow audio.
-     */
     startFromUserGesture() {
         if (this.running) {
             return Promise.resolve();
@@ -60,7 +68,10 @@ export class PrologueAudioBed {
 
         const oceanUrl = this.oceanConfig?.url;
         const musicUrl = this.musicConfig?.url;
-        if (!oceanUrl && !musicUrl) {
+        const voiceoverAudio = this.voiceoverConfig?.audio;
+        const voiceoverUrl = this.voiceoverConfig?.url;
+
+        if (!oceanUrl && !musicUrl && !voiceoverAudio && !voiceoverUrl) {
             return Promise.resolve();
         }
 
@@ -79,7 +90,7 @@ export class PrologueAudioBed {
         this.masterGain.connect(this.ctx.destination);
 
         if (oceanUrl) {
-            this.oceanLayer = createLayer(
+            this.oceanLayer = createLoopLayer(
                 this.ctx,
                 this.masterGain,
                 oceanUrl,
@@ -89,7 +100,7 @@ export class PrologueAudioBed {
         }
 
         if (musicUrl) {
-            this.musicLayer = createLayer(
+            this.musicLayer = createLoopLayer(
                 this.ctx,
                 this.masterGain,
                 musicUrl,
@@ -98,13 +109,44 @@ export class PrologueAudioBed {
             );
         }
 
-        const playTargets = [this.oceanLayer, this.musicLayer].filter(Boolean);
+        if (voiceoverAudio) {
+            this.voiceoverLayer = createVoiceoverLayer(
+                this.ctx,
+                this.masterGain,
+                voiceoverAudio,
+                this.voiceoverConfig.volume ?? 1
+            );
+        } else if (voiceoverUrl) {
+            const audio = new Audio(voiceoverUrl);
+            audio.preload = 'auto';
+            this.voiceoverLayer = createVoiceoverLayer(
+                this.ctx,
+                this.masterGain,
+                audio,
+                this.voiceoverConfig.volume ?? 1
+            );
+        }
+
+        const playTargets = [this.oceanLayer, this.musicLayer, this.voiceoverLayer].filter(Boolean);
         const playPromises = playTargets.map((layer) => layer.audio.play());
 
         const now = this.ctx.currentTime;
-        playTargets.forEach((layer) => {
+        [this.oceanLayer, this.musicLayer].filter(Boolean).forEach((layer) => {
             layer.gain.gain.linearRampToValueAtTime(layer.peakVolume, now + 1.8);
         });
+
+        if (this.voiceoverLayer) {
+            const delaySec = this.voiceoverConfig?.delaySec ?? 2;
+            const peak = this.voiceoverLayer.peakVolume;
+            this.voiceoverLayer.gain.gain.setValueAtTime(0, now);
+            this.voiceoverLayer.gain.gain.linearRampToValueAtTime(peak, now + delaySec + 0.35);
+            this._duckLayer(this.oceanLayer);
+            this._duckLayer(this.musicLayer);
+
+            if (this.voiceoverConfig?.onEnded) {
+                this.voiceoverLayer.audio.addEventListener('ended', this.voiceoverConfig.onEnded);
+            }
+        }
 
         this.running = true;
 
@@ -115,7 +157,7 @@ export class PrologueAudioBed {
     }
 
     _duckLayer(layer) {
-        if (!layer || layer.ducked || layer.fadingOut || !this.ctx) {
+        if (!layer || layer.ducked || layer.fadingOut || !this.ctx || layer.duckRatio == null) {
             return;
         }
 
@@ -143,7 +185,7 @@ export class PrologueAudioBed {
 
         this._fadingOut = true;
         const now = this.ctx.currentTime;
-        const layers = [this.oceanLayer, this.musicLayer].filter(Boolean);
+        const layers = [this.oceanLayer, this.musicLayer, this.voiceoverLayer].filter(Boolean);
 
         layers.forEach((layer) => {
             layer.fadingOut = true;
@@ -181,7 +223,7 @@ export class PrologueAudioBed {
         }
 
         window.setTimeout(() => {
-            [this.oceanLayer, this.musicLayer].forEach((layer) => {
+            [this.oceanLayer, this.musicLayer, this.voiceoverLayer].forEach((layer) => {
                 if (!layer) return;
                 try {
                     layer.audio.pause();
@@ -205,6 +247,7 @@ export class PrologueAudioBed {
             this.ctx?.close?.();
             this.oceanLayer = null;
             this.musicLayer = null;
+            this.voiceoverLayer = null;
             this.masterGain = null;
             this.ctx = null;
             this._fadingOut = false;
@@ -212,5 +255,4 @@ export class PrologueAudioBed {
     }
 }
 
-/** @deprecated Use PrologueAudioBed */
 export const PrologueAmbience = PrologueAudioBed;

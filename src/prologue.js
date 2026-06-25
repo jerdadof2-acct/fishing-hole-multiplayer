@@ -23,6 +23,7 @@ import {
     PROLOGUE_VOICEOVER_VOLUME
 } from './config/prologue.js';
 import { PrologueAudioBed } from './audio/prologueAmbience.js';
+import { preloadPrologueVoiceover } from './assetPack.js';
 import { loadingProgress } from './loadingProgress.js';
 
 /** True when this build's prologue has not been shown yet (replay on each PROLOGUE_GAME_VERSION bump). */
@@ -93,66 +94,13 @@ export function playStoryPrologue(options = {}) {
     let lastTs = 0;
     let done = false;
     let canEnter = false;
-    let voiceoverAudio = null;
-    let voiceoverTimer = null;
-    let voiceoverEndedHandler = null;
     let ambienceFadeTimer = null;
     let audioBed = null;
     let interstitialTimer = null;
     let lastCreditLine = null;
     let creditsFinished = false;
-    let voiceoverPrimed = false;
-
-    const primeVoiceoverForPlayback = () => {
-        if (skipCredits || !PROLOGUE_VOICEOVER_URL || voiceoverPrimed) {
-            return;
-        }
-
-        stopVoiceover();
-        voiceoverAudio = new Audio(PROLOGUE_VOICEOVER_URL);
-        voiceoverAudio.preload = 'auto';
-        voiceoverAudio.volume = PROLOGUE_VOICEOVER_VOLUME;
-        voiceoverAudio.load();
-
-        voiceoverEndedHandler = () => {
-            scheduleAmbienceFadeAfterVoiceover();
-        };
-        voiceoverAudio.addEventListener('ended', voiceoverEndedHandler);
-
-        const unlockVolume = voiceoverAudio.volume;
-        voiceoverAudio.volume = 0.001;
-        voiceoverAudio.play()
-            .then(() => {
-                voiceoverAudio.pause();
-                voiceoverAudio.currentTime = 0;
-                voiceoverAudio.volume = unlockVolume;
-                voiceoverPrimed = true;
-            })
-            .catch((error) => {
-                console.warn('[PROLOGUE] Voiceover unlock failed:', error);
-            });
-    };
-
-    const stopVoiceover = () => {
-        if (voiceoverTimer) {
-            clearTimeout(voiceoverTimer);
-            voiceoverTimer = null;
-        }
-        if (ambienceFadeTimer) {
-            clearTimeout(ambienceFadeTimer);
-            ambienceFadeTimer = null;
-        }
-        if (voiceoverAudio) {
-            if (voiceoverEndedHandler) {
-                voiceoverAudio.removeEventListener('ended', voiceoverEndedHandler);
-                voiceoverEndedHandler = null;
-            }
-            voiceoverAudio.pause();
-            voiceoverAudio.currentTime = 0;
-            voiceoverAudio = null;
-        }
-        voiceoverPrimed = false;
-    };
+    let preloadedVoiceover = null;
+    let voiceoverLoadPromise = null;
 
     const scheduleAmbienceFadeAfterVoiceover = () => {
         if (ambienceFadeTimer) {
@@ -197,8 +145,17 @@ export function playStoryPrologue(options = {}) {
                 duckRatio: PROLOGUE_MUSIC_DUCK_RATIO
             };
         }
+        if (PROLOGUE_VOICEOVER_URL) {
+            tracks.voiceover = {
+                audio: preloadedVoiceover ?? undefined,
+                url: preloadedVoiceover ? undefined : PROLOGUE_VOICEOVER_URL,
+                volume: PROLOGUE_VOICEOVER_VOLUME,
+                delaySec: PROLOGUE_VOICEOVER_DELAY_SEC,
+                onEnded: scheduleAmbienceFadeAfterVoiceover
+            };
+        }
 
-        if (!tracks.ocean && !tracks.music) {
+        if (!tracks.ocean && !tracks.music && !tracks.voiceover) {
             return;
         }
 
@@ -206,18 +163,29 @@ export function playStoryPrologue(options = {}) {
         audioBed.startFromUserGesture();
     };
 
-    const scheduleVoiceover = () => {
-        if (skipCredits || !PROLOGUE_VOICEOVER_URL || !voiceoverAudio) {
+    const beginVoiceoverPreload = () => {
+        if (skipCredits || !PROLOGUE_VOICEOVER_URL || voiceoverLoadPromise) {
             return;
         }
 
-        voiceoverTimer = window.setTimeout(() => {
-            voiceoverTimer = null;
-            audioBed?.duckForVoiceover();
-            voiceoverAudio?.play().catch((error) => {
-                console.warn('[PROLOGUE] Voiceover play failed:', error);
+        const gateHint = startGate?.querySelector('.prologue-start-gate-hint');
+        if (gateHint) {
+            gateHint.textContent = 'Loading narration…';
+        }
+
+        voiceoverLoadPromise = preloadPrologueVoiceover(PROLOGUE_VOICEOVER_URL)
+            .then((audio) => {
+                preloadedVoiceover = audio;
+                if (gateHint) {
+                    gateHint.textContent = 'Tap to begin';
+                }
+            })
+            .catch((error) => {
+                console.warn('[PROLOGUE] Voiceover preload failed:', error);
+                if (gateHint) {
+                    gateHint.textContent = 'Tap to begin (narration may be delayed)';
+                }
             });
-        }, PROLOGUE_VOICEOVER_DELAY_SEC * 1000);
     };
 
     const loading = document.getElementById('loading');
@@ -264,7 +232,10 @@ export function playStoryPrologue(options = {}) {
 
     return new Promise((resolve) => {
         const cleanup = () => {
-            stopVoiceover();
+            if (ambienceFadeTimer) {
+                clearTimeout(ambienceFadeTimer);
+                ambienceFadeTimer = null;
+            }
             stopAudioBed();
             if (rafId) {
                 cancelAnimationFrame(rafId);
@@ -369,7 +340,7 @@ export function playStoryPrologue(options = {}) {
                 interstitialTimer = null;
             }
             if (immediate) {
-                stopVoiceover();
+                stopAudioBed();
                 stopAudioBed();
             }
 
@@ -382,7 +353,7 @@ export function playStoryPrologue(options = {}) {
             if (phase !== 'credits' || creditsFinished) return;
             creditsFinished = true;
             if (immediate) {
-                stopVoiceover();
+                stopAudioBed();
                 stopAudioBed();
             }
             if (rafId) {
@@ -450,9 +421,7 @@ export function playStoryPrologue(options = {}) {
 
         const beginCreditsSequence = () => {
             startGate?.classList.add('hidden');
-            primeVoiceoverForPlayback();
             startAudioBed();
-            scheduleVoiceover();
             lastTs = 0;
             rafId = requestAnimationFrame(tick);
         };
@@ -481,6 +450,7 @@ export function playStoryPrologue(options = {}) {
             startGate.classList.remove('hidden');
             startGate.addEventListener('click', onStart);
             startGate.addEventListener('keydown', onStartKey);
+            beginVoiceoverPreload();
         });
 
         if (skipCredits) {

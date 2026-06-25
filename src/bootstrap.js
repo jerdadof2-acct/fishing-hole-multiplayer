@@ -1,6 +1,7 @@
-import Game from './main.js?v=20250624-claim';
+import Game from './main.js?v=20250624-pack-vo';
 import { api } from './api.js';
 import { initAdRotator } from './ads.js';
+import { ensureAssetPack } from './assetPack.js';
 import { loadingProgress } from './loadingProgress.js';
 import {
     markPrologueSeenForVersion,
@@ -582,6 +583,16 @@ async function bootstrapGameInner() {
     initAdRotator();
     loadingProgress.show('Connecting to Halley\'s Big Catch...');
     loadingProgress.update(2, 'Connecting to server...');
+
+    try {
+        await ensureAssetPack({
+            onProgress: (percent, message) => {
+                loadingProgress.update(Math.min(42, Math.round(percent * 0.4)), message);
+            }
+        });
+    } catch (error) {
+        console.warn('[BOOTSTRAP] Asset pack download failed (continuing online):', error);
+    }
 
     const health = await api.healthCheck(10000);
     if (!health || health.status !== 'ok') {

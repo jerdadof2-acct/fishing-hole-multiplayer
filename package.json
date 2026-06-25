@@ -9,6 +9,7 @@
     "dev": "node --watch server/index.js",
     "db:schema": "node server/run-schema.js",
     "db:migrate": "node server/run-migration.js",
+    "generate:manifest": "node scripts/generate-asset-manifest.mjs",
     "compress:assets": "node scripts/compress-assets.mjs",
     "compress:cat": "node scripts/compress-cat-glb.mjs",
     "test": "echo \"Error: no test specified\" && exit 1"
