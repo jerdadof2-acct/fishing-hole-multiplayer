@@ -2100,6 +2100,20 @@ canvas {
     transform: scale(1.02);
 }
 
+.settings-reset-btn-secondary {
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+}
+
+.settings-reset-btn-secondary:hover {
+    background: linear-gradient(135deg, #b45309 0%, #92400e 100%);
+}
+
+.settings-danger-copy code {
+    font-size: 0.85em;
+    color: rgba(255, 255, 255, 0.85);
+}
+
 .cat-bark-bubble {
     position: fixed;
     z-index: 1150;

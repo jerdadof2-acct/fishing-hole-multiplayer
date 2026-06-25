@@ -298,6 +298,19 @@ export class API {
         return this.request(`/leaderboard/speed?limit=${limit}`);
     }
 
+    /**
+     * Wipe global leaderboard + speed board on the server (admin secret required).
+     * @param {string} adminSecret
+     */
+    resetLeaderboards(adminSecret) {
+        return this.request('/admin/reset-leaderboards', {
+            method: 'POST',
+            headers: {
+                'X-Admin-Secret': adminSecret
+            }
+        });
+    }
+
     async getPlayerCatches(limit = 50) {
         if (!this.userId) {
             throw new Error('User ID not set');

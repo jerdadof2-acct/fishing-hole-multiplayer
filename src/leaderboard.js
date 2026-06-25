@@ -279,6 +279,15 @@ export class Leaderboard {
         });
         return map;
     }
+
+    /** Clear local weight + speed leaderboard data on this device. */
+    resetAll() {
+        this.leaderboards = {};
+        this.global = [];
+        this.speedBoard = [];
+        this.speedBoardMap = {};
+        this.save();
+    }
 }
 
 

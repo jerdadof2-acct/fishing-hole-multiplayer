@@ -1911,6 +1911,13 @@ export class UI {
                     <div class="settings-danger-zone">
                         <div class="settings-danger-title">⚠️ Danger Zone</div>
                         <p class="settings-danger-copy">
+                            Reset the global leaderboard and speed board for all players, plus local board data on this device.
+                            Requires the admin reset code (set <code>LEADERBOARD_RESET_SECRET</code> on the server).
+                        </p>
+                        <button type="button" id="reset-leaderboards-btn" class="settings-reset-btn settings-reset-btn-secondary">
+                            🏆 Reset Leaderboards
+                        </button>
+                        <p class="settings-danger-copy" style="margin-top: 16px;">
                             Reset all progress and start from the beginning. This action cannot be undone!
                         </p>
                         <button type="button" id="reset-progress-btn" class="settings-reset-btn">
@@ -1935,6 +1942,13 @@ export class UI {
                     } finally {
                         replayBtn.disabled = false;
                     }
+                });
+            }
+
+            const resetLeaderboardsBtn = document.getElementById('reset-leaderboards-btn');
+            if (resetLeaderboardsBtn) {
+                resetLeaderboardsBtn.addEventListener('click', () => {
+                    this.showResetLeaderboardsConfirmation();
                 });
             }
 
@@ -3710,6 +3724,60 @@ export class UI {
         });
     }
     
+    showResetLeaderboardsConfirmation() {
+        const confirmed = window.confirm(
+            'Reset the global leaderboard and speed board?\n\n' +
+            'This clears all players\' top catches and reaction times on the server, ' +
+            'and local board data on this device. Your fishing progress is not affected.'
+        );
+        if (!confirmed) {
+            return;
+        }
+
+        const secret = window.prompt('Enter admin reset code:');
+        if (!secret) {
+            return;
+        }
+
+        this.executeLeaderboardReset(secret.trim());
+    }
+
+    async executeLeaderboardReset(adminSecret) {
+        if (this.leaderboard) {
+            this.leaderboard.resetAll();
+        }
+
+        this.playerCatchCache = { entries: [], fetchedAt: 0 };
+        this.speedLeaderboardCache = { entries: [], fetchedAt: 0 };
+
+        if (!this.isOnline() || !this.api) {
+            this.showBannerNotification('Local leaderboards cleared. Connect online to reset global boards.', '#fde68a', 4500);
+            if (this.activeLeaderboardTab) {
+                this.renderLeaderboard(this.activeLeaderboardTab);
+            }
+            return;
+        }
+
+        try {
+            const result = await this.api.resetLeaderboards(adminSecret);
+            const deleted = (result?.deletedLeaderboardEntries ?? 0) + (result?.deletedCatches ?? 0);
+            this.showBannerNotification(
+                `Leaderboards reset (${deleted} server records cleared).`,
+                '#4ade80',
+                4500
+            );
+            if (this.activeLeaderboardTab) {
+                await this.renderLeaderboard(this.activeLeaderboardTab);
+            }
+        } catch (error) {
+            console.error('[UI] Leaderboard reset failed:', error);
+            const message = error?.message === 'Forbidden'
+                ? 'Wrong admin code, or LEADERBOARD_RESET_SECRET is not set on the server.'
+                : (error?.message || 'Could not reset global leaderboards.');
+            this.showBannerNotification(message, '#f87171', 6000);
+        }
+    }
+
     showResetConfirmation() {
         // Create confirmation dialog
         const confirmDialog = document.createElement('div');
@@ -3890,10 +3958,7 @@ export class UI {
         }
         
         if (this.leaderboard) {
-            // Reset leaderboard
-            this.leaderboard.leaderboards = {};
-            this.leaderboard.global = [];
-            this.leaderboard.save();
+            this.leaderboard.resetAll();
         }
         
         if (this.fishCollection) {
