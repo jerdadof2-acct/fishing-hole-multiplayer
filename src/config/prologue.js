@@ -39,6 +39,9 @@ export const PROLOGUE_AMBIENCE_DUCK_RATIO = 0.36;
 /** Peak music volume (0–1) — below voiceover and ocean SFX. */
 export const PROLOGUE_MUSIC_VOLUME = 0.28;
 
+/** Same track looped at Celestial Depths while fishing the Starfish. */
+export const CELESTIAL_DEPTHS_MUSIC_VOLUME = 0.34;
+
 /** Music level while voiceover plays (ratio of peak). */
 export const PROLOGUE_MUSIC_DUCK_RATIO = 0.32;
 

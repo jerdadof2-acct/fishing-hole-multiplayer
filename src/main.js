@@ -16,6 +16,7 @@ import { SoundManager } from './sound.js';
 import { addWaterParticles } from './effects/waterParticles.js';
 import { Sfx } from './audio/sfx.js';
 import { Voiceover } from './audio/voiceover.js';
+import { CelestialDepthsMusic } from './audio/locationMusic.js';
 import { VOICEOVER_TAP_COOLDOWN_MS } from './config/voiceover.js';
 import { Player } from './player.js';
 import { Inventory } from './inventory.js';
@@ -51,6 +52,7 @@ export class Game {
         this.lakeMask = null;
         this.soundManager = null;
         this.sfx = null;
+        this.celestialMusic = new CelestialDepthsMusic();
         
         // Gameplay systems
         this.player = null;
@@ -87,6 +89,9 @@ export class Game {
         this.startGalleryImageWarmup();
         this.setupActivityTracking();
         this.setupCatTap();
+        if (this.locations) {
+            this.syncLocationMusic(this.locations.getCurrentLocation());
+        }
         this.animate();
     }
 
@@ -307,6 +312,7 @@ export class Game {
             this.water.setWaterBodyType(currentLocation.waterBodyType);
             this.applyLocationEnvironment(currentLocation);
             this.applyCelestialBaitPreference(currentLocation);
+            this.syncLocationMusic(currentLocation);
             
             loadingProgress.update(58, `Building ${currentLocation.name}...`);
             this.platform = new Platform(this.scene, this.water);
@@ -534,6 +540,7 @@ export class Game {
 
     markActivity() {
         this.lastActivityTime = performance.now();
+        this.celestialMusic?.resumeAfterGesture?.();
         if (this._portraitIdleActive && this.camera) {
             this._portraitIdleActive = false;
             this.camera.setPortraitMode(false);
@@ -1053,6 +1060,21 @@ export class Game {
             this.player.save({ skipSync: true });
         }
     }
+
+    syncLocationMusic(location) {
+        if (!this.celestialMusic) {
+            return;
+        }
+
+        const playCelestial = location?.waterBodyType === 'CELESTIAL'
+            && this.player?.canAccessCelestialDepths?.() === true;
+
+        if (playCelestial) {
+            this.celestialMusic.start();
+        } else {
+            this.celestialMusic.stop();
+        }
+    }
     
     /**
      * Switch to a different location (for testing)
@@ -1083,6 +1105,7 @@ export class Game {
         this.water.setWaterBodyType(location.waterBodyType);
         this.applyLocationEnvironment(location);
         this.applyCelestialBaitPreference(location);
+        this.syncLocationMusic(location);
         
         // Switch platform
         this.platform.switchPlatform(location.platformType);

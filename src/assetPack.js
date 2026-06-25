@@ -417,4 +417,18 @@ export async function preloadPrologueVoiceover(url) {
     return audio;
 }
 
+/** Blob URL or file path for the prologue music track (already cached after prologue load). */
+export function getPrologueMusicSource() {
+    if (prologuePackResult?.music?.blobUrl) {
+        return prologuePackResult.music.blobUrl;
+    }
+
+    const src = prologuePackResult?.music?.audio?.src;
+    if (src && src.startsWith('blob:')) {
+        return src;
+    }
+
+    return null;
+}
+
 export { CACHE_NAME as ASSET_PACK_CACHE_NAME };
