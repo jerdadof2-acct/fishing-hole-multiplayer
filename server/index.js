@@ -1190,31 +1190,6 @@ app.get('/api/leaderboard/speed', authenticate, async (req, res) => {
     }
 });
 
-// Wipe global leaderboard + speed board (requires LEADERBOARD_RESET_SECRET on server)
-app.post('/api/admin/reset-leaderboards', async (req, res) => {
-    try {
-        const expected = process.env.LEADERBOARD_RESET_SECRET;
-        const provided = req.headers['x-admin-secret'];
-
-        if (!expected || typeof provided !== 'string' || provided !== expected) {
-            return res.status(403).json({ error: 'Forbidden' });
-        }
-
-        const catches = await pool.query('DELETE FROM player_catches RETURNING id');
-        const board = await pool.query('DELETE FROM leaderboard_catches RETURNING id');
-        await pool.query('UPDATE players SET biggest_catch = 0');
-
-        res.json({
-            success: true,
-            deletedCatches: catches.rowCount,
-            deletedLeaderboardEntries: board.rowCount
-        });
-    } catch (error) {
-        console.error('[API] Reset leaderboards error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
 // Get a player's catch history (top catches)
 app.get('/api/players/:playerId/catches', authenticate, async (req, res) => {
     try {
