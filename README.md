@@ -1,4 +1,4 @@
-# Kitty Creek Fishing Club 🎣
+# Halley's Big Catch 🎣
 
 A purrfect multiplayer fishing tournament game with physics-based fishing, deep progression, and soon-to-launch social features.
 
@@ -6,7 +6,7 @@ A purrfect multiplayer fishing tournament game with physics-based fishing, deep 
 
 - 🐱 **Cat-Themed Competition** – Face lovable rivals like “Sly Sylvester” and “Tommy the Stray”
 - 🎣 **Realistic Fishing** – Physics-driven casting, reeling, and fish behavior across ponds, rivers, lakes, and oceans
-- 🏆 **Multiplayer Tournaments** – Fair-play events where mega fish can tip the scales (Railway-ready backend)
+- 🏆 **Multiplayer Tournaments** – Fair-play events where mega fish can tip the scales (Render-hosted backend)
 - 📊 **Leaderboards & Progression** – Track biggest fish, level up through exponential XP tiers, and unlock new tackle
 - 💾 **Cloud Saves** – Username-based profiles persist via PostgreSQL when the backend is connected
 - 🤝 **Friends System (WIP)** – Share your friend code, manage requests, and view future crew activity in a dedicated tab
@@ -17,12 +17,12 @@ A purrfect multiplayer fishing tournament game with physics-based fishing, deep 
 ### Prerequisites
 - Node.js 18+
 - Modern web browser
-- PostgreSQL (for cloud saves / Railway deployment)
+- PostgreSQL (for cloud saves / Render deployment)
 
 ### Installation
 ```bash
 git clone https://github.com/jerdadof2-acct/fishing-hole-multiplayer.git
-cd "Kitty Creek"
+cd "Halley's Big Catch"
 npm install
 ```
 
@@ -44,16 +44,16 @@ Open `index.html` directly (or serve it) to play. The client checks `/api/health
 - By default the frontend targets `/api`; override with:
   ```html
   <script>
-    window.__API_BASE_URL__ = 'https://your-domain.railway.app/api';
+    window.__API_BASE_URL__ = 'https://kitty-creek.onrender.com/api';
   </script>
   ```
-  or `<meta name="kitty-creek-api-base" content="https://your-domain/api">`.
+  or `<meta name="halleys-big-catch-api-base" content="https://your-domain/api">`.
 - Offline play still tracks everything locally; the new Friends tab shows your friend code (or “OFFLINE” when disconnected) and includes copy/add affordances ready for backend integration.
 
 ## 📁 Project Structure
 
 ```
-Kitty Creek/
+Halley's Big Catch/
 ├── index.html              # Main entry point
 ├── src/
 │   ├── bootstrap.js        # Auth bootstrap + offline fallback
@@ -77,22 +77,26 @@ Kitty Creek/
 - **Upcoming** – Friends activity feed, live tournaments, extra locations, and real-time multiplayer hooks.
 
 ## 🛠️ Environment Variables
-Create `.env` (or configure Railway variables):
+Create `.env` (or configure Render environment variables):
 ```env
 DATABASE_URL=postgresql://user:pass@host:port/dbname
 PORT=3000
 NODE_ENV=development
 ```
 
-## 📦 Deployment on Railway
+## 📦 Deployment on Render
 
-1. Create a Railway project and link this GitHub repo.
-2. Add a PostgreSQL service; Railway injects `DATABASE_URL`.
+**Live site:** https://kitty-creek.onrender.com
+
+1. Create a Render web service and link this GitHub repo.
+2. Add a Render PostgreSQL instance; set `DATABASE_URL` on the web service.
 3. Run the schema once:
    ```bash
-   railway run psql $DATABASE_URL -f server/schema.sql
+   psql $DATABASE_URL -f server/schema.sql
    ```
-4. Set `window.__API_BASE_URL__` (or the meta tag) to your Railway URL so the client hits the correct `/api` origin.
+4. Set `FRONTEND_URL` to `https://kitty-creek.onrender.com`. The client uses `/api` on the same origin by default.
+
+See `RENDER_DEPLOYMENT.md` and `SETUP_INSTRUCTIONS.md` for full steps.
 
 ## 📚 Documentation
 

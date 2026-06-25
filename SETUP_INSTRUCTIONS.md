@@ -1,13 +1,15 @@
-# Kitty Creek Friends System - Setup Instructions
+# Halley's Big Catch Friends System - Setup Instructions
 
 ## Overview
-This document provides step-by-step instructions for setting up the friends system with PostgreSQL and Railway deployment.
+This document provides step-by-step instructions for setting up the friends system with PostgreSQL and Render deployment.
+
+**Production:** https://kitty-creek.onrender.com
 
 ## Prerequisites
 - Node.js 18+ installed
-- PostgreSQL database (local or Railway)
+- PostgreSQL database (local or Render)
 - GitHub account
-- Railway account
+- Render account
 
 ## Local Development Setup
 
@@ -22,18 +24,18 @@ npm install
 1. Install PostgreSQL locally
 2. Create a database:
 ```sql
-CREATE DATABASE kitty_creek;
+CREATE DATABASE halleys_big_catch;
 ```
 
 3. Run the schema:
 ```bash
-psql -d kitty_creek -f server/schema.sql
+psql -d halleys_big_catch -f server/schema.sql
 ```
 
-#### Option B: Railway PostgreSQL
-1. Create a Railway account
-2. Create a new PostgreSQL service
-3. Copy the `DATABASE_URL` from Railway
+#### Option B: Render PostgreSQL
+1. Create a Render account at https://render.com
+2. Create a new PostgreSQL instance
+3. Copy the `DATABASE_URL` from the Render dashboard
 4. Set it as environment variable:
 ```bash
 export DATABASE_URL="postgresql://user:pass@host:port/dbname"
@@ -42,7 +44,7 @@ export DATABASE_URL="postgresql://user:pass@host:port/dbname"
 ### 3. Environment Variables
 Create a `.env` file in the root directory:
 ```env
-DATABASE_URL=postgresql://user:password@localhost:5432/kitty_creek
+DATABASE_URL=postgresql://user:password@localhost:5432/halleys_big_catch
 PORT=3000
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
@@ -62,7 +64,7 @@ The server will run on `http://localhost:3000`
 curl http://localhost:3000/api/health
 ```
 
-## Railway Deployment
+## Render Deployment
 
 ### 1. GitHub Setup
 
@@ -85,70 +87,57 @@ git branch -M main
 git push -u origin main
 ```
 
-### 2. Railway Setup
+### 2. Render Setup
 
-1. **Create Railway Account**:
-   - Go to https://railway.app
+1. **Create Render Account**:
+   - Go to https://render.com
    - Sign up with GitHub
 
-2. **Create New Project**:
-   - Click "New Project"
-   - Select "Deploy from GitHub repo"
-   - Choose your repository
+2. **Create Web Service**:
+   - New → Web Service
+   - Connect your GitHub repository
+   - Build: `npm install`
+   - Start: `npm start`
 
 3. **Add PostgreSQL Database**:
-   - In Railway project, click "+ New"
-   - Select "Database" → "Add PostgreSQL"
-   - Railway will automatically provide `DATABASE_URL`
+   - New → PostgreSQL
+   - Copy `DATABASE_URL` and add it to the web service environment variables
 
 4. **Configure Environment Variables**:
-   - Go to your service → Variables
-   - Add these variables:
-     - `DATABASE_URL` - Automatically set by Railway PostgreSQL
+   - On the web service → Environment:
+     - `DATABASE_URL` — from Render PostgreSQL
      - `NODE_ENV` = `production`
-     - `PORT` - Automatically set by Railway
-     - `FRONTEND_URL` = Your production domain (e.g., `https://your-app.railway.app`)
+     - `PORT` — set automatically by Render
+     - `FRONTEND_URL` = `https://kitty-creek.onrender.com`
 
 5. **Run Database Migrations**:
-   - Go to your PostgreSQL service in Railway
-   - Click "Connect" → "Query"
-   - Copy and paste the contents of `server/schema.sql`
-   - Run the query
-
-   OR use Railway CLI:
-   ```bash
-   railway login
-   railway link
-   railway run psql $DATABASE_URL -f server/schema.sql
-   ```
+   - Open your Render PostgreSQL shell or connect with `psql`
+   - Run the contents of `server/schema.sql`
 
 6. **Deploy**:
-   - Railway will automatically deploy on push to main
-   - Or click "Deploy" in Railway dashboard
+   - Render deploys automatically on push to `main`
+   - Or trigger **Manual Deploy** from the dashboard
 
-### 3. Update Frontend API URL
+### 3. Frontend API URL
 
-Once deployed, update your frontend to use the Railway URL:
+Production is served from **https://kitty-creek.onrender.com**. The API lives at `/api` on the same origin, so no extra client config is required.
 
-1. In Railway, copy your service URL (e.g., `https://kitty-creek-production.up.railway.app`)
-2. Update `index.html` so the frontend knows where to find the API:
-   ```html
-   <script>
-     window.__API_BASE_URL__ = 'https://kitty-creek-production.up.railway.app/api';
-   </script>
-   ```
-   Place this snippet **before** the `<script type="module" src="src/bootstrap.js"></script>` line.
-3. Alternatively, add a meta tag inside `<head>`:
-   ```html
-   <meta name="kitty-creek-api-base" content="https://kitty-creek-production.up.railway.app/api">
-   ```
-4. If the game is served from the same origin as the API, no extra configuration is required (it defaults to `/api`).
+For a split frontend/backend setup, set before bootstrap:
+```html
+<script>
+  window.__API_BASE_URL__ = 'https://kitty-creek.onrender.com/api';
+</script>
+```
+Or in `<head>`:
+```html
+<meta name="halleys-big-catch-api-base" content="https://kitty-creek.onrender.com/api">
+```
 
 ## Testing the Deployment
 
 ### 1. Health Check
 ```bash
-curl https://your-railway-url.railway.app/api/health
+curl https://kitty-creek.onrender.com/api/health
 ```
 
 Should return:
@@ -158,7 +147,7 @@ Should return:
 
 ### 2. Register a Player
 ```bash
-curl -X POST https://your-railway-url.railway.app/api/players/register \
+curl -X POST https://kitty-creek.onrender.com/api/players/register \
   -H "Content-Type: application/json" \
   -d '{"username":"testuser"}'
 ```
@@ -176,18 +165,17 @@ Should return:
 ## Troubleshooting
 
 ### Database Connection Issues
-- Verify `DATABASE_URL` is set correctly
-- Check Railway PostgreSQL service is running
-- Verify SSL settings (Railway requires SSL)
+- Verify `DATABASE_URL` is set correctly on the Render web service
+- Check Render PostgreSQL is running
+- Verify SSL settings (Render PostgreSQL requires SSL in production)
 
 ### CORS Issues
-- Ensure `FRONTEND_URL` is set correctly
-- Check Railway service URL matches your domain
+- Ensure `FRONTEND_URL` is set to `https://kitty-creek.onrender.com`
 - Verify CORS middleware in `server/index.js`
 
 ### Migration Issues
 - Ensure schema.sql ran successfully
-- Check Railway PostgreSQL logs
+- Check Render PostgreSQL logs
 - Verify tables exist: `SELECT * FROM information_schema.tables;`
 
 ## Next Steps
@@ -201,9 +189,7 @@ Should return:
 ## Support
 
 For issues or questions:
-- Check Railway logs: Railway dashboard → Your service → Logs
-- Check database logs: Railway dashboard → PostgreSQL → Logs
+- Check Render logs: dashboard → your web service → Logs
+- Check database logs: dashboard → PostgreSQL → Logs
 - Review `FRIENDS_SYSTEM_DESIGN.md` for architecture details
-
-
-
+- See `RENDER_DEPLOYMENT.md` for a shorter deploy checklist

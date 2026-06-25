@@ -1,4 +1,4 @@
-# Documentation Index - Kitty Creek Fishing Club
+# Documentation Index - Halley's Big Catch
 
 ## 📚 Complete Documentation Reference
 
@@ -30,7 +30,7 @@ This index provides quick access to all project documentation.
 - **BONUS_LOCATIONS_DESIGN.md** - Bonus locations design and implementation plan
 
 ### Setup & Deployment
-- **SETUP_INSTRUCTIONS.md** - Local development and Railway deployment
+- **SETUP_INSTRUCTIONS.md** - Local development and Render deployment
 - **README.md** - Quick start guide
 
 ---
@@ -112,7 +112,7 @@ This index provides quick access to all project documentation.
 → See feature design documents (FRIENDS_SYSTEM_DESIGN.md, etc.)
 
 #### Deploying to production
-→ See `SETUP_INSTRUCTIONS.md` (Railway section)
+→ See `SETUP_INSTRUCTIONS.md` (Render section) or `RENDER_DEPLOYMENT.md`
 
 ---
 
@@ -211,6 +211,7 @@ This index provides quick access to all project documentation.
 
 **Last Updated**: 2024
 **Maintained By**: Development Team
+
 
 
 

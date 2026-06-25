@@ -217,7 +217,7 @@ class API {
     constructor() {
         const globalBase = typeof window !== 'undefined' ? window.__API_BASE_URL__ : null;
         const metaBase = typeof document !== 'undefined'
-            ? document.querySelector('meta[name="kitty-creek-api-base"]')?.content
+            ? document.querySelector('meta[name="halleys-big-catch-api-base"]')?.content
             : null;
 
         this.baseURL = (globalBase || metaBase || '/api').replace(/\/$/, '');
@@ -293,7 +293,7 @@ class API {
 4. **Input Sanitization**: Sanitize all user inputs
 5. **CORS**: Configure CORS for production domain
 
-### 7. GitHub & Railway Deployment
+### 7. GitHub & Render Deployment
 
 #### GitHub Setup
 1. Initialize Git repository (if not already)
@@ -305,53 +305,40 @@ class API {
 3. Create repository on GitHub
 4. Push code to main branch
 
-#### Railway Deployment
+#### Render Deployment
 1. **Project Setup**:
-   - Connect GitHub repository to Railway
-   - Railway will auto-detect Node.js project
-   - Set root directory (if needed)
+   - Connect GitHub repository to Render
+   - Create a Web Service (Node.js)
+   - Build: `npm install`, Start: `npm start`
 
 2. **Environment Variables**:
-   - `DATABASE_URL` - PostgreSQL connection string (Railway provides)
-   - `PORT` - Server port (Railway sets automatically)
+   - `DATABASE_URL` - PostgreSQL connection string (Render provides)
+   - `PORT` - Server port (Render sets automatically)
    - `NODE_ENV` - `production`
-   - `API_URL` - Frontend API URL (for CORS)
+   - `FRONTEND_URL` - `https://kitty-creek.onrender.com`
 
 3. **Database**:
-   - Add PostgreSQL service in Railway
-   - Railway provides `DATABASE_URL` automatically
-   - Run migration script on first deploy
+   - Add PostgreSQL on Render
+   - Copy `DATABASE_URL` to the web service
+   - Run `server/schema.sql` on first deploy
 
 4. **Build Configuration**:
-   - Build command: `npm run build` (if using build step)
-   - Start command: `node server/index.js`
+   - Build command: `npm install`
+   - Start command: `npm start` (runs `server/index.js`)
    - Static files served from Express
 
-5. **Railway Configuration** (`railway.json` or package.json):
-   ```json
-   {
-     "build": {
-       "builder": "NIXPACKS"
-     },
-     "deploy": {
-       "startCommand": "node server/index.js",
-       "restartPolicyType": "ON_FAILURE"
-     }
-   }
-   ```
-
-6. **Database Migrations**:
-   - Run migrations on deploy (Railway post-deploy script)
-   - Or manual migration via Railway CLI
+5. **Database Migrations**:
+   - Run schema manually via Render PostgreSQL shell
+   - Or connect with `psql $DATABASE_URL -f server/schema.sql`
 
 #### Deployment Checklist
 - [ ] GitHub repository created and pushed
-- [ ] Railway account created
-- [ ] PostgreSQL database added in Railway
+- [ ] Render web service created
+- [ ] PostgreSQL database added on Render
 - [ ] Environment variables configured
 - [ ] Database migrations run
-- [ ] CORS configured for production domain
-- [ ] SSL/HTTPS enabled (Railway default)
+- [ ] CORS configured for `https://kitty-creek.onrender.com`
+- [ ] SSL/HTTPS enabled (Render default)
 
 ### 8. Future Enhancements
 

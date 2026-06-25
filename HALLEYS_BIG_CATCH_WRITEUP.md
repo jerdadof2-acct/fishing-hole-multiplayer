@@ -35,7 +35,7 @@
 ### Architecture
 - **Frontend**: Three.js-based 3D engine with custom physics systems
 - **Backend**: Express.js API server with PostgreSQL database
-- **Deployment**: Railway-ready infrastructure with cloud save support
+- **Deployment**: Render-hosted at https://kitty-creek.onrender.com with cloud save support
 - **Offline Mode**: Graceful fallback to localStorage when backend unavailable
 
 ### Advanced Systems

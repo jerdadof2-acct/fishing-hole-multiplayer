@@ -220,9 +220,9 @@ Add core gameplay systems from reference file: player progression (level, money,
 - Provide a first-launch username prompt:
   - Modal input asking the player to pick a unique username before entering the game
   - Validate locally (length, characters) and show inline errors
-- Persist player identity across sessions via PostgreSQL hosted on Railway:
+- Persist player identity across sessions via PostgreSQL hosted on Render:
   - Create an Express backend (`server/index.js`) that serves the static build and exposes REST endpoints under `/api/users`
-  - Configure PostgreSQL connection using `pg` with `process.env.DATABASE_URL` (Railway) and SSL
+  - Configure PostgreSQL connection using `pg` with `process.env.DATABASE_URL` (Render) and SSL
   - Ensure a `players` table exists (`id UUID PRIMARY KEY`, `username TEXT UNIQUE`, timestamps, optional profile JSON)
   - Endpoints:
     - `POST /api/users/register` → reserve a new username, returning `{ userId, username }`
@@ -239,7 +239,7 @@ Add core gameplay systems from reference file: player progression (level, money,
   - Display server error / “name taken” messages inline without leaving modal
 - Project scaffolding:
   - Add root `package.json` with scripts (`start`, `dev`) and dependencies (`express`, `pg`, `cors`, `dotenv`)
-  - Document Railway environment variables (e.g., `.env` containing `DATABASE_URL`) and local dev instructions
+  - Document Render environment variables (e.g., `.env` containing `DATABASE_URL`) and local dev instructions
   - Optional: provide mock fallback that stores names locally when backend unavailable (for offline use)
 
 ### 17. Achievement System

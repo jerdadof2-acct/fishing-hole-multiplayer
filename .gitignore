@@ -40,5 +40,5 @@ temp/
 .DS_Store
 Thumbs.db
 
-# Railway
-.railway/
+# Render
+.render/

@@ -1,4 +1,4 @@
-# Kitty Creek Fishing Club - Complete Project Documentation
+# Halley's Big Catch - Complete Project Documentation
 
 ## Table of Contents
 1. [Project Overview](#project-overview)
@@ -12,7 +12,7 @@
 
 ## Project Overview
 
-Kitty Creek Fishing Club is a 3D fishing simulation game built with Three.js, featuring:
+Halley's Big Catch is a 3D fishing simulation game built with Three.js, featuring:
 - Realistic fishing mechanics (casting, reeling, fighting fish)
 - Physics-based fishing line simulation
 - Multiple water body types (Pond, River, Lake, Ocean)
@@ -132,7 +132,7 @@ Kitty Creek Fishing Club is a 3D fishing simulation game built with Three.js, fe
 
 ### File Structure
 ```
-Kitty Creek/
+Halley's Big Catch/
 ├── index.html              # Main HTML entry point
 ├── package.json            # Node.js dependencies
 ├── src/
@@ -355,12 +355,13 @@ Kitty Creek/
 - Environment variable: `DATABASE_URL`
 - See `SETUP_INSTRUCTIONS.md` for details
 
-### Deployment (Railway)
+### Deployment (Render)
 - Express.js backend server
 - Static file serving
 - PostgreSQL database
 - Environment variables required
-- See `SETUP_INSTRUCTIONS.md` for Railway deployment
+- Production: https://kitty-creek.onrender.com
+- See `SETUP_INSTRUCTIONS.md` and `RENDER_DEPLOYMENT.md`
 
 ### Save System
 - LocalStorage-based (client-side)
@@ -451,6 +452,7 @@ For issues, questions, or contributions, refer to the project repository.
 **Last Updated**: 2024
 **Status**: Active Development
 **Next Priority**: Friends System Frontend Integration
+
 
 
 

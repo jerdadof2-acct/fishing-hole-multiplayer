@@ -126,7 +126,7 @@
 - Node.js (runtime)
 
 ### Deployment
-- Railway (hosting)
+- Render (hosting) — https://kitty-creek.onrender.com
 - GitHub (version control)
 - PostgreSQL (database)
 
@@ -178,6 +178,8 @@
 
 **Last Updated**: 2024
 **Status**: Core Complete, Extensions Pending
+
+
 
 
 

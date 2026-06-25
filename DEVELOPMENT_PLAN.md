@@ -1,4 +1,4 @@
-# Kitty Creek Fishing Club - Development Plan
+# Halley's Big Catch - Development Plan
 ## Mobile App & Growth Strategy
 
 ---
@@ -14,7 +14,7 @@ Convert web app to Google Play Store with 1000+ downloads through engaging featu
 - [ ] Install Capacitor and Android dependencies
 - [ ] Configure Capacitor for Android build
 - [ ] Set up Android project structure
-- [ ] Update API endpoints to point to Railway server
+- [ ] Update API endpoints to point to Render server (https://kitty-creek.onrender.com)
 
 ### 1.2 Server Updates
 - [ ] Implement room/instance system (max 8 players per room)
@@ -26,7 +26,7 @@ Convert web app to Google Play Store with 1000+ downloads through engaging featu
 - [ ] Set up Google AdMob account
 - [ ] Integrate banner ads (bottom of screen, non-intrusive)
 - [ ] Test ad placement and user experience
-- [ ] Goal: Cover Railway server costs ($5-20/month)
+- [ ] Goal: Cover Render server costs
 
 ---
 
