@@ -3,10 +3,10 @@
 export const STARFISH_ID = 33;
 export const STARLIGHT_LURE_BAIT_NAME = 'Starlight Lure';
 
-/** Starfish only at Celestial Depths with the forged Starlight Lure equipped. */
+/** Starfish only at Celestial Depths once the full relic quest is complete. */
 export function canSpawnStarfish(location, player) {
     return location?.waterBodyType === 'CELESTIAL'
-        && player?.starlightLureCrafted === true
+        && player?.canAccessCelestialDepths?.() === true
         && player?.gear?.bait === STARLIGHT_LURE_BAIT_NAME;
 }
 
@@ -19,7 +19,13 @@ export function canSpawnStarfish(location, player) {
 export function resolveLocationFishIds(location, player = null) {
     if (!location) return [0, 1, 2];
     if (location.waterBodyType === 'CELESTIAL') {
-        return canSpawnStarfish(location, player) ? [STARFISH_ID] : [];
+        if (!player?.canAccessCelestialDepths?.()) {
+            return [];
+        }
+        if (player?.gear?.bait !== STARLIGHT_LURE_BAIT_NAME) {
+            return [];
+        }
+        return [STARFISH_ID];
     }
     const ids = Array.isArray(location.fish) && location.fish.length ? location.fish : [0, 1, 2];
     return ids.filter((id) => id !== STARFISH_ID);

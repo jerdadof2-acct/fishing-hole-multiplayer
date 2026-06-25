@@ -521,10 +521,14 @@ export class UI {
     
     initFriendsUI() {
         this.renderFriendCode();
+        this.renderSavePinSection();
 
         const copyButton = document.getElementById('friends-copy-code');
         const addForm = document.getElementById('friends-add-form');
         const inputEl = document.getElementById('friends-add-input');
+        const savePinForm = document.getElementById('save-pin-form');
+        const savePinInput = document.getElementById('save-pin-input');
+        const savePinConfirm = document.getElementById('save-pin-confirm');
         const friendsListEl = document.getElementById('friends-list');
         const pendingReceivedEl = document.getElementById('friends-pending-received');
         const pendingSentEl = document.getElementById('friends-pending-sent');
@@ -552,6 +556,44 @@ export class UI {
                 } catch (error) {
                     console.warn('[UI] Failed to copy friend code:', error);
                     this.showFriendMessage('Copy failed. Tap and hold to copy manually.', 'error');
+                }
+            });
+        }
+
+        if (savePinForm) {
+            savePinForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+
+                if (!this.isOnline()) {
+                    this.showSavePinMessage('Connect online to set a save PIN.', 'error');
+                    return;
+                }
+
+                const pin = savePinInput?.value?.trim() || '';
+                const confirm = savePinConfirm?.value?.trim() || '';
+
+                if (!/^\d{4,6}$/.test(pin)) {
+                    this.showSavePinMessage('Save PIN must be 4–6 digits.', 'error');
+                    return;
+                }
+                if (pin !== confirm) {
+                    this.showSavePinMessage('PINs do not match.', 'error');
+                    return;
+                }
+
+                const submitButton = savePinForm.querySelector('button[type="submit"]');
+                if (submitButton) submitButton.disabled = true;
+
+                try {
+                    await this.api.setSavePin(pin);
+                    if (savePinInput) savePinInput.value = '';
+                    if (savePinConfirm) savePinConfirm.value = '';
+                    this.showSavePinMessage('Save PIN set. Keep it private — use it with your username on a new device.');
+                    await this.renderSavePinSection();
+                } catch (error) {
+                    this.showSavePinMessage(error?.message || 'Failed to set save PIN.', 'error');
+                } finally {
+                    if (submitButton) submitButton.disabled = false;
                 }
             });
         }
@@ -636,6 +678,7 @@ export class UI {
     
     async renderFriends(refresh = false) {
         this.renderFriendCode();
+        this.renderSavePinSection();
 
         if (!this.isOnline()) {
             this.renderFriendsOffline();
@@ -1364,6 +1407,54 @@ export class UI {
         friendCodeEl.textContent = this.player.friendCode || '------';
     }
 
+    async renderSavePinSection() {
+        const statusEl = document.getElementById('save-pin-status');
+        const formEl = document.getElementById('save-pin-form');
+        if (!statusEl) return;
+
+        if (!this.isOnline()) {
+            statusEl.textContent = 'Connect online to manage your save PIN.';
+            formEl?.classList.add('hidden');
+            return;
+        }
+
+        try {
+            const saveInfo = await this.api.getGameSave();
+            if (saveInfo?.hasPin) {
+                statusEl.textContent = 'Save PIN is set. On a new device, choose Returning fisher and sign in with your username and PIN.';
+                formEl?.classList.add('hidden');
+            } else {
+                statusEl.textContent = 'Set a private save PIN so you can restore progress on a new device. Your friend code is only for adding friends.';
+                formEl?.classList.remove('hidden');
+            }
+        } catch (error) {
+            console.warn('[UI] Failed to load save PIN status:', error);
+            statusEl.textContent = 'Could not load save PIN status. Try again later.';
+            formEl?.classList.add('hidden');
+        }
+    }
+
+    showSavePinMessage(message, tone = 'info', duration = 5000) {
+        const messageEl = document.getElementById('save-pin-message');
+        if (!messageEl) return;
+
+        messageEl.textContent = message;
+        messageEl.classList.remove('hidden');
+        messageEl.classList.toggle('error', tone === 'error');
+
+        if (this.savePinMessageTimer) {
+            clearTimeout(this.savePinMessageTimer);
+        }
+
+        if (duration > 0) {
+            this.savePinMessageTimer = setTimeout(() => {
+                messageEl.textContent = '';
+                messageEl.classList.add('hidden');
+                messageEl.classList.remove('error');
+            }, duration);
+        }
+    }
+
     isOnline() {
         return Boolean(this.player?.userId && this.api);
     }
@@ -1893,6 +1984,16 @@ export class UI {
             console.warn('[UI] Location not unlocked:', location.name);
             return;
         }
+
+        if (location.waterBodyType === 'CELESTIAL' && !this.player.canAccessCelestialDepths()) {
+            this.showToast({
+                type: 'error',
+                title: 'Celestial Depths locked',
+                body: 'Collect all ten sea relics and forge the Starlight Lure first.'
+            });
+            this.updateLocationSelector();
+            return;
+        }
         
         // Check if player can afford the location
         if (this.player.money < location.cost) {
@@ -1907,7 +2008,11 @@ export class UI {
         console.log('[UI] Changing location to:', location.name);
         
         // Switch location (this will update water type and platform automatically)
-        this.game.changeLocation(locationIndex);
+        const switched = this.game.changeLocation(locationIndex);
+        if (!switched) {
+            this.updateLocationSelector();
+            return;
+        }
         
         // Deduct cost if not free
         if (location.cost > 0) {
@@ -1965,6 +2070,16 @@ export class UI {
             console.error('Fishing system not available');
             return;
         }
+
+        const currentLocation = this.game?.locations?.getCurrentLocation?.();
+        if (currentLocation?.waterBodyType === 'CELESTIAL' && !this.player?.canAccessCelestialDepths()) {
+            this.showToast({
+                type: 'error',
+                title: 'Celestial Depths locked',
+                body: 'Collect all ten sea relics and forge the Starlight Lure first.'
+            });
+            return;
+        }
         
         // Reset bite detection state
         this.waitingForBite = false;
@@ -2011,6 +2126,12 @@ export class UI {
     startBiteDetection() {
         if (!this.player || !this.game?.locations) {
             console.warn('[UI] Player or locations not available for bite detection');
+            return;
+        }
+
+        const currentLocation = this.game.locations.getCurrentLocation();
+        if (currentLocation?.waterBodyType === 'CELESTIAL' && !this.player.canAccessCelestialDepths()) {
+            console.warn('[UI] Bite detection blocked — Celestial Depths is locked');
             return;
         }
         
@@ -2351,6 +2472,10 @@ export class UI {
                     // Hook fish and start fight
             if (this.fishing.bobber && this.fishing.bobber.visible) {
                         this.fish.spawnFish();
+                        if (!this.fish.currentFish) {
+                            this.handleMiss('Nothing stirs in these depths…');
+                            return;
+                        }
                         this.fish.hook();
                         this.fishing.setFishOnLine(true);
                         this.fishing.isReeling = true;
@@ -2392,6 +2517,10 @@ export class UI {
             this.waitingForBite = false;
             if (this.fishing.bobber && this.fishing.bobber.visible) {
                 this.fish.spawnFish();
+                if (!this.fish.currentFish) {
+                    this.handleMiss('Nothing stirs in these depths…');
+                    return;
+                }
                 this.fish.hook();
             this.fishing.setFishOnLine(true);
                 this.fishing.isReeling = true;

@@ -3,6 +3,8 @@ import {
     getRelicForGameLocation,
     HIDDEN_RELICS,
     RELIC_DISCOVERY_CHANCE,
+    RELIC_DISCOVERY_PITY_CASTS,
+    RELIC_DISCOVERY_PITY_STEP,
     STARLIGHT_LURE_BAIT_ID
 } from './config/hiddenRelics.js';
 
@@ -19,9 +21,18 @@ export function rollRelicDiscovery(player, relic) {
         return false;
     }
 
+    const attempts = player.getRelicCastAttempts(relic.id);
+    if (attempts >= RELIC_DISCOVERY_PITY_CASTS) {
+        player.recordRelicCastAttempt(relic.id, true);
+        return true;
+    }
+
     const luckBonus = ((player.stats?.luck ?? 50) - 50) * 0.001;
-    const chance = Math.min(0.22, RELIC_DISCOVERY_CHANCE + luckBonus);
-    return Math.random() < chance;
+    const pityBonus = attempts * RELIC_DISCOVERY_PITY_STEP;
+    const chance = Math.min(0.55, RELIC_DISCOVERY_CHANCE + luckBonus + pityBonus);
+    const found = Math.random() < chance;
+    player.recordRelicCastAttempt(relic.id, found);
+    return found;
 }
 
 /**

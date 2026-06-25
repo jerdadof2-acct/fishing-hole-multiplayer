@@ -711,6 +711,8 @@ export class Fish {
         if (this.state === FishState.HOOKED_FIGHT || this.state === FishState.LANDING) {
             return;
         }
+
+        this.currentFish = null;
         
         // spawnFish just prepares the fish data - actual positioning happens in hook()
         // Fish spawns at bobber location when hooked, not randomly

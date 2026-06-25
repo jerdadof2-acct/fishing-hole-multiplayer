@@ -11,6 +11,8 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
+import { hashPin, validatePin, verifyPin } from './pinAuth.js';
+import { runMigrations } from './migrate.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -86,10 +88,10 @@ function isValidUUID(uuid) {
 
 // ==================== Player Routes ====================
 
-// Register new player
+// Register new player (username + save PIN)
 app.post('/api/players/register', async (req, res) => {
     try {
-        const { username } = req.body;
+        const { username, pin } = req.body;
         
         // Validate username
         if (!username || typeof username !== 'string') {
@@ -103,6 +105,11 @@ app.post('/api/players/register', async (req, res) => {
         if (!/^[a-zA-Z0-9_]+$/.test(username)) {
             return res.status(400).json({ error: 'Username can only contain letters, numbers, and underscores' });
         }
+
+        const pinCheck = validatePin(pin);
+        if (!pinCheck.ok) {
+            return res.status(400).json({ error: pinCheck.error });
+        }
         
         // Generate unique friend code
         let friendCode;
@@ -115,12 +122,14 @@ app.post('/api/players/register', async (req, res) => {
             }
         } while (await pool.query('SELECT id FROM players WHERE friend_code = $1', [friendCode]).then(r => r.rows.length > 0));
         
+        const pinHash = hashPin(pin);
+
         // Insert player
         const result = await pool.query(
-            `INSERT INTO players (username, friend_code, display_name)
-             VALUES ($1, $2, $1)
+            `INSERT INTO players (username, friend_code, display_name, pin_hash)
+             VALUES ($1, $2, $1, $3)
              RETURNING id, username, friend_code, level, experience, money, player_stats, created_at`,
-            [username, friendCode]
+            [username, friendCode, pinHash]
         );
         
         const player = result.rows[0];
@@ -149,6 +158,69 @@ app.post('/api/players/register', async (req, res) => {
     }
 });
 
+// Sign in on a new device / after reinstall (username + save PIN)
+app.post('/api/players/login', async (req, res) => {
+    try {
+        const { username, pin } = req.body;
+
+        if (!username || typeof username !== 'string') {
+            return res.status(400).json({ error: 'Username is required' });
+        }
+
+        const pinCheck = validatePin(pin);
+        if (!pinCheck.ok) {
+            return res.status(400).json({ error: pinCheck.error });
+        }
+
+        const result = await pool.query(
+            `SELECT id, username, friend_code, display_name, level, experience, money,
+                    total_caught, biggest_catch, player_stats, pin_hash, game_save,
+                    game_save_updated_at, last_active, created_at
+             FROM players
+             WHERE username = $1`,
+            [username.trim()]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(401).json({ error: 'Username or save PIN is incorrect.' });
+        }
+
+        const player = result.rows[0];
+
+        if (!player.pin_hash) {
+            return res.status(403).json({
+                error: 'This account does not have a save PIN yet. Open the game on your original device and set one in Friends → Save PIN.'
+            });
+        }
+
+        if (!verifyPin(pin, player.pin_hash)) {
+            return res.status(401).json({ error: 'Username or save PIN is incorrect.' });
+        }
+
+        await pool.query('UPDATE players SET last_active = NOW() WHERE id = $1', [player.id]);
+
+        const gameSave = player.game_save && typeof player.game_save === 'object' ? player.game_save : {};
+
+        res.json({
+            userId: player.id,
+            username: player.username,
+            friendCode: player.friend_code,
+            level: player.level,
+            experience: player.experience,
+            money: player.money,
+            stats: player.player_stats,
+            totalCaught: player.total_caught,
+            biggestCatch: player.biggest_catch,
+            gameSave,
+            gameSaveUpdatedAt: player.game_save_updated_at,
+            hasPin: true
+        });
+    } catch (error) {
+        console.error('[API] Login error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Get current player
 app.get('/api/players/me', authenticate, async (req, res) => {
     try {
@@ -158,7 +230,8 @@ app.get('/api/players/me', authenticate, async (req, res) => {
         
         const result = await pool.query(
             `SELECT id, username, friend_code, display_name, level, experience, money,
-                    total_caught, biggest_catch, player_stats, last_active, created_at
+                    total_caught, biggest_catch, player_stats, last_active, created_at,
+                    (pin_hash IS NOT NULL) AS has_pin
              FROM players
              WHERE id = $1`,
             [req.userId]
@@ -236,6 +309,140 @@ app.put('/api/players/me', authenticate, async (req, res) => {
         res.json(result.rows[0]);
     } catch (error) {
         console.error('[API] Update player error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Set save PIN (existing accounts on their original device)
+app.put('/api/players/me/pin', authenticate, async (req, res) => {
+    try {
+        if (!isValidUUID(req.userId)) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+
+        const { pin } = req.body;
+        const pinCheck = validatePin(pin);
+        if (!pinCheck.ok) {
+            return res.status(400).json({ error: pinCheck.error });
+        }
+
+        const existing = await pool.query(
+            'SELECT pin_hash FROM players WHERE id = $1',
+            [req.userId]
+        );
+
+        if (existing.rows.length === 0) {
+            return res.status(404).json({ error: 'Player not found' });
+        }
+
+        if (existing.rows[0].pin_hash) {
+            return res.status(409).json({ error: 'Save PIN is already set for this account.' });
+        }
+
+        await pool.query(
+            'UPDATE players SET pin_hash = $1, updated_at = NOW() WHERE id = $2',
+            [hashPin(pin), req.userId]
+        );
+
+        res.json({ success: true, hasPin: true });
+    } catch (error) {
+        console.error('[API] Set PIN error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Download full cloud save
+app.get('/api/players/me/save', authenticate, async (req, res) => {
+    try {
+        if (!isValidUUID(req.userId)) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+
+        const result = await pool.query(
+            `SELECT game_save, game_save_updated_at,
+                    (pin_hash IS NOT NULL) AS has_pin
+             FROM players WHERE id = $1`,
+            [req.userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Player not found' });
+        }
+
+        const row = result.rows[0];
+        res.json({
+            gameSave: row.game_save && typeof row.game_save === 'object' ? row.game_save : {},
+            gameSaveUpdatedAt: row.game_save_updated_at,
+            hasPin: row.has_pin
+        });
+    } catch (error) {
+        console.error('[API] Get save error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Upload full cloud save
+app.put('/api/players/me/save', authenticate, async (req, res) => {
+    try {
+        if (!isValidUUID(req.userId)) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+
+        const { gameSave } = req.body;
+        if (!gameSave || typeof gameSave !== 'object') {
+            return res.status(400).json({ error: 'Invalid save data' });
+        }
+
+        const payload = JSON.stringify(gameSave);
+        if (payload.length > 2_000_000) {
+            return res.status(413).json({ error: 'Save data too large' });
+        }
+
+        const result = await pool.query(
+            `UPDATE players
+             SET game_save = $1::jsonb,
+                 game_save_updated_at = NOW(),
+                 last_active = NOW(),
+                 level = COALESCE($2, level),
+                 experience = COALESCE($3, experience),
+                 money = COALESCE($4, money),
+                 total_caught = COALESCE($5, total_caught),
+                 biggest_catch = COALESCE($6, biggest_catch),
+                 player_stats = COALESCE($7::jsonb, player_stats)
+             WHERE id = $8
+             RETURNING game_save_updated_at`,
+            [
+                payload,
+                gameSave.player?.level ?? null,
+                gameSave.player?.experience ?? null,
+                gameSave.player?.money ?? null,
+                gameSave.player?.totalCaught ?? null,
+                gameSave.player?.biggestCatch ?? null,
+                gameSave.player?.stats ? JSON.stringify(gameSave.player.stats) : null,
+                req.userId
+            ]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Player not found' });
+        }
+
+        if (gameSave.collection?.caughtFishCollection) {
+            await pool.query(
+                `INSERT INTO player_collections (player_id, caught_fish, updated_at)
+                 VALUES ($1, $2::jsonb, NOW())
+                 ON CONFLICT (player_id)
+                 DO UPDATE SET caught_fish = EXCLUDED.caught_fish, updated_at = NOW()`,
+                [req.userId, JSON.stringify(gameSave.collection.caughtFishCollection)]
+            );
+        }
+
+        res.json({
+            success: true,
+            gameSaveUpdatedAt: result.rows[0].game_save_updated_at
+        });
+    } catch (error) {
+        console.error('[API] Update save error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -958,11 +1165,19 @@ app.get('/api/health', async (req, res) => {
     }
 });
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`[SERVER] Halley's Big Catch Friends API running on port ${PORT}`);
-    console.log(`[SERVER] Environment: ${NODE_ENV}`);
-});
+// Start server (migrations run automatically before listen)
+async function startServer() {
+    try {
+        await runMigrations(pool);
+    } catch (error) {
+        console.error('[SERVER] Database migration failed:', error);
+        process.exit(1);
+    }
 
+    app.listen(PORT, () => {
+        console.log(`[SERVER] Halley's Big Catch Friends API running on port ${PORT}`);
+        console.log(`[SERVER] Environment: ${NODE_ENV}`);
+    });
+}
 
-
+startServer();

@@ -147,6 +147,16 @@
                     <button class="modal-close" data-modal="friends-modal">&times;</button>
                 </div>
                 <div class="friends-content">
+                    <section class="friends-section" id="save-pin-section">
+                        <h3>Save PIN</h3>
+                        <p id="save-pin-status" class="friends-tip">Private — use on a new device to restore your progress. Not shared with friends.</p>
+                        <form id="save-pin-form" class="friends-add-form hidden">
+                            <input type="password" id="save-pin-input" class="friends-input" placeholder="4–6 digit PIN" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="new-password" />
+                            <input type="password" id="save-pin-confirm" class="friends-input" placeholder="Confirm PIN" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="new-password" />
+                            <button type="submit" class="friends-submit-button">Set Save PIN</button>
+                        </form>
+                        <p id="save-pin-message" class="friends-message hidden"></p>
+                    </section>
                     <section class="friends-section">
                         <h3>Your Friend Code</h3>
                         <div class="friend-code-card">
@@ -198,15 +208,19 @@
             </div>
         </div>
 
-        <!-- Username Modal -->
+        <!-- Account modal (new fisher / returning fisher) -->
         <div id="username-modal" class="modal hidden">
             <div class="modal-content username-modal">
                 <div class="modal-header">
                     <h2>Welcome to Halley's Big Catch</h2>
                 </div>
                 <div class="modal-body">
+                    <div class="auth-mode-tabs" role="tablist" aria-label="Account type">
+                        <button type="button" id="auth-tab-new" class="auth-mode-tab active" data-auth-mode="new" role="tab" aria-selected="true">New fisher</button>
+                        <button type="button" id="auth-tab-returning" class="auth-mode-tab" data-auth-mode="returning" role="tab" aria-selected="false">Returning fisher</button>
+                    </div>
                     <p id="username-helper" class="modal-helper-text">
-                        Pick a username so we can save your progress in the Halley's Big Catch clubhouse.
+                        Pick a username and a private save PIN. You'll use both to restore progress on a new device.
                     </p>
                     <form id="username-form" class="username-form">
                         <input
@@ -215,7 +229,29 @@
                             class="username-input"
                             placeholder="FisherCat42"
                             maxlength="20"
-                            autocomplete="off"
+                            autocomplete="username"
+                            required
+                        />
+                        <input
+                            type="password"
+                            id="pin-input"
+                            class="username-input"
+                            placeholder="Save PIN (4–6 digits)"
+                            maxlength="6"
+                            inputmode="numeric"
+                            pattern="[0-9]*"
+                            autocomplete="new-password"
+                            required
+                        />
+                        <input
+                            type="password"
+                            id="pin-confirm-input"
+                            class="username-input auth-pin-confirm"
+                            placeholder="Confirm save PIN"
+                            maxlength="6"
+                            inputmode="numeric"
+                            pattern="[0-9]*"
+                            autocomplete="new-password"
                             required
                         />
                         <button type="submit" id="username-submit" class="username-submit">
@@ -233,7 +269,10 @@
                 <div class="prologue-credits-viewport">
                     <div id="prologue-credits-inner" class="prologue-credits-inner"></div>
                 </div>
-                <p class="prologue-credits-hint">A long time ago, on a lake not so far away…</p>
+            </div>
+
+            <div id="prologue-interstitial-phase" class="prologue-interstitial-phase hidden" aria-hidden="true">
+                <p class="prologue-interstitial-text">A long time ago, on a lake not so far away…</p>
             </div>
 
             <div id="prologue-title-phase" class="prologue-title-phase hidden" aria-label="Tap anywhere to enter the game">
@@ -244,11 +283,6 @@
                 <p id="prologue-tap-hint" class="prologue-tap-hint hidden">Tap anywhere to cast off</p>
             </div>
 
-            <div class="prologue-speed-controls" aria-label="Prologue scroll speed (for voiceover sync)">
-                <button type="button" id="prologue-slower" class="prologue-speed-btn">Slower</button>
-                <span class="prologue-speed-readout">Scroll <span id="prologue-speed-label">0.55×</span></span>
-                <button type="button" id="prologue-faster" class="prologue-speed-btn">Faster</button>
-            </div>
             <p id="prologue-load-hint" class="prologue-load-hint hidden" aria-live="polite"></p>
         </div>
     </div>

@@ -12,6 +12,16 @@ export const STARLIGHT_LURE_IMAGE = 'images/hiddenitems/starlightlure.png';
 /** Chance per cast that an undiscovered relic surfaces instead of a normal bite. */
 export const RELIC_DISCOVERY_CHANCE = 0.11;
 
+/** After this many casts at a location without finding its relic, the next cast guarantees it. */
+export const RELIC_DISCOVERY_PITY_CASTS = 18;
+
+/** Bonus added to relic chance per failed cast (stacks toward pity). */
+export const RELIC_DISCOVERY_PITY_STEP = 0.028;
+
+export function isStoryGatedLocation(location) {
+    return location?.requiresStarlightLure === true || location?.waterBodyType === 'CELESTIAL';
+}
+
 export const HIDDEN_RELICS = [
     {
         id: 'weathered_bobber',

@@ -84,12 +84,43 @@ export class API {
     /**
      * Register a new player
      * @param {string} username - Player username
+     * @param {string} pin - 4-6 digit save PIN
      * @returns {Promise<Object>} Player data with userId and friendCode
      */
-    async registerPlayer(username) {
+    async registerPlayer(username, pin) {
         return this.request('/players/register', {
             method: 'POST',
-            body: JSON.stringify({ username })
+            body: JSON.stringify({ username, pin })
+        });
+    }
+
+    /**
+     * Sign in with username + save PIN (new device / reinstall)
+     * @param {string} username
+     * @param {string} pin
+     */
+    async loginPlayer(username, pin) {
+        return this.request('/players/login', {
+            method: 'POST',
+            body: JSON.stringify({ username, pin })
+        });
+    }
+
+    async getGameSave() {
+        return this.request('/players/me/save');
+    }
+
+    async updateGameSave(gameSave) {
+        return this.request('/players/me/save', {
+            method: 'PUT',
+            body: JSON.stringify({ gameSave })
+        });
+    }
+
+    async setSavePin(pin) {
+        return this.request('/players/me/pin', {
+            method: 'PUT',
+            body: JSON.stringify({ pin })
         });
     }
     

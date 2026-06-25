@@ -278,6 +278,7 @@ export class Game {
                 }
             }
             if (this.player) {
+                this.player.syncStoryUnlocks();
                 const savedIndex = typeof this.player.currentLocationIndex === 'number'
                     ? this.player.currentLocationIndex
                     : 0;
@@ -1006,7 +1007,7 @@ export class Game {
     }
 
     ensureStarlightLureUnlocked() {
-        if (!this.player || !this.player.starlightLureCrafted || !this.player.hasAllHiddenRelics()) {
+        if (!this.player?.canAccessCelestialDepths()) {
             return;
         }
 
@@ -1023,6 +1024,9 @@ export class Game {
         let saveNeeded = false;
 
         if (isCelestial) {
+            if (!this.player.canAccessCelestialDepths()) {
+                return;
+            }
             this.ensureStarlightLureUnlocked();
             if (this.player.gear.bait !== this.STARLIGHT_LURE_NAME) {
                 if (!this.player.__previousBait || this.player.gear.bait !== this.STARLIGHT_LURE_NAME) {
@@ -1049,13 +1053,18 @@ export class Game {
     changeLocation(locationIndex) {
         if (!this.locations || !this.platform || !this.water) {
             console.warn('[LOCATION SWITCH] Location system not initialized');
-            return;
+            return false;
         }
         
         const location = this.locations.getLocation(locationIndex);
         if (!location) {
             console.warn('[LOCATION SWITCH] Invalid location index:', locationIndex);
-            return;
+            return false;
+        }
+
+        if (location.waterBodyType === 'CELESTIAL' && !this.player?.canAccessCelestialDepths()) {
+            console.warn('[LOCATION SWITCH] Celestial Depths locked — collect all relics and forge the Starlight Lure first');
+            return false;
         }
         
         console.log('[LOCATION SWITCH] Switching to:', location.name, 'Water type:', location.waterBodyType, 'Platform:', location.platformType);
@@ -1077,6 +1086,8 @@ export class Game {
             applyCatPlatformHeight(this.cat, location.platformType, newPlatformPos, this.platform);
             console.log('[LOCATION SWITCH] Cat repositioned to:', this.cat.savedPosition);
         }
+
+        return true;
     }
 }
 

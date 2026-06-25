@@ -1,11 +1,10 @@
 /**
  * Story prologue — first-time entrance sequence (see DOCS/halleys-big-catch-story.md).
- * Adjust scroll speed for voiceover sync via playStoryPrologue({ scrollSpeedMultiplier }).
+ * Scroll speed is fixed at PROLOGUE_SCROLL_SPEED for voiceover sync.
  */
 
 export const PROLOGUE_SEEN_STORAGE_KEY = 'kittyCreekPrologueSeen';
 export const PROLOGUE_VERSION_STORAGE_KEY = 'kittyCreekPrologueVersion';
-export const PROLOGUE_SPEED_STORAGE_KEY = 'kittyCreekPrologueScrollSpeed';
 
 /**
  * Bump this when shipping an update that should replay the entrance prologue.
@@ -16,19 +15,55 @@ export const PROLOGUE_GAME_VERSION = '20250621-2';
 /** Base upward scroll speed in pixels per second at multiplier 1.0. */
 export const PROLOGUE_BASE_SCROLL_PX_PER_SEC = 42;
 
-/** Default scroll multiplier (0.55× verified for comfortable reading / voiceover sync). */
-export const PROLOGUE_SCROLL_SPEED_DEFAULT = 0.55;
+/** Fixed scroll multiplier — synced to intro voiceover (not user-adjustable). */
+export const PROLOGUE_SCROLL_SPEED = 0.7;
 
-export const PROLOGUE_SCROLL_SPEED_MIN = 0.35;
-export const PROLOGUE_SCROLL_SPEED_MAX = 3.5;
-/** Fine steps so you can land between 0.55× and 0.70× (e.g. 0.60×, 0.65×). */
-export const PROLOGUE_SCROLL_SPEED_STEP = 0.05;
+/** @deprecated Use PROLOGUE_SCROLL_SPEED */
+export const PROLOGUE_SCROLL_SPEED_DEFAULT = PROLOGUE_SCROLL_SPEED;
+
+/** Intro narration — plays after credits begin scrolling. */
+export const PROLOGUE_VOICEOVER_URL = '/assets/audio/halleys-big-catch-intro.wav';
+
+/** Ocean + seagulls loop under the voiceover. */
+export const PROLOGUE_AMBIENCE_URL = '/assets/audio/prologue-ocean-seagulls.mp3';
+
+/** Universfield dark mysterious atmosphere — background music bed. */
+export const PROLOGUE_MUSIC_URL = '/assets/audio/prologue-music.mp3';
+
+/** Peak ocean SFX volume (0–1) — below voiceover. */
+export const PROLOGUE_AMBIENCE_VOLUME = 0.3;
+
+/** Ocean level while voiceover plays (ratio of peak). */
+export const PROLOGUE_AMBIENCE_DUCK_RATIO = 0.36;
+
+/** Peak music volume (0–1) — below voiceover and ocean SFX. */
+export const PROLOGUE_MUSIC_VOLUME = 0.28;
+
+/** Music level while voiceover plays (ratio of peak). */
+export const PROLOGUE_MUSIC_DUCK_RATIO = 0.32;
+
+/** Seconds after voiceover ends before ocean ambience begins fading. */
+export const PROLOGUE_AMBIENCE_FADE_DELAY_AFTER_VO_SEC = 1;
+
+/** Duration of the ocean fade-out (seconds). */
+export const PROLOGUE_AMBIENCE_FADE_DURATION_SEC = 3;
+
+/** Voiceover playback volume (0–1). */
+export const PROLOGUE_VOICEOVER_VOLUME = 1;
+
+/** Seconds of scroll before voiceover starts (scroll begins immediately). */
+export const PROLOGUE_VOICEOVER_DELAY_SEC = 2;
 
 /** Seconds on splash screen before tap-to-enter is enabled. */
 export const PROLOGUE_ENTER_BUTTON_DELAY_SEC = 3.5;
 
-/** Fade duration between credits and title (ms). */
+/** Fade duration between prologue phases (ms). */
 export const PROLOGUE_PHASE_FADE_MS = 1200;
+
+/** How long the “A long time ago…” card holds before the entry graphic (ms). */
+export const PROLOGUE_INTERSTITIAL_HOLD_MS = 2800;
+
+export const PROLOGUE_INTERSTITIAL_TEXT = 'A long time ago, on a lake not so far away…';
 
 export const PROLOGUE_ENTRANCE_IMAGE = 'images/halley-splash.png';
 

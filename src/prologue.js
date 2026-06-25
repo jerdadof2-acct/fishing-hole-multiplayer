@@ -3,45 +3,37 @@ import {
     PROLOGUE_ENTER_BUTTON_DELAY_SEC,
     PROLOGUE_ENTRANCE_IMAGE,
     PROLOGUE_GAME_VERSION,
+    PROLOGUE_INTERSTITIAL_HOLD_MS,
+    PROLOGUE_INTERSTITIAL_TEXT,
     PROLOGUE_PHASE_FADE_MS,
     PROLOGUE_SCROLL_BACKGROUND,
-    PROLOGUE_SCROLL_SPEED_MAX,
-    PROLOGUE_SCROLL_SPEED_MIN,
-    PROLOGUE_SCROLL_SPEED_STEP,
-    PROLOGUE_SCROLL_SPEED_DEFAULT,
-    PROLOGUE_SPEED_STORAGE_KEY,
+    PROLOGUE_SCROLL_SPEED,
     PROLOGUE_STORY_PARAGRAPHS,
-    PROLOGUE_VERSION_STORAGE_KEY
+    PROLOGUE_VERSION_STORAGE_KEY,
+    PROLOGUE_AMBIENCE_DUCK_RATIO,
+    PROLOGUE_AMBIENCE_FADE_DELAY_AFTER_VO_SEC,
+    PROLOGUE_AMBIENCE_FADE_DURATION_SEC,
+    PROLOGUE_AMBIENCE_URL,
+    PROLOGUE_AMBIENCE_VOLUME,
+    PROLOGUE_MUSIC_DUCK_RATIO,
+    PROLOGUE_MUSIC_URL,
+    PROLOGUE_MUSIC_VOLUME,
+    PROLOGUE_VOICEOVER_DELAY_SEC,
+    PROLOGUE_VOICEOVER_URL,
+    PROLOGUE_VOICEOVER_VOLUME
 } from './config/prologue.js';
+import { PrologueAudioBed } from './audio/prologueAmbience.js';
 import { loadingProgress } from './loadingProgress.js';
-
-function clamp(value, min, max) {
-    return Math.min(max, Math.max(min, value));
-}
-
-function loadSavedScrollMultiplier() {
-    try {
-        const raw = localStorage.getItem(PROLOGUE_SPEED_STORAGE_KEY);
-        const parsed = raw ? parseFloat(raw) : PROLOGUE_SCROLL_SPEED_DEFAULT;
-        return Number.isFinite(parsed)
-            ? clamp(parsed, PROLOGUE_SCROLL_SPEED_MIN, PROLOGUE_SCROLL_SPEED_MAX)
-            : PROLOGUE_SCROLL_SPEED_DEFAULT;
-    } catch {
-        return PROLOGUE_SCROLL_SPEED_DEFAULT;
-    }
-}
-
-function saveScrollMultiplier(multiplier) {
-    try {
-        localStorage.setItem(PROLOGUE_SPEED_STORAGE_KEY, String(multiplier));
-    } catch {
-        /* ignore */
-    }
-}
 
 /** True when this build's prologue has not been shown yet (replay on each PROLOGUE_GAME_VERSION bump). */
 export function shouldPlayStoryPrologue() {
     try {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('prologue')) {
+                return true;
+            }
+        }
         return localStorage.getItem(PROLOGUE_VERSION_STORAGE_KEY) !== PROLOGUE_GAME_VERSION;
     } catch {
         return true;
@@ -67,9 +59,8 @@ export function shouldShowReturnSplash() {
 }
 
 /**
- * Full-screen cinematic prologue: scrolling story → splash art → tap anywhere to enter.
+ * Full-screen cinematic prologue: scrolling story → interstitial card → splash art → tap anywhere to enter.
  * @param {{
- *   scrollSpeedMultiplier?: number,
  *   skipCredits?: boolean,
  *   waitForReady?: () => Promise<unknown>,
  *   onLoadProgress?: (percent: number) => void
@@ -80,18 +71,19 @@ export function playStoryPrologue(options = {}) {
     const skipCredits = options.skipCredits === true;
     const overlay = document.getElementById('story-prologue');
     const creditsPhase = document.getElementById('prologue-credits-phase');
+    const interstitialPhase = document.getElementById('prologue-interstitial-phase');
     const titlePhase = document.getElementById('prologue-title-phase');
     const creditsInner = document.getElementById('prologue-credits-inner');
-    const speedLabel = document.getElementById('prologue-speed-label');
+    const interstitialText = interstitialPhase?.querySelector('.prologue-interstitial-text');
     const tapHint = document.getElementById('prologue-tap-hint');
     const loadHint = document.getElementById('prologue-load-hint');
 
-    if (!overlay || !creditsPhase || !titlePhase || !creditsInner) {
+    if (!overlay || !creditsPhase || !interstitialPhase || !titlePhase || !creditsInner) {
         console.warn('[PROLOGUE] Missing DOM — skipping prologue');
         return Promise.resolve();
     }
 
-    let scrollMultiplier = options.scrollSpeedMultiplier ?? loadSavedScrollMultiplier();
+    const scrollMultiplier = PROLOGUE_SCROLL_SPEED;
     let rafId = null;
     let enterTimer = null;
     let loadPollId = null;
@@ -100,6 +92,113 @@ export function playStoryPrologue(options = {}) {
     let lastTs = 0;
     let done = false;
     let canEnter = false;
+    let voiceoverAudio = null;
+    let voiceoverTimer = null;
+    let voiceoverEndedHandler = null;
+    let ambienceFadeTimer = null;
+    let audioBed = null;
+    let interstitialTimer = null;
+    let lastCreditLine = null;
+    let creditsFinished = false;
+
+    const stopVoiceover = () => {
+        if (voiceoverTimer) {
+            clearTimeout(voiceoverTimer);
+            voiceoverTimer = null;
+        }
+        if (ambienceFadeTimer) {
+            clearTimeout(ambienceFadeTimer);
+            ambienceFadeTimer = null;
+        }
+        if (voiceoverAudio) {
+            if (voiceoverEndedHandler) {
+                voiceoverAudio.removeEventListener('ended', voiceoverEndedHandler);
+                voiceoverEndedHandler = null;
+            }
+            voiceoverAudio.pause();
+            voiceoverAudio.currentTime = 0;
+            voiceoverAudio = null;
+        }
+    };
+
+    const scheduleAmbienceFadeAfterVoiceover = () => {
+        if (ambienceFadeTimer) {
+            clearTimeout(ambienceFadeTimer);
+        }
+        ambienceFadeTimer = window.setTimeout(() => {
+            ambienceFadeTimer = null;
+            audioBed?.startFadeOut(PROLOGUE_AMBIENCE_FADE_DURATION_SEC);
+        }, PROLOGUE_AMBIENCE_FADE_DELAY_AFTER_VO_SEC * 1000);
+    };
+
+    const haveLastWordsExited = () => {
+        if (!lastCreditLine) {
+            return false;
+        }
+        const lineBottom = scrollY + lastCreditLine.offsetTop + lastCreditLine.offsetHeight;
+        return lineBottom <= 0;
+    };
+
+    const stopAudioBed = () => {
+        audioBed?.stop();
+        audioBed = null;
+    };
+
+    const startAudioBed = () => {
+        if (skipCredits) {
+            return;
+        }
+
+        const tracks = {};
+        if (PROLOGUE_AMBIENCE_URL) {
+            tracks.ocean = {
+                url: PROLOGUE_AMBIENCE_URL,
+                volume: PROLOGUE_AMBIENCE_VOLUME,
+                duckRatio: PROLOGUE_AMBIENCE_DUCK_RATIO
+            };
+        }
+        if (PROLOGUE_MUSIC_URL) {
+            tracks.music = {
+                url: PROLOGUE_MUSIC_URL,
+                volume: PROLOGUE_MUSIC_VOLUME,
+                duckRatio: PROLOGUE_MUSIC_DUCK_RATIO
+            };
+        }
+
+        if (!tracks.ocean && !tracks.music) {
+            return;
+        }
+
+        audioBed = new PrologueAudioBed(tracks);
+        audioBed.start().catch((error) => {
+            console.warn('[PROLOGUE] Audio bed failed to start:', error);
+        });
+    };
+
+    const scheduleVoiceover = () => {
+        if (skipCredits || !PROLOGUE_VOICEOVER_URL) {
+            return;
+        }
+
+        stopVoiceover();
+        voiceoverAudio = new Audio(PROLOGUE_VOICEOVER_URL);
+        voiceoverAudio.preload = 'auto';
+        voiceoverAudio.volume = PROLOGUE_VOICEOVER_VOLUME;
+        voiceoverAudio.load();
+
+        voiceoverEndedHandler = () => {
+            scheduleAmbienceFadeAfterVoiceover();
+        };
+        voiceoverAudio.addEventListener('ended', voiceoverEndedHandler);
+
+        voiceoverTimer = window.setTimeout(() => {
+            voiceoverTimer = null;
+            audioBed?.duckForVoiceover();
+            voiceoverAudio?.play().catch((error) => {
+                console.warn('[PROLOGUE] Voiceover play failed:', error);
+            });
+        }, PROLOGUE_VOICEOVER_DELAY_SEC * 1000);
+    };
 
     const loading = document.getElementById('loading');
     if (loading) {
@@ -109,6 +208,8 @@ export function playStoryPrologue(options = {}) {
     creditsInner.innerHTML = PROLOGUE_STORY_PARAGRAPHS
         .map((text) => `<p class="prologue-credit-line">${text}</p>`)
         .join('');
+
+    lastCreditLine = creditsInner.querySelector('.prologue-credit-line:last-child');
 
     const creditsViewport = creditsPhase.querySelector('.prologue-credits-viewport');
     if (creditsViewport) {
@@ -121,15 +222,6 @@ export function playStoryPrologue(options = {}) {
         titleImg.src = PROLOGUE_ENTRANCE_IMAGE;
         titleImg.alt = "Halley's Big Catch — Adventure awaits";
     }
-
-    const slowerBtn = document.getElementById('prologue-slower');
-    const fasterBtn = document.getElementById('prologue-faster');
-
-    const updateSpeedLabel = () => {
-        if (speedLabel) {
-            speedLabel.textContent = `${scrollMultiplier.toFixed(2)}×`;
-        }
-    };
 
     const updateLoadHint = () => {
         if (!loadHint) return;
@@ -150,17 +242,10 @@ export function playStoryPrologue(options = {}) {
         }
     };
 
-    const setScrollMultiplier = (next) => {
-        scrollMultiplier = clamp(next, PROLOGUE_SCROLL_SPEED_MIN, PROLOGUE_SCROLL_SPEED_MAX);
-        saveScrollMultiplier(scrollMultiplier);
-        updateSpeedLabel();
-    };
-
-    const onSlower = () => setScrollMultiplier(scrollMultiplier - PROLOGUE_SCROLL_SPEED_STEP);
-    const onFaster = () => setScrollMultiplier(scrollMultiplier + PROLOGUE_SCROLL_SPEED_STEP);
-
     return new Promise((resolve) => {
         const cleanup = () => {
+            stopVoiceover();
+            stopAudioBed();
             if (rafId) {
                 cancelAnimationFrame(rafId);
                 rafId = null;
@@ -173,16 +258,20 @@ export function playStoryPrologue(options = {}) {
                 clearInterval(loadPollId);
                 loadPollId = null;
             }
+            if (interstitialTimer) {
+                clearTimeout(interstitialTimer);
+                interstitialTimer = null;
+            }
             document.removeEventListener('keydown', onKeyDown);
-            slowerBtn?.removeEventListener('click', onSlower);
-            fasterBtn?.removeEventListener('click', onFaster);
             overlay.removeEventListener('click', onOverlayTap);
-            overlay.classList.remove('can-enter', 'is-splash-only');
+            overlay.classList.remove('can-enter', 'is-splash-only', 'is-interstitial-phase', 'is-fading-interstitial');
             overlay.removeAttribute('role');
             overlay.removeAttribute('tabindex');
             overlay.classList.add('hidden');
             overlay.classList.remove('is-title-phase', 'is-fading', 'is-fading-credits');
             creditsPhase.classList.remove('hidden');
+            interstitialPhase.classList.add('hidden');
+            interstitialPhase.setAttribute('aria-hidden', 'true');
             titlePhase.classList.add('hidden');
             tapHint?.classList.add('hidden');
             if (tapHint) {
@@ -233,33 +322,67 @@ export function playStoryPrologue(options = {}) {
 
         const onOverlayTap = (event) => {
             if (phase !== 'title' || !canEnter) return;
-            if (event.target.closest('.prologue-speed-controls')) return;
             onEnter();
         };
 
         const startTitlePhase = () => {
             phase = 'title';
-            overlay.classList.remove('is-fading', 'is-fading-credits');
+            overlay.classList.remove('is-fading', 'is-fading-credits', 'is-fading-interstitial', 'is-interstitial-phase');
             overlay.classList.add('is-title-phase');
             if (skipCredits) {
                 overlay.classList.add('is-splash-only');
             }
             creditsPhase.classList.add('hidden');
+            interstitialPhase.classList.add('hidden');
+            interstitialPhase.setAttribute('aria-hidden', 'true');
             titlePhase.classList.remove('hidden');
             updateLoadHint();
 
             enterTimer = window.setTimeout(enableEnter, PROLOGUE_ENTER_BUTTON_DELAY_SEC * 1000);
         };
 
-        const goToTitlePhase = () => {
-            if (phase !== 'credits') return;
+        const goToTitlePhase = ({ immediate = false } = {}) => {
+            if (phase === 'title') return;
+            if (interstitialTimer) {
+                clearTimeout(interstitialTimer);
+                interstitialTimer = null;
+            }
+            if (immediate) {
+                stopVoiceover();
+                stopAudioBed();
+            }
+
+            phase = 'title';
+            overlay.classList.add('is-fading-interstitial');
+            window.setTimeout(startTitlePhase, PROLOGUE_PHASE_FADE_MS);
+        };
+
+        const goToInterstitialPhase = ({ immediate = false } = {}) => {
+            if (phase !== 'credits' || creditsFinished) return;
+            creditsFinished = true;
+            if (immediate) {
+                stopVoiceover();
+                stopAudioBed();
+            }
             if (rafId) {
                 cancelAnimationFrame(rafId);
                 rafId = null;
             }
 
+            phase = 'interstitial';
             overlay.classList.add('is-fading-credits');
-            window.setTimeout(startTitlePhase, PROLOGUE_PHASE_FADE_MS);
+            window.setTimeout(() => {
+                creditsPhase.classList.add('hidden');
+                interstitialPhase.classList.remove('hidden');
+                interstitialPhase.setAttribute('aria-hidden', 'false');
+                overlay.classList.remove('is-fading-credits');
+                overlay.classList.add('is-interstitial-phase');
+
+                interstitialTimer = window.setTimeout(() => {
+                    interstitialTimer = null;
+                    goToTitlePhase();
+                }, PROLOGUE_INTERSTITIAL_HOLD_MS);
+            }, PROLOGUE_PHASE_FADE_MS);
         };
 
         const tick = (ts) => {
@@ -271,16 +394,11 @@ export function playStoryPrologue(options = {}) {
             const dt = Math.min(0.05, (ts - lastTs) / 1000);
             lastTs = ts;
 
-            const viewport = creditsPhase.querySelector('.prologue-credits-viewport');
-            const viewportH = viewport?.clientHeight || window.innerHeight;
-            const innerH = creditsInner.scrollHeight;
-            const endY = -(innerH + viewportH * 0.35);
-
             scrollY -= PROLOGUE_BASE_SCROLL_PX_PER_SEC * scrollMultiplier * dt;
             creditsInner.style.transform = `translate3d(0, ${scrollY}px, 0)`;
 
-            if (scrollY <= endY) {
-                goToTitlePhase();
+            if (haveLastWordsExited()) {
+                goToInterstitialPhase();
                 return;
             }
 
@@ -296,29 +414,23 @@ export function playStoryPrologue(options = {}) {
             if (event.key === ' ' || event.key === 'Spacebar') {
                 event.preventDefault();
                 if (phase === 'credits') {
-                    goToTitlePhase();
+                    goToInterstitialPhase({ immediate: true });
+                } else if (phase === 'interstitial') {
+                    goToTitlePhase({ immediate: true });
                 }
-                return;
-            }
-            if (event.key === '-' || event.key === '_') {
-                setScrollMultiplier(scrollMultiplier - PROLOGUE_SCROLL_SPEED_STEP);
-            } else if (event.key === '=' || event.key === '+') {
-                setScrollMultiplier(scrollMultiplier + PROLOGUE_SCROLL_SPEED_STEP);
             }
         };
 
         overlay.addEventListener('click', onOverlayTap);
-        slowerBtn?.addEventListener('click', onSlower);
-        fasterBtn?.addEventListener('click', onFaster);
         document.addEventListener('keydown', onKeyDown);
 
-        updateSpeedLabel();
         updateLoadHint();
         loadPollId = window.setInterval(updateLoadHint, 350);
 
         if (skipCredits) {
-            overlay.classList.remove('hidden', 'is-title-phase', 'is-fading', 'is-fading-credits', 'can-enter');
+            overlay.classList.remove('hidden', 'is-title-phase', 'is-fading', 'is-fading-credits', 'is-fading-interstitial', 'is-interstitial-phase', 'can-enter');
             creditsPhase.classList.add('hidden');
+            interstitialPhase.classList.add('hidden');
             titlePhase.classList.add('hidden');
             tapHint?.classList.add('hidden');
             canEnter = false;
@@ -326,15 +438,17 @@ export function playStoryPrologue(options = {}) {
             return;
         }
 
+        if (interstitialText) {
+            interstitialText.textContent = PROLOGUE_INTERSTITIAL_TEXT;
+        }
+
         phase = 'credits';
-        overlay.classList.remove('hidden', 'is-title-phase', 'is-fading', 'is-fading-credits', 'can-enter');
+        overlay.classList.remove('hidden', 'is-title-phase', 'is-fading', 'is-fading-credits', 'is-fading-interstitial', 'is-interstitial-phase', 'can-enter');
         creditsPhase.classList.remove('hidden');
+        interstitialPhase.classList.add('hidden');
         titlePhase.classList.add('hidden');
         tapHint?.classList.add('hidden');
         canEnter = false;
-        updateSpeedLabel();
-        updateLoadHint();
-        loadPollId = window.setInterval(updateLoadHint, 350);
 
         const viewport = creditsPhase.querySelector('.prologue-credits-viewport');
         const viewportH = viewport?.clientHeight || window.innerHeight;
@@ -342,9 +456,11 @@ export function playStoryPrologue(options = {}) {
         creditsInner.style.transform = `translate3d(0, ${scrollY}px, 0)`;
         lastTs = 0;
 
+        startAudioBed();
         requestAnimationFrame(() => {
             rafId = requestAnimationFrame(tick);
         });
+        scheduleVoiceover();
     });
 }
 

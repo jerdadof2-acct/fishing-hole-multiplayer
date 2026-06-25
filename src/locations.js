@@ -101,7 +101,7 @@ export class Locations {
                 difficulty: 'Legendary',
                 fish: [33],
                 cost: 0,
-                unlockLevel: 1,
+                unlockLevel: 99,
                 description: 'A star-lit abyss where ocean and sky become one',
                 waterBodyType: 'CELESTIAL',
                 platformType: 'LARGE_BOAT',

@@ -8,6 +8,7 @@ import {
     shouldPlayStoryPrologue,
     shouldShowReturnSplash
 } from './prologue.js';
+import { applyGameSaveToLocal, captureLocalGameSave, getNewerGameSave } from './cloudSave.js';
 
 const AUTH_STORAGE_KEY = 'kittyCreekAuth';
 
@@ -175,6 +176,14 @@ async function handleOfflineMode(message) {
 async function fetchPlayerState(userId) {
     try {
         const profile = await api.getPlayer();
+        const saveResponse = await api.getGameSave().catch(() => null);
+        const localSave = captureLocalGameSave();
+        const remoteSave = saveResponse?.gameSave;
+        const mergedSave = getNewerGameSave(localSave, remoteSave);
+        if (mergedSave) {
+            applyGameSaveToLocal(mergedSave);
+        }
+
         const collectionResponse = await api.getPlayerCollection(profile?.id || userId);
         let collection = null;
 
@@ -195,10 +204,51 @@ async function fetchPlayerState(userId) {
             }
         }
 
-        return { profile, collection };
+        const localCollection = captureLocalGameSave()?.collection?.caughtFishCollection;
+        if (localCollection && typeof localCollection === 'object') {
+            collection = { ...collection, ...localCollection };
+        }
+
+        return { profile, collection, hasPin: profile?.has_pin ?? saveResponse?.hasPin ?? false };
     } catch (error) {
         console.error('[BOOTSTRAP] Failed to fetch player state:', error);
         throw error;
+    }
+}
+
+function validatePinInput(pin) {
+    if (!/^\d{4,6}$/.test(pin)) {
+        return 'Save PIN must be 4–6 digits.';
+    }
+    return null;
+}
+
+function setAuthMode(mode) {
+    const isReturning = mode === 'returning';
+    const helper = document.getElementById('username-helper');
+    const pinConfirm = document.getElementById('pin-confirm-input');
+    const submitButton = document.getElementById('username-submit');
+    const tabNew = document.getElementById('auth-tab-new');
+    const tabReturning = document.getElementById('auth-tab-returning');
+
+    tabNew?.classList.toggle('active', !isReturning);
+    tabReturning?.classList.toggle('active', isReturning);
+    tabNew?.setAttribute('aria-selected', String(!isReturning));
+    tabReturning?.setAttribute('aria-selected', String(isReturning));
+
+    if (helper) {
+        helper.textContent = isReturning
+            ? 'Enter your username and save PIN to restore your fisher cat on this device.'
+            : 'Pick a username and a private save PIN. You\'ll use both to restore progress on a new device.';
+    }
+
+    pinConfirm?.classList.toggle('hidden', isReturning);
+    if (pinConfirm) {
+        pinConfirm.required = !isReturning;
+    }
+
+    if (submitButton) {
+        submitButton.textContent = isReturning ? 'Restore My Save' : 'Create Profile';
     }
 }
 
@@ -229,26 +279,78 @@ async function promptForUsername(options = {}) {
     const modal = document.getElementById('username-modal');
     const form = document.getElementById('username-form');
     const input = document.getElementById('username-input');
+    const pinInput = document.getElementById('pin-input');
+    const pinConfirmInput = document.getElementById('pin-confirm-input');
     const errorElement = document.getElementById('username-error');
     const submitButton = document.getElementById('username-submit');
     const helperText = document.getElementById('username-helper');
+    const tabNew = document.getElementById('auth-tab-new');
+    const tabReturning = document.getElementById('auth-tab-returning');
 
-    if (!modal || !form || !input || !submitButton) {
+    if (!modal || !form || !input || !pinInput || !submitButton) {
         throw new Error('Username modal elements are missing');
     }
+
+    let authMode = 'new';
 
     hideError(errorElement);
     helperText?.classList.remove('hidden');
     modal.classList.remove('hidden');
     input.value = '';
+    pinInput.value = '';
+    if (pinConfirmInput) pinConfirmInput.value = '';
+
+    if (offline) {
+        tabNew?.classList.add('hidden');
+        tabReturning?.classList.add('hidden');
+        pinInput.classList.add('hidden');
+        pinInput.required = false;
+        pinConfirmInput?.classList.add('hidden');
+        if (pinConfirmInput) pinConfirmInput.required = false;
+        if (helperText) {
+            helperText.textContent = 'Pick a username — progress saves on this device only while offline.';
+        }
+        if (submitButton) submitButton.textContent = 'Continue';
+    } else {
+        tabNew?.classList.remove('hidden');
+        tabReturning?.classList.remove('hidden');
+        pinInput.classList.remove('hidden');
+        pinInput.required = true;
+        pinConfirmInput?.classList.remove('hidden');
+        setAuthMode('new');
+    }
+
     input.focus();
 
     return new Promise((resolve) => {
+        const cleanupListeners = () => {
+            form.removeEventListener('submit', handleSubmit);
+            input.removeEventListener('input', handleInput);
+            pinInput.removeEventListener('input', handleInput);
+            pinConfirmInput?.removeEventListener('input', handleInput);
+            tabNew?.removeEventListener('click', onNewTab);
+            tabReturning?.removeEventListener('click', onReturningTab);
+        };
+
+        const onNewTab = () => {
+            authMode = 'new';
+            setAuthMode('new');
+            hideError(errorElement);
+        };
+
+        const onReturningTab = () => {
+            authMode = 'returning';
+            setAuthMode('returning');
+            hideError(errorElement);
+        };
+
         const handleSubmit = async (event) => {
             event.preventDefault();
             hideError(errorElement);
 
             const username = input.value.trim();
+            const pin = pinInput.value.trim();
+
             if (!username) {
                 showError(errorElement, 'Please enter a username.');
                 return;
@@ -262,22 +364,68 @@ async function promptForUsername(options = {}) {
                 return;
             }
 
+            if (offline) {
+                disableForm(input, submitButton);
+                helperText?.classList.add('hidden');
+                submitButton.textContent = 'Loading...';
+                modal.classList.add('hidden');
+                cleanupListeners();
+                resolve({ offlineUsername: username });
+                return;
+            }
+
+            const pinError = validatePinInput(pin);
+            if (pinError) {
+                showError(errorElement, pinError);
+                return;
+            }
+
+            if (authMode === 'new' && pin !== pinConfirmInput?.value?.trim()) {
+                showError(errorElement, 'Save PINs do not match.');
+                return;
+            }
+
             disableForm(input, submitButton);
+            pinInput.disabled = true;
+            pinConfirmInput && (pinConfirmInput.disabled = true);
             helperText?.classList.add('hidden');
-            submitButton.textContent = 'Creating profile...';
+            submitButton.textContent = authMode === 'returning' ? 'Restoring...' : 'Creating profile...';
 
             try {
-                if (offline) {
+                if (authMode === 'returning') {
+                    const login = await api.loginPlayer(username, pin);
+                    if (!login?.userId) {
+                        throw new Error('Sign in failed');
+                    }
+
+                    api.setUserId(login.userId);
+                    setAuthStorage({
+                        userId: login.userId,
+                        username: login.username,
+                        friendCode: login.friendCode
+                    });
+
+                    if (login.gameSave) {
+                        applyGameSaveToLocal(login.gameSave);
+                    }
+
+                    const { profile, collection } = await fetchPlayerState(login.userId);
+
                     modal.classList.add('hidden');
-                    submitButton.textContent = 'Create Profile';
-                    enableForm(input, submitButton);
-                    form.removeEventListener('submit', handleSubmit);
-                    input.removeEventListener('input', handleInput);
-                    resolve({ offlineUsername: username });
+                    cleanupListeners();
+                    resolve({
+                        profile,
+                        collection,
+                        auth: {
+                            userId: login.userId,
+                            username: login.username,
+                            friendCode: login.friendCode
+                        }
+                    });
                     return;
                 }
 
-                const registration = await api.registerPlayer(username);
+                const registration = await api.registerPlayer(username, pin);
                 if (!registration?.userId) {
                     throw new Error('Registration failed');
                 }
@@ -292,8 +440,7 @@ async function promptForUsername(options = {}) {
                 const { profile, collection } = await fetchPlayerState(registration.userId);
 
                 modal.classList.add('hidden');
-                form.removeEventListener('submit', handleSubmit);
-                input.removeEventListener('input', handleInput);
+                cleanupListeners();
                 resolve({
                     profile,
                     collection,
@@ -304,10 +451,12 @@ async function promptForUsername(options = {}) {
                     }
                 });
             } catch (error) {
-                console.error('[BOOTSTRAP] Registration failed:', error);
-                showError(errorElement, error.message || 'Failed to create user. Please try again.');
+                console.error('[BOOTSTRAP] Auth failed:', error);
+                showError(errorElement, error.message || 'Failed to sign in. Please try again.');
                 enableForm(input, submitButton);
-                submitButton.textContent = 'Create Profile';
+                pinInput.disabled = false;
+                if (pinConfirmInput) pinConfirmInput.disabled = false;
+                submitButton.textContent = authMode === 'returning' ? 'Restore My Save' : 'Create Profile';
                 helperText?.classList.remove('hidden');
             }
         };
@@ -316,8 +465,12 @@ async function promptForUsername(options = {}) {
             hideError(errorElement);
         };
 
+        tabNew?.addEventListener('click', onNewTab);
+        tabReturning?.addEventListener('click', onReturningTab);
         form.addEventListener('submit', handleSubmit);
         input.addEventListener('input', handleInput);
+        pinInput.addEventListener('input', handleInput);
+        pinConfirmInput?.addEventListener('input', handleInput);
     });
 }
 

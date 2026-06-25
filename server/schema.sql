@@ -1,4 +1,4 @@
--- Kitty Creek Friends System Database Schema
+-- Halley's Big Catch Friends System Database Schema
 -- Run this script to set up the PostgreSQL database
 
 -- Players table (extends existing player data)
@@ -13,6 +13,9 @@ CREATE TABLE IF NOT EXISTS players (
     total_caught INTEGER DEFAULT 0,
     biggest_catch DECIMAL(10, 2) DEFAULT 0,
     player_stats JSONB DEFAULT '{"accuracy": 50, "luck": 50, "patience": 50, "strength": 50}'::jsonb,
+    pin_hash TEXT,
+    game_save JSONB DEFAULT '{}'::jsonb,
+    game_save_updated_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
     last_active TIMESTAMP DEFAULT NOW()

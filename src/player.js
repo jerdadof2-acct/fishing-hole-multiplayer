@@ -1,5 +1,5 @@
 import { TackleShop, getTackleByName } from './tackleShop.js';
-import { CELESTIAL_DEPTHS_LOCATION_INDEX, STARLIGHT_LURE_BAIT_ID } from './config/hiddenRelics.js';
+import { CELESTIAL_DEPTHS_LOCATION_INDEX, HIDDEN_RELICS, STARLIGHT_LURE_BAIT_ID } from './config/hiddenRelics.js';
 
 /**
  * Player State Management System
@@ -114,6 +114,8 @@ export class Player {
         // Story relics (hidden items from each region)
         this.hiddenRelicsCollected = [];
         this.starlightLureCrafted = false;
+        /** @type {Record<string, number>} casts without finding each relic (pity tracker) */
+        this.relicCastAttempts = {};
 
         // Server sync context
         this.api = null;
@@ -251,9 +253,14 @@ export class Player {
      * @returns {Object|null} Single unlock object or null if no unlocks
      */
     checkUnlocks(locations = null, tackleShop = null) {
+        this.syncStoryUnlocks();
+
         // Priority 1: Check for location unlocks first
         if (locations && locations.locations) {
             for (const [index, location] of locations.locations.entries()) {
+                if (location.requiresStarlightLure || location.waterBodyType === 'CELESTIAL') {
+                    continue;
+                }
                 if (!this.locationUnlocks.includes(index) && this.level >= location.unlockLevel) {
                     this.locationUnlocks.push(index);
                     console.log(`[PLAYER] Location unlocked: ${location.name} (Level ${location.unlockLevel})`);
@@ -444,7 +451,8 @@ export class Player {
                 achievements: this.achievements,
                 currentLocationIndex: this.currentLocationIndex,
                 hiddenRelicsCollected: this.hiddenRelicsCollected,
-                starlightLureCrafted: this.starlightLureCrafted
+                starlightLureCrafted: this.starlightLureCrafted,
+                relicCastAttempts: this.relicCastAttempts
             };
             
             if (this.userId) {
@@ -592,6 +600,12 @@ export class Player {
             biggestCatch: this.biggestCatch,
             stats: this.stats
         });
+
+        const { captureLocalGameSave } = await import('./cloudSave.js');
+        const gameSave = captureLocalGameSave();
+        if (gameSave) {
+            await this.api.updateGameSave(gameSave);
+        }
     }
     
     /**
@@ -639,6 +653,9 @@ export class Player {
                     ? playerData.hiddenRelicsCollected
                     : [];
                 this.starlightLureCrafted = playerData.starlightLureCrafted === true;
+                this.relicCastAttempts = playerData.relicCastAttempts && typeof playerData.relicCastAttempts === 'object'
+                    ? playerData.relicCastAttempts
+                    : {};
 
                 if (playerData.userId) {
                     this.userId = playerData.userId;
@@ -660,6 +677,7 @@ export class Player {
                     const playerData = JSON.parse(backupData);
                     Object.assign(this, playerData);
                     this.normalizeTackleState();
+                    this.syncStoryUnlocks();
                     console.log('[PLAYER] Loaded from backup');
                 }
             } catch (backupError) {
@@ -693,7 +711,33 @@ export class Player {
     }
 
     hasAllHiddenRelics() {
-        return Array.isArray(this.hiddenRelicsCollected) && this.hiddenRelicsCollected.length >= 10;
+        if (!Array.isArray(this.hiddenRelicsCollected)) {
+            return false;
+        }
+        return HIDDEN_RELICS.every((relic) => this.hiddenRelicsCollected.includes(relic.id));
+    }
+
+    canAccessCelestialDepths() {
+        return this.starlightLureCrafted === true && this.hasAllHiddenRelics();
+    }
+
+    getRelicCastAttempts(relicId) {
+        if (!this.relicCastAttempts || typeof this.relicCastAttempts !== 'object') {
+            return 0;
+        }
+        return this.relicCastAttempts[relicId] ?? 0;
+    }
+
+    recordRelicCastAttempt(relicId, found) {
+        if (!this.relicCastAttempts || typeof this.relicCastAttempts !== 'object') {
+            this.relicCastAttempts = {};
+        }
+        if (found) {
+            delete this.relicCastAttempts[relicId];
+        } else {
+            this.relicCastAttempts[relicId] = (this.relicCastAttempts[relicId] ?? 0) + 1;
+        }
+        this.save({ skipSync: true });
     }
 
     unlockStarlightLure() {
@@ -708,21 +752,28 @@ export class Player {
         }
     }
 
-    /** Gate Celestial Depths and Starlight Lure behind story relic progress. */
+    /** Gate Celestial Depths and Starlight Lure behind all relics + forged lure. */
     syncStoryUnlocks() {
         const celestialIdx = CELESTIAL_DEPTHS_LOCATION_INDEX;
+        const storyComplete = this.canAccessCelestialDepths();
 
-        if (this.starlightLureCrafted && this.hasAllHiddenRelics()) {
+        if (storyComplete) {
             if (!this.locationUnlocks.includes(celestialIdx)) {
                 this.locationUnlocks.push(celestialIdx);
             }
             this.unlockStarlightLure();
         } else {
             this.locationUnlocks = this.locationUnlocks.filter((index) => index !== celestialIdx);
+            if (this.currentLocationIndex === celestialIdx) {
+                this.currentLocationIndex = this.locationUnlocks[0] ?? 0;
+            }
             if (!this.starlightLureCrafted && Array.isArray(this.tackleUnlocks?.baits)) {
                 this.tackleUnlocks.baits = this.tackleUnlocks.baits.filter(
                     (id) => id !== STARLIGHT_LURE_BAIT_ID
                 );
+            }
+            if (this.gear?.bait === 'Starlight Lure') {
+                this.gear.bait = 'Basic Bait';
             }
         }
     }
