@@ -701,11 +701,11 @@ app.post('/api/friends/request', authenticate, async (req, res) => {
         const [player1, player2] = req.userId < friendId ? [req.userId, friendId] : [friendId, req.userId];
         
         await pool.query(
-            `INSERT INTO friendships (player1_id, player2_id, status)
-             VALUES ($1, $2, 'pending')
+            `INSERT INTO friendships (player1_id, player2_id, status, requested_by_id)
+             VALUES ($1, $2, 'pending', $3)
              ON CONFLICT (player1_id, player2_id) 
-             DO UPDATE SET status = 'pending', created_at = NOW()`,
-            [player1, player2]
+             DO UPDATE SET status = 'pending', requested_by_id = $3, created_at = NOW()`,
+            [player1, player2, req.userId]
         );
         
         res.json({ success: true, message: 'Friend request sent' });
@@ -751,42 +751,25 @@ app.get('/api/friends/pending', authenticate, async (req, res) => {
             return res.status(400).json({ error: 'Invalid user ID' });
         }
         
-        // Sent requests
+        // Sent requests (initiated by current user)
         const sentResult = await pool.query(
             `SELECT f.id, f.created_at, p.id as player_id, p.username, p.friend_code, p.level
              FROM friendships f
-             JOIN players p ON (
-                 CASE 
-                     WHEN f.player1_id = $1 THEN f.player2_id = p.id
-                     ELSE f.player1_id = p.id
-                 END
-             )
-             WHERE (f.player1_id = $1 OR f.player2_id = $1) 
-                   AND f.status = 'pending'
-                   AND (
-                       (f.player1_id = $1 AND f.player1_id < f.player2_id) OR
-                       (f.player2_id = $1 AND f.player2_id < f.player1_id)
-                   )
+             JOIN players p ON p.id = CASE WHEN f.player1_id = $1 THEN f.player2_id ELSE f.player1_id END
+             WHERE f.status = 'pending' AND f.requested_by_id = $1
              ORDER BY f.created_at DESC`,
             [req.userId]
         );
         
-        // Received requests
+        // Received requests (initiated by someone else)
         const receivedResult = await pool.query(
             `SELECT f.id, f.created_at, p.id as player_id, p.username, p.friend_code, p.level
              FROM friendships f
-             JOIN players p ON (
-                 CASE 
-                     WHEN f.player1_id = $1 THEN f.player2_id = p.id
-                     ELSE f.player1_id = p.id
-                 END
-             )
-             WHERE (f.player1_id = $1 OR f.player2_id = $1) 
-                   AND f.status = 'pending'
-                   AND (
-                       (f.player2_id = $1 AND f.player1_id < f.player2_id) OR
-                       (f.player1_id = $1 AND f.player2_id < f.player1_id)
-                   )
+             JOIN players p ON p.id = f.requested_by_id
+             WHERE f.status = 'pending'
+                   AND f.requested_by_id IS NOT NULL
+                   AND f.requested_by_id != $1
+                   AND (f.player1_id = $1 OR f.player2_id = $1)
              ORDER BY f.created_at DESC`,
             [req.userId]
         );
@@ -821,6 +804,8 @@ app.post('/api/friends/accept/:requestId', authenticate, async (req, res) => {
              WHERE id = $1 
                    AND status = 'pending'
                    AND (player1_id = $2 OR player2_id = $2)
+                   AND requested_by_id IS NOT NULL
+                   AND requested_by_id != $2
              RETURNING id`,
             [requestId, req.userId]
         );

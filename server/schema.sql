@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS friendships (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     player1_id UUID REFERENCES players(id) ON DELETE CASCADE,
     player2_id UUID REFERENCES players(id) ON DELETE CASCADE,
+    requested_by_id UUID REFERENCES players(id) ON DELETE CASCADE,
     status TEXT DEFAULT 'pending', -- 'pending', 'accepted', 'blocked'
     created_at TIMESTAMP DEFAULT NOW(),
     UNIQUE(player1_id, player2_id),
@@ -80,6 +81,7 @@ CREATE TABLE IF NOT EXISTS player_collections (
 CREATE INDEX IF NOT EXISTS idx_friendships_player1 ON friendships(player1_id);
 CREATE INDEX IF NOT EXISTS idx_friendships_player2 ON friendships(player2_id);
 CREATE INDEX IF NOT EXISTS idx_friendships_status ON friendships(status);
+CREATE INDEX IF NOT EXISTS idx_friendships_requested_by ON friendships(requested_by_id);
 CREATE INDEX IF NOT EXISTS idx_friend_activities_player ON friend_activities(player_id);
 CREATE INDEX IF NOT EXISTS idx_friend_activities_created ON friend_activities(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_leaderboard_catches_weight ON leaderboard_catches(fish_weight DESC);
