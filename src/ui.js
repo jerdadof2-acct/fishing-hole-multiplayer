@@ -2280,17 +2280,23 @@ export class UI {
     }
 
     showRelicPopup(relic, forgedStarlight = false) {
+        this.showRelicDetailPopup(relic, { forgedStarlight, fromDiscovery: true });
+    }
+
+    showRelicDetailPopup(relic, options = {}) {
+        const { forgedStarlight = false, fromDiscovery = false, locked = false } = options;
         const existingPopup = document.getElementById('relic-popup');
         if (existingPopup) existingPopup.remove();
 
         const progress = this.player?.hiddenRelicsCollected?.length ?? 0;
         const isSmallScreen = window.innerWidth <= 600;
         const popupPadding = isSmallScreen ? '22px 18px' : '36px 44px';
-        const imageMax = isSmallScreen ? 200 : 260;
 
         const popup = document.createElement('div');
         popup.id = 'relic-popup';
         popup.className = 'relic-popup';
+        popup.setAttribute('role', 'dialog');
+        popup.setAttribute('aria-modal', 'true');
         popup.style.cssText = `
             position: fixed;
             top: 50%;
@@ -2303,44 +2309,144 @@ export class UI {
             padding: ${popupPadding};
         `;
 
-        const { primary: relicImg, fallback: relicFallback } = getRelicImagePaths(relic.image);
-        const { primary: lureImg, fallback: lureFallback } = getRelicImagePaths(STARLIGHT_LURE_IMAGE);
+        const closeLabel = fromDiscovery ? 'Keep in logbook' : 'Close';
 
-        const forgeBlock = forgedStarlight ? `
-            <div class="relic-popup-forge">
-                <div class="relic-popup-forge-title">✨ The Starlight Lure is forged ✨</div>
-                <div class="relic-popup-image-wrap">
-                    <img class="relic-popup-image relic-popup-image--lure" src="${lureImg}" alt="Starlight Lure" decoding="async" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${lureFallback}';}">
+        if (locked && relic) {
+            popup.innerHTML = `
+                <div class="relic-popup-glow" aria-hidden="true"></div>
+                <p class="relic-popup-eyebrow">Not yet recovered</p>
+                <h2 class="relic-popup-title">Undiscovered relic</h2>
+                <p class="relic-popup-location">Search the waters at <strong>${relic.location}</strong></p>
+                <div class="relic-card-silhouette relic-popup-locked-icon" aria-hidden="true">?</div>
+                <p class="relic-popup-meaning">Cast your line at this region and watch for a golden glow on the bobber. Halley may surface something the sea has kept hidden.</p>
+                <button type="button" id="relic-popup-close" class="relic-popup-close">${closeLabel}</button>
+            `;
+        } else {
+            const { primary: relicImg, fallback: relicFallback } = getRelicImagePaths(relic.image);
+            const { primary: lureImg, fallback: lureFallback } = getRelicImagePaths(STARLIGHT_LURE_IMAGE);
+
+            const forgeBlock = forgedStarlight ? `
+                <div class="relic-popup-forge">
+                    <div class="relic-popup-forge-title">✨ The Starlight Lure is forged ✨</div>
+                    <div class="relic-popup-image-wrap">
+                        <img class="relic-popup-image relic-popup-image--lure" src="${lureImg}" alt="Starlight Lure" decoding="async" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${lureFallback}';}">
+                    </div>
+                    <p class="relic-popup-forge-quote">"Ten pieces of a puzzle I didn't even know I was solving… Looks like I've just built the light that started it all."</p>
+                    <p class="relic-popup-forge-note">Halley can now sail to the <strong>Celestial Depths</strong>.</p>
                 </div>
-                <p class="relic-popup-forge-quote">"Ten pieces of a puzzle I didn't even know I was solving… Looks like I've just built the light that started it all."</p>
-                <p class="relic-popup-forge-note">Halley can now sail to the <strong>Celestial Depths</strong>.</p>
-            </div>
-        ` : '';
+            ` : '';
 
-        popup.innerHTML = `
-            <div class="relic-popup-glow" aria-hidden="true"></div>
-            <p class="relic-popup-eyebrow">Hidden relic recovered · ${progress} of 10</p>
-            <h2 class="relic-popup-title">${relic.name}</h2>
-            <p class="relic-popup-location">Found at <strong>${relic.location}</strong></p>
-            <div class="relic-popup-image-wrap">
-                <img class="relic-popup-image" src="${relicImg}" alt="${relic.name}" decoding="async" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${relicFallback}';}">
-            </div>
-            <blockquote class="relic-popup-message">"${relic.message}"</blockquote>
-            <p class="relic-popup-meaning">${relic.meaning}</p>
-            ${forgeBlock}
-            <button type="button" id="relic-popup-close" class="relic-popup-close">Keep in logbook</button>
-        `;
+            const eyebrow = fromDiscovery
+                ? `Hidden relic recovered · ${progress} of 10`
+                : 'Relics logbook';
+
+            popup.innerHTML = `
+                <div class="relic-popup-glow" aria-hidden="true"></div>
+                <p class="relic-popup-eyebrow">${eyebrow}</p>
+                <h2 class="relic-popup-title">${relic.name}</h2>
+                <p class="relic-popup-location">Found at <strong>${relic.location}</strong></p>
+                <div class="relic-popup-image-wrap">
+                    <img class="relic-popup-image" src="${relicImg}" alt="${relic.name}" decoding="async" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${relicFallback}';}">
+                </div>
+                <blockquote class="relic-popup-message">"${relic.message}"</blockquote>
+                <p class="relic-popup-meaning"><strong>What it means:</strong> ${relic.meaning}</p>
+                ${forgeBlock}
+                <button type="button" id="relic-popup-close" class="relic-popup-close">${closeLabel}</button>
+            `;
+        }
 
         document.body.appendChild(popup);
 
         const close = () => {
             popup.remove();
-            this.finishRelicDiscovery(forgedStarlight);
+            if (fromDiscovery) {
+                this.finishRelicDiscovery(forgedStarlight);
+            }
         };
 
         document.getElementById('relic-popup-close')?.addEventListener('click', close);
         popup.addEventListener('click', (event) => {
             if (event.target === popup) close();
+        });
+    }
+
+    showStarlightLureDetail() {
+        const existingPopup = document.getElementById('relic-popup');
+        if (existingPopup) existingPopup.remove();
+
+        const { primary: lureImg, fallback: lureFallback } = getRelicImagePaths(STARLIGHT_LURE_IMAGE);
+        const popup = document.createElement('div');
+        popup.id = 'relic-popup';
+        popup.className = 'relic-popup';
+        popup.setAttribute('role', 'dialog');
+        popup.setAttribute('aria-modal', 'true');
+        popup.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 12000;
+            max-width: min(92vw, 520px);
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 36px 44px;
+        `;
+
+        popup.innerHTML = `
+            <div class="relic-popup-glow" aria-hidden="true"></div>
+            <p class="relic-popup-eyebrow">Relics logbook</p>
+            <h2 class="relic-popup-title">Starlight Lure</h2>
+            <p class="relic-popup-location">Forged from <strong>ten sea relics</strong></p>
+            <div class="relic-popup-image-wrap">
+                <img class="relic-popup-image relic-popup-image--lure" src="${lureImg}" alt="Starlight Lure" decoding="async" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${lureFallback}';}">
+            </div>
+            <blockquote class="relic-popup-message">"A fragment of the sky calling to something deep below."</blockquote>
+            <p class="relic-popup-meaning"><strong>What it means:</strong> The comet's light, gathered from relics across the sea, becomes a beacon that can call the Starfish of Eternity from the Celestial Depths.</p>
+            <button type="button" id="relic-popup-close" class="relic-popup-close">Close</button>
+        `;
+
+        document.body.appendChild(popup);
+        const close = () => popup.remove();
+        document.getElementById('relic-popup-close')?.addEventListener('click', close);
+        popup.addEventListener('click', (event) => {
+            if (event.target === popup) close();
+        });
+    }
+
+    handleRelicCardClick(relicId) {
+        if (!relicId) return;
+
+        if (relicId === 'starlight_lure') {
+            this.showStarlightLureDetail();
+            return;
+        }
+
+        import('./config/hiddenRelics.js').then(({ getRelicById }) => {
+            const relic = getRelicById(relicId);
+            if (!relic) return;
+
+            const owned = this.player?.hasHiddenRelic?.(relicId)
+                || (Array.isArray(this.player?.hiddenRelicsCollected)
+                    && this.player.hiddenRelicsCollected.includes(relicId));
+
+            if (owned) {
+                this.showRelicDetailPopup(relic, { fromDiscovery: false });
+            } else {
+                this.showRelicDetailPopup(relic, { locked: true });
+            }
+        });
+    }
+
+    wireRelicsTabCards(container) {
+        container.querySelectorAll('[data-relic-id]').forEach((card) => {
+            const open = () => this.handleRelicCardClick(card.dataset.relicId);
+            card.addEventListener('click', open);
+            card.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    open();
+                }
+            });
         });
     }
 
@@ -2383,11 +2489,11 @@ export class UI {
 
             const lurePaths = getRelicImagePaths(STARLIGHT_LURE_IMAGE);
             const lureCard = lureReady ? `
-                <article class="relic-card relic-card--found relic-card--lure">
+                <article class="relic-card relic-card--found relic-card--lure relic-card--clickable" data-relic-id="starlight_lure" role="button" tabindex="0" aria-label="Starlight Lure — tap for details">
                     <img class="relic-card-image" src="${lurePaths.primary}" alt="Starlight Lure" loading="lazy" decoding="async" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${lurePaths.fallback}';}">
                     <h4 class="relic-card-name">Starlight Lure</h4>
                     <p class="relic-card-region">Forged from ten relics</p>
-                    <p class="relic-card-message">"A fragment of the sky calling to something deep below."</p>
+                    <p class="relic-card-hint">Tap to read more</p>
                 </article>
             ` : '';
 
@@ -2396,19 +2502,20 @@ export class UI {
                 if (owned) {
                     const { primary, fallback } = getRelicImagePaths(relic.image);
                     return `
-                        <article class="relic-card relic-card--found">
+                        <article class="relic-card relic-card--found relic-card--clickable" data-relic-id="${relic.id}" role="button" tabindex="0" aria-label="${relic.name} — tap for details">
                             <img class="relic-card-image" src="${primary}" alt="${relic.name}" loading="lazy" decoding="async" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${fallback}';}">
                             <h4 class="relic-card-name">${relic.name}</h4>
                             <p class="relic-card-region">${relic.location}</p>
-                            <p class="relic-card-message">"${relic.message}"</p>
+                            <p class="relic-card-hint">Tap to read more</p>
                         </article>
                     `;
                 }
                 return `
-                    <article class="relic-card relic-card--locked">
+                    <article class="relic-card relic-card--locked relic-card--clickable" data-relic-id="${relic.id}" role="button" tabindex="0" aria-label="Undiscovered relic at ${relic.location}">
                         <div class="relic-card-silhouette" aria-hidden="true">?</div>
                         <h4 class="relic-card-name">Undiscovered relic</h4>
                         <p class="relic-card-region">Fish at ${relic.location}</p>
+                        <p class="relic-card-hint">Tap for a clue</p>
                     </article>
                 `;
             }).join('');
@@ -2421,10 +2528,13 @@ export class UI {
                         <p class="relics-subtitle">${lureReady
                             ? 'The Starlight Lure shines aboard The Shooting Star.'
                             : 'Gather all ten relics to forge the Starlight Lure.'}</p>
+                        <p class="relics-subtitle relics-subtitle--hint">Tap any relic to open its story.</p>
                     </header>
                     <div class="relics-grid">${lureCard}${cards}</div>
                 </div>
             `;
+
+            this.wireRelicsTabCards(container);
         });
     }
 
@@ -2642,7 +2752,6 @@ export class UI {
                 "Fish are gossiping about your casting technique! 😸",
                 "They're doing cat yoga down there! 🧘‍♀️",
                 "Fish are on their meow-ning break! ☕",
-                "A ghost fish stole your bait and laughed! 👻😹",
                 "Fish are watching cat videos... but not yours! 📺",
                 "They swam away purring at your attempt!",
                 "Your bait was too fancy for fish who prefer cat food! 🐟",
