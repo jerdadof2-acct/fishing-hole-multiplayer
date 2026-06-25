@@ -107,6 +107,16 @@ export class API {
     }
 
     /**
+     * Claim an older account that never got a save PIN (username only).
+     */
+    async claimAccount(username) {
+        return this.request('/players/claim', {
+            method: 'POST',
+            body: JSON.stringify({ username })
+        });
+    }
+
+    /**
      * Recover an account that never got a save PIN (username + friend code).
      * Disabled once a save PIN is set on the account.
      */

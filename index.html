@@ -218,7 +218,6 @@
                     <div class="auth-mode-tabs" role="tablist" aria-label="Account type">
                         <button type="button" id="auth-tab-new" class="auth-mode-tab active" data-auth-mode="new" role="tab" aria-selected="true">New fisher</button>
                         <button type="button" id="auth-tab-returning" class="auth-mode-tab" data-auth-mode="returning" role="tab" aria-selected="false">Returning</button>
-                        <button type="button" id="auth-tab-recover" class="auth-mode-tab" data-auth-mode="recover" role="tab" aria-selected="false">No PIN yet</button>
                     </div>
                     <p id="username-helper" class="modal-helper-text">
                         Pick a username and a private save PIN. You'll use both to restore progress on a new device.
@@ -255,18 +254,13 @@
                             autocomplete="new-password"
                             required
                         />
-                        <input
-                            type="text"
-                            id="friend-code-input"
-                            class="username-input auth-friend-code hidden"
-                            placeholder="Friend code (6 letters)"
-                            maxlength="8"
-                            autocomplete="off"
-                        />
                         <button type="submit" id="username-submit" class="username-submit">
                             Create Profile
                         </button>
                     </form>
+                    <button type="button" id="auth-switch-account" class="auth-switch-account hidden">
+                        Sign in as a different account
+                    </button>
                     <p id="username-error" class="username-error hidden"></p>
                 </div>
             </div>
@@ -310,6 +304,9 @@
                         </button>
                     </form>
                     <p id="save-pin-setup-error" class="username-error hidden"></p>
+                    <button type="button" id="save-pin-switch-account" class="auth-switch-account">
+                        Sign in as a different account
+                    </button>
                 </div>
             </div>
         </div>
@@ -378,7 +375,7 @@
             });
         })();
     </script>
-    <script type="module" src="src/bootstrap.js?v=20250624-recover-pin"></script>
+    <script type="module" src="src/bootstrap.js?v=20250624-claim"></script>
 </body>
 </html>
 

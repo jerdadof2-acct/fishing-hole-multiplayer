@@ -1,8 +1,24 @@
-/**
- * Save PIN setup and validation — shared by bootstrap and in-game UI.
- */
-
 import { captureLocalGameSave } from './cloudSave.js';
+
+const AUTH_STORAGE_KEY = 'kittyCreekAuth';
+
+export function clearAuthStorage() {
+    try {
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+    } catch {
+        /* ignore */
+    }
+}
+
+export function switchToDifferentAccount() {
+    clearAuthStorage();
+    try {
+        sessionStorage.setItem('preferReturningAuth', '1');
+    } catch {
+        /* ignore */
+    }
+    window.location.reload();
+}
 
 export function validatePinInput(pin) {
     if (!/^\d{4,6}$/.test(pin)) {
@@ -59,6 +75,7 @@ export async function promptForSavePin(api, options = {}) {
     const errorElement = document.getElementById('save-pin-setup-error');
     const submitButton = document.getElementById('save-pin-setup-submit');
     const helper = document.getElementById('save-pin-setup-helper');
+    const switchAccountButton = document.getElementById('save-pin-switch-account');
 
     if (!modal || !form || !pinInput || !pinConfirm || !submitButton) {
         throw new Error('Save PIN setup modal elements are missing');
@@ -66,11 +83,11 @@ export async function promptForSavePin(api, options = {}) {
 
     if (helper) {
         const codeHint = friendCode
-            ? ` Your friend code is ${friendCode} — use it with your username under "No PIN yet" if you reinstall before finishing this step.`
+            ? ` Wrong account? Tap "Sign in as a different account" below.`
             : '';
         helper.textContent =
-            `Set a private save PIN now so you can restore progress on a new device.${codeHint} ` +
-            'Your PIN is secret. Your friend code is only for one-time recovery until a PIN is set.';
+            `Set a private save PIN now to claim and secure this account.${codeHint} ` +
+            'After that, use your username and PIN on Returning to sign in on other devices.';
     }
 
     hideError(errorElement);
@@ -84,6 +101,11 @@ export async function promptForSavePin(api, options = {}) {
             form.removeEventListener('submit', handleSubmit);
             pinInput.removeEventListener('input', handleInput);
             pinConfirm.removeEventListener('input', handleInput);
+            switchAccountButton?.removeEventListener('click', onSwitchAccount);
+        };
+
+        const onSwitchAccount = () => {
+            switchToDifferentAccount();
         };
 
         const handleSubmit = async (event) => {
@@ -127,6 +149,7 @@ export async function promptForSavePin(api, options = {}) {
         form.addEventListener('submit', handleSubmit);
         pinInput.addEventListener('input', handleInput);
         pinConfirm.addEventListener('input', handleInput);
+        switchAccountButton?.addEventListener('click', onSwitchAccount);
     });
 }
 

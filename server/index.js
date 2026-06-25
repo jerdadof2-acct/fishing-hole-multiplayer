@@ -189,7 +189,7 @@ app.post('/api/players/login', async (req, res) => {
 
         if (!player.pin_hash) {
             return res.status(403).json({
-                error: 'No save PIN on this account yet. Use "No PIN yet" with your username and friend code, or set a PIN on your current device.',
+                error: 'This account has no save PIN yet. On Returning, enter your username and leave PIN blank to claim it.',
                 code: 'NO_SAVE_PIN'
             });
         }
@@ -218,6 +218,65 @@ app.post('/api/players/login', async (req, res) => {
         });
     } catch (error) {
         console.error('[API] Login error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+function buildPinlessAuthResponse(player) {
+    const gameSave = player.game_save && typeof player.game_save === 'object' ? player.game_save : {};
+    return {
+        userId: player.id,
+        username: player.username,
+        friendCode: player.friend_code,
+        level: player.level,
+        experience: player.experience,
+        money: player.money,
+        stats: player.player_stats,
+        totalCaught: player.total_caught,
+        biggestCatch: player.biggest_catch,
+        gameSave,
+        gameSaveUpdatedAt: player.game_save_updated_at,
+        hasPin: false,
+        requiresPinSetup: true
+    };
+}
+
+// Claim an older account by username only (no save PIN set yet) — then set a PIN in-game
+app.post('/api/players/claim', async (req, res) => {
+    try {
+        const { username } = req.body;
+
+        if (!username || typeof username !== 'string') {
+            return res.status(400).json({ error: 'Username is required' });
+        }
+
+        const result = await pool.query(
+            `SELECT id, username, friend_code, display_name, level, experience, money,
+                    total_caught, biggest_catch, player_stats, pin_hash, game_save,
+                    game_save_updated_at, last_active, created_at
+             FROM players
+             WHERE username = $1`,
+            [username.trim()]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'No account found with that username.' });
+        }
+
+        const player = result.rows[0];
+
+        if (player.pin_hash) {
+            return res.status(403).json({
+                error: 'This account already has a save PIN. Enter your username and PIN on Returning.',
+                code: 'HAS_SAVE_PIN'
+            });
+        }
+
+        await pool.query('UPDATE players SET last_active = NOW() WHERE id = $1', [player.id]);
+
+        res.json(buildPinlessAuthResponse(player));
+    } catch (error) {
+        console.error('[API] Claim error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -267,23 +326,7 @@ app.post('/api/players/recover', async (req, res) => {
 
         await pool.query('UPDATE players SET last_active = NOW() WHERE id = $1', [player.id]);
 
-        const gameSave = player.game_save && typeof player.game_save === 'object' ? player.game_save : {};
-
-        res.json({
-            userId: player.id,
-            username: player.username,
-            friendCode: player.friend_code,
-            level: player.level,
-            experience: player.experience,
-            money: player.money,
-            stats: player.player_stats,
-            totalCaught: player.total_caught,
-            biggestCatch: player.biggest_catch,
-            gameSave,
-            gameSaveUpdatedAt: player.game_save_updated_at,
-            hasPin: false,
-            requiresPinSetup: true
-        });
+        res.json(buildPinlessAuthResponse(player));
     } catch (error) {
         console.error('[API] Recover error:', error);
         res.status(500).json({ error: 'Internal server error' });

@@ -1427,7 +1427,7 @@ export class UI {
                 statusEl.textContent = 'Save PIN is set. On a new device, choose Returning and sign in with your username and PIN.';
                 formEl?.classList.add('hidden');
             } else {
-                statusEl.textContent = 'Set a save PIN now — required to restore progress on a new device. Until then, use No PIN yet with your friend code below.';
+                statusEl.textContent = 'Set a save PIN now — required to restore progress on a new device. On Returning, leave PIN blank to claim this account.';
                 formEl?.classList.remove('hidden');
             }
         } catch (error) {
