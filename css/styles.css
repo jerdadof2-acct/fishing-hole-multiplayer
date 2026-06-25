@@ -2406,13 +2406,15 @@ canvas {
     font-weight: 600;
 }
 
-/* Local story test panel — only when URL has ?dev=1 or ?storytest=1 */
+/* Local dev panel — localhost or ?dev=1 / ?storytest=1 */
 #story-test-panel {
     position: fixed;
     left: 12px;
     bottom: 72px;
     z-index: 11000;
-    width: min(92vw, 220px);
+    width: min(92vw, 240px);
+    max-height: min(70vh, 520px);
+    overflow-y: auto;
     padding: 10px 12px;
     border-radius: 12px;
     background: rgba(12, 18, 40, 0.94);
@@ -2455,6 +2457,24 @@ canvas {
     font-size: 0.65rem;
     line-height: 1.35;
     color: rgba(255, 255, 255, 0.55);
+}
+
+.story-test-panel-section {
+    margin: 10px 0 6px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #93c5fd;
+}
+
+.story-test-boat-grid {
+    display: grid;
+    gap: 4px;
+}
+
+.story-test-boat-grid button {
+    margin-bottom: 0;
 }
 
 /* First-time gameplay onboarding — dock tour */

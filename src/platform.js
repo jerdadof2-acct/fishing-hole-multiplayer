@@ -5,6 +5,28 @@ import {
 } from './config/idlePortrait.js';
 import { buildStylizedDock } from './scene/stylizedDock.js';
 
+function makeBox(w, h, d, mat, x, y, z, name = '') {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    mesh.position.set(x, y, z);
+    if (name) mesh.name = name;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    return mesh;
+}
+
+function makeCyl(radius, length, mat, x, y, z, rot = {}, name = '', segments = 10) {
+    const mesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius, length, segments),
+        mat
+    );
+    mesh.position.set(x, y, z);
+    mesh.rotation.set(rot.x || 0, rot.y || 0, rot.z || 0);
+    if (name) mesh.name = name;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    return mesh;
+}
+
 /**
  * Platform system - manages dock and boats where cat stands
  * DOCK: For ponds and rivers (completely still)
@@ -663,12 +685,34 @@ export class Platform {
         const boatLength = this.largeBoatDepth;
         const hullHeight = 0.25; // Taller hull for large boat
         const hullOuterEdge = boatWidth * 0.42 + 0.03; // Outer edge of hull sides (including thickness)
-        
-        const hullMaterial = new THREE.MeshStandardMaterial({
-            color: 0x2c3e50, // Dark blue-gray hull
-            roughness: 0.6,
-            metalness: 0.2
+
+        const sportWhite = new THREE.MeshStandardMaterial({
+            color: 0xf7f7f2,
+            roughness: 0.58,
+            metalness: 0.05
         });
+        const navyStripe = new THREE.MeshStandardMaterial({
+            color: 0x12304a,
+            roughness: 0.5,
+            metalness: 0.08
+        });
+        const blackRubRail = new THREE.MeshStandardMaterial({
+            color: 0x111111,
+            roughness: 0.45,
+            metalness: 0.12
+        });
+        const chrome = new THREE.MeshStandardMaterial({
+            color: 0xd8dde2,
+            roughness: 0.22,
+            metalness: 0.85
+        });
+        const teak = new THREE.MeshStandardMaterial({
+            color: 0xc79a5b,
+            roughness: 0.72,
+            metalness: 0.03
+        });
+
+        const hullMaterial = navyStripe;
         
         // For now, skip shader modifications to avoid compilation errors
         // The geometry improvements (beveled hull, pointed bow) will provide visual improvement
@@ -726,14 +770,7 @@ export class Platform {
         boatGroup.add(backWall);
         
         // Stern deck (white, sunken below gunwales)
-        const deckMaterial = new THREE.MeshStandardMaterial({
-            color: 0xf5f5f5, // White deck
-            roughness: 0.7,
-            metalness: 0.1,
-            // Disable polygon offset - it can cause visible seams
-            // Instead, ensure seamless rendering
-            flatShading: false // Smooth shading to eliminate visible seams
-        });
+        const deckMaterial = sportWhite;
         
         const deckThickness = 0.06;
         const deckWidth = Math.max(0.1, hullOuterEdge * 2 - 0.3); // Keep deck within hull
@@ -761,29 +798,7 @@ export class Platform {
         boatGroup.add(catStandMarker);
         boatGroup.userData.catStandMarker = catStandMarker;
 
-        // Teak cockpit slats (sportfisher deck)
-        const teakSlatMaterial = new THREE.MeshStandardMaterial({
-            color: 0xc9a66b,
-            roughness: 0.72,
-            metalness: 0.04
-        });
-        const slatCount = 16;
-        const slatSpacing = deckLength / slatCount;
-        for (let i = 0; i < slatCount; i++) {
-            const slat = new THREE.Mesh(
-                new THREE.BoxGeometry(deckWidth * 0.84, 0.014, slatSpacing * 0.52),
-                teakSlatMaterial
-            );
-            slat.position.set(
-                0,
-                deckTopLocal + deckThickness * 0.5 + 0.008,
-                -deckLength * 0.5 + slatSpacing * (i + 0.5)
-            );
-            slat.receiveShadow = true;
-            boatGroup.add(slat);
-        }
-        
-        // Bow (front of boat - pointed/tapered shape like small boat)
+        // Bow (front of boat - pointed/tapered shape)
         const bowShape = new THREE.Shape();
         bowShape.moveTo(-boatWidth * 0.4, 0);
         bowShape.lineTo(boatWidth * 0.4, 0);
@@ -796,7 +811,7 @@ export class Platform {
         bowGeometry.rotateX(-Math.PI / 2);
         bowGeometry.translate(0, -hullHeight * 0.15, 0);
         
-        const bow = new THREE.Mesh(bowGeometry, hullMaterial);
+        const bow = new THREE.Mesh(bowGeometry, sportWhite);
         bow.name = 'largeBoat-bow';
         bow.position.set(0, 0, -bottomLength * 0.5 + 0.05); // Position at back end (negative Z)
         bow.rotation.x = -Math.PI / 12; // Tilt forward slightly
@@ -804,20 +819,9 @@ export class Platform {
         bow.scale.x = bowScaleX;
         boatGroup.add(bow);
         
-        // Gunwale "cap" - L-cap with chunkier proportions for large boat
-        const gunwaleMaterial = new THREE.MeshStandardMaterial({
-            color: 0x9aa2ad, // Light grey for gunwale body
-            roughness: 0.55,
-            metalness: 0.08
-        });
-        const gunwaleTopMaterial = new THREE.MeshStandardMaterial({
-            color: 0x2f3238, // Dark cap along very top
-            roughness: 0.45,
-            metalness: 0.1,
-            polygonOffset: true,
-            polygonOffsetFactor: -1,
-            polygonOffsetUnits: -1
-        });
+        // Gunwale "cap" - chrome rails with white coaming
+        const gunwaleMaterial = chrome;
+        const gunwaleTopMaterial = blackRubRail;
         
         const gunwaleHeight = 2.2;
         const gunwaleIn = 0.06;
@@ -874,7 +878,7 @@ export class Platform {
         const transomHeight = deckSurfaceY - hullFloorY + 0.04;
         const transomWall = new THREE.Mesh(
             new THREE.BoxGeometry(foreAftLen * 0.98, transomHeight, railThick + 0.08),
-            hullMaterial
+            sportWhite
         );
         transomWall.name = 'largeBoat-transom';
         transomWall.position.set(0, hullFloorY + transomHeight * 0.5, frontRailZ);
@@ -939,6 +943,53 @@ export class Platform {
         transomTopRail.position.set(0, topY + 0.01, frontRailZ);
         transomTopRail.castShadow = true;
         boatGroup.add(transomTopRail);
+
+        // --- Lightweight sportfisher upgrade details ---
+        boatGroup.add(makeBox(0.08, 0.85, boatLength * 0.86, sportWhite, -railCenterX - 0.03, deckTopLocal + 0.28, 0, 'sportfish-left-white-hull'));
+        boatGroup.add(makeBox(0.08, 0.85, boatLength * 0.86, sportWhite, railCenterX + 0.03, deckTopLocal + 0.28, 0, 'sportfish-right-white-hull'));
+
+        boatGroup.add(makeBox(0.09, 0.16, boatLength * 0.82, navyStripe, -railCenterX - 0.08, deckTopLocal - 0.05, 0, 'sportfish-left-navy-stripe'));
+        boatGroup.add(makeBox(0.09, 0.16, boatLength * 0.82, navyStripe, railCenterX + 0.08, deckTopLocal - 0.05, 0, 'sportfish-right-navy-stripe'));
+
+        boatGroup.add(makeBox(0.08, 0.08, boatLength * 0.88, blackRubRail, -railCenterX - 0.10, railY + gunwaleHeight * 0.52, 0, 'sportfish-left-rubrail'));
+        boatGroup.add(makeBox(0.08, 0.08, boatLength * 0.88, blackRubRail, railCenterX + 0.10, railY + gunwaleHeight * 0.52, 0, 'sportfish-right-rubrail'));
+
+        for (let i = 0; i < 10; i++) {
+            const z = boatLength * 0.10 + i * 0.28;
+            boatGroup.add(makeBox(deckWidth * 0.70, 0.018, 0.12, teak, 0, deckSurfaceY + 0.018, z, 'sportfish-teak-cockpit-slat'));
+        }
+
+        boatGroup.add(makeBox(deckWidth * 0.72, 0.32, 0.10, sportWhite, 0, deckSurfaceY + 0.18, frontRailZ - 0.18, 'sportfish-transom-pad'));
+
+        boatGroup.add(makeBox(1.3, 0.38, 0.55, sportWhite, -deckWidth * 0.25, deckSurfaceY + 0.21, boatLength * 0.08, 'sportfish-cooler'));
+        boatGroup.add(makeBox(1.32, 0.04, 0.57, chrome, -deckWidth * 0.25, deckSurfaceY + 0.43, boatLength * 0.08, 'sportfish-cooler-lid'));
+
+        const consoleZ = -boatLength * 0.28;
+        boatGroup.add(makeBox(1.8, 0.85, 1.1, sportWhite, 0, deckSurfaceY + 0.45, consoleZ, 'sportfish-console'));
+        boatGroup.add(makeBox(1.25, 0.35, 0.08, blackRubRail, 0, deckSurfaceY + 0.70, consoleZ - 0.55, 'sportfish-windshield'));
+
+        const towerZ = -boatLength * 0.18;
+        const towerHeight = 2.7;
+        const towerHalfW = 1.15;
+        boatGroup.add(makeCyl(0.035, towerHeight, chrome, -towerHalfW, deckSurfaceY + towerHeight / 2, towerZ, {}, 'tower-left-post'));
+        boatGroup.add(makeCyl(0.035, towerHeight, chrome, towerHalfW, deckSurfaceY + towerHeight / 2, towerZ, {}, 'tower-right-post'));
+        boatGroup.add(makeCyl(0.035, towerHalfW * 2, chrome, 0, deckSurfaceY + towerHeight, towerZ, { z: Math.PI / 2 }, 'tower-top-crossbar'));
+        boatGroup.add(makeBox(1.4, 0.08, 0.8, sportWhite, 0, deckSurfaceY + towerHeight + 0.05, towerZ, 'tower-small-top'));
+
+        const outriggerLen = 3.0;
+        const outriggerY = deckSurfaceY + 2.1;
+        const outriggerZ = -boatLength * 0.08;
+        boatGroup.add(makeCyl(0.025, outriggerLen, chrome, -1.55, outriggerY, outriggerZ, { z: 0.85, y: 0.25 }, 'left-outrigger'));
+        boatGroup.add(makeCyl(0.025, outriggerLen, chrome, 1.55, outriggerY, outriggerZ, { z: -0.85, y: -0.25 }, 'right-outrigger'));
+
+        for (let i = 0; i < 4; i++) {
+            const x = (i - 1.5) * 0.45;
+            boatGroup.add(makeCyl(0.045, 0.45, chrome, x, deckSurfaceY + 0.65, frontRailZ - 0.28, { x: Math.PI / 2 }, 'stern-rocket-launcher'));
+        }
+
+        // Beveled edge strips (simple rounded look)
+        boatGroup.add(makeBox(0.04, 0.12, boatLength * 0.84, sportWhite, -railCenterX - 0.06, deckTopLocal + 0.12, 0, 'sportfish-left-bevel'));
+        boatGroup.add(makeBox(0.04, 0.12, boatLength * 0.84, sportWhite, railCenterX + 0.06, deckTopLocal + 0.12, 0, 'sportfish-right-bevel'));
         
         // Inner coaming lip (chunkier for large boat)
         const coamH = gunwaleHeight * 0.65;
@@ -947,11 +998,7 @@ export class Platform {
         
         const coamSideGeom = new THREE.BoxGeometry(coamTh, coamH, sideLen * 0.98);
         const coamBackGeom = new THREE.BoxGeometry(foreAftLen * 0.98, coamH, coamTh);
-        const coamMat = new THREE.MeshStandardMaterial({ 
-            color: 0x4b2f16, 
-            roughness: 0.7, 
-            metalness: 0.05 
-        });
+        const coamMat = teak;
         
         // Left inner lip - positioned inside deck edge
         const leftCoam = new THREE.Mesh(coamSideGeom, coamMat);
@@ -1001,17 +1048,12 @@ export class Platform {
         boatGroup.add(rightSheer);
 
         // Flush-mount rod holders along gunwales (sportfisher)
-        const gunwaleRodMaterial = new THREE.MeshStandardMaterial({
-            color: 0xc8c8c8,
-            roughness: 0.22,
-            metalness: 0.88
-        });
         const gunwaleRodGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.14, 10);
         for (let i = 0; i < 5; i++) {
             const t = 0.12 + i * 0.19;
             const zPos = backRailZ + (frontRailZ - backRailZ) * t;
             for (const side of [-1, 1]) {
-                const holder = new THREE.Mesh(gunwaleRodGeo, gunwaleRodMaterial);
+                const holder = new THREE.Mesh(gunwaleRodGeo, chrome);
                 holder.rotation.z = Math.PI / 2;
                 holder.position.set(side * (railCenterX + 0.04), railY + gunwaleHeight * 0.58, zPos);
                 holder.castShadow = true;
@@ -1020,11 +1062,7 @@ export class Platform {
         }
         
         // Cleats for docking (larger for big boat)
-        const cleatMaterial = new THREE.MeshStandardMaterial({
-            color: 0x888888, // Silver/gray metal
-            roughness: 0.3,
-            metalness: 0.8
-        });
+        const cleatMaterial = chrome;
         
         // Large boat cleats (bigger and more substantial)
         const cleatGroup = new THREE.Group();
@@ -1062,15 +1100,11 @@ export class Platform {
         backCleatRight.rotation.y = -Math.PI / 2;
         boatGroup.add(backCleatRight);
         
-        // Anchor winch system at bow (front where cat stands)
-        const winchMaterial = new THREE.MeshStandardMaterial({
-            color: 0x666666, // Steel gray
-            roughness: 0.4,
-            metalness: 0.8
-        });
+        // Anchor winch system at transom
+        const winchMaterial = chrome;
         
         // Winch drum
-        const winchDrum = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.08, 16), winchMaterial);
+        const winchDrum = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.08, 10), winchMaterial);
         winchDrum.rotation.z = Math.PI / 2;
         winchDrum.position.set(0, railY + gunwaleHeight * 0.25, frontRailZ - 0.15);
         winchDrum.castShadow = true;
@@ -1081,39 +1115,6 @@ export class Platform {
         winchMount.position.set(0, railY + gunwaleHeight * 0.25 - 0.04, frontRailZ - 0.15);
         winchMount.castShadow = true;
         boatGroup.add(winchMount);
-        
-        // Fish box/well (storage area on deck)
-        const fishBoxMaterial = new THREE.MeshStandardMaterial({
-            color: 0xf5f5f5, // White like deck
-            roughness: 0.7,
-            metalness: 0.1
-        });
-        
-        const fishBoxWidth = boatWidth * 0.5;
-        const fishBoxDepth = boatLength * 0.15;
-        const fishBoxHeight = 0.25;
-        
-        // Fish box sides
-        const fishBoxSide = new THREE.Mesh(new THREE.BoxGeometry(0.04, fishBoxHeight, fishBoxDepth), deckMaterial);
-        // Left side
-        const fishBoxLeft = fishBoxSide.clone();
-        fishBoxLeft.position.set(-fishBoxWidth * 0.5, deckTopLocal + fishBoxHeight * 0.5, -boatLength * 0.25);
-        fishBoxLeft.castShadow = true;
-        boatGroup.add(fishBoxLeft);
-        // Right side
-        const fishBoxRight = fishBoxSide.clone();
-        fishBoxRight.position.set(fishBoxWidth * 0.5, deckTopLocal + fishBoxHeight * 0.5, -boatLength * 0.25);
-        fishBoxRight.castShadow = true;
-        boatGroup.add(fishBoxRight);
-        // Front
-        const fishBoxFront = new THREE.Mesh(new THREE.BoxGeometry(fishBoxWidth, fishBoxHeight, 0.04), deckMaterial);
-        fishBoxFront.position.set(0, deckTopLocal + fishBoxHeight * 0.5, -boatLength * 0.25 + fishBoxDepth * 0.5);
-        fishBoxFront.castShadow = true;
-        boatGroup.add(fishBoxFront);
-        // Back
-        const fishBoxBack = fishBoxFront.clone();
-        fishBoxBack.position.set(0, deckTopLocal + fishBoxHeight * 0.5, -boatLength * 0.25 - fishBoxDepth * 0.5);
-        boatGroup.add(fishBoxBack);
         
         // Drain scuppers (larger for big boat)
         const scupperGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.08, 8);

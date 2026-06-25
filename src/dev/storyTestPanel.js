@@ -1,11 +1,6 @@
 import { CELESTIAL_DEPTHS_LOCATION_INDEX, HIDDEN_RELICS } from '../config/hiddenRelics.js';
 import { collectHiddenRelic } from '../hiddenRelics.js';
-
-function isStoryTestMode() {
-    if (typeof window === 'undefined') return false;
-    const params = new URLSearchParams(window.location.search);
-    return params.has('dev') || params.has('storytest');
-}
+import { getDevOceanBoatLocations, isDevMode } from './devMode.js';
 
 function grantAllRelics(player) {
     if (!player) return;
@@ -15,37 +10,70 @@ function grantAllRelics(player) {
     player.save({ skipSync: true });
 }
 
+function jumpToLocation(game, locationIndex) {
+    const ui = game.ui;
+    const player = game.player;
+    if (!ui || !player || !game.locations) return;
+
+    const switched = game.changeLocation(locationIndex);
+    if (!switched) return;
+
+    player.currentLocationIndex = locationIndex;
+    player.save({ skipSync: true });
+    ui.updateLocationSelector?.();
+    ui.updatePlayerInfo?.();
+
+    const name = game.locations.getLocation(locationIndex)?.name || 'Location';
+    ui.showBannerNotification?.(`Preview: ${name}`, '#93c5fd', 2800);
+}
+
 /**
- * Local-only story preview (?dev=1 or ?storytest=1 on the URL).
+ * Local dev shortcuts (localhost, 127.0.0.1, ?dev=1, or ?storytest=1).
  * @param {import('../main.js').default} game
  */
 export function initStoryTestPanel(game) {
-    if (!isStoryTestMode() || !game) return;
+    if (!isDevMode() || !game) return;
 
     const existing = document.getElementById('story-test-panel');
     if (existing) existing.remove();
 
+    const oceanBoatLocations = getDevOceanBoatLocations(game.locations);
+    const boatButtons = oceanBoatLocations.map((loc) => `
+        <button type="button" data-location="${loc.index}" class="story-test-boat-btn">
+            ${loc.name}
+        </button>
+    `).join('');
+
     const panel = document.createElement('div');
     panel.id = 'story-test-panel';
-    panel.setAttribute('aria-label', 'Story test shortcuts');
+    panel.setAttribute('aria-label', 'Dev test shortcuts');
     panel.innerHTML = `
-        <div class="story-test-panel-title">Story test (local)</div>
-        <button type="button" data-action="forge">1 — Show forge popup</button>
-        <button type="button" data-action="celestial">2 — Go to Celestial Depths</button>
+        <div class="story-test-panel-title">Dev (local)</div>
+        <div class="story-test-panel-section">Large boat preview</div>
+        <div class="story-test-boat-grid">${boatButtons}</div>
+        <p class="story-test-panel-hint">Or use the location dropdown — ocean spots are unlocked on localhost.</p>
+        <div class="story-test-panel-section">Story shortcuts</div>
+        <button type="button" data-action="forge">Show forge popup</button>
+        <button type="button" data-action="celestial">Go to Celestial Depths</button>
         <button type="button" data-action="reset-starfish">Reset Starfish (first catch)</button>
-        <p class="story-test-panel-hint">After step 2: cast and hook the Starfish.</p>
     `;
 
     document.body.appendChild(panel);
 
     panel.addEventListener('click', (event) => {
+        const locationIndex = event.target.closest('[data-location]')?.dataset?.location;
+        if (locationIndex !== undefined) {
+            jumpToLocation(game, Number(locationIndex));
+            return;
+        }
+
         const action = event.target.closest('[data-action]')?.dataset?.action;
         if (!action) return;
 
         const ui = game.ui;
         const player = game.player;
         if (!ui || !player) {
-            console.warn('[STORY TEST] Game not ready yet');
+            console.warn('[DEV] Game not ready yet');
             return;
         }
 
@@ -62,11 +90,7 @@ export function initStoryTestPanel(game) {
 
         if (action === 'celestial') {
             grantAllRelics(player);
-            game.changeLocation(CELESTIAL_DEPTHS_LOCATION_INDEX);
-            player.currentLocationIndex = CELESTIAL_DEPTHS_LOCATION_INDEX;
-            player.save({ skipSync: true });
-            ui.updateLocationSelector?.();
-            ui.updatePlayerInfo?.();
+            jumpToLocation(game, CELESTIAL_DEPTHS_LOCATION_INDEX);
             ui.showBannerNotification?.('Celestial Depths — cast to meet the Starfish.', '#fde68a', 4000);
             return;
         }
@@ -80,5 +104,5 @@ export function initStoryTestPanel(game) {
         }
     });
 
-    console.info('[STORY TEST] Panel ready — use ?dev=1 or ?storytest=1 in the URL');
+    console.info('[DEV] Panel ready — ocean locations unlocked on localhost');
 }

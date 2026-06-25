@@ -6,6 +6,7 @@ import { isCelestialStarfishHook } from './config/starfishEncounter.js';
 import { getFishImagePaths, getRelicImagePaths } from './utils/imageAssets.js';
 import { switchToDifferentAccount } from './savePinSetup.js';
 import { pickMissMessage } from './config/missMessages.js';
+import { isDevMode } from './dev/devMode.js';
 
 export class UI {
     constructor(fishing, fish, water, game, gameplaySystems = null, sfx = null) {
@@ -2052,15 +2053,16 @@ export class UI {
         
         // Add options for unlocked locations only
         locations.forEach((location, index) => {
-            if (this.player.locationUnlocks.includes(index)) {
-                const option = document.createElement('option');
-                option.value = index;
-                option.textContent = location.name;
-                if (index === currentLocationIndex) {
-                    option.selected = true;
-                }
-                locationSelect.appendChild(option);
+            const isUnlocked = this.player.locationUnlocks.includes(index);
+            if (!isUnlocked && !isDevMode()) return;
+
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = isUnlocked ? location.name : `${location.name} (dev)`;
+            if (index === currentLocationIndex) {
+                option.selected = true;
             }
+            locationSelect.appendChild(option);
         });
         
         // If no locations unlocked, add at least the first one
@@ -2086,12 +2088,12 @@ export class UI {
         }
         
         // Check if location is unlocked
-        if (!this.player.locationUnlocks.includes(locationIndex)) {
+        if (!isDevMode() && !this.player.locationUnlocks.includes(locationIndex)) {
             console.warn('[UI] Location not unlocked:', location.name);
             return;
         }
 
-        if (location.waterBodyType === 'CELESTIAL' && !this.player.canAccessCelestialDepths()) {
+        if (location.waterBodyType === 'CELESTIAL' && !isDevMode() && !this.player.canAccessCelestialDepths()) {
             this.showToast({
                 type: 'error',
                 title: 'Celestial Depths locked',
@@ -2102,7 +2104,7 @@ export class UI {
         }
         
         // Check if player can afford the location
-        if (this.player.money < location.cost) {
+        if (!isDevMode() && this.player.money < location.cost) {
             this.showToast({
                 type: 'error',
                 title: 'Not enough money',
@@ -2121,7 +2123,7 @@ export class UI {
         }
         
         // Deduct cost if not free
-        if (location.cost > 0) {
+        if (!isDevMode() && location.cost > 0) {
             this.player.spendMoney(location.cost);
             this.updatePlayerInfo();
         }

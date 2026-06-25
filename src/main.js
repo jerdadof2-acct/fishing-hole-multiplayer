@@ -6,6 +6,7 @@ import { Grass } from './grass.js';
 import { Dock } from './dock.js';
 import { Platform } from './platform.js';
 import { Locations } from './locations.js';
+import { applyDevOceanUnlocks, isDevMode } from './dev/devMode.js';
 import { Fishing } from './fishing.js';
 import { Fish } from './fish.js';
 import { UI } from './ui.js';
@@ -293,6 +294,9 @@ export class Game {
                         unlocksAdded = true;
                     }
                 });
+                if (applyDevOceanUnlocks(this.player, this.locations)) {
+                    unlocksAdded = true;
+                }
                 if (unlocksAdded) {
                     this.player.save({ skipSync: true });
                     console.log('[LOCATIONS] Temporary unlocks granted for testing:', this.player.locationUnlocks);
@@ -493,13 +497,14 @@ export class Game {
             }, this.sfx);
             this.ui.init();
 
-            if (typeof window !== 'undefined') {
-                const params = new URLSearchParams(window.location.search);
-                if (params.has('dev') || params.has('storytest')) {
-                    import('./dev/storyTestPanel.js').then(({ initStoryTestPanel }) => {
-                        initStoryTestPanel(this);
-                    });
-                }
+            if (isDevMode()) {
+                this.ui.updateLocationSelector?.();
+            }
+
+            if (typeof window !== 'undefined' && isDevMode()) {
+                import('./dev/storyTestPanel.js').then(({ initStoryTestPanel }) => {
+                    initStoryTestPanel(this);
+                });
             }
 
             if (this.player) {
@@ -1105,7 +1110,7 @@ export class Game {
             return false;
         }
 
-        if (location.waterBodyType === 'CELESTIAL' && !this.player?.canAccessCelestialDepths()) {
+        if (location.waterBodyType === 'CELESTIAL' && !isDevMode() && !this.player?.canAccessCelestialDepths()) {
             console.warn('[LOCATION SWITCH] Celestial Depths locked — collect all relics and forge the Starlight Lure first');
             return false;
         }
