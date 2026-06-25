@@ -5,6 +5,7 @@ import { STARLIGHT_LURE_IMAGE, isStarlightLureBait } from './config/hiddenRelics
 import { isCelestialStarfishHook } from './config/starfishEncounter.js';
 import { getFishImagePaths, getRelicImagePaths } from './utils/imageAssets.js';
 import { switchToDifferentAccount } from './savePinSetup.js';
+import { pickMissMessage } from './config/missMessages.js';
 
 export class UI {
     constructor(fishing, fish, water, game, gameplaySystems = null, sfx = null) {
@@ -2723,7 +2724,10 @@ export class UI {
                         reason = 'Too eager! Fish wasn\'t ready!';
                     }
                     console.log('[UI] Catch failed -', reason, 'Reaction time:', reactionTime, 'ms, Timing window:', timingWindow, 'ms');
-                    this.handleMiss(reason);
+                    if (this.fishing.bobber?.visible) {
+                        this.fish.spawnFish();
+                    }
+                    this.handleMiss(reason, this.fish.getCurrentFish());
                 }
             }).catch(error => {
                 console.error('[UI] Failed to load tackleShop:', error);
@@ -2748,15 +2752,14 @@ export class UI {
         });
     }
     
-    handleMiss(reason) {
+    handleMiss(reason, escapedFish = null) {
         const castButton = document.getElementById('cast-button');
         
         this.waitingForBite = false;
         this.biteStrikeTime = null;
         this.hookSetSuccess = false;
         
-        // Get humorous miss message based on reason
-        let missMessage = this.getMissMessage(reason);
+        const missMessage = this.getMissMessage(reason, escapedFish);
         
         // Show miss notification with humorous message
         this.showMissNotification(missMessage);
@@ -2786,87 +2789,8 @@ export class UI {
         }
     }
     
-    getMissMessage(reason) {
-        // Determine message type based on reason
-        let messageType = 'general';
-        const reasonLower = (reason || '').toLowerCase();
-        if (reasonLower.includes('too slow') || reasonLower.includes('too quick')) {
-            messageType = 'tooSlow';
-        } else if (reasonLower.includes('too eager')) {
-            messageType = 'tooEager';
-        }
-        
-        // Humorous miss messages from reference file
-        const missMessages = {
-            tooEager: [
-                "Too eager! Fish wasn't ready!",
-                "Slow down, tiger! The fish needs a moment! 😸",
-                "You're faster than a cat chasing a laser pointer! 🔴",
-                "The fish said 'chill, let me finish my coffee first!' ☕"
-            ],
-            tooSlow: [
-                "That fish was too quick for your paws! 🐾",
-                "Too slow! Fish got away!",
-                "The fish saw you coming and said 'NOPE!' 😹",
-                "That fish escaped faster than you run from the vacuum! 🏃",
-                "Fish are doing cat yoga down there! 🧘‍♀️",
-                "Fish are on their meow-ning break! ☕",
-                "That fish yelled 'DEUCES!' and swam away! ✌️",
-                "The fish took one look at you and said 'Hard pass!' 🙅",
-                "That fish went 'Nah fam, not today Satan!' 😈"
-            ],
-            general: [
-                "That fish was too quick for your paws! 🐾",
-                "The fish saw you coming and said 'NOPE!' 😹",
-                "Just a nibble... your whiskers need more practice!",
-                "Fish are gossiping about your casting technique! 😸",
-                "They're doing cat yoga down there! 🧘‍♀️",
-                "Fish are on their meow-ning break! ☕",
-                "Fish are watching cat videos... but not yours! 📺",
-                "They swam away purring at your attempt!",
-                "Your bait was too fancy for fish who prefer cat food! 🐟",
-                "Fish are playing hide and seek... you're 'it'!",
-                "Maybe try a different spot, furriend?",
-                "That fish said 'meow-bee next time!' 😸",
-                "Fish are having a catnip party without you! 🎉🌿",
-                "Just a friendly turtle saying 'meow-lo!' 🐢",
-                "The fish are playing tag... and you're still it!",
-                "Your hook came back empty... like a cat's food bowl at 3am!",
-                "Fish saw your cat avatar and got jealous! 😼",
-                "They're busy practicing their fin-ishing moves!",
-                "Fish are playing poker... and winning! 🃏",
-                "Your bait was too spicy for their delicate palates! 🌶️",
-                "Fish are on vacation... to avoid cats! 🏖️",
-                "They're writing their memoirs... 'My Life as Cat Bait' 📝",
-                "Fish are doing karaoke... 'Don't Stop Belly-in!' 🎤",
-                "Just a crab waving hello with claws! 🦀",
-                "Fish are practicing social distancing... from cats!",
-                "They're having a business meeting... about avoiding cats! 💼",
-                "Fish are doing homework... 'How to Avoid Being Caught 101' 📚",
-                "Your purr-suasion skills need work! 😸",
-                "That fish ghosted you harder than your last Tinder date! 💀",
-                "Fish are filing a restraining order against you! 📋",
-                "The fish laughed and gave you a participation trophy! 🏆",
-                "Fish are starting a support group: 'Victims of Cat Fishing' 🎣",
-                "That fish is now writing a strongly worded Yelp review about you! ⭐",
-                "Fish are organizing a protest: 'Occupy the Deep End!' 📢",
-                "The fish just added you to their fish-block list! 🚫",
-                "Fish are literally creating an escape committee right now! 🏃‍♀️🏃‍♂️",
-                "That fish is ghost writing its autobiography: 'The One That Got Away... Again' 📖",
-                "The fish sent back your bait with a complaint form! 📝",
-                "Fish are forming an anti-cat coalition... and you're President! 👔",
-                "That fish just called its lawyer! And won! ⚖️",
-                "The fish started a GoFundMe: 'Save Me From This Cat's Awful Casting' 💰",
-                "Fish are doing inventory... of their bait collection you keep donating! 📦",
-                "That fish put 'Professional Escapologist' on its LinkedIn! 💼",
-                "The fish just roasted you in front of its whole school! 🔥",
-                "Fish are voting you 'Least Threatening Cat of the Month' 🏅",
-                "That fish escaped and is now teaching other fish your techniques... backwards! 🎓"
-            ]
-        };
-        
-        const messages = missMessages[messageType] || missMessages.general;
-        return messages[Math.floor(Math.random() * messages.length)];
+    getMissMessage(reason, escapedFish = null) {
+        return pickMissMessage({ reason, fish: escapedFish });
     }
     
     showMissNotification(message) {
@@ -2887,6 +2811,7 @@ export class UI {
             font-size: 18px;
             font-weight: bold;
             text-align: center;
+            white-space: pre-line;
             max-width: 80%;
             border: 3px solid rgba(255, 150, 50, 0.8);
             animation: popupFadeIn 0.3s ease-out;
