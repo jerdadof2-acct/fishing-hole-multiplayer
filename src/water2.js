@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { makeWaterMaterial } from './water/waterMaterial.js?v=20250625-coral-aqua2';
+import { makeWaterMaterial } from './water/waterMaterial.js?v=20250625-amazon-river-soft';
 import {
     getWaterBodyConfig,
     DEFAULT_WATER_BODY_TYPE,
@@ -7,7 +7,7 @@ import {
     applyFrozenFjordWaterColors,
     applyCoralKingdomsWaterColors,
     applyLakeWaterColors
-} from './water/waterBodyTypes.js?v=20250625-coral-aqua2';
+} from './water/waterBodyTypes.js?v=20250625-amazon-river-soft';
 import { createRiverFlowTexture } from './water/riverFlowTexture.js';
 import {
     createRiverDockPostWake,
@@ -29,6 +29,7 @@ import { PondSubmergedGrass } from './effects/pondSubmergedGrass.js';
 import { FjordIceFloes } from './effects/fjordIceFloes.js';
 import { CoralReefStructures, REEF_BED_OFFSET } from './effects/coralReefStructures.js';
 import { ReefFishShadows } from './effects/reefFishShadows.js';
+import { AmazonAnacondaShadow } from './effects/amazonAnacondaShadow.js';
 import { createReefSandTexture } from './effects/reefSandTexture.js';
 import { cloneLakeMaskForAlpha } from './buildLakeMask.js';
 
@@ -94,6 +95,8 @@ export class Water2Lake {
         this.coralReef = null;
         this.reefFishShadows = null;
         this._coralReefLocationEnabled = false;
+        this.amazonAnacondaShadow = null;
+        this._amazonAnacondaEnabled = false;
         this._defaultLakeBedY = 0.08;
         this._defaultCausticsY = 0.035;
     }
@@ -638,6 +641,33 @@ export class Water2Lake {
         this._syncCoralReefVisibility();
     }
 
+    /**
+     * Amazon Depths only — rare huge anaconda shadow slithering downstream.
+     * @param {boolean} enabled
+     */
+    setAmazonAnacondaEnabled(enabled) {
+        this._amazonAnacondaEnabled = enabled === true;
+        if (this.amazonAnacondaShadow) {
+            this.amazonAnacondaShadow.setActive(this._amazonAnacondaEnabled);
+            if (this._amazonAnacondaEnabled && this.waterBodyConfig?.flowDirection) {
+                this.amazonAnacondaShadow.setFlowDirection(this.waterBodyConfig.flowDirection);
+            }
+        }
+    }
+
+    /** Dev / test — spawn the anaconda shadow immediately at Amazon Depths. */
+    forceSpawnAmazonAnaconda({ closer = false } = {}) {
+        if (!this.amazonAnacondaShadow) {
+            return false;
+        }
+        if (this.waterBodyConfig?.flowDirection) {
+            this.amazonAnacondaShadow.setFlowDirection(this.waterBodyConfig.flowDirection);
+        }
+        this._amazonAnacondaEnabled = true;
+        this.amazonAnacondaShadow.setActive(true);
+        return this.amazonAnacondaShadow.forceSpawn({ closer });
+    }
+
     _syncCoralKingdomsBed() {
         const reef = this._coralReefLocationEnabled && this.waterBodyType === 'LAKE';
         const bedY = reef ? this.waterY - REEF_BED_OFFSET : this.waterY - this._defaultLakeBedY;
@@ -766,6 +796,9 @@ export class Water2Lake {
                 const flowDir = this.waterBodyConfig.flowDirection;
                 material.uniforms.uFlowDirection.value.copy(flowDir);
                 material.uniforms.uFlowSpeed.value = this.waterBodyConfig.flowSpeed || 1.5;
+                if (this.amazonAnacondaShadow) {
+                    this.amazonAnacondaShadow.setFlowDirection(flowDir);
+                }
             } else {
                 material.uniforms.uFlowDirection.value.set(0, 0);
                 material.uniforms.uFlowSpeed.value = 0.0;
@@ -1265,6 +1298,14 @@ export class Water2Lake {
         this.reefFishShadows.create();
         this.reefFishShadows.setActive(this._coralReefLocationEnabled);
 
+        this.amazonAnacondaShadow = new AmazonAnacondaShadow(this.sceneRef, {
+            waterY: this.waterY,
+            flowDirection: this.waterBodyConfig?.flowDirection,
+            groundSize: this.groundSize
+        });
+        this.amazonAnacondaShadow.create();
+        this.amazonAnacondaShadow.setActive(this._amazonAnacondaEnabled);
+
         this._syncCoralKingdomsBed();
 
         this._syncLakeBedDecorVisibility(this.waterBodyType);
@@ -1335,6 +1376,10 @@ export class Water2Lake {
 
         if (this.reefFishShadows) {
             this.reefFishShadows.update(delta);
+        }
+
+        if (this.amazonAnacondaShadow) {
+            this.amazonAnacondaShadow.update(delta);
         }
 
         tickCausticsLayer(this.causticsLayer, delta);

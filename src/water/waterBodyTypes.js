@@ -140,7 +140,7 @@ export const WaterBodyTypes = {
         flowDirection: new THREE.Vector2(1, 0),
         /** Wide, slow current — Amazon-scale river, not a rapid. */
         flowSpeed: 0.56,
-        flowMapStrength: 0.82,
+        flowMapStrength: 0.77,
         hasFlow: true,
         windScroll1: new THREE.Vector2(0.03, 0.0),
         windScroll2: new THREE.Vector2(0.02, 0.0)

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 let cachedTexture = null;
-const TEXTURE_VERSION = 5;
+const TEXTURE_VERSION = 6;
 
 function seededRandom(seed) {
     let s = seed;
@@ -101,7 +101,7 @@ export function createRiverFlowTexture() {
         const bandH = 12 + rand() * 22;
         const grad = ctx.createLinearGradient(0, y - bandH * 0.5, 0, y + bandH * 0.5);
         grad.addColorStop(0, 'rgba(255,255,255,0)');
-        grad.addColorStop(0.5, `rgba(200,220,240,${0.025 + rand() * 0.032})`);
+        grad.addColorStop(0.5, `rgba(200,220,240,${0.02 + rand() * 0.026})`);
         grad.addColorStop(1, 'rgba(255,255,255,0)');
         ctx.fillStyle = grad;
         ctx.fillRect(0, y - bandH * 0.5, width, bandH);
@@ -112,7 +112,7 @@ export function createRiverFlowTexture() {
         const y = rand() * height;
         const x = rand() * width;
         const length = 90 + rand() * 300;
-        const alpha = 0.11 + rand() * 0.3;
+        const alpha = 0.09 + rand() * 0.26;
         const wobble = (rand() - 0.5) * 3.2;
 
         ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
@@ -153,7 +153,7 @@ export function createRiverFlowTexture() {
         drawWrappedStreak(ctx, width, x, y, length, 4 + rand() * 7, alpha);
     }
 
-    blendHorizontalSeams(ctx, width, height, 44);
+    blendHorizontalSeams(ctx, width, height, 54);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = THREE.RepeatWrapping;

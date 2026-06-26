@@ -1,4 +1,4 @@
-import Game from './main.js?v=20250625-amazon-water2';
+import Game from './main.js?v=20250625-anaconda-bark2';
 import { api } from './api.js';
 import { initAdRotator } from './ads.js';
 import { ensureProloguePack, prefetchProloguePack, startDeferredPackDownload } from './assetPack.js';

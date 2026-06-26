@@ -15,8 +15,23 @@ export const VOICEOVER_LINES = {
     cast: [],
     reel: [],
     bigCatch: [],
-    miss: []
+    miss: [],
+    anaconda: [
+        { text: '…That is NOT a fish.' },
+        { text: 'Note to self: stay on the dock.' },
+        { text: 'My worm suddenly feels very, very small.' },
+        { text: 'Was that a snake or did the river grow eyebrows?' },
+        { text: 'I only catch fish. That catches nightmares.' },
+        { text: 'Purr-fectly fine. Totally fine. Not moving.' },
+        { text: 'Tell me that was a floating log. Lie to me.' },
+        { text: 'The jungle special just swam by…' },
+        { text: 'My tail says we should have brought a bigger boat.' },
+        { text: 'I came for catfish. Not… whatever THAT is.' }
+    ]
 };
 
 /** Minimum ms between tap barks (avoid spam). */
 export const VOICEOVER_TAP_COOLDOWN_MS = 1400;
+
+/** Minimum ms between anaconda sighting barks. */
+export const VOICEOVER_ANACONDA_COOLDOWN_MS = 8000;

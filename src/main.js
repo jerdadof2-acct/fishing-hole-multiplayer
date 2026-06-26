@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Scene } from './scene.js';
 import { Cat, applyCatPlatformHeight } from './cat.js?v=20260622-deploy';
-import { Water2Lake } from './water2.js?v=20250625-amazon-water2';
+import { Water2Lake } from './water2.js?v=20250625-anaconda-bark2';
 import { Grass } from './grass.js';
 import { Dock } from './dock.js';
 import { Platform } from './platform.js';
@@ -23,7 +23,12 @@ import {
     AmazonDepthsAmbience,
     CrescentPondAmbience
 } from './audio/locationMusic.js?v=20250625-pond-ambience';
-import { VOICEOVER_TAP_COOLDOWN_MS } from './config/voiceover.js';
+import { VOICEOVER_TAP_COOLDOWN_MS, VOICEOVER_ANACONDA_COOLDOWN_MS } from './config/voiceover.js';
+
+/** How close the snake must pass Halley's look point (world XZ) to trigger a bark. */
+const ANACONDA_BARK_X_RADIUS = 5.5;
+const ANACONDA_BARK_Z_RADIUS = 5.0;
+const ANACONDA_BARK_LOOK_AHEAD_Z = 2.4;
 import { Player } from './player.js';
 import { Inventory } from './inventory.js';
 import { Leaderboard } from './leaderboard.js';
@@ -119,7 +124,7 @@ export class Game {
         }
     }
 
-    showCatBark(text) {
+    showCatBark(text, durationMs = 1600) {
         const bubble = document.getElementById('cat-bark-bubble');
         const canvas = this.scene?.renderer?.domElement;
         const camera = this.scene?.camera;
@@ -151,7 +156,61 @@ export class Game {
         this._catBarkTimer = window.setTimeout(() => {
             bubble.classList.remove('visible');
             bubble.classList.add('hidden');
-        }, 1600);
+        }, durationMs);
+    }
+
+    onAmazonAnacondaSighted() {
+        if (!this._revealed || !this.locations) {
+            return;
+        }
+        if (this.locations.getCurrentLocation()?.name !== AMAZON_DEPTHS_NAME) {
+            return;
+        }
+
+        const now = Date.now();
+        if (now - (this._lastAnacondaBarkAt || 0) < VOICEOVER_ANACONDA_COOLDOWN_MS) {
+            return;
+        }
+        this._lastAnacondaBarkAt = now;
+
+        this.voiceover?.playRandom('anaconda', {
+            onSpeak: (text) => this.showCatBark(text, 2800)
+        });
+    }
+
+    checkAnacondaInFrontOfCat() {
+        const shadow = this.water?.amazonAnacondaShadow;
+        if (!shadow?.isSwimming?.()) {
+            this._anacondaBarkedThisCrossing = false;
+            return;
+        }
+
+        if (this._anacondaBarkedThisCrossing) {
+            return;
+        }
+
+        if (!this._revealed || this.locations?.getCurrentLocation()?.name !== AMAZON_DEPTHS_NAME) {
+            return;
+        }
+
+        const catPos = this.platform?.getSurfacePosition?.()
+            || this.cat?.getModel?.()?.getWorldPosition?.(new THREE.Vector3());
+        if (!catPos) {
+            return;
+        }
+
+        const lookX = catPos.x;
+        const lookZ = catPos.z + ANACONDA_BARK_LOOK_AHEAD_Z;
+        const samples = shadow.getProximitySamplePoints();
+
+        for (const point of samples) {
+            if (Math.abs(point.x - lookX) <= ANACONDA_BARK_X_RADIUS
+                && Math.abs(point.z - lookZ) <= ANACONDA_BARK_Z_RADIUS) {
+                this._anacondaBarkedThisCrossing = true;
+                this.onAmazonAnacondaSighted();
+                return;
+            }
+        }
     }
 
     isCatTapAllowed() {
@@ -348,6 +407,7 @@ export class Game {
             
             // Coral / fjord flags before water type so LAKE+coral tuning applies correctly
             this.water.setCoralReefEnabled(this.locations.getCurrentLocation()?.name === CORAL_KINGDOMS_NAME);
+            this.water.setAmazonAnacondaEnabled(this.locations.getCurrentLocation()?.name === AMAZON_DEPTHS_NAME);
             this.water.setWaterBodyType(currentLocation.waterBodyType);
             this.applyLakeMaskForWaterBody(currentLocation.waterBodyType);
             this.water.setPondSubmergedGrassEnabled(isCrescentPondLocation(this.locations));
@@ -669,6 +729,8 @@ export class Game {
         if (this.water && this.water.update) {
             this.water.update(delta);
         }
+
+        this.checkAnacondaInFrontOfCat();
         
         // Update grass (wind sway)
         if (this.grass) {
@@ -1218,6 +1280,7 @@ export class Game {
         
         // Reef / ice flags before water type so location-specific tuning sticks on return
         this.water.setCoralReefEnabled(location.name === CORAL_KINGDOMS_NAME);
+        this.water.setAmazonAnacondaEnabled(location.name === AMAZON_DEPTHS_NAME);
         this.water.setFjordIceFloesEnabled(location.name === FROZEN_FJORDS_NAME);
         this.water.setWaterBodyType(location.waterBodyType);
         this.applyLakeMaskForWaterBody(location.waterBodyType);

@@ -1,6 +1,12 @@
 import { CELESTIAL_DEPTHS_LOCATION_INDEX, HIDDEN_RELICS } from '../config/hiddenRelics.js';
 import { collectHiddenRelic } from '../hiddenRelics.js';
+import { AMAZON_DEPTHS_NAME } from '../locations.js';
 import { getDevOceanBoatLocations, isDevMode } from './devMode.js';
+
+function getAmazonLocationIndex(locations) {
+    const list = locations?.locations ?? [];
+    return list.findIndex((loc) => loc.name === AMAZON_DEPTHS_NAME);
+}
 
 function grantAllRelics(player) {
     if (!player) return;
@@ -56,6 +62,8 @@ export function initStoryTestPanel(game) {
         <button type="button" data-action="forge">Show forge popup</button>
         <button type="button" data-action="celestial">Go to Celestial Depths</button>
         <button type="button" data-action="reset-starfish">Reset Starfish (first catch)</button>
+        <div class="story-test-panel-section">Amazon Depths</div>
+        <button type="button" data-action="spawn-anaconda">Spawn anaconda shadow</button>
     `;
 
     document.body.appendChild(panel);
@@ -101,6 +109,22 @@ export function initStoryTestPanel(game) {
                 game.fishCollection.save?.({ skipSync: true });
             }
             ui.showBannerNotification?.('Starfish reset — next catch uses the full reunion.', '#a5f3fc', 3500);
+            return;
+        }
+
+        if (action === 'spawn-anaconda') {
+            const amazonIndex = getAmazonLocationIndex(game.locations);
+            const atAmazon = game.locations?.getCurrentLocation()?.name === AMAZON_DEPTHS_NAME;
+            if (!atAmazon && amazonIndex >= 0) {
+                jumpToLocation(game, amazonIndex);
+            }
+            game.water?.setAmazonAnacondaEnabled(true);
+            const spawned = game.water?.forceSpawnAmazonAnaconda?.({ closer: true });
+            if (spawned) {
+                ui.showBannerNotification?.('Anaconda shadow spawned — watch the river.', '#86efac', 3200);
+            } else {
+                ui.showBannerNotification?.('Could not spawn anaconda — water not ready.', '#fca5a5', 3200);
+            }
         }
     });
 
