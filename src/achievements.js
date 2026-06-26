@@ -1,4 +1,4 @@
-import { FishTypes } from './fishTypes.js';
+import { FishTypes, getUnlockedVisibleFishCount } from './fishTypes.js';
 
 const RARE_RARITIES = ['Rare', 'Epic', 'Legendary', 'Trophy'];
 
@@ -30,7 +30,7 @@ function getLegendaryCatchCount(player) {
 
 function getUnlockedFishCount(player) {
     if (!player?.caughtFishCollection) return 0;
-    return Object.values(player.caughtFishCollection).filter(entry => entry?.caught).length;
+    return getUnlockedVisibleFishCount(player.caughtFishCollection);
 }
 
 function getGearCount(player) {
@@ -222,7 +222,7 @@ export const ACHIEVEMENTS = [
             { target: 25, reward: { experience: 210, money: 340 } },
             { target: 30, reward: { experience: 270, money: 450 } },
             { target: 35, reward: { experience: 310, money: 560 } },
-            { target: 37, reward: { experience: 330, money: 600 } } // Complete
+            { target: 38, reward: { experience: 330, money: 600 } } // Full catalog incl. Starfish
         ]
     },
     {

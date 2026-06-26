@@ -4,6 +4,7 @@
  */
 
 import { STARFISH_ID } from './config/starfishEncounter.js';
+import { getFishCollectionOrder, getLocationAssignedFishIdSet } from './locations.js';
 
 export { getFishImagePath, getFishImagePaths } from './utils/imageAssets.js';
 
@@ -56,11 +57,12 @@ export const FishTypes = [
     // Mythic (33)
     { id: 33, name: 'Starfish of Eternity', rarity: 'Mythic', minWeight: 120.0, maxWeight: 220.0, recordWeight: 250.0, value: 5000, experience: 240, season: 'All' },
 
-    // Coral Kingdoms reef fish (34-37)
+    // Coral Kingdoms reef fish (34-38)
     { id: 34, name: 'Clownfish', rarity: 'Common', minWeight: 0.1, maxWeight: 0.35, recordWeight: 0.5, value: 14, experience: 8, season: 'All' },
     { id: 35, name: 'Blue Tang', rarity: 'Uncommon', minWeight: 0.3, maxWeight: 1.8, recordWeight: 2.5, value: 26, experience: 14, season: 'All' },
     { id: 36, name: 'Pufferfish', rarity: 'Uncommon', minWeight: 0.5, maxWeight: 3.5, recordWeight: 5.0, value: 38, experience: 18, season: 'All' },
-    { id: 37, name: 'Lionfish', rarity: 'Rare', minWeight: 1.0, maxWeight: 4.5, recordWeight: 6.5, value: 65, experience: 26, season: 'All' }
+    { id: 37, name: 'Lionfish', rarity: 'Rare', minWeight: 1.0, maxWeight: 4.5, recordWeight: 6.5, value: 65, experience: 26, season: 'All' },
+    { id: 38, name: 'Queen Angelfish', rarity: 'Epic', minWeight: 0.8, maxWeight: 3.2, recordWeight: 4.8, value: 92, experience: 34, season: 'All' }
 ];
 
 // Fish facts database
@@ -102,7 +104,8 @@ export const FishFacts = {
     'Clownfish': { fact: 'Lives among stinging sea anemones in a fearless partnership.', fun: 'Every reef has that one neighbor who never pays rent!', real: 'All clownfish hatch male; the dominant fish can become female to lead the colony.' },
     'Blue Tang': { fact: 'A surgeonfish with a razor-sharp spine tucked near its tail.', fun: 'Grazes algae all day — the reef\'s original lawn service!', real: 'Uses its caudal spine for defense and is a powerful algae grazer on coral reefs.' },
     'Pufferfish': { fact: 'Inflates into a spiky ball when threatened and packs a potent toxin.', fun: 'Looks cuddly until you make it mad — then it\'s a beach ball with attitude!', real: 'Many species contain tetrodotoxin; their fused teeth form a beak for crushing shells.' },
-    'Lionfish': { fact: 'Striped ambush hunter with venomous dorsal spines.', fun: 'Fans out its fins like a underwater lion\'s mane before it pounces!', real: 'Native to the Indo-Pacific; invasive in the Atlantic where it has few natural predators.' }
+    'Lionfish': { fact: 'Striped ambush hunter with venomous dorsal spines.', fun: 'Fans out its fins like a underwater lion\'s mane before it pounces!', real: 'Native to the Indo-Pacific; invasive in the Atlantic where it has few natural predators.' },
+    'Queen Angelfish': { fact: 'Electric blue and gold royalty of the reef — fiercely territorial around its home coral head.', fun: 'Dresses fancier than the tourists and knows it!', real: 'Holacanthus ciliaris pairs for life and can live over 15 years on Caribbean reefs.' }
 };
 
 /**
@@ -112,6 +115,40 @@ export const FishFacts = {
  */
 export function getFishTypeById(id) {
     return FishTypes.find(fish => fish.id === id) || null;
+}
+
+/**
+ * Fish species shown in the collection, ordered by location unlock progression.
+ * Orphaned species (not assigned to any location) are excluded.
+ * Starfish is hidden until first catch.
+ * @param {Record<number, { caught?: boolean }>} [caughtFishCollection]
+ * @param {Array<{ fish?: number[], unlockLevel?: number }>} [locations]
+ */
+export function getVisibleCollectionFishTypes(caughtFishCollection = {}, locations = undefined) {
+    const assignedIds = getLocationAssignedFishIdSet(locations);
+    const orderedIds = getFishCollectionOrder(locations);
+
+    return orderedIds
+        .map((id) => getFishTypeById(id))
+        .filter((fish) => {
+            if (!fish || !assignedIds.has(fish.id)) return false;
+            if (fish.id === STARFISH_ID) {
+                return caughtFishCollection[STARFISH_ID]?.caught === true;
+            }
+            return true;
+        });
+}
+
+/** Total species in the collection catalog for this save. */
+export function getCollectionSpeciesTotal(caughtFishCollection = {}, locations = undefined) {
+    return getVisibleCollectionFishTypes(caughtFishCollection, locations).length;
+}
+
+/** Caught species that count toward collection progress. */
+export function getUnlockedVisibleFishCount(caughtFishCollection = {}, locations = undefined) {
+    return getVisibleCollectionFishTypes(caughtFishCollection, locations)
+        .filter((fish) => caughtFishCollection[fish.id]?.caught === true)
+        .length;
 }
 
 /**

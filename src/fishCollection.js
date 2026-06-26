@@ -8,7 +8,11 @@ import {
     getFishImagePaths,
     warmImageCache
 } from './utils/imageAssets.js';
-import { FishTypes } from './fishTypes.js';
+import {
+    FishTypes,
+    getCollectionSpeciesTotal,
+    getUnlockedVisibleFishCount
+} from './fishTypes.js';
 
 export { resolveFishImagePath as getFishImagePath, getFishImagePaths };
 
@@ -72,10 +76,10 @@ export class FishCollection {
      * @returns {Object} {caught, total, percentage}
      */
     getCollectionStats() {
-        const total = FishTypes.length;
-        const caught = Object.values(this.caughtFishCollection).filter(f => f.caught).length;
-        const percentage = Math.round((caught / total) * 100);
-        
+        const total = getCollectionSpeciesTotal(this.caughtFishCollection);
+        const caught = getUnlockedVisibleFishCount(this.caughtFishCollection);
+        const percentage = total > 0 ? Math.round((caught / total) * 100) : 0;
+
         return { caught, total, percentage };
     }
     

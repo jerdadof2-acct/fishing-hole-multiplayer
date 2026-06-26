@@ -4,6 +4,7 @@ import { replayStoryPrologue } from './prologue.js';
 import { STARLIGHT_LURE_IMAGE, isStarlightLureBait } from './config/hiddenRelics.js';
 import { isCelestialStarfishHook } from './config/starfishEncounter.js';
 import { getFishImagePaths, getRelicImagePaths } from './utils/imageAssets.js';
+import { getCollectionSpeciesTotal, getUnlockedVisibleFishCount } from './fishTypes.js';
 import { switchToDifferentAccount } from './savePinSetup.js';
 import { pickMissMessage } from './config/missMessages.js';
 import { hasPrivilegedAccess } from './admin/adminAuth.js';
@@ -1069,7 +1070,7 @@ export class UI {
                     }
                 } catch (error) {
                     console.warn('[UI] Failed to load fish types:', error);
-                    this.totalFishTypes = 37;
+                    this.totalFishTypes = 38;
                 }
             }
 
@@ -1089,9 +1090,9 @@ export class UI {
 
         const caughtFish = data.caughtFish || {};
         const totals = data.totals || {};
-        const uniqueFish = totals.uniqueFish ?? Object.values(caughtFish).filter(entry => entry && entry.caught !== false).length;
+        const uniqueFish = getUnlockedVisibleFishCount(caughtFish);
         const totalCatches = totals.totalCatches ?? Object.values(caughtFish).reduce((sum, entry) => sum + (entry?.count || 0), 0);
-        const totalSpecies = this.totalFishTypes ?? 0;
+        const totalSpecies = getCollectionSpeciesTotal(caughtFish);
 
         const displayName = this.safeText(friendMeta?.display_name || data.displayName || friendMeta?.username || data.username || 'Angler');
         const level = friendMeta?.level ?? data.level ?? '-';
@@ -2028,8 +2029,10 @@ export class UI {
                 }).join('');
             }
         } else if (tab === 'collection') {
-            import('./fishTypes.js').then(({ FishTypes }) => {
+            import('./fishTypes.js').then(({ FishTypes, getVisibleCollectionFishTypes }) => {
                 const collection = this.fishCollection ? this.fishCollection.getAllCollectionData() : {};
+                const locations = this.game?.locations?.getLocations?.();
+                const visibleFish = getVisibleCollectionFishTypes(collection, locations);
                 
                 // Get biggest catch for each fish from inventory
                 const getBiggestCatchForFish = (fishId) => {
@@ -2057,14 +2060,14 @@ export class UI {
                 };
                 
                 // Check if collection data exists and has fish
-                if (!FishTypes || FishTypes.length === 0) {
+                if (!visibleFish || visibleFish.length === 0) {
                     inventoryContent.innerHTML = '<p style="text-align: center; color: rgba(255,255,255,0.5); padding: 40px;">Loading fish data...</p>';
             return;
         }
         
                 inventoryContent.innerHTML = `
                     <div class="collection-grid">
-                        ${FishTypes.map(fish => {
+                        ${visibleFish.map(fish => {
                             const fishData = collection[fish.id];
                             const isCaught = fishData && fishData.caught === true;
                             const catchCount = fishData ? (fishData.count || 0) : 0;
@@ -4217,7 +4220,8 @@ export class UI {
 
     getAchievementContext() {
         const totalLocations = this.game?.locations?.locations?.length || 0;
-        const totalFish = this.totalFishTypes ?? 37;
+        const locations = this.game?.locations?.getLocations?.();
+        const totalFish = getCollectionSpeciesTotal(this.player?.caughtFishCollection, locations);
         return {
             totalLocations,
             totalFish

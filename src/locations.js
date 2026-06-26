@@ -33,7 +33,7 @@ export class Locations {
             {
                 name: 'Coral Kingdoms',
                 difficulty: 'Medium',
-                fish: [34, 35, 36, 37],
+                fish: [34, 35, 36, 37, 38],
                 cost: 50,
                 unlockLevel: 3,
                 description: 'Shallow reefs hiding treasures that remember your name',
@@ -168,4 +168,44 @@ export class Locations {
         const location = this.getCurrentLocation();
         return location ? location.platformType : 'DOCK';
     }
+}
+
+/**
+ * Fish IDs assigned to at least one location (excludes orphaned species).
+ * @param {Array<{ fish?: number[], unlockLevel?: number }>} [locations]
+ */
+export function getLocationAssignedFishIdSet(locations = new Locations().locations) {
+    const ids = new Set();
+    for (const location of locations) {
+        for (const fishId of location.fish || []) {
+            ids.add(fishId);
+        }
+    }
+    return ids;
+}
+
+/**
+ * Collection display order: locations by unlock level, fish in each location's list
+ * (first appearance only when a species appears in multiple locations).
+ * @param {Array<{ fish?: number[], unlockLevel?: number }>} [locations]
+ * @returns {number[]}
+ */
+export function getFishCollectionOrder(locations = new Locations().locations) {
+    const indexed = locations.map((loc, index) => ({ loc, index }));
+    indexed.sort((a, b) => {
+        const levelDiff = (a.loc.unlockLevel ?? 0) - (b.loc.unlockLevel ?? 0);
+        return levelDiff !== 0 ? levelDiff : a.index - b.index;
+    });
+
+    const seen = new Set();
+    const orderedIds = [];
+    for (const { loc } of indexed) {
+        for (const fishId of loc.fish || []) {
+            if (!seen.has(fishId)) {
+                seen.add(fishId);
+                orderedIds.push(fishId);
+            }
+        }
+    }
+    return orderedIds;
 }

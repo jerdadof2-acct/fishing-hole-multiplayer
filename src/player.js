@@ -1,5 +1,8 @@
 import { TackleShop, getTackleByName } from './tackleShop.js';
-import { FishTypes } from './fishTypes.js';
+import {
+    getCollectionSpeciesTotal,
+    getUnlockedVisibleFishCount
+} from './fishTypes.js';
 import {
     CELESTIAL_DEPTHS_LOCATION_INDEX,
     HIDDEN_RELICS,
@@ -431,10 +434,10 @@ export class Player {
      * @returns {Object} {caught, total, percentage}
      */
     getCollectionStats() {
-        const total = FishTypes.length;
-        const caught = Object.values(this.caughtFishCollection).filter(f => f.caught).length;
-        const percentage = Math.round((caught / total) * 100);
-        
+        const total = getCollectionSpeciesTotal(this.caughtFishCollection);
+        const caught = getUnlockedVisibleFishCount(this.caughtFishCollection);
+        const percentage = total > 0 ? Math.round((caught / total) * 100) : 0;
+
         return { caught, total, percentage };
     }
     
