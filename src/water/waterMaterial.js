@@ -160,9 +160,9 @@ export function makeWaterMaterial({
       vec2 uv1;
       vec2 uv2;
       if (uRiverMode > 0.5) {
-        float scroll = flowScrollT * 0.34;
-        uv1 = vec2(along * 0.17 + scroll, across * 0.22) * 2.0;
-        uv2 = vec2(along * 0.26 + scroll * 1.32 + 0.35, across * 0.34 + 0.12) * 2.8;
+        float scroll = flowScrollT * 0.31;
+        uv1 = vec2(along * 0.145 + scroll, across * 0.19) * 1.72;
+        uv2 = vec2(along * 0.22 + scroll * 1.26 + 0.35, across * 0.28 + 0.12) * 2.4;
       } else {
         vec2 flowOffset = uFlowDirection * flowScrollT;
         vec2 flowScroll = flowOffset * 2.0;
@@ -171,7 +171,7 @@ export function makeWaterMaterial({
       }
       vec3 n1 = texture2D(uNormal1, uv1).xyz * 2.0 - 1.0;
       vec3 n2 = texture2D(uNormal2, uv2).xyz * 2.0 - 1.0;
-      vec3 n = normalize(vec3(n1.x + n2.x, n1.y * 0.7 + n2.y * 0.7, n1.z + n2.z) + vNormal * (uRiverMode > 0.5 ? 0.18 : 0.35));
+      vec3 n = normalize(vec3(n1.x + n2.x, n1.y * 0.7 + n2.y * 0.7, n1.z + n2.z) + vNormal * (uRiverMode > 0.5 ? 0.24 : 0.35));
 
       vec3 V = normalize(uCamPos - vWorldPos);
       float fres = clamp(uFresnelBias + uFresnelScale * pow(1.0 - max(dot(V, n), 0.0), uFresnelPower), 0.0, 1.0);
@@ -244,19 +244,19 @@ export function makeWaterMaterial({
       vec3 color = base + fres * fresBoost + sparkle + fjordGlint + sunReflectionColor + skyReflection;
 
       if (uRiverMode > 0.5 && uHasFlowMap > 0.5 && uFlowMapStrength > 0.0) {
-        float scroll = flowScrollT * 0.28;
-        vec2 flowUV1 = vec2(along * 0.055 + scroll, across * 0.14 + 0.31);
-        vec2 flowUV2 = vec2(along * 0.09 + scroll * 1.22 + 0.27, across * 0.2 + 0.08);
-        vec2 flowUV3 = vec2(along * 0.038 + scroll * 0.72 + 0.61, across * 0.1 + 0.52);
+        float scroll = flowScrollT * 0.25;
+        vec2 flowUV1 = vec2(along * 0.048 + scroll, across * 0.125 + 0.31);
+        vec2 flowUV2 = vec2(along * 0.078 + scroll * 1.18 + 0.27, across * 0.18 + 0.08);
+        vec2 flowUV3 = vec2(along * 0.034 + scroll * 0.68 + 0.61, across * 0.09 + 0.52);
         float streak1 = sampleFlow(flowUV1);
         float streak2 = sampleFlow(flowUV2);
         float streak3 = sampleFlow(flowUV3);
-        float streak = pow(clamp(streak1 * 0.7 + streak2 * 0.55 + streak3 * 0.35, 0.0, 1.0), 1.05);
+        float streak = pow(clamp(streak1 * 0.66 + streak2 * 0.51 + streak3 * 0.31, 0.0, 1.0), 1.2);
         vec3 flowTint = vec3(0.78, 0.64, 0.46);
-        color += flowTint * streak * uFlowMapStrength * (0.38 + fres * 0.72);
-        color = mix(color, color + vec3(0.14, 0.09, 0.05) * streak, uFlowMapStrength * 0.48);
-        float vein = smoothstep(0.3, 0.82, streak);
-        color += vec3(0.12, 0.08, 0.04) * vein * uFlowMapStrength * 0.18;
+        color += flowTint * streak * uFlowMapStrength * (0.33 + fres * 0.62);
+        color = mix(color, color + vec3(0.12, 0.08, 0.045) * streak, uFlowMapStrength * 0.41);
+        float vein = smoothstep(0.34, 0.85, streak);
+        color += vec3(0.1, 0.068, 0.035) * vein * uFlowMapStrength * 0.15;
       } else if (uFlowSpeed > 0.0 && uHasFlowMap > 0.5 && uFlowMapStrength > 0.0) {
         vec2 fPerp2 = vec2(-fDir.y, fDir.x);
         float along2 = dot(worldXZ, fDir);

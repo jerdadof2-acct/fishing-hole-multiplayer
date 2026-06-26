@@ -1138,17 +1138,17 @@ export class Water2Lake {
                 vec2 fPerp = vec2(-fDir.y, fDir.x);
                 float along = dot(p, fDir);
                 float across = dot(p, fPerp);
-                float scroll = uFlowSpeed * uTime * 1.15;
+                float scroll = uFlowSpeed * uTime * 1.08;
                 
-                float r1 = sin(along * 7.5 - scroll * 3.2) * waveAmplitude;
-                float r2 = sin(along * 13.0 - scroll * 5.5) * waveAmplitude * 0.45;
-                float r3 = sin(along * 4.2 - scroll * 1.8) * waveAmplitude * 0.65;
-                float cross = sin(across * 2.8 + scroll * 0.35) * waveAmplitude * 0.07;
+                float r1 = sin(along * 6.2 - scroll * 2.8) * waveAmplitude;
+                float r2 = sin(along * 10.5 - scroll * 4.8) * waveAmplitude * 0.42;
+                float r3 = sin(along * 3.6 - scroll * 1.6) * waveAmplitude * 0.58;
+                float cross = sin(across * 2.4 + scroll * 0.32) * waveAmplitude * 0.055;
                 base = (r1 + r2 + r3 + cross) * waveScale;
                 
-                float dAlong1 = 7.5 * waveAmplitude * waveScale * cos(along * 7.5 - scroll * 3.2);
-                float dAlong2 = 13.0 * waveAmplitude * waveScale * 0.45 * cos(along * 13.0 - scroll * 5.5);
-                float dAlong3 = 4.2 * waveAmplitude * waveScale * 0.65 * cos(along * 4.2 - scroll * 1.8);
+                float dAlong1 = 6.2 * waveAmplitude * waveScale * cos(along * 6.2 - scroll * 2.8);
+                float dAlong2 = 10.5 * waveAmplitude * waveScale * 0.42 * cos(along * 10.5 - scroll * 4.8);
+                float dAlong3 = 3.6 * waveAmplitude * waveScale * 0.58 * cos(along * 3.6 - scroll * 1.6);
                 float dAlong = dAlong1 + dAlong2 + dAlong3;
                 dx = -dAlong * fDir.x;
                 dz = -dAlong * fDir.y;

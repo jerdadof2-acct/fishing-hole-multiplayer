@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 let cachedTexture = null;
-const TEXTURE_VERSION = 3;
+const TEXTURE_VERSION = 5;
 
 function seededRandom(seed) {
     let s = seed;
@@ -96,27 +96,27 @@ export function createRiverFlowTexture() {
     ctx.fillRect(0, 0, width, height);
 
     // Soft horizontal bands — constant across U (no vertical striping), seamless by nature.
-    for (let band = 0; band < 8; band++) {
-        const y = (band + rand() * 0.55) * (height / 8);
-        const bandH = 10 + rand() * 18;
+    for (let band = 0; band < 9; band++) {
+        const y = (band + rand() * 0.55) * (height / 9);
+        const bandH = 12 + rand() * 22;
         const grad = ctx.createLinearGradient(0, y - bandH * 0.5, 0, y + bandH * 0.5);
         grad.addColorStop(0, 'rgba(255,255,255,0)');
-        grad.addColorStop(0.5, `rgba(200,220,240,${0.03 + rand() * 0.04})`);
+        grad.addColorStop(0.5, `rgba(200,220,240,${0.025 + rand() * 0.032})`);
         grad.addColorStop(1, 'rgba(255,255,255,0)');
         ctx.fillStyle = grad;
         ctx.fillRect(0, y - bandH * 0.5, width, bandH);
     }
 
     // Long horizontal streaks with soft ends; wrap-aware so tiles cleanly.
-    for (let i = 0; i < 95; i++) {
+    for (let i = 0; i < 72; i++) {
         const y = rand() * height;
         const x = rand() * width;
-        const length = 80 + rand() * 320;
-        const alpha = 0.14 + rand() * 0.42;
-        const wobble = (rand() - 0.5) * 4;
+        const length = 90 + rand() * 300;
+        const alpha = 0.11 + rand() * 0.3;
+        const wobble = (rand() - 0.5) * 3.2;
 
         ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
-        ctx.lineWidth = 0.9 + rand() * 2.4;
+        ctx.lineWidth = 1.1 + rand() * 3.0;
         ctx.lineCap = 'round';
 
         const xEnd = x + length;
@@ -145,15 +145,15 @@ export function createRiverFlowTexture() {
     }
 
     // Broad soft streaks with gradient caps (primary flow read).
-    for (let i = 0; i < 48; i++) {
+    for (let i = 0; i < 36; i++) {
         const y = rand() * height;
         const x = rand() * width;
-        const length = 120 + rand() * 280;
-        const alpha = 0.08 + rand() * 0.18;
-        drawWrappedStreak(ctx, width, x, y, length, 3 + rand() * 6, alpha);
+        const length = 130 + rand() * 290;
+        const alpha = 0.065 + rand() * 0.15;
+        drawWrappedStreak(ctx, width, x, y, length, 4 + rand() * 7, alpha);
     }
 
-    blendHorizontalSeams(ctx, width, height, 40);
+    blendHorizontalSeams(ctx, width, height, 44);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = THREE.RepeatWrapping;

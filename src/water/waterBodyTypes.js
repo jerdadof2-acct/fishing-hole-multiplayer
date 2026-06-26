@@ -128,22 +128,22 @@ export const WaterBodyTypes = {
         fogColor: new THREE.Color(0x6b5340),
         fogDepth: 9.0,
         fogIntensity: 0.55,
-        turbidity: 0.78,
+        turbidity: 0.82,
         absorption: 0.82,
         opacity: 0.97,
-        sparkleStrength: 0.07,
+        sparkleStrength: 0.058,
         /** No lake swell — only directional flow ripples in the vertex shader. */
         riverMode: true,
-        waveScale: 1.0,
-        waveSpeed: 1.6,
-        waveAmplitude: 0.022,
+        waveScale: 0.91,
+        waveSpeed: 1.48,
+        waveAmplitude: 0.018,
         flowDirection: new THREE.Vector2(1, 0),
         /** Wide, slow current — Amazon-scale river, not a rapid. */
-        flowSpeed: 0.62,
-        flowMapStrength: 0.95,
+        flowSpeed: 0.56,
+        flowMapStrength: 0.82,
         hasFlow: true,
-        windScroll1: new THREE.Vector2(0.038, 0.0),
-        windScroll2: new THREE.Vector2(0.026, 0.0)
+        windScroll1: new THREE.Vector2(0.03, 0.0),
+        windScroll2: new THREE.Vector2(0.02, 0.0)
     },
     
     LAKE: {
