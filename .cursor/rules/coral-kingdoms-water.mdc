@@ -1,0 +1,33 @@
+---
+description: Locked Coral Kingdoms shallow bay water — persists across location travel
+globs:
+  - src/water/waterBodyTypes.js
+  - src/water2.js
+  - src/main.js
+  - src/locations.js
+---
+
+# Coral Kingdoms water (locked)
+
+**Coral Kingdoms** uses `waterBodyType: 'LAKE'` but its own shallow tropical bay palette — not generic LAKE colors.
+
+## Locked values (`src/water/waterBodyTypes.js`)
+
+| Role | Hex |
+|------|-----|
+| Shallow | `#42C4FF` (bright aqua blue) |
+| Deep | `#186890` |
+| Fog | `#2A88B8` |
+
+- **Helper:** `applyCoralKingdomsWaterColors(material)`
+- Also clears `uFlatWater` / `uOpaqueDeep` so Fjord-style flat water never bleeds in.
+
+## Location switch order (`main.js`)
+
+Call **`setCoralReefEnabled` before `setWaterBodyType`** so returning to Coral Kingdoms re-applies bay colors and reef bed/caustics in one pass.
+
+## Rules
+
+- Do not use generic LAKE deep blue (`#004466`) at Coral Kingdoms.
+- `_syncCoralKingdomsBed` must call `applyCoralKingdomsWaterColors` when reef is active.
+- `setWaterBodyType('LAKE')` must call `applyCoralKingdomsWaterColors` when `_coralReefLocationEnabled` is true.

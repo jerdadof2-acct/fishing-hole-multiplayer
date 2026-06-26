@@ -41,6 +41,7 @@ export function updateFishShadowSprite(shadow, fishPosition, waterY = 0, visible
 
 /**
  * Scrolling caustics on the lake bed (additive plane just under the surface).
+ * World-space UVs + dual-layer soft blend hide tile seams and axis-aligned lines.
  * @param {object} scene
  * @param {number} groundSize
  * @param {number} waterY
@@ -59,51 +60,111 @@ export function createCausticsLayer(scene, groundSize, waterY, options = {}) {
         : '/assets/textures/caustics_loop.jpg';
     const texture = loader.load(
         texPath,
+        (tex) => {
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            tex.minFilter = THREE.LinearMipmapLinearFilter;
+            tex.magFilter = THREE.LinearFilter;
+            tex.generateMipmaps = true;
+        },
         undefined,
-        undefined,
-        () => loader.load('/assets/textures/caustics_loop.jpg')
+        () => loader.load('/assets/textures/caustics_loop-sm.jpg', (tex) => {
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        })
     );
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(6, 6);
 
-    const excludeBounds = options.excludeBounds || null;
     const lakeMask = options.lakeMask || null;
-    const material = new THREE.MeshBasicMaterial({
-        map: texture,
+    const excludeBounds = options.excludeBounds || null;
+    const rot = 0.27;
+    const defaultOpacity = isMobile ? 0.22 : 0.34;
+
+    const material = new THREE.ShaderMaterial({
+        uniforms: {
+            uMap: { value: texture },
+            uOffset1: { value: new THREE.Vector2(0.19, 0.33) },
+            uOffset2: { value: new THREE.Vector2(0.47, 0.11) },
+            uOpacity: { value: defaultOpacity },
+            uMask: { value: lakeMask },
+            uHasMask: { value: lakeMask ? 1.0 : 0.0 },
+            uExcludeBounds: { value: excludeBounds || new THREE.Vector4() },
+            uHasExclude: { value: excludeBounds ? 1.0 : 0.0 },
+            uGroundSize: { value: groundSize },
+            uWorldScale1: { value: 0.044 },
+            uWorldScale2: { value: 0.029 },
+            uRotCos: { value: Math.cos(rot) },
+            uRotSin: { value: Math.sin(rot) }
+        },
+        vertexShader: `
+            varying vec3 vWorldPos;
+            void main() {
+                vec4 worldPos = modelMatrix * vec4(position, 1.0);
+                vWorldPos = worldPos.xyz;
+                gl_Position = projectionMatrix * viewMatrix * worldPos;
+            }
+        `,
+        fragmentShader: `
+            uniform sampler2D uMap;
+            uniform sampler2D uMask;
+            uniform float uHasMask;
+            uniform vec4 uExcludeBounds;
+            uniform float uHasExclude;
+            uniform float uGroundSize;
+            uniform vec2 uOffset1;
+            uniform vec2 uOffset2;
+            uniform float uOpacity;
+            uniform float uWorldScale1;
+            uniform float uWorldScale2;
+            uniform float uRotCos;
+            uniform float uRotSin;
+            varying vec3 vWorldPos;
+
+            void main() {
+                if (uHasMask > 0.5) {
+                    vec2 maskUv = vec2(
+                        vWorldPos.x / uGroundSize + 0.5,
+                        1.0 - (vWorldPos.z / uGroundSize + 0.5)
+                    );
+                    if (texture2D(uMask, maskUv).r < 0.42) {
+                        discard;
+                    }
+                }
+
+                if (uHasExclude > 0.5) {
+                    if (
+                        vWorldPos.x > uExcludeBounds.x &&
+                        vWorldPos.x < uExcludeBounds.y &&
+                        vWorldPos.z > uExcludeBounds.z &&
+                        vWorldPos.z < uExcludeBounds.w
+                    ) {
+                        discard;
+                    }
+                }
+
+                vec2 wp = vWorldPos.xz;
+                vec2 rot = vec2(
+                    wp.x * uRotCos - wp.y * uRotSin,
+                    wp.x * uRotSin + wp.y * uRotCos
+                );
+
+                vec2 uv1 = rot * uWorldScale1 + uOffset1;
+                vec2 uv2 = rot * uWorldScale2 + uOffset2;
+                float c1 = texture2D(uMap, uv1).r;
+                float c2 = texture2D(uMap, uv2).r;
+                float c3 = texture2D(uMap, uv1 + vec2(0.012, -0.009)).r;
+                float c4 = texture2D(uMap, uv2 + vec2(-0.008, 0.011)).r;
+                float blended = c1 * 0.34 + c2 * 0.3 + c3 * 0.2 + c4 * 0.16;
+                float soft = smoothstep(0.14, 0.76, blended);
+                soft = pow(soft, 1.5);
+                vec3 tint = vec3(0.76, 0.91, 1.0);
+                gl_FragColor = vec4(tint, soft * uOpacity);
+            }
+        `,
         transparent: true,
-        opacity: isMobile ? 0.22 : 0.36,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
         depthTest: true,
-        alphaMap: lakeMask || null,
-        alphaTest: lakeMask ? 0.42 : 0
+        side: THREE.DoubleSide
     });
-
-    if (excludeBounds) {
-        material.onBeforeCompile = (shader) => {
-            shader.uniforms.uExcludeBounds = { value: excludeBounds };
-            shader.vertexShader = `varying vec3 vCausticsWorldPos;\n${shader.vertexShader}`;
-            shader.vertexShader = shader.vertexShader.replace(
-                '#include <worldpos_vertex>',
-                `#include <worldpos_vertex>
-                vCausticsWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;`
-            );
-            shader.fragmentShader = `varying vec3 vCausticsWorldPos;\nuniform vec4 uExcludeBounds;\n${shader.fragmentShader}`;
-            shader.fragmentShader = shader.fragmentShader.replace(
-                '#include <map_fragment>',
-                `#include <map_fragment>
-                if (
-                    vCausticsWorldPos.x > uExcludeBounds.x &&
-                    vCausticsWorldPos.x < uExcludeBounds.y &&
-                    vCausticsWorldPos.z > uExcludeBounds.z &&
-                    vCausticsWorldPos.z < uExcludeBounds.w
-                ) {
-                    discard;
-                }`
-            );
-        };
-        material.customProgramCacheKey = () => 'caustics-dock-exclude';
-    }
 
     const mesh = new THREE.Mesh(
         new THREE.PlaneGeometry(groundSize * 0.92, groundSize * 0.92),
@@ -113,17 +174,54 @@ export function createCausticsLayer(scene, groundSize, waterY, options = {}) {
     mesh.position.y = waterY - 0.035;
     mesh.renderOrder = -1;
     mesh.name = 'WaterCaustics';
-    mesh.userData.scrollSpeed = new THREE.Vector2(0.0005, 0.0003);
+    mesh.userData.scrollSpeed1 = new THREE.Vector2(0.00038, 0.00024);
+    mesh.userData.scrollSpeed2 = new THREE.Vector2(-0.00022, 0.00034);
+    mesh.userData.causticsMode = 'default';
     scene.add(mesh);
     return mesh;
 }
 
+/** Tune caustics for Coral Kingdoms reef — fewer seams, no axis line through boat. */
+export function setCausticsLayerMode(causticsMesh, mode = 'default') {
+    const mat = causticsMesh?.material;
+    if (!mat?.uniforms) return;
+
+    const isMobile = typeof navigator !== 'undefined'
+        && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    causticsMesh.userData.causticsMode = mode;
+
+    if (mode === 'reef') {
+        const rot = 0.41;
+        mat.uniforms.uOpacity.value = isMobile ? 0.16 : 0.21;
+        mat.uniforms.uWorldScale1.value = 0.028;
+        mat.uniforms.uWorldScale2.value = 0.019;
+        mat.uniforms.uRotCos.value = Math.cos(rot);
+        mat.uniforms.uRotSin.value = Math.sin(rot);
+        mat.uniforms.uOffset1.value.set(0.53, 0.21);
+        mat.uniforms.uOffset2.value.set(0.17, 0.64);
+    } else {
+        const rot = 0.27;
+        mat.uniforms.uOpacity.value = isMobile ? 0.22 : 0.34;
+        mat.uniforms.uWorldScale1.value = 0.044;
+        mat.uniforms.uWorldScale2.value = 0.029;
+        mat.uniforms.uRotCos.value = Math.cos(rot);
+        mat.uniforms.uRotSin.value = Math.sin(rot);
+        mat.uniforms.uOffset1.value.set(0.19, 0.33);
+        mat.uniforms.uOffset2.value.set(0.47, 0.11);
+    }
+}
+
 export function tickCausticsLayer(causticsMesh, delta) {
-    if (!causticsMesh?.material?.map) return;
-    const speed = causticsMesh.userData.scrollSpeed;
-    const map = causticsMesh.material.map;
-    map.offset.x += speed.x * delta * 60;
-    map.offset.y += speed.y * delta * 60;
+    const uniforms = causticsMesh?.material?.uniforms;
+    if (!uniforms?.uOffset1) return;
+
+    const s1 = causticsMesh.userData.scrollSpeed1;
+    const s2 = causticsMesh.userData.scrollSpeed2;
+    const dt = delta * 60;
+    uniforms.uOffset1.value.x += s1.x * dt;
+    uniforms.uOffset1.value.y += s1.y * dt;
+    uniforms.uOffset2.value.x += s2.x * dt;
+    uniforms.uOffset2.value.y += s2.y * dt;
 }
 
 /**

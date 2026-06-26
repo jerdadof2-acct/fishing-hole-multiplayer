@@ -219,6 +219,18 @@ canvas {
     display: none !important;
 }
 
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 .visible {
     display: flex !important;
 }
@@ -584,6 +596,11 @@ canvas {
     justify-content: center;
     padding: 20px;
     backdrop-filter: blur(5px);
+}
+
+/* Stacked above inventory / collection modals */
+.fish-details-popup {
+    z-index: 11200;
 }
 
 .modal-content {

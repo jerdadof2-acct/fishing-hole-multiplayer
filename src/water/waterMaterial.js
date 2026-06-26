@@ -23,7 +23,9 @@ export function makeWaterMaterial({
   lakeBedMap = null,
   flowMap = null,
   flowMapStrength = 0.0,
-  riverMode = false
+  riverMode = false,
+  opaqueDeepWater = false,
+  flatWaterColor = false
 }) {
   normalMap1.wrapS = normalMap1.wrapT = THREE.RepeatWrapping;
   normalMap2.wrapS = normalMap2.wrapT = THREE.RepeatWrapping;
@@ -61,7 +63,10 @@ export function makeWaterMaterial({
     uFlowMap: { value: flowMap },
     uHasFlowMap: { value: flowMap ? 1.0 : 0.0 },
     uFlowMapStrength: { value: flowMapStrength },
-    uRiverMode: { value: riverMode ? 1.0 : 0.0 }
+    uRiverMode: { value: riverMode ? 1.0 : 0.0 },
+    uOpaqueDeep: { value: opaqueDeepWater ? 1.0 : 0.0 },
+    uFlatWater: { value: flatWaterColor ? 1.0 : 0.0 },
+    uSandBed: { value: 0.0 }
   };
 
   const vert = /* glsl */`
@@ -112,6 +117,9 @@ export function makeWaterMaterial({
     uniform float uHasFlowMap;
     uniform float uFlowMapStrength;
     uniform float uRiverMode;
+    uniform float uOpaqueDeep;
+    uniform float uFlatWater;
+    uniform float uSandBed;
 
     varying vec3 vWorldPos;
     varying vec3 vNormal;
@@ -173,8 +181,36 @@ export function makeWaterMaterial({
       if (uRiverMode > 0.5) {
         float scroll = flowScrollT * 0.24;
         sparkle *= step(0.93, hash(vec2(along * 0.14 + scroll, across * 0.08)));
+      } else if (uFlatWater > 0.5) {
+        sparkle *= step(0.992, hash(vWorldPos.xz * 0.08 + uTime * 0.06)) * 0.35;
       } else {
         sparkle *= step(0.98, hash(vUv + uTime * 0.1));
+      }
+
+      vec3 L = normalize(uSunDir);
+      vec3 H = normalize(L + V);
+      float ndh = max(dot(n, H), 0.0);
+
+      vec3 fjordGlint = vec3(0.0);
+      if (uFlatWater > 0.5) {
+        vec2 glintCell = vWorldPos.xz * 0.11;
+        vec2 glintId = floor(glintCell);
+        vec2 glintLocal = fract(glintCell) - 0.5;
+        float clusterPhase = hash(glintId) * 6.28318;
+        float clusterBurst = smoothstep(0.68, 0.96, sin(uTime * 0.38 + clusterPhase) * 0.5 + 0.5);
+        float globalPulse = smoothstep(0.5, 0.9, sin(uTime * 0.19 + 2.1) * 0.5 + 0.5);
+        float pointGate = step(0.84, hash(glintId + 1.73));
+        float spot = 1.0 - smoothstep(0.0, 0.38, length(glintLocal));
+        float glintMask = clusterBurst * globalPulse * pointGate * spot;
+
+        float glintSpec = pow(ndh, 200.0) * ndl;
+        vec3 glintTint = vec3(0.9, 0.95, 1.0);
+        fjordGlint += glintTint * glintSpec * glintMask * uSparkleStrength * 5.5;
+
+        float streakGate = step(0.975, hash(vWorldPos.xz * 0.15 + floor(uTime * 0.32)));
+        float streakPulse = smoothstep(0.6, 0.95, sin(uTime * 0.27 + hash(vWorldPos.xz * 0.03) * 6.28318) * 0.5 + 0.5);
+        float streakSpec = pow(ndh, 140.0) * ndl;
+        fjordGlint += glintTint * streakSpec * streakGate * streakPulse * uSparkleStrength * 2.8;
       }
 
       float distFromCamera = length(uCamPos - vWorldPos);
@@ -183,13 +219,14 @@ export function makeWaterMaterial({
       float depth = max(depthY, depthDistance * 0.6);
       depth = pow(depth, 1.35);
 
-      vec3 base = mix(uColorShallow, uColorDeep, depth);
+      float depthBlend = uSandBed > 0.5 ? pow(depth, 2.5) : depth;
+      vec3 base = mix(uColorShallow, uColorDeep, depthBlend);
+      if (uFlatWater > 0.5) {
+        base = uColorDeep;
+      }
       float absorptionFactor = 1.0 - (depth * uAbsorption * 0.45);
-      base *= max(absorptionFactor, 0.35);
+      base *= max(absorptionFactor, uFlatWater > 0.5 ? 0.92 : 0.35);
 
-      vec3 L = normalize(uSunDir);
-      vec3 H = normalize(L + V);
-      float ndh = max(dot(n, H), 0.0);
       float spec = pow(ndh, 180.0);
       float sunSpecIntensity = (uFlowSpeed > 0.0) ? 1.5 : 1.0;
       float sunSpec = spec * ndl * fres * sunSpecIntensity;
@@ -199,8 +236,12 @@ export function makeWaterMaterial({
       vec3 R = reflect(-V, n);
       float skyFres = pow(1.0 - max(dot(V, n), 0.0), 2.4);
       vec3 skyReflection = sampleSky(R) * skyFres * uEnvIntensity;
+      if (uFlatWater > 0.5) {
+        skyReflection *= 0.18;
+      }
 
-      vec3 color = base + fres * 0.22 + sparkle + sunReflectionColor + skyReflection;
+      float fresBoost = uFlatWater > 0.5 ? 0.05 : 0.22;
+      vec3 color = base + fres * fresBoost + sparkle + fjordGlint + sunReflectionColor + skyReflection;
 
       if (uRiverMode > 0.5 && uHasFlowMap > 0.5 && uFlowMapStrength > 0.0) {
         float scroll = flowScrollT * 0.28;
@@ -232,22 +273,49 @@ export function makeWaterMaterial({
       }
 
       if (uHasLakeBed > 0.5) {
-        vec2 bedUV = vWorldPos.xz * 0.042;
+        vec2 bedXZ = vWorldPos.xz;
+        if (uSandBed > 0.5) {
+          float cs = 0.9553;
+          float sn = 0.2955;
+          bedXZ = vec2(bedXZ.x * cs - bedXZ.y * sn, bedXZ.x * sn + bedXZ.y * cs);
+        }
+        vec2 bedUV = bedXZ * (uSandBed > 0.5 ? 0.02 : 0.042);
         vec3 bed = texture2D(uLakeBed, bedUV).rgb;
+        if (uSandBed > 0.5) {
+          vec3 bedB = texture2D(uLakeBed, bedUV + vec2(0.005, 0.003)).rgb;
+          vec3 bedC = texture2D(uLakeBed, bedUV + vec2(-0.004, 0.005)).rgb;
+          vec3 bedD = texture2D(uLakeBed, bedUV + vec2(0.003, -0.004)).rgb;
+          bed = (bed + bedB + bedC + bedD) * 0.25;
+        }
         float shallow = 1.0 - depth;
         shallow = pow(shallow, 2.2);
-        vec3 bedTint = uRiverMode > 0.5 ? vec3(0.9, 0.74, 0.52) : vec3(0.72, 0.86, 0.98);
-        float bedMix = uRiverMode > 0.5 ? shallow * 0.24 : shallow * 0.38;
+        vec3 bedTint = uSandBed > 0.5
+          ? vec3(0.58, 0.84, 0.98)
+          : (uRiverMode > 0.5 ? vec3(0.9, 0.74, 0.52) : vec3(0.72, 0.86, 0.98));
+        float bedMix = uSandBed > 0.5
+          ? shallow * 0.16
+          : (uRiverMode > 0.5 ? shallow * 0.24 : shallow * 0.38);
+        if (uOpaqueDeep > 0.5) {
+          bedMix *= (1.0 - pow(clamp(depth, 0.0, 1.0), 1.6));
+        }
         color = mix(color, bed * bedTint, bedMix);
       }
 
       float fogAmount = depth * uFogIntensity;
       float turbidityAmount = depth * uTurbidity;
-      color = mix(color, uFogColor, fogAmount * 0.28);
-      color = mix(color, uFogColor * 0.7, turbidityAmount * 0.18);
+      if (uFlatWater < 0.5) {
+        color = mix(color, uFogColor, fogAmount * 0.28);
+        color = mix(color, uFogColor * 0.7, turbidityAmount * 0.18);
+      }
 
-      float finalOpacity = mix(uOpacity, uOpacity + (1.0 - uOpacity) * 0.45, depth);
-      finalOpacity = mix(finalOpacity * 0.58, finalOpacity, depth);
+      float finalOpacity;
+      if (uOpaqueDeep > 0.5) {
+        float d = pow(clamp(depth, 0.0, 1.0), uFlatWater > 0.5 ? 0.35 : 0.65);
+        finalOpacity = mix(uOpacity * (uFlatWater > 0.5 ? 0.95 : 0.78), 1.0, d);
+      } else {
+        finalOpacity = mix(uOpacity, uOpacity + (1.0 - uOpacity) * 0.45, depth);
+        finalOpacity = mix(finalOpacity * 0.58, finalOpacity, depth);
+      }
 
       gl_FragColor = vec4(color, finalOpacity);
     }

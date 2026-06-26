@@ -1,0 +1,23 @@
+---
+description: Locked Frozen Fjords water color — do not change without explicit user approval
+globs:
+  - src/water/waterBodyTypes.js
+  - src/water/waterMaterial.js
+  - src/water2.js
+  - src/locations.js
+---
+
+# Frozen Fjords water (locked)
+
+**Frozen Fjords** (`waterBodyType: 'FJORD'`) uses a single approved water color:
+
+- **Hex:** `#314D76`
+- **Constant:** `FROZEN_FJORD_WATER_HEX` in `src/water/waterBodyTypes.js`
+- **Apply helper:** `applyFrozenFjordWaterColors(material)` — use when touching fjord water uniforms
+
+## Rules
+
+- Deep, shallow, and fog colors must all stay `#314D76` (flat water — no depth tint).
+- Do **not** change `FROZEN_FJORD_WATER_HEX` or fjord `deepColor` / `shallowColor` / `fogColor` unless the user explicitly asks.
+- When editing `setWaterBodyType` or water init, keep the `FJORD` branch calling `applyFrozenFjordWaterColors`.
+- Scene fog / lighting in `main.js` (`applyLocationEnvironment` FJORD block) may differ — only **water surface** color is locked here.

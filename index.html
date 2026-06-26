@@ -151,6 +151,7 @@
                         <h3>Save PIN</h3>
                         <p id="save-pin-status" class="friends-tip">Private — use on a new device to restore your progress. Not shared with friends.</p>
                         <form id="save-pin-form" class="friends-add-form hidden">
+                            <input type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" class="visually-hidden" value="save-pin" readonly />
                             <input type="password" id="save-pin-input" class="friends-input" placeholder="4–6 digit PIN" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="new-password" />
                             <input type="password" id="save-pin-confirm" class="friends-input" placeholder="Confirm PIN" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="new-password" />
                             <button type="submit" class="friends-submit-button">Set Save PIN</button>
@@ -277,6 +278,7 @@
                         Your account needs a private save PIN so you can restore progress on a new device. Keep it secret — it's not your friend code.
                     </p>
                     <form id="save-pin-setup-form" class="username-form">
+                        <input type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" class="visually-hidden" value="save-pin" readonly />
                         <input
                             type="password"
                             id="save-pin-setup-input"
@@ -375,7 +377,7 @@
             });
         })();
     </script>
-    <script type="module" src="src/bootstrap.js?v=20250625-pine-shape"></script>
+    <script type="module" src="src/bootstrap.js?v=20250625-coral-shadows2"></script>
 </body>
 </html>
 

@@ -18,6 +18,10 @@ function clampVolume(value) {
 export const AMAZON_DEPTHS_AMBIENCE_URL = '/src/audio/lookingnorth-river-flow-473686.mp3';
 export const AMAZON_DEPTHS_AMBIENCE_VOLUME = 0.38;
 
+export const CRESCENT_POND_AMBIENCE_URL =
+    '/src/audio/freesound_community-water-lap-against-rocks-lake-27442.mp3';
+export const CRESCENT_POND_AMBIENCE_VOLUME = 0.34;
+
 export class LoopingLocationAmbience {
     /**
      * @param {{ resolveSource: () => string, peakVolume: number }} options
@@ -205,6 +209,15 @@ export class AmazonDepthsAmbience extends LoopingLocationAmbience {
         super({
             resolveSource: () => AMAZON_DEPTHS_AMBIENCE_URL,
             peakVolume: AMAZON_DEPTHS_AMBIENCE_VOLUME
+        });
+    }
+}
+
+export class CrescentPondAmbience extends LoopingLocationAmbience {
+    constructor() {
+        super({
+            resolveSource: () => CRESCENT_POND_AMBIENCE_URL,
+            peakVolume: CRESCENT_POND_AMBIENCE_VOLUME
         });
     }
 }

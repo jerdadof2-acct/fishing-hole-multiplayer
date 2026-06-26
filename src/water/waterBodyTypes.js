@@ -3,6 +3,101 @@
 import * as THREE from 'three';
 
 /**
+ * Design-locked Frozen Fjords water color (#314D76).
+ * Approved June 2025 — do not change deep/shallow/fog without explicit user approval.
+ * @see applyFrozenFjordWaterColors
+ */
+export const FROZEN_FJORD_WATER_HEX = 0x314d76;
+
+function frozenFjordWaterColor() {
+    return new THREE.Color(FROZEN_FJORD_WATER_HEX);
+}
+
+/** Re-apply locked fjord water colors to live shader uniforms. */
+export function applyFrozenFjordWaterColors(material) {
+    if (!material?.uniforms?.uColorDeep) {
+        return;
+    }
+    const locked = frozenFjordWaterColor();
+    material.uniforms.uColorDeep.value.copy(locked);
+    material.uniforms.uColorShallow.value.copy(locked);
+    material.uniforms.uFogColor.value.copy(locked);
+}
+
+/**
+ * Design-locked Coral Kingdoms shallow tropical bay water.
+ * Light blue-green — must persist when leaving and returning from other locations.
+ */
+export const CORAL_KINGDOMS_WATER_DEEP_HEX = 0x186890;
+export const CORAL_KINGDOMS_WATER_SHALLOW_HEX = 0x42c4ff;
+export const CORAL_KINGDOMS_WATER_FOG_HEX = 0x2a88b8;
+
+export const CORAL_KINGDOMS_WATER_TUNING = {
+    absorption: 0.28,
+    turbidity: 0.04,
+    opacity: 0.76,
+    fogIntensity: 0.22,
+    fogDepth: 8.0,
+    sparkleStrength: 0.34
+};
+
+/** Re-apply locked Coral Kingdoms bay water to live shader uniforms. */
+export function applyCoralKingdomsWaterColors(material) {
+    if (!material?.uniforms) {
+        return;
+    }
+    const u = material.uniforms;
+    u.uColorDeep.value.setHex(CORAL_KINGDOMS_WATER_DEEP_HEX);
+    u.uColorShallow.value.setHex(CORAL_KINGDOMS_WATER_SHALLOW_HEX);
+    u.uFogColor.value.setHex(CORAL_KINGDOMS_WATER_FOG_HEX);
+    u.uAbsorption.value = CORAL_KINGDOMS_WATER_TUNING.absorption;
+    u.uTurbidity.value = CORAL_KINGDOMS_WATER_TUNING.turbidity;
+    u.uOpacity.value = CORAL_KINGDOMS_WATER_TUNING.opacity;
+    u.uFogIntensity.value = CORAL_KINGDOMS_WATER_TUNING.fogIntensity;
+    u.uFogDepth.value = CORAL_KINGDOMS_WATER_TUNING.fogDepth;
+    if (u.uSparkleStrength) {
+        u.uSparkleStrength.value = CORAL_KINGDOMS_WATER_TUNING.sparkleStrength;
+    }
+    if (u.uOpaqueDeep) {
+        u.uOpaqueDeep.value = 0.0;
+    }
+    if (u.uFlatWater) {
+        u.uFlatWater.value = 0.0;
+    }
+    if (u.uHasLakeBed) {
+        u.uHasLakeBed.value = 1.0;
+    }
+    if (u.uEnvIntensity) {
+        u.uEnvIntensity.value = 0.44;
+    }
+}
+
+/** Restore default LAKE water uniforms (when leaving Coral Kingdoms). */
+export function applyLakeWaterColors(material, config = getWaterBodyConfig('LAKE')) {
+    if (!material?.uniforms || !config) {
+        return;
+    }
+    const u = material.uniforms;
+    u.uColorDeep.value.copy(config.deepColor);
+    u.uColorShallow.value.copy(config.shallowColor);
+    u.uFogColor.value.copy(config.fogColor);
+    u.uAbsorption.value = config.absorption;
+    u.uTurbidity.value = config.turbidity;
+    u.uOpacity.value = config.opacity;
+    u.uFogIntensity.value = config.fogIntensity;
+    u.uFogDepth.value = config.fogDepth;
+    if (u.uSparkleStrength) {
+        u.uSparkleStrength.value = config.sparkleStrength;
+    }
+    if (u.uOpaqueDeep) {
+        u.uOpaqueDeep.value = 0.0;
+    }
+    if (u.uFlatWater) {
+        u.uFlatWater.value = 0.0;
+    }
+}
+
+/**
  * Water body type configurations
  * Each type has distinct visual properties to make them look different
  */
@@ -67,6 +162,26 @@ export const WaterBodyTypes = {
         waveAmplitude: 0.07,                     // Normal wave amplitude (lake-specific, default)
         windScroll1: new THREE.Vector2(0.025, 0.012),
         windScroll2: new THREE.Vector2(-0.012, 0.018)
+    },
+
+    FJORD: {
+        name: 'Frozen Fjord',
+        deepColor: frozenFjordWaterColor(),
+        shallowColor: frozenFjordWaterColor(),
+        fogColor: frozenFjordWaterColor(),
+        fogDepth: 24.0,
+        fogIntensity: 0.35,
+        turbidity: 0.04,
+        absorption: 0.95,
+        opacity: 1.0,
+        opaqueDeepWater: true,
+        flatWaterColor: true,
+        sparkleStrength: 0.14,
+        waveScale: 0.82,
+        waveSpeed: 1.35,
+        waveAmplitude: 0.042,
+        windScroll1: new THREE.Vector2(0.014, 0.007),
+        windScroll2: new THREE.Vector2(-0.008, 0.011)
     },
     
     OCEAN: {

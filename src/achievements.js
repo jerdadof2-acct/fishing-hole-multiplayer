@@ -218,10 +218,11 @@ export const ACHIEVEMENTS = [
         tiers: [
             { target: 5, reward: { experience: 70, money: 100 } },
             { target: 10, reward: { experience: 110, money: 170 } },
-            { target: 17, reward: { experience: 160, money: 240 } }, // Half (33/2 = 16.5, rounded up)
+            { target: 17, reward: { experience: 160, money: 240 } },
             { target: 25, reward: { experience: 210, money: 340 } },
             { target: 30, reward: { experience: 270, money: 450 } },
-            { target: 33, reward: { experience: 330, money: 600 } } // Complete
+            { target: 35, reward: { experience: 310, money: 560 } },
+            { target: 37, reward: { experience: 330, money: 600 } } // Complete
         ]
     },
     {

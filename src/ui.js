@@ -1069,7 +1069,7 @@ export class UI {
                     }
                 } catch (error) {
                     console.warn('[UI] Failed to load fish types:', error);
-                    this.totalFishTypes = 33;
+                    this.totalFishTypes = 37;
                 }
             }
 
@@ -3764,6 +3764,7 @@ export class UI {
             // Create detailed fish stats popup
             const popup = document.createElement('div');
             popup.id = 'fish-details-popup';
+            popup.className = 'fish-details-popup';
             popup.style.cssText = `
                 position: fixed;
                 top: 50%;
@@ -3775,7 +3776,6 @@ export class UI {
                 border-radius: 15px;
                 border: 2px solid ${rarityColor};
                 box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
-                z-index: 10002;
                 font-family: 'Arial', sans-serif;
                 max-width: 500px;
                 max-height: 90vh;
@@ -4217,7 +4217,7 @@ export class UI {
 
     getAchievementContext() {
         const totalLocations = this.game?.locations?.locations?.length || 0;
-        const totalFish = 33; // Total number of fish types in the game
+        const totalFish = this.totalFishTypes ?? 37;
         return {
             totalLocations,
             totalFish

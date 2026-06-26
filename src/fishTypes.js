@@ -1,6 +1,6 @@
 /**
  * Fish Type System
- * Defines all 33 fish types with their properties and facts
+ * Defines all fish types with their properties and facts
  */
 
 import { STARFISH_ID } from './config/starfishEncounter.js';
@@ -54,7 +54,13 @@ export const FishTypes = [
     { id: 32, name: 'Trophy King', rarity: 'Trophy', minWeight: 200.0, maxWeight: 500.0, value: 1500, experience: 110, season: 'All' },
     
     // Mythic (33)
-    { id: 33, name: 'Starfish of Eternity', rarity: 'Mythic', minWeight: 120.0, maxWeight: 220.0, recordWeight: 250.0, value: 5000, experience: 240, season: 'All' }
+    { id: 33, name: 'Starfish of Eternity', rarity: 'Mythic', minWeight: 120.0, maxWeight: 220.0, recordWeight: 250.0, value: 5000, experience: 240, season: 'All' },
+
+    // Coral Kingdoms reef fish (34-37)
+    { id: 34, name: 'Clownfish', rarity: 'Common', minWeight: 0.1, maxWeight: 0.35, recordWeight: 0.5, value: 14, experience: 8, season: 'All' },
+    { id: 35, name: 'Blue Tang', rarity: 'Uncommon', minWeight: 0.3, maxWeight: 1.8, recordWeight: 2.5, value: 26, experience: 14, season: 'All' },
+    { id: 36, name: 'Pufferfish', rarity: 'Uncommon', minWeight: 0.5, maxWeight: 3.5, recordWeight: 5.0, value: 38, experience: 18, season: 'All' },
+    { id: 37, name: 'Lionfish', rarity: 'Rare', minWeight: 1.0, maxWeight: 4.5, recordWeight: 6.5, value: 65, experience: 26, season: 'All' }
 ];
 
 // Fish facts database
@@ -92,7 +98,11 @@ export const FishFacts = {
     'Trophy Sturgeon': { fact: 'Ancient giant of the rivers.', fun: 'Older than your grandpa and twice as wise!', real: 'Some reach over 15 feet long.' },
     'Trophy Catfish': { fact: 'Freshwater giant with suction cup mouth.', fun: 'Named "Trophy" because it won first place!', real: 'World record catfish was over 300 lbs.' },
     'Trophy King': { fact: 'The ultimate catch - king of all fish!', fun: 'Rules the depths with an iron fin!', real: 'Crown jewel of any angler\'s collection.' },
-    'Starfish of Eternity': { fact: 'Born the same night as Halleycat under the comet\'s glow.', fun: 'Remembers every wish whispered to the sea.', real: 'Glows with bioluminescent patterns that mirror constellations.' }
+    'Starfish of Eternity': { fact: 'Born the same night as Halleycat under the comet\'s glow.', fun: 'Remembers every wish whispered to the sea.', real: 'Glows with bioluminescent patterns that mirror constellations.' },
+    'Clownfish': { fact: 'Lives among stinging sea anemones in a fearless partnership.', fun: 'Every reef has that one neighbor who never pays rent!', real: 'All clownfish hatch male; the dominant fish can become female to lead the colony.' },
+    'Blue Tang': { fact: 'A surgeonfish with a razor-sharp spine tucked near its tail.', fun: 'Grazes algae all day — the reef\'s original lawn service!', real: 'Uses its caudal spine for defense and is a powerful algae grazer on coral reefs.' },
+    'Pufferfish': { fact: 'Inflates into a spiky ball when threatened and packs a potent toxin.', fun: 'Looks cuddly until you make it mad — then it\'s a beach ball with attitude!', real: 'Many species contain tetrodotoxin; their fused teeth form a beak for crushing shells.' },
+    'Lionfish': { fact: 'Striped ambush hunter with venomous dorsal spines.', fun: 'Fans out its fins like a underwater lion\'s mane before it pounces!', real: 'Native to the Indo-Pacific; invasive in the Atlantic where it has few natural predators.' }
 };
 
 /**

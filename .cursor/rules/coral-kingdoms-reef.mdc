@@ -1,0 +1,50 @@
+---
+description: Locked Coral Kingdoms reef — colonies, spacing, size, shapes, and fish shadows
+globs:
+  - src/effects/coralReefStructures.js
+  - src/effects/reefFishShadows.js
+  - src/effects/reefSandTexture.js
+  - src/water2.js
+  - src/main.js
+---
+
+# Coral Kingdoms reef (locked)
+
+**Do not change the Coral Kingdoms reef** (colony count, spacing, size multiplier, procedural shapes, palette, bed offset, or reef fish shadows) **unless the user explicitly asks** to modify the coral reef.
+
+Coral Kingdoms is toggled via `setCoralReefEnabled(true)` when `location.name === 'Coral Kingdoms'`. Call it **before** `setWaterBodyType` (see `coral-kingdoms-water.mdc`).
+
+## Locked placement (`src/effects/coralReefStructures.js`)
+
+| Constant | Value |
+|----------|-------|
+| `REEF_BED_OFFSET` | `0.28` |
+| `TARGET_COLONIES` | `210` |
+| `TARGET_FILLER_COLONIES` | `95` |
+| `TARGET_LARGE_COLONIES` | `16` |
+| `MIN_COLONY_SPACING` | `1.35` |
+| `MIN_FILLER_SPACING` | `0.95` |
+| `MIN_LARGE_SPACING` | `4.6` |
+| `MIN_DIST_FROM_BOAT` | `3` |
+| `MAX_DIST_FROM_BOAT` | `20` |
+| `CORAL_SIZE_MULTIPLIER` | `2.0` |
+| `REEF_WIDTH_BOOST` | `1.75` |
+| `LARGE_REEF_WIDTH_BOOST` | `2.65` |
+| `HEIGHT_FILL` | `0.96` |
+
+## Locked look
+
+- **Palette:** six coral colors (pink, orange, magenta, teal, sand, purple) with flat-shaded `MeshStandardMaterial`.
+- **Shapes:** jagged octahedron mounds, 4-sided knobby branches/tubes, flat plate fans, staghorn plates, table slabs — **not** smooth cones/spheres/toruses.
+- **Large colonies:** twin branches, mega fan clusters, table coral, boulder mounds (see `buildLargeCoralColony`).
+- **Sand bed:** cool pale sand via `reefSandTexture.js`; caustics mode `'reef'` on bed.
+
+## Reef fish shadows (`src/effects/reefFishShadows.js`)
+
+- Ambient fish **shadow sprites** only (no fish meshes) swimming in the reef ring.
+- Active only when coral reef is enabled; tied to `setCoralReefEnabled`.
+
+## Integration (`water2.js`)
+
+- `CoralReefStructures` + `ReefFishShadows` created together; both follow `_coralReefLocationEnabled`.
+- `_syncCoralKingdomsBed` owns sand bed, caustics Y, and `applyCoralKingdomsWaterColors` when reef is active.

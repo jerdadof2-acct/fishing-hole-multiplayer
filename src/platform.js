@@ -724,13 +724,13 @@ export class Platform {
         );
         
         // Debug helper: report max extents to track down protruding geometry
-        this.reportPlatformExtents(this.platformMesh, hullOuterEdge, 'SMALL_BOAT', this.smallBoatWidth, boatLength);
+        this.reportPlatformExtents(this.platformMesh, hullOuterEdge, 'SMALL_BOAT', boatLength);
         
         // Store initial rotation for animation
         this.platformMesh.userData.initialRotation = new THREE.Euler(0, 0, 0);
     }
     
-    reportPlatformExtents(group, maxAbsXAllowed, label, maxAbsZAllowed = null, boatLength = null) {
+    reportPlatformExtents(group, maxAbsXAllowed, label, boatLength = null) {
         if (!group || typeof maxAbsXAllowed !== 'number') {
             return;
         }
@@ -740,13 +740,19 @@ export class Platform {
         if (isMobile) {
             return;
         }
+
+        const maxAbsZLimit = typeof boatLength === 'number' && boatLength > 0
+            ? boatLength * 0.5
+            : null;
         
         try {
-            const limitText = maxAbsZAllowed
-                ? `limits x=${maxAbsXAllowed.toFixed(3)} z=${(maxAbsZAllowed * 0.5).toFixed(3)}`
+            const limitText = maxAbsZLimit != null
+                ? `limits x=${maxAbsXAllowed.toFixed(3)} z=${maxAbsZLimit.toFixed(3)}`
                 : `limit x=${maxAbsXAllowed.toFixed(3)}`;
             console.log(`[PLATFORM][${label}] Checking mesh extents (${limitText})`);
             group.updateMatrixWorld(true);
+            const groupInverse = new THREE.Matrix4().copy(group.matrixWorld).invert();
+            const childInGroup = new THREE.Matrix4();
             let maxAbsX = 0;
             let maxAbsZ = 0;
             const offenders = [];
@@ -763,8 +769,9 @@ export class Platform {
                     if (!localBox) {
                         return;
                     }
-                    const worldBox = localBox.clone().applyMatrix4(child.matrixWorld);
-                    const childMaxAbs = Math.max(Math.abs(worldBox.min.x), Math.abs(worldBox.max.x));
+                    childInGroup.multiplyMatrices(groupInverse, child.matrixWorld);
+                    const groupBox = localBox.clone().applyMatrix4(childInGroup);
+                    const childMaxAbs = Math.max(Math.abs(groupBox.min.x), Math.abs(groupBox.max.x));
                     if (childMaxAbs > maxAbsX) {
                         maxAbsX = childMaxAbs;
                     }
@@ -773,9 +780,9 @@ export class Platform {
                         outOfBounds = true;
                     }
                     
-                    if (maxAbsZAllowed) {
-                        const childMaxZAbs = Math.max(Math.abs(worldBox.min.z), Math.abs(worldBox.max.z));
-                        if (childMaxZAbs > maxAbsZAllowed + 0.005) {
+                    if (maxAbsZLimit != null) {
+                        const childMaxZAbs = Math.max(Math.abs(groupBox.min.z), Math.abs(groupBox.max.z));
+                        if (childMaxZAbs > maxAbsZLimit + 0.005) {
                             outOfBounds = true;
                         }
                         if (childMaxZAbs > maxAbsZ) {
@@ -800,13 +807,15 @@ export class Platform {
                                 z: child.scale.z.toFixed(3)
                             },
                             maxAbs: childMaxAbs,
-                            maxZ: maxAbsZAllowed ? Math.max(Math.abs(worldBox.min.z), Math.abs(worldBox.max.z)) : null
+                            maxZ: maxAbsZLimit != null
+                                ? Math.max(Math.abs(groupBox.min.z), Math.abs(groupBox.max.z))
+                                : null
                         });
                     }
                 }
             });
             
-            const extentText = maxAbsZAllowed
+            const extentText = maxAbsZLimit != null
                 ? `max |x| ${maxAbsX.toFixed(3)}, max |z| ${maxAbsZ.toFixed(3)}`
                 : `max |x| ${maxAbsX.toFixed(3)}`;
             console.log(`[PLATFORM][${label}] Extents: ${extentText}`);
@@ -1619,7 +1628,7 @@ export class Platform {
         });
         
         // Debug helper: report max extents to track down protruding geometry
-        this.reportPlatformExtents(this.platformMesh, hullOuterEdge, 'LARGE_BOAT', this.largeBoatWidth, boatLength);
+        this.reportPlatformExtents(this.platformMesh, hullOuterEdge, 'LARGE_BOAT', boatLength);
         
         // Store initial rotation for animation
         this.platformMesh.userData.initialRotation = new THREE.Euler(0, 0, 0);

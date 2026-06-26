@@ -1,6 +1,13 @@
 import * as THREE from 'three';
-import { makeWaterMaterial } from './water/waterMaterial.js';
-import { getWaterBodyConfig, DEFAULT_WATER_BODY_TYPE, WaterBodyTypes } from './water/waterBodyTypes.js';
+import { makeWaterMaterial } from './water/waterMaterial.js?v=20250625-coral-aqua2';
+import {
+    getWaterBodyConfig,
+    DEFAULT_WATER_BODY_TYPE,
+    WaterBodyTypes,
+    applyFrozenFjordWaterColors,
+    applyCoralKingdomsWaterColors,
+    applyLakeWaterColors
+} from './water/waterBodyTypes.js?v=20250625-coral-aqua2';
 import { createRiverFlowTexture } from './water/riverFlowTexture.js';
 import {
     createRiverDockPostWake,
@@ -14,10 +21,15 @@ import {
     createAmbientSplashRings,
     createCausticsLayer,
     tickAmbientSplashes,
-    tickCausticsLayer
+    tickCausticsLayer,
+    setCausticsLayerMode
 } from './effects/waterAmbience.js';
 import { getDockPostSplashPositions, getStylizedDockWorldBounds } from './scene/stylizedDock.js';
 import { PondSubmergedGrass } from './effects/pondSubmergedGrass.js';
+import { FjordIceFloes } from './effects/fjordIceFloes.js';
+import { CoralReefStructures, REEF_BED_OFFSET } from './effects/coralReefStructures.js';
+import { ReefFishShadows } from './effects/reefFishShadows.js';
+import { createReefSandTexture } from './effects/reefSandTexture.js';
 import { cloneLakeMaskForAlpha } from './buildLakeMask.js';
 
 // Create procedural water normal map if texture is missing
@@ -77,6 +89,13 @@ export class Water2Lake {
         this.lakeBedGround = null;
         this.pondSubmergedGrass = null;
         this._pondGrassLocationEnabled = false;
+        this.fjordIceFloes = null;
+        this._fjordIceLocationEnabled = false;
+        this.coralReef = null;
+        this.reefFishShadows = null;
+        this._coralReefLocationEnabled = false;
+        this._defaultLakeBedY = 0.08;
+        this._defaultCausticsY = 0.035;
     }
     
     /**
@@ -527,11 +546,18 @@ export class Water2Lake {
         if (this.lakeBedGround?.material) {
             this.lakeBedGround.material.alphaMap = this.lakeMaskAlpha;
         }
-        if (this.causticsLayer?.material) {
-            this.causticsLayer.material.alphaMap = this.lakeMaskAlpha;
+        if (this.causticsLayer?.material?.uniforms?.uMask) {
+            this.causticsLayer.material.uniforms.uMask.value = this.lakeMaskAlpha;
+            this.causticsLayer.material.uniforms.uHasMask.value = 1.0;
         }
-        if (this.pondSubmergedGrass) {
+        if (this.pondSubmergedGrass && this._pondGrassLocationEnabled) {
             this.pondSubmergedGrass.rebuild(lakeMask);
+        }
+        if (this.fjordIceFloes && this._fjordIceLocationEnabled) {
+            this.fjordIceFloes.rebuild(lakeMask);
+        }
+        if (this.coralReef && this._coralReefLocationEnabled) {
+            this.coralReef.rebuild(lakeMask);
         }
 
         if (previous && previous !== lakeMask) {
@@ -561,6 +587,125 @@ export class Water2Lake {
     }
 
     /**
+     * Frozen Fjords only — ice chunks bobbing on the surface.
+     * @param {boolean} enabled
+     */
+    setFjordIceFloesEnabled(enabled) {
+        this._fjordIceLocationEnabled = enabled === true;
+        if (this._fjordIceLocationEnabled && this.fjordIceFloes) {
+            this.fjordIceFloes.rebuild(this.lakeMask);
+        }
+        this._syncFjordIceFloesVisibility();
+    }
+
+    _syncFjordIceFloesVisibility() {
+        if (!this.fjordIceFloes) {
+            return;
+        }
+        this.fjordIceFloes.setActive(
+            this._fjordIceLocationEnabled && this.waterBodyType === 'FJORD'
+        );
+    }
+
+    _syncLakeBedDecorVisibility(type) {
+        const waterType = type || this.waterBodyType;
+        const hidePebbles = waterType === 'FJORD' || waterType === 'CELESTIAL';
+        if (this.lakeBedGround) {
+            this.lakeBedGround.visible = !hidePebbles;
+        }
+        if (this.causticsLayer) {
+            this.causticsLayer.visible = waterType !== 'FJORD';
+        }
+    }
+
+    /**
+     * Coral Kingdoms only — submerged reef structures around the boat.
+     * @param {boolean} enabled
+     */
+    setCoralReefEnabled(enabled) {
+        this._coralReefLocationEnabled = enabled === true;
+        if (this.coralReef) {
+            this.coralReef.setActive(this._coralReefLocationEnabled);
+            if (this._coralReefLocationEnabled) {
+                this.coralReef.bedOffset = REEF_BED_OFFSET;
+                this.coralReef.rebuild(this.lakeMask);
+            }
+        }
+        if (this.reefFishShadows) {
+            this.reefFishShadows.setActive(this._coralReefLocationEnabled);
+        }
+        this._syncCoralKingdomsBed();
+        this._syncCoralReefVisibility();
+    }
+
+    _syncCoralKingdomsBed() {
+        const reef = this._coralReefLocationEnabled && this.waterBodyType === 'LAKE';
+        const bedY = reef ? this.waterY - REEF_BED_OFFSET : this.waterY - this._defaultLakeBedY;
+
+        if (this.lakeBedGround) {
+            this.lakeBedGround.position.y = bedY;
+            const mat = this.lakeBedGround.material;
+            if (reef && this.sandBedMap) {
+                mat.map = this.sandBedMap;
+                this.sandBedMap.repeat.set(5, 5);
+                this.sandBedMap.center.set(0.5, 0.5);
+                this.sandBedMap.rotation = 0.31;
+                this.sandBedMap.offset.set(0.22, 0.38);
+                mat.normalMap = null;
+                mat.roughnessMap = null;
+                mat.color.set(0xe8f4fc);
+                mat.roughness = 0.94;
+            } else if (this.pebbleBedColor) {
+                mat.map = this.pebbleBedColor;
+                mat.normalMap = this.pebbleBedNormal;
+                mat.roughnessMap = this.pebbleBedRough;
+                mat.color.set(0xffffff);
+                mat.roughness = 1;
+                if (this.sandBedMap) {
+                    this.sandBedMap.rotation = 0;
+                    this.sandBedMap.offset.set(0, 0);
+                }
+            }
+            mat.needsUpdate = true;
+        }
+
+        if (this.causticsLayer) {
+            if (reef) {
+                this.causticsLayer.visible = true;
+                this.causticsLayer.position.y = bedY + 0.05;
+                setCausticsLayerMode(this.causticsLayer, 'reef');
+            } else {
+                this.causticsLayer.visible = this.waterBodyType !== 'FJORD';
+                this.causticsLayer.position.y = this.waterY - this._defaultCausticsY;
+                setCausticsLayerMode(this.causticsLayer, 'default');
+            }
+        }
+
+        const waterMat = this.mesh?.material;
+        if (waterMat?.uniforms) {
+            const u = waterMat.uniforms;
+            if (u.uLakeBed && this.sandBedMap && this.pebbleBedMap) {
+                u.uLakeBed.value = reef ? this.sandBedMap : this.pebbleBedMap;
+            }
+            if (u.uSandBed) {
+                u.uSandBed.value = reef ? 1.0 : 0.0;
+            }
+            if (reef) {
+                applyCoralKingdomsWaterColors(waterMat);
+            } else if (this.waterBodyType === 'LAKE') {
+                applyLakeWaterColors(waterMat, this.waterBodyConfig);
+            }
+        }
+    }
+
+    _syncCoralReefVisibility() {
+        if (!this.coralReef) {
+            return;
+        }
+        this.coralReef.setActive(this._coralReefLocationEnabled);
+    }
+
+    /**
      * Change water body type (e.g., 'POND', 'RIVER', 'LAKE', 'OCEAN')
      */
     setWaterBodyType(type) {
@@ -582,11 +727,24 @@ export class Water2Lake {
             if (material.uniforms.uEnvIntensity) {
                 material.uniforms.uEnvIntensity.value = type === 'CELESTIAL'
                     ? 0.12
-                    : (type === 'RIVER' ? 0.2 : 0.44);
+                    : (type === 'RIVER' ? 0.2 : (type === 'FJORD' ? 0.08 : 0.44));
             }
             if (material.uniforms.uHasLakeBed) {
-                material.uniforms.uHasLakeBed.value = type === 'CELESTIAL' ? 0.0 : 1.0;
+                material.uniforms.uHasLakeBed.value = (type === 'CELESTIAL' || type === 'FJORD') ? 0.0 : 1.0;
             }
+            if (material.uniforms.uOpaqueDeep) {
+                material.uniforms.uOpaqueDeep.value = this.waterBodyConfig.opaqueDeepWater ? 1.0 : 0.0;
+            }
+            if (material.uniforms.uFlatWater) {
+                material.uniforms.uFlatWater.value = this.waterBodyConfig.flatWaterColor ? 1.0 : 0.0;
+            }
+            if (type === 'FJORD') {
+                applyFrozenFjordWaterColors(material);
+            } else if (type === 'LAKE' && this._coralReefLocationEnabled) {
+                applyCoralKingdomsWaterColors(material);
+            }
+            this._syncLakeBedDecorVisibility(type);
+            this._syncCoralKingdomsBed();
             if (this.waterBodyConfig.waveSpeed !== undefined) {
                 material.uniforms.waveSpeed.value = this.waterBodyConfig.waveSpeed;
             }
@@ -680,14 +838,23 @@ export class Water2Lake {
                 }
             }
 
-            if (this.causticsLayer?.material) {
-                const isMobile = typeof navigator !== 'undefined'
-                    && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-                const base = isMobile ? 0.22 : 0.36;
-                this.causticsLayer.material.opacity = type === 'POND' ? base * 0.55 : base;
+            if (this.causticsLayer?.material?.uniforms?.uOpacity) {
+                if (this._coralReefLocationEnabled && type === 'LAKE') {
+                    setCausticsLayerMode(this.causticsLayer, 'reef');
+                } else {
+                    setCausticsLayerMode(this.causticsLayer, 'default');
+                    const isMobile = typeof navigator !== 'undefined'
+                        && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+                    const base = isMobile ? 0.22 : 0.34;
+                    const mult = type === 'POND'
+                        ? 0.55
+                        : (type === 'FJORD' ? 0.62 : 1.0);
+                    this.causticsLayer.material.uniforms.uOpacity.value = base * mult;
+                }
             }
 
             this._syncPondSubmergedGrassVisibility();
+            this._syncFjordIceFloesVisibility();
         }
     }
 
@@ -708,6 +875,14 @@ export class Water2Lake {
         lakeBedColor.colorSpace = THREE.SRGBColorSpace;
         const lakeBedNormal = configureBedTex(textureLoader.load('/assets/textures/lakeBed/clean_pebbles_nor_gl_1k.jpg'));
         const lakeBedRough = configureBedTex(textureLoader.load('/assets/textures/lakeBed/clean_pebbles_rough_1k.jpg'));
+        this.pebbleBedColor = lakeBedColor;
+        this.pebbleBedNormal = lakeBedNormal;
+        this.pebbleBedRough = lakeBedRough;
+        this.pebbleBedMap = lakeBedColor;
+
+        const sandBedMap = createReefSandTexture(512);
+        sandBedMap.repeat.set(8, 8);
+        this.sandBedMap = sandBedMap;
 
         // Lake bed — visible through shallow water and under caustics
         const ground = new THREE.Mesh(
@@ -793,7 +968,7 @@ export class Water2Lake {
         const envMap = null;
         const envIntensity = this.waterBodyType === 'CELESTIAL'
             ? 0.12
-            : (this.waterBodyType === 'RIVER' ? 0.2 : 0.44);
+            : (this.waterBodyType === 'RIVER' ? 0.2 : (this.waterBodyType === 'FJORD' ? 0.08 : 0.44));
         
         // Get actual sun direction from scene's directional light
         // Directional light position: (-10, 20, 10) = upper left
@@ -830,11 +1005,18 @@ export class Water2Lake {
             opacity: this.waterBodyConfig.opacity,
             envMap,
             envIntensity,
-            lakeBedMap: this.waterBodyType === 'CELESTIAL' ? null : this.lakeBedMap,
+            lakeBedMap: (this.waterBodyType === 'CELESTIAL' || this.waterBodyType === 'FJORD')
+                ? null
+                : this.lakeBedMap,
             flowMap: riverFlowMap,
             flowMapStrength: this.waterBodyConfig.riverMode ? (this.waterBodyConfig.flowMapStrength ?? 0.95) : 0.0,
-            riverMode: this.waterBodyConfig.riverMode === true
+            riverMode: this.waterBodyConfig.riverMode === true,
+            opaqueDeepWater: this.waterBodyConfig.opaqueDeepWater === true,
+            flatWaterColor: this.waterBodyConfig.flatWaterColor === true
         });
+        if (this.waterBodyType === 'FJORD') {
+            applyFrozenFjordWaterColors(waterMaterial);
+        }
         
         // Extend material to support lake mask and ripples (existing functionality)
         waterMaterial.uniforms.lakeMask = { value: this.lakeMask };
@@ -1056,6 +1238,36 @@ export class Water2Lake {
         });
         this.pondSubmergedGrass.create();
         this._syncPondSubmergedGrassVisibility();
+
+        this.fjordIceFloes = new FjordIceFloes(this.sceneRef, {
+            lakeMask: this.lakeMask,
+            groundSize: this.groundSize,
+            waterY: this.waterY
+        });
+        this.fjordIceFloes.create();
+        this._syncFjordIceFloesVisibility();
+
+        this.coralReef = new CoralReefStructures(this.sceneRef, {
+            lakeMask: this.lakeMask,
+            groundSize: this.groundSize,
+            waterY: this.waterY,
+            bedOffset: REEF_BED_OFFSET
+        });
+        this.coralReef.create();
+        this._syncCoralReefVisibility();
+
+        this.reefFishShadows = new ReefFishShadows(this.sceneRef, {
+            lakeMask: this.lakeMask,
+            groundSize: this.groundSize,
+            waterY: this.waterY,
+            bedOffset: REEF_BED_OFFSET
+        });
+        this.reefFishShadows.create();
+        this.reefFishShadows.setActive(this._coralReefLocationEnabled);
+
+        this._syncCoralKingdomsBed();
+
+        this._syncLakeBedDecorVisibility(this.waterBodyType);
         
         // Add helper methods for water animation and splashes
         // Material's tick function is already set up above
@@ -1111,6 +1323,18 @@ export class Water2Lake {
 
         if (this.pondSubmergedGrass) {
             this.pondSubmergedGrass.update(delta);
+        }
+
+        if (this.fjordIceFloes) {
+            this.fjordIceFloes.update(delta, (x, z) => this.getWaterHeight(x, z));
+        }
+
+        if (this.coralReef) {
+            this.coralReef.update(delta);
+        }
+
+        if (this.reefFishShadows) {
+            this.reefFishShadows.update(delta);
         }
 
         tickCausticsLayer(this.causticsLayer, delta);

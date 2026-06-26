@@ -4,6 +4,8 @@
  */
 
 export const AMAZON_DEPTHS_NAME = 'Amazon Depths';
+export const FROZEN_FJORDS_NAME = 'Frozen Fjords';
+export const CORAL_KINGDOMS_NAME = 'Coral Kingdoms';
 
 export class Locations {
     constructor() {
@@ -31,7 +33,7 @@ export class Locations {
             {
                 name: 'Coral Kingdoms',
                 difficulty: 'Medium',
-                fish: [2, 3, 4, 5],
+                fish: [34, 35, 36, 37],
                 cost: 50,
                 unlockLevel: 3,
                 description: 'Shallow reefs hiding treasures that remember your name',
@@ -45,7 +47,7 @@ export class Locations {
                 cost: 200,
                 unlockLevel: 9,
                 description: 'Ice-bound waters where even time can sleep',
-                waterBodyType: 'LAKE',
+                waterBodyType: 'FJORD',
                 platformType: 'SMALL_BOAT'
             },
             {

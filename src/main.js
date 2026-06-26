@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import { Scene } from './scene.js';
 import { Cat, applyCatPlatformHeight } from './cat.js?v=20260622-deploy';
-import { Water2Lake } from './water2.js';
+import { Water2Lake } from './water2.js?v=20250625-coral-shadows2';
 import { Grass } from './grass.js';
 import { Dock } from './dock.js';
 import { Platform } from './platform.js';
-import { Locations, AMAZON_DEPTHS_NAME } from './locations.js';
+import { Locations, AMAZON_DEPTHS_NAME, FROZEN_FJORDS_NAME, CORAL_KINGDOMS_NAME } from './locations.js';
 import { applyDevOceanUnlocks, isDevMode } from './dev/devMode.js';
 import { hasPrivilegedAccess } from './admin/adminAuth.js';
 import { Fishing } from './fishing.js';
@@ -18,7 +18,11 @@ import { SoundManager } from './sound.js';
 import { addWaterParticles } from './effects/waterParticles.js';
 import { Sfx } from './audio/sfx.js';
 import { Voiceover } from './audio/voiceover.js';
-import { CelestialDepthsMusic, AmazonDepthsAmbience } from './audio/locationMusic.js?v=20250625-amazon-ambience';
+import {
+    CelestialDepthsMusic,
+    AmazonDepthsAmbience,
+    CrescentPondAmbience
+} from './audio/locationMusic.js?v=20250625-pond-ambience';
 import { VOICEOVER_TAP_COOLDOWN_MS } from './config/voiceover.js';
 import { Player } from './player.js';
 import { Inventory } from './inventory.js';
@@ -66,6 +70,7 @@ export class Game {
         this.sfx = null;
         this.celestialMusic = new CelestialDepthsMusic();
         this.amazonAmbience = new AmazonDepthsAmbience();
+        this.crescentPondAmbience = new CrescentPondAmbience();
         
         // Gameplay systems
         this.player = null;
@@ -341,10 +346,12 @@ export class Game {
             const currentLocation = this.locations.getCurrentLocation();
             console.log('[LOCATIONS] Current location:', currentLocation.name, 'Water type:', currentLocation.waterBodyType, 'Platform:', currentLocation.platformType);
             
-            // Set water type based on current location
+            // Coral / fjord flags before water type so LAKE+coral tuning applies correctly
+            this.water.setCoralReefEnabled(this.locations.getCurrentLocation()?.name === CORAL_KINGDOMS_NAME);
             this.water.setWaterBodyType(currentLocation.waterBodyType);
             this.applyLakeMaskForWaterBody(currentLocation.waterBodyType);
             this.water.setPondSubmergedGrassEnabled(isCrescentPondLocation(this.locations));
+            this.water.setFjordIceFloesEnabled(this.locations.getCurrentLocation()?.name === FROZEN_FJORDS_NAME);
             this.applyLocationEnvironment(currentLocation);
             this.applyCelestialBaitPreference(currentLocation);
             this.syncLocationMusic(currentLocation);
@@ -592,6 +599,7 @@ export class Game {
         this.lastActivityTime = performance.now();
         this.celestialMusic?.resumeAfterGesture?.();
         this.amazonAmbience?.resumeAfterGesture?.();
+        this.crescentPondAmbience?.resumeAfterGesture?.();
         if (this._portraitIdleActive && this.camera) {
             this._portraitIdleActive = false;
             this.camera.setPortraitMode(false);
@@ -1074,6 +1082,21 @@ export class Game {
                     color: 0xf4f8ff,
                     rotationSpeed: 0
                 }
+            },
+            FJORD: {
+                scene: {
+                    fogColor: 0xc5d4e4,
+                    fogNear: 30,
+                    fogFar: 220,
+                    hemisphereSkyColor: 0xa8bdd4,
+                    hemisphereGroundColor: 0x3a4654,
+                    hemisphereIntensity: 0.62,
+                    directionalColor: 0xe6eef8,
+                    directionalIntensity: 0.68,
+                    ambientColor: 0x647888,
+                    ambientIntensity: 0.4
+                },
+                waterParticles: defaultParticleSettings
             }
         };
 
@@ -1140,21 +1163,32 @@ export class Game {
         const playCelestial = location?.waterBodyType === 'CELESTIAL'
             && this.player?.canAccessCelestialDepths?.() === true;
         const playAmazon = location?.name === AMAZON_DEPTHS_NAME;
+        const playCrescentPond = location?.name === CRESCENT_POND_NAME;
 
         if (playCelestial) {
             this.amazonAmbience?.stop();
+            this.crescentPondAmbience?.stop();
             this.celestialMusic?.start();
             return;
         }
 
         if (playAmazon) {
             this.celestialMusic?.stop();
+            this.crescentPondAmbience?.stop();
             this.amazonAmbience?.start();
+            return;
+        }
+
+        if (playCrescentPond) {
+            this.celestialMusic?.stop();
+            this.amazonAmbience?.stop();
+            this.crescentPondAmbience?.start();
             return;
         }
 
         this.celestialMusic?.stop();
         this.amazonAmbience?.stop();
+        this.crescentPondAmbience?.stop();
     }
     
     /**
@@ -1182,7 +1216,9 @@ export class Game {
         // Update current location
         this.locations.setCurrentLocation(locationIndex);
         
-        // Switch water type
+        // Reef / ice flags before water type so location-specific tuning sticks on return
+        this.water.setCoralReefEnabled(location.name === CORAL_KINGDOMS_NAME);
+        this.water.setFjordIceFloesEnabled(location.name === FROZEN_FJORDS_NAME);
         this.water.setWaterBodyType(location.waterBodyType);
         this.applyLakeMaskForWaterBody(location.waterBodyType);
         this.water.setPondSubmergedGrassEnabled(isCrescentPondLocation(this.locations));
