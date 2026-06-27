@@ -839,7 +839,7 @@ export class Game {
         // Update fishing system (syncs bobber to fish position after fish has moved)
         if (this.fishing) {
             this.fishing.update(delta);
-            if (this.fishing.isReeling) {
+            if (this.fishing.isReeling || this.fish?.state === 'LANDED') {
                 this.fishing.updateReel(delta);
             }
             this.fishing.syncCatAnimation?.();

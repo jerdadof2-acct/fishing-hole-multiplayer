@@ -275,14 +275,8 @@ export class Fish {
         this.isHooked = true;
 
         if (this.fishing) {
-            this.fishing.isReeling = false;
+            this.fishing.finalizeCatchLine?.();
             this.fishing.setFishOnLine(false);
-            if (this.fishing.rope) {
-                this.fishing.rope.setReeling(false);
-                this.fishing.rope.setFightingMode(false);
-                this.fishing.rope.setLandingMode(false);
-                this.fishing.rope.setFloating(false);
-            }
         }
         
         // Log catch

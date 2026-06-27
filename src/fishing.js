@@ -336,6 +336,79 @@ export class Fishing {
         this.bobber.position.y = lastNode.pos.y;
     }
 
+    stopActiveReelSounds() {
+        if (this._activeReelSounds?.length) {
+            this._activeReelSounds.forEach(soundObj => {
+                if (soundObj.sound?.isPlaying) {
+                    soundObj.sound.stop();
+                    soundObj.sound.disconnect();
+                }
+                if (soundObj.container && this.sceneRef?.scene) {
+                    this.sceneRef.scene.remove(soundObj.container);
+                }
+            });
+            this._activeReelSounds = [];
+        }
+        this._reelSoundTimer = 0;
+    }
+
+    settleLineAfterCatch() {
+        if (!this.rope?.rope?.length || !this.bobber) return;
+
+        const rodTipObj = this.getRodTip();
+        if (!rodTipObj) {
+            this.rope.updateLineGeometry(0);
+            return;
+        }
+
+        const tip = new THREE.Vector3();
+        rodTipObj.getWorldPosition(tip);
+        const bob = this.bobber.position;
+        const nodeCount = this.rope.rope.length;
+        const segments = Math.max(nodeCount - 1, 1);
+
+        for (let i = 0; i < nodeCount; i++) {
+            const t = i / segments;
+            const node = this.rope.rope[i];
+            node.pos.lerpVectors(tip, bob, t);
+            node.prev.copy(node.pos);
+        }
+
+        this.rope.ropeLen = Math.max(tip.distanceTo(bob), 0.1);
+        this.rope.setReeling(false);
+        this.rope.setFloating(false);
+        this.rope.setFightingMode(false);
+        this.rope.setLandingMode(false);
+    }
+
+    finalizeCatchLine() {
+        this.isReeling = false;
+        this.stopActiveReelSounds();
+
+        if (this.bobber && this.cat) {
+            const catPos = this.cat.getSavedPosition?.() || this.cat.getModel()?.position;
+            if (catPos) {
+                const waterHeight = this.water.getWaterHeight(catPos.x, catPos.z + 0.5);
+                this.bobber.position.set(catPos.x, waterHeight + 0.06, catPos.z + 0.5);
+                this.bobber.visible = true;
+            }
+        }
+
+        if (this.bobber) {
+            this.bobber.userData.floating = false;
+        }
+        this.clearBobberWaitFlags();
+
+        if (this.fishingLine) {
+            this.fishingLine.visible = false;
+        }
+        if (this.rope?.lineMesh) {
+            this.rope.lineMesh.visible = true;
+        }
+
+        this.settleLineAfterCatch();
+    }
+
     updateStarlightMode() {
         const shouldEnable = this.shouldUseStarlightMode();
         if (shouldEnable && !this.starlightActive) {
@@ -913,7 +986,7 @@ export class Fishing {
     }
 
     _estimateLineTension(fishInstance, delta) {
-        if (!this.rope || !this.bobber?.visible) {
+        if (!this.rope || !this.bobber?.visible || fishInstance?.state === 'LANDED') {
             return 0;
         }
 
@@ -1476,7 +1549,11 @@ export class Fishing {
             const t = this.sceneRef.clock.elapsedTime;
             const gentleReunionLine = fishInstance?._gentleReunion
                 && (fishInstance.state === 'HOOKED_FIGHT' || fishInstance.state === 'LANDING');
-            if (gentleReunionLine) {
+            if (fishInstance?.state === 'LANDED') {
+                this.stopActiveReelSounds();
+                this.settleLineAfterCatch();
+                this.rope.updateLineGeometry(0);
+            } else if (gentleReunionLine) {
                 this._pinGentleReunionLine(fishInstance);
                 this.rope.updateLineGeometry(delta);
             } else {
@@ -1699,15 +1776,9 @@ export class Fishing {
             return; // Don't reel during freeze
         }
 
-        if (fish?.state === 'LANDED' && this.fishOnLine) {
-            this.isReeling = false;
+        if (fish?.state === 'LANDED') {
+            this.finalizeCatchLine();
             this.setFishOnLine(false);
-            if (this.rope) {
-                this.rope.setReeling(false);
-                this.rope.setFightingMode(false);
-                this.rope.setLandingMode(false);
-                this.rope.setFloating(false);
-            }
             return;
         }
 
@@ -1721,19 +1792,8 @@ export class Fishing {
         // Stop immediately when fish is caught (LANDED state)
         const isFishCaught = fish && fish.state === 'LANDED';
         
-        // Stop all active reel sounds immediately when fish is caught
-        if (isFishCaught && this._activeReelSounds.length > 0) {
-            this._activeReelSounds.forEach(soundObj => {
-                if (soundObj.sound && soundObj.sound.isPlaying) {
-                    soundObj.sound.stop();
-                    soundObj.sound.disconnect();
-                }
-                if (soundObj.container && this.sceneRef && this.sceneRef.scene) {
-                    this.sceneRef.scene.remove(soundObj.container);
-                }
-            });
-            this._activeReelSounds = [];
-            this._reelSoundTimer = 0;
+        if (isFishCaught) {
+            this.stopActiveReelSounds();
         }
         
         if (this.isReeling && this.sfx && !isFishCaught) {
@@ -2026,59 +2086,7 @@ export class Fishing {
         if (fishInstance && this.fishOnLine) {
             const fishState = fishInstance.state; // Using string states now
             if (fishState === 'LANDED') {
-                // Reeling complete - fish caught
-                this.isReeling = false;
-                // Big Catch animation is triggered from fish.js startCelebrate
-                this._reelSoundTimer = 0; // Reset reel sound timer immediately
-                
-                // Stop all active reel sounds immediately
-                if (this._activeReelSounds && this._activeReelSounds.length > 0) {
-                    this._activeReelSounds.forEach(soundObj => {
-                        if (soundObj.sound && soundObj.sound.isPlaying) {
-                            soundObj.sound.stop();
-                            soundObj.sound.disconnect();
-                        }
-                        if (soundObj.container && this.sceneRef && this.sceneRef.scene) {
-                            this.sceneRef.scene.remove(soundObj.container);
-                        }
-                    });
-                    this._activeReelSounds = [];
-                }
-                if (this.rope) {
-                    this.rope.setReeling(false);
-                    this.rope.setFloating(false);
-                    this.rope.setLandingMode(false);
-                }
-                // Keep bobber visible right in front of dock after catch
-                // Position bobber right in front of dock (not lifting out of water)
-                if (this.bobber && this.cat) {
-                    // Get cat/dock position - bobber should be right in front
-                    const catPos = this.cat.getModel()?.position;
-                    if (catPos) {
-                        const waterHeight = this.water.getWaterHeight(catPos.x, catPos.z + 0.5);
-                        this.bobber.position.set(
-                            catPos.x,
-                            waterHeight + 0.06, // Normal floating position
-                            catPos.z + 0.5 // Right in front of dock
-                        );
-                    }
-                    this.bobber.visible = true; // Keep visible in front of dock
-                }
-                // Hide old fishing line, but keep rope line visible
-                if (this.fishingLine) this.fishingLine.visible = false;
-                // Keep rope line visible to show bobber in front of dock
-                if (this.rope && this.rope.lineMesh) {
-                    this.rope.lineMesh.visible = true;
-                }
-                // ALWAYS ensure old fishing line is hidden after catch (prevent double line)
-                if (this.fishingLine) {
-                    this.fishingLine.visible = false;
-                }
-                this.bobber.userData.floating = false;
-                this.clearBobberWaitFlags();
-                
-                // Reset fish on line flag
-                this.fishOnLine = false;
+                this.finalizeCatchLine();
                 this.setFishOnLine(false);
                 
                 // Reset final splash flag
