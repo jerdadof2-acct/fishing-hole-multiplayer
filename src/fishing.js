@@ -385,6 +385,14 @@ export class Fishing {
         this.isReeling = false;
         this.stopActiveReelSounds();
 
+        const fishInstance = this.sceneRef?.fish || this.game?.fish || null;
+        const postCatchIdle = fishInstance?.state === 'LANDED'
+            && !this.isCasting
+            && !this.bobber?.userData?.floating;
+        if (!postCatchIdle) {
+            return;
+        }
+
         if (this.bobber && this.cat) {
             const catPos = this.cat.getSavedPosition?.() || this.cat.getModel()?.position;
             if (catPos) {
@@ -915,6 +923,9 @@ export class Fishing {
             console.log('Cannot cast - already casting or reeling');
             return;
         }
+
+        const fishInstance = this.sceneRef?.fish || this.game?.fish || null;
+        fishInstance?.resetForNewCast?.();
         
         const rodTip = this.getRodTip();
         if (!rodTip) return;
@@ -1549,7 +1560,7 @@ export class Fishing {
             const t = this.sceneRef.clock.elapsedTime;
             const gentleReunionLine = fishInstance?._gentleReunion
                 && (fishInstance.state === 'HOOKED_FIGHT' || fishInstance.state === 'LANDING');
-            if (fishInstance?.state === 'LANDED') {
+            if (fishInstance?.state === 'LANDED' && !this.bobber?.userData?.floating) {
                 this.stopActiveReelSounds();
                 this.settleLineAfterCatch();
                 this.rope.updateLineGeometry(0);
@@ -1776,7 +1787,7 @@ export class Fishing {
             return; // Don't reel during freeze
         }
 
-        if (fish?.state === 'LANDED') {
+        if (fish?.state === 'LANDED' && !this.bobber?.userData?.floating) {
             this.finalizeCatchLine();
             this.setFishOnLine(false);
             return;

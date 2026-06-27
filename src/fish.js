@@ -882,4 +882,22 @@ export class Fish {
     getCurrentFish() {
         return this.currentFish;
     }
+
+    resetForNewCast() {
+        if (this.state === FishState.HOOKED_FIGHT || this.state === FishState.LANDING) {
+            return;
+        }
+
+        this.state = FishState.IDLE;
+        this.isHooked = false;
+        this._hasTriggeredCaught = false;
+        this._gentleReunion = false;
+        this._reunionHookPos = null;
+        this._reunionMaxDist = 0;
+        this.currentFish = null;
+
+        if (this.mesh) {
+            this.mesh.visible = false;
+        }
+    }
 }
