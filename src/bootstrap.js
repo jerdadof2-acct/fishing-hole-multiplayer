@@ -1,4 +1,4 @@
-import Game from './main.js?v=20260624-comet-material';
+import Game from './main.js?v=20260624-location-ambience';
 import { api } from './api.js';
 import { initAdRotator } from './ads.js';
 import { ensureProloguePack, prefetchProloguePack, startDeferredPackDownload } from './assetPack.js';

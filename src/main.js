@@ -31,7 +31,7 @@ import {
     CortezBackwatersAmbience,
     CraggyCoastAmbience,
     StormbreakerBayAmbience
-} from './audio/locationMusic.js?v=20250625-pond-ambience';
+} from './audio/locationMusic.js?v=20260624-location-ambience';
 import { VOICEOVER_TAP_COOLDOWN_MS, VOICEOVER_ANACONDA_COOLDOWN_MS } from './config/voiceover.js';
 
 /** How close the snake must pass Halley's look point (world XZ) to trigger a bark. */
