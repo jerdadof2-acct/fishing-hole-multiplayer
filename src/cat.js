@@ -8,12 +8,15 @@ import {
     PORTRAIT_CAT_TURN_SPEED_BLEND_SCALE,
     PORTRAIT_BLEND_ACTIVE_THRESHOLD
 } from './config/idlePortrait.js';
+import { debugLog } from './config/debug.js';
 
 const CAT_MODEL_URL = 'assets/glb/Cat.glb?v=webp1';
 const CAT_TARGET_HEIGHT = 2.0;
 const CAT_TARGET_HEIGHT_LARGE_BOAT = 2.2;
 /** Extra sole clearance below foot bones (ankle ≠ ground contact). */
 const FOOT_SOLE_PADDING = 0.06;
+/** Per-frame blend toward deck target — planted feel on rocking boats. */
+const PLATFORM_ALIGN_LERP = 0.12;
 // Lake-facing rotation: see CAT_FACING_Y in src/config/idlePortrait.js (locked).
 
 function isFootBone(name) {
@@ -181,7 +184,7 @@ export class Cat {
                     this.targetHeight = CAT_TARGET_HEIGHT;
                     const scale = this.targetHeight / this.bindHeight;
                     this.model.scale.setScalar(scale);
-                    console.log('Cat model size:', size, 'Scale applied:', scale);
+                    debugLog('Cat model size:', size, 'Scale applied:', scale);
                     
                     this.setupAnimations(gltf);
                     this.setupRodTip();
@@ -220,21 +223,12 @@ export class Cat {
                             child.castShadow = true;
                             child.receiveShadow = true;
                             
-                            // Lighten cat materials to make it more visible on dock
+                            // Subtle fill — rim light in scene.js handles separation from background
                             const materials = Array.isArray(child.material) ? child.material : [child.material];
                             materials.forEach((mat) => {
                                 if (mat && mat.isMeshStandardMaterial) {
-                                    // Add subtle emissive lighting to brighten the cat
-                                    mat.emissive = new THREE.Color(0x333333); // Subtle warm glow (was 0x000000)
-                                    mat.emissiveIntensity = 0.2; // 20% emissive brightness
-                                    
-                                    // Increase material brightness slightly
-                                    if (mat.color) {
-                                        // Brighten the color slightly
-                                        const brightness = 1.3; // 30% brighter
-                                        mat.color = mat.color.clone().multiplyScalar(brightness);
-                                    }
-                                    
+                                    mat.emissive = new THREE.Color(0x111111);
+                                    mat.emissiveIntensity = 0.08;
                                     mat.needsUpdate = true;
                                 }
                             });
@@ -242,9 +236,9 @@ export class Cat {
                     });
                     
                     this.sceneRef.scene.add(this.catAnchor);
-                    console.log('Cat model added to scene. Position:', this.catAnchor.position);
-                    console.log('Cat model scale:', this.model.scale);
-                    console.log('Cat feet Y offset:', this.feetYOffset);
+                    debugLog('Cat model added to scene. Position:', this.catAnchor.position);
+                    debugLog('Cat model scale:', this.model.scale);
+                    debugLog('Cat feet Y offset:', this.feetYOffset);
                     resolve();
                 },
                 (xhr) => {
@@ -273,7 +267,7 @@ export class Cat {
             this.animationClips[clip.name] = clip;
         });
 
-        console.log('[CAT] Animations:', Object.keys(this.animationClips).join(', '));
+        debugLog('[CAT] Animations:', Object.keys(this.animationClips).join(', '));
     }
 
     resetToBindPose() {
@@ -411,7 +405,7 @@ export class Cat {
             if (this.rodTipNode) return;
             if (child.name && tipNamePatterns.some((pattern) => pattern.test(child.name))) {
                 this.rodTipNode = child;
-                console.log('[CAT] Found artist rod tip node:', child.name);
+                debugLog('[CAT] Found artist rod tip node:', child.name);
             }
         });
 
@@ -436,7 +430,7 @@ export class Cat {
 
         this.rodTipMarker = new THREE.Object3D();
         this.rodTipMarker.name = 'RodTipMarker';
-        console.log('[CAT] Rod tip marker ready', {
+        debugLog('[CAT] Rod tip marker ready', {
             node: this.rodTipNode?.name || null,
             vertexIndex: this._rodTipVertexIndex
         });
@@ -593,14 +587,25 @@ export class Cat {
     }
 
     /**
-     * Each frame: follow deck X/Z and raise/lower until feet touch the surface (keeps rotation).
+     * World position where feet should rest on the given deck point (temporary anchor mutation).
+     * @param {THREE.Vector3} surfacePos
+     * @returns {THREE.Vector3}
      */
-    alignFeetToSurface(surfacePos) {
+    _resolveFeetAlignedPosition(surfacePos) {
         const anchor = this.catAnchor || this.model;
-        if (!anchor || !surfacePos) return;
+        if (!anchor || !surfacePos) {
+            return surfacePos?.clone?.() ?? new THREE.Vector3();
+        }
+
+        if (!this._surfaceAlignScratch) {
+            this._surfaceAlignScratch = new THREE.Vector3();
+        }
+        const scratch = this._surfaceAlignScratch;
+        scratch.copy(anchor.position);
 
         anchor.position.x = surfacePos.x;
         anchor.position.z = surfacePos.z;
+        anchor.position.y = surfacePos.y;
 
         const targetY = surfacePos.y + FOOT_SOLE_PADDING;
         anchor.updateMatrixWorld(true);
@@ -610,6 +615,28 @@ export class Cat {
         } else {
             anchor.position.y = surfacePos.y + this.feetYOffset + 0.02;
         }
+
+        const aligned = anchor.position.clone();
+        anchor.position.copy(scratch);
+        anchor.updateMatrixWorld(true);
+        return aligned;
+    }
+
+    /**
+     * Each frame: ease toward deck X/Z/Y (keeps rotation). Instant on load via positionOnSurface.
+     * @param {THREE.Vector3} surfacePos
+     * @param {{ instant?: boolean }} [options]
+     */
+    alignFeetToSurface(surfacePos, { instant = false } = {}) {
+        const anchor = this.catAnchor || this.model;
+        if (!anchor || !surfacePos) return;
+
+        const target = this._resolveFeetAlignedPosition(surfacePos);
+        const t = instant ? 1 : PLATFORM_ALIGN_LERP;
+
+        anchor.position.x += (target.x - anchor.position.x) * t;
+        anchor.position.y += (target.y - anchor.position.y) * t;
+        anchor.position.z += (target.z - anchor.position.z) * t;
 
         anchor.updateMatrixWorld(true);
         this.savedPosition = anchor.position.clone();
@@ -630,16 +657,9 @@ export class Cat {
         if (!preserveFacing) {
             anchor.rotation.y = this.baseRotationY;
         }
-        anchor.updateMatrixWorld(true);
 
-        const targetY = surfacePos.y + FOOT_SOLE_PADDING;
-        const contactY = this.getLowestContactWorldY();
-        if (contactY !== null) {
-            anchor.position.y += targetY - contactY;
-        } else {
-            anchor.position.y = surfacePos.y + this.feetYOffset + 0.02;
-        }
-
+        const aligned = this._resolveFeetAlignedPosition(surfacePos);
+        anchor.position.copy(aligned);
         anchor.updateMatrixWorld(true);
 
         this.savedPosition = anchor.position.clone();
@@ -660,16 +680,16 @@ export class Cat {
                 if (name === 'headx' || name === 'head' || name.includes('head')) {
                     if (!this.headBone) {
                         this.headBone = child;
-                        console.log('[CAT] Found head bone:', child.name);
+                        debugLog('[CAT] Found head bone:', child.name);
                     }
                 }
             }
         });
-        console.log(`[CAT] Found ${this.allBones.length} bones in model`);
+        debugLog(`[CAT] Found ${this.allBones.length} bones in model`);
         // Log all bone names for debugging
         const boneNames = this.allBones.map(b => b.name).filter(n => n);
         if (boneNames.length > 0) {
-            console.log('[CAT] Bone names:', boneNames.join(', '));
+            debugLog('[CAT] Bone names:', boneNames.join(', '));
         }
     }
     
@@ -689,52 +709,52 @@ export class Cat {
                     ((name.includes('right') || name.includes('r_') || name.includes('_r')) && 
                      (name.includes('upperarm') || name.includes('upper_arm') || name.includes('arm_stretch') || name === 'mixamorigrightarm' || name === 'mixamorig:rightarm'))) {
                     this.rightUpperArmBone = child;
-                    console.log('[CAT] Found right upper arm bone:', child.name);
+                    debugLog('[CAT] Found right upper arm bone:', child.name);
                 }
                 if (name === 'forearm_stretchr' || 
                     boneKey === 'rightforearm' ||
                     ((name.includes('right') || name.includes('r_') || name.includes('_r')) && 
                      (name.includes('lowerarm') || name.includes('forearm') || name.includes('lower_arm') || name.includes('forearm_stretch') || name === 'mixamorigrightforearm' || name === 'mixamorig:rightforearm'))) {
                     this.rightLowerArmBone = child;
-                    console.log('[CAT] Found right lower arm bone:', child.name);
+                    debugLog('[CAT] Found right lower arm bone:', child.name);
                 }
                 if (name === 'handr' || 
                     boneKey === 'righthand' ||
                     ((name.includes('right') || name.includes('r_') || name.includes('_r')) && 
                      (name.includes('hand') || name === 'mixamorigrighthand' || name === 'mixamorig:righthand'))) {
                     this.rightHandBone = child;
-                    console.log('[CAT] Found right hand bone:', child.name);
+                    debugLog('[CAT] Found right hand bone:', child.name);
                 }
                 if (name === 'shoulderr' || 
                     ((name.includes('right') || name.includes('r_') || name.includes('_r')) && 
                      (name.includes('shoulder') || name.includes('clavicle')))) {
                     this.rightShoulderBone = child;
-                    console.log('[CAT] Found right shoulder bone:', child.name);
+                    debugLog('[CAT] Found right shoulder bone:', child.name);
                 }
                 
                 // LEFT ARM BONES
                 if ((name.includes('left') || name.includes('l_') || name.includes('_l')) && 
                     (name.includes('shoulder') || name.includes('clavicle'))) {
                     this.leftShoulderBone = child;
-                    console.log('[CAT] Found left shoulder bone:', child.name);
+                    debugLog('[CAT] Found left shoulder bone:', child.name);
                 }
                 if (boneKey === 'leftarm' ||
                     ((name.includes('left') || name.includes('l_') || name.includes('_l')) && 
                      (name.includes('upperarm') || name.includes('upper_arm') || name === 'mixamorigleftarm' || name === 'mixamorig:leftarm'))) {
                     this.leftUpperArmBone = child;
-                    console.log('[CAT] Found left upper arm bone:', child.name);
+                    debugLog('[CAT] Found left upper arm bone:', child.name);
                 }
                 if (boneKey === 'leftforearm' ||
                     ((name.includes('left') || name.includes('l_') || name.includes('_l')) && 
                      (name.includes('lowerarm') || name.includes('forearm') || name.includes('lower_arm') || name === 'mixamorigleftforearm' || name === 'mixamorig:leftforearm'))) {
                     this.leftLowerArmBone = child;
-                    console.log('[CAT] Found left lower arm bone:', child.name);
+                    debugLog('[CAT] Found left lower arm bone:', child.name);
                 }
                 if (boneKey === 'lefthand' || name === 'handl' ||
                     ((name.includes('left') || name.includes('l_') || name.includes('_l')) && 
                      (name.includes('hand') || name === 'mixamoriglefthand' || name === 'mixamorig:lefthand' || name === 'handl'))) {
                     this.leftHandBone = child;
-                    console.log('[CAT] Found left hand bone:', child.name);
+                    debugLog('[CAT] Found left hand bone:', child.name);
                 }
             }
         });
@@ -862,7 +882,7 @@ export class Cat {
         // Completely disable arm sway during celebration
         if (this.armSwayAction) {
             this.armSwayAction.setEffectiveWeight(0.0); // Set to 0 instead of 0.2 to completely disable
-            console.log('[CAT] Arm sway disabled for celebration');
+            debugLog('[CAT] Arm sway disabled for celebration');
         }
         
         // Optionally release left-hand static lock for a second (so we can raise the rod higher)
@@ -914,14 +934,14 @@ export class Cat {
             // Get current hand world position directly from bone if _rHandTargetW isn't set
             if (this._rHandTargetW && this._rHandTargetW.lengthSq() > 0) {
                 this._rightHandReelPos = this._rHandTargetW.clone();
-                console.log('[CAT] Cached hand position at reel from target:', this._rightHandReelPos);
+                debugLog('[CAT] Cached hand position at reel from target:', this._rightHandReelPos);
             } else {
                 // Fallback: get hand position from bone
                 const handPos = new THREE.Vector3();
                 this.rightHandBone.getWorldPosition(handPos);
                 this._rightHandReelPos = handPos.clone();
                 this._rHandTargetW.copy(handPos); // Initialize target from hand position
-                console.log('[CAT] Cached hand position at reel from bone:', this._rightHandReelPos);
+                debugLog('[CAT] Cached hand position at reel from bone:', this._rightHandReelPos);
             }
         } else {
             console.warn('[CAT] Cannot cache reel position - rightHandBone not found!');
@@ -989,7 +1009,7 @@ export class Cat {
         }
         
         // Debug: verify spine bones found
-        console.log(`[CAT] Celebration started! Duration: ${duration}s, Spine bones: ${sp.length}, Head bone: ${this.headBone ? this.headBone.name : 'not found'}, Tail bones: ${this.getTailBones().length}`);
+        debugLog(`[CAT] Celebration started! Duration: ${duration}s, Spine bones: ${sp.length}, Head bone: ${this.headBone ? this.headBone.name : 'not found'}, Tail bones: ${this.getTailBones().length}`);
     }
     
     /**
@@ -1143,7 +1163,7 @@ export class Cat {
             }
         }
         
-        console.log('[CAT] Celebration ended');
+        debugLog('[CAT] Celebration ended');
     }
     
     /**
@@ -1163,7 +1183,7 @@ export class Cat {
         
         // Debug logging (every 0.2 seconds)
         if (Math.floor(C.t * 5) !== Math.floor((C.t - dt) * 5)) {
-            console.log(`[CAT] Celebration update: t=${C.t.toFixed(3)}/${dur.toFixed(3)}, u=${u.toFixed(3)}, active=${C.active}`);
+            debugLog(`[CAT] Celebration update: t=${C.t.toFixed(3)}/${dur.toFixed(3)}, u=${u.toFixed(3)}, active=${C.active}`);
         }
         
         // 1) Raise rod AND right hand straight up for cheering - move hand AWAY from reel
@@ -1184,7 +1204,7 @@ export class Cat {
                 // Use cached reel position as starting point
                 startPos = this._rightHandReelPos.clone();
                 if (Math.floor(C.t * 5) !== Math.floor((C.t - dt) * 5)) {
-                    console.log(`[CAT] Celebration: Starting from reel pos: ${startPos.x.toFixed(2)}, ${startPos.y.toFixed(2)}, ${startPos.z.toFixed(2)}`);
+                    debugLog(`[CAT] Celebration: Starting from reel pos: ${startPos.x.toFixed(2)}, ${startPos.y.toFixed(2)}, ${startPos.z.toFixed(2)}`);
                 }
             } else if (this._rHandTargetW) {
                 // Fallback: use current target if reel pos not cached
@@ -1223,7 +1243,7 @@ export class Cat {
             
             // Debug log to verify target is moving
             if (Math.floor(C.t * 10) !== Math.floor((C.t - dt) * 10)) {
-                console.log(`[CAT] Celebration hand target (u=${u.toFixed(2)}): final=${finalTarget.x.toFixed(2)},${finalTarget.y.toFixed(2)},${finalTarget.z.toFixed(2)}, start=${startPos.x.toFixed(2)},${startPos.y.toFixed(2)},${startPos.z.toFixed(2)}, shoulder=${s.y.toFixed(2)}`);
+                debugLog(`[CAT] Celebration hand target (u=${u.toFixed(2)}): final=${finalTarget.x.toFixed(2)},${finalTarget.y.toFixed(2)},${finalTarget.z.toFixed(2)}, start=${startPos.x.toFixed(2)},${startPos.y.toFixed(2)},${startPos.z.toFixed(2)}, shoulder=${s.y.toFixed(2)}`);
             }
         } else {
             // Fallback: try to find shoulder bone or use hand bone position
@@ -1481,7 +1501,7 @@ export class Cat {
                     if (this.rightHandBone) {
                         this.rightHandBone.getWorldPosition(currentHandPos);
                         const distance = currentHandPos.distanceTo(this._rHandTargetW);
-                        console.log(`[CAT] Celebration IK solve: target=${this._rHandTargetW.y.toFixed(2)}, actual=${currentHandPos.y.toFixed(2)}, dist=${distance.toFixed(3)}`);
+                        debugLog(`[CAT] Celebration IK solve: target=${this._rHandTargetW.y.toFixed(2)}, actual=${currentHandPos.y.toFixed(2)}, dist=${distance.toFixed(3)}`);
                     }
                 }
             } else {
@@ -1503,7 +1523,7 @@ export class Cat {
         // End - only stop when we've actually reached the duration
         // Add small buffer to prevent premature ending due to floating point issues
         if (t >= dur - 0.001) {
-            console.log(`[CAT] Celebration duration reached: t=${t.toFixed(3)} >= dur=${dur.toFixed(3)}`);
+            debugLog(`[CAT] Celebration duration reached: t=${t.toFixed(3)} >= dur=${dur.toFixed(3)}`);
             this.stopCelebrate();
         }
     }
@@ -1539,7 +1559,7 @@ export class Cat {
             L2: pE.distanceTo(pW),            // elbow → wrist
             pole: new THREE.Vector3(0.35, 0.2, 0.9).normalize() // preferred bend direction
         };
-        console.log('[CAT] Right arm segments cached - L1:', this._rightArmSeg.L1, 'L2:', this._rightArmSeg.L2);
+        debugLog('[CAT] Right arm segments cached - L1:', this._rightArmSeg.L1, 'L2:', this._rightArmSeg.L2);
     }
     
     /**
@@ -1827,7 +1847,7 @@ export class Cat {
         
         // Reduced logging - only log once per hand
         if (!this[`_${side}HandGripLogged`]) {
-            console.log(`[CAT] Hand grip pose applied to ${side} hand`);
+            debugLog(`[CAT] Hand grip pose applied to ${side} hand`);
             this[`_${side}HandGripLogged`] = true;
         }
     }
@@ -1874,7 +1894,7 @@ export class Cat {
             // Store initial hand position to prevent accumulation
             if (!this._leftHandInitPosition) {
                 this._leftHandInitPosition = leftHandBone.position.clone();
-                console.log('[CAT] Stored initial left hand position:', this._leftHandInitPosition);
+                debugLog('[CAT] Stored initial left hand position:', this._leftHandInitPosition);
             }
             
             // Update model matrices first
@@ -2051,18 +2071,18 @@ export class Cat {
                 const forearmWorldPosAfter = new THREE.Vector3();
                 leftLowerArmBone.getWorldPosition(forearmWorldPosAfter);
                 
-                console.log('[CAT] Hand positioning verification:');
-                console.log('  Target world pos:', targetWorldPos);
-                console.log('  Actual hand world pos:', actualHandWorldPos);
-                console.log('  Distance to target:', distanceToTarget.toFixed(4));
-                console.log('  Hand bone local pos:', leftHandBone.position);
-                console.log('  Forearm world pos (after lock):', forearmWorldPosAfter);
-                console.log('  Target in forearm local:', this._targetInForearmLocal);
+                debugLog('[CAT] Hand positioning verification:');
+                debugLog('  Target world pos:', targetWorldPos);
+                debugLog('  Actual hand world pos:', actualHandWorldPos);
+                debugLog('  Distance to target:', distanceToTarget.toFixed(4));
+                debugLog('  Hand bone local pos:', leftHandBone.position);
+                debugLog('  Forearm world pos (after lock):', forearmWorldPosAfter);
+                debugLog('  Target in forearm local:', this._targetInForearmLocal);
                 
                 if (distanceToTarget > 0.1) {
                     console.warn('[CAT] WARNING: Hand did not reach target! Distance:', distanceToTarget.toFixed(4));
                 } else {
-                    console.log('[CAT] Hand successfully positioned at target');
+                    debugLog('[CAT] Hand successfully positioned at target');
                 }
                 
                 this._handPositionVerified = true;
@@ -2134,7 +2154,7 @@ export class Cat {
                     // Debug logging removed - too spammy
                     // Uncomment below if debugging hand positioning issues
                     // if (!this._lastHandFishingState || this._lastHandFishingState !== isFishing) {
-                    //     console.log(`[HAND] positionRightHandForFishing called: isFishing=${isFishing}`);
+                    //     debugLog(`[HAND] positionRightHandForFishing called: isFishing=${isFishing}`);
                     //     this._lastHandFishingState = isFishing;
                     // }
         
@@ -2152,7 +2172,7 @@ export class Cat {
                 forearm: this.rightLowerArmBone ? this.rightLowerArmBone.rotation.clone() : null,
                 hand: rightHandBone.position.clone()
             };
-            console.log('[CAT] Right arm initial rotations stored:', this._rightArmInitRotations);
+            debugLog('[CAT] Right arm initial rotations stored:', this._rightArmInitRotations);
         }
         
         if (!isFishing) {
@@ -2426,7 +2446,7 @@ export class Cat {
         // This would require inverse kinematics or angle calculations
         // For now, this is a placeholder showing how to access bones
         
-        console.log('[CAT] Arm bones available for manual manipulation');
+        debugLog('[CAT] Arm bones available for manual manipulation');
     }
 
     getModel() {
@@ -2547,7 +2567,7 @@ export class Cat {
             this.baseRotationY = 0;
             this.model.rotation.y = this.baseRotationY;
             this._forceInitialRotation = false;
-            console.log('[CAT] Forced initial rotation - model.rotation.y:', this.model.rotation.y);
+            debugLog('[CAT] Forced initial rotation - model.rotation.y:', this.model.rotation.y);
         }
         
         // Ensure baseRotationY is correct (cat should face away from camera)
@@ -2558,7 +2578,7 @@ export class Cat {
             if (!bobberPosition) {
                 // Only force rotation if no bobber is being tracked
                 this.model.rotation.y = this.baseRotationY;
-                console.log('[CAT] Corrected rotation from Math.PI to 0');
+                debugLog('[CAT] Corrected rotation from Math.PI to 0');
             }
         }
         

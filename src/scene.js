@@ -8,6 +8,7 @@ export class Scene {
         this.clock = new THREE.Clock();
         this.hemisphereLight = null;
         this.directionalLight = null;
+        this.rimLight = null;
         this.ambientLight = null;
         this.defaultEnvironment = {
             background: 0x87ceeb,
@@ -19,6 +20,8 @@ export class Scene {
             hemisphereIntensity: 0.7,
             directionalColor: 0xffffff,
             directionalIntensity: 0.8,
+            rimColor: 0x9fdcff,
+            rimIntensity: 0.32,
             ambientColor: 0xffffff,
             ambientIntensity: 0.35
         };
@@ -70,6 +73,12 @@ export class Scene {
         }
         this.scene.add(directionalLight);
         this.directionalLight = directionalLight;
+
+        const rimLight = new THREE.DirectionalLight(0x9fdcff, 0.32);
+        rimLight.position.set(6, 8, -8);
+        rimLight.castShadow = false;
+        this.scene.add(rimLight);
+        this.rimLight = rimLight;
 
         // Ambient light for overall illumination
         // Increased slightly to brighten cat on dock
@@ -178,6 +187,11 @@ export class Scene {
         if (this.directionalLight) {
             this.directionalLight.color.set(env.directionalColor);
             this.directionalLight.intensity = env.directionalIntensity;
+        }
+
+        if (this.rimLight) {
+            this.rimLight.color.set(env.rimColor);
+            this.rimLight.intensity = env.rimIntensity;
         }
 
         if (this.ambientLight) {

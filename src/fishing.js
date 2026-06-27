@@ -69,6 +69,8 @@ export class Fishing {
         this.fishOnLine = false; // True when fighting a fish
         this.bobberJiggleTime = 0; // Time for bobber jiggling animation
         this.fightSplashTimer = 0; // Timer for continuous splashes during fight
+        this.fightRippleTimer = 0;
+        this.fightRippleInterval = 0.32;
         this.bobberWake = null; // V-shaped wake trailing bobber during fight
         // Rod bending state for smooth interpolation
         this.rodBendState = {}; // Stores target rotation for each section for smooth lerping
@@ -96,6 +98,9 @@ export class Fishing {
         this.starlightCore = null;
         this.starlightSprite = null;
         this.starlightPulse = 0;
+        this.bobberHaloGroup = null;
+        this.bobberHaloRing = null;
+        this.bobberHaloSprite = null;
         this.defaultBobberAppearance = null;
         this.starfishCelebration = null;
         this.pendingCelebrateDuration = null;
@@ -343,6 +348,9 @@ export class Fishing {
                     this.bobber.material.emissiveIntensity = 0;
                 }
                 this.bobber.material.needsUpdate = true;
+            }
+            if (this.bobberHaloGroup) {
+                this.bobberHaloGroup.visible = false;
             }
         } else if (!shouldEnable && this.starlightActive) {
             this.starlightActive = false;
@@ -661,15 +669,85 @@ export class Fishing {
         console.log('Created fallback rod tip bone');
     }
 
+    createBobberHalo() {
+        this.bobberHaloGroup = new THREE.Group();
+        this.bobberHaloGroup.name = 'BobberHalo';
+        this.bobberHaloGroup.renderOrder = 1002;
+        this.bobberHaloGroup.visible = false;
+
+        const ringTexture = this.createRadialTexture(
+            'rgba(255, 90, 50, 0.95)',
+            'rgba(255, 40, 20, 0)'
+        );
+        const ringMaterial = new THREE.MeshBasicMaterial({
+            map: ringTexture,
+            color: 0xff5533,
+            transparent: true,
+            opacity: 0.42,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            depthTest: false,
+            side: THREE.DoubleSide
+        });
+        this.bobberHaloRing = new THREE.Mesh(new THREE.RingGeometry(0.09, 0.26, 48), ringMaterial);
+        this.bobberHaloRing.rotation.x = -Math.PI / 2;
+        this.bobberHaloRing.position.y = -0.05;
+        this.bobberHaloGroup.add(this.bobberHaloRing);
+
+        const haloTexture = this.createRadialTexture(
+            'rgba(255, 255, 255, 1)',
+            'rgba(255, 120, 60, 0)'
+        );
+        const haloMaterial = new THREE.SpriteMaterial({
+            map: haloTexture,
+            color: 0xff6644,
+            transparent: true,
+            opacity: 0.38,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            depthTest: false
+        });
+        this.bobberHaloSprite = new THREE.Sprite(haloMaterial);
+        this.bobberHaloSprite.scale.set(0.5, 0.5, 1);
+        this.bobberHaloSprite.position.y = 0.03;
+        this.bobberHaloGroup.add(this.bobberHaloSprite);
+
+        this.bobber.add(this.bobberHaloGroup);
+    }
+
+    updateBobberHalo(elapsedTime) {
+        if (!this.bobberHaloGroup) return;
+
+        const showHalo = this.bobber?.visible
+            && !this.starlightActive
+            && (this.bobber.material?.opacity ?? 1) > 0.05;
+        this.bobberHaloGroup.visible = showHalo;
+        if (!showHalo) return;
+
+        const pulse = 0.9 + Math.sin(elapsedTime * 2.6) * 0.1;
+        const tugBoost = this.bobber.userData?.tugActive ? 1.18 : 1.0;
+        const biteBoost = this.bobber.userData?.biteStrike ? 1.12 : 1.0;
+        const intensity = pulse * tugBoost * biteBoost;
+
+        if (this.bobberHaloRing?.material) {
+            this.bobberHaloRing.material.opacity = THREE.MathUtils.clamp(0.38 * intensity, 0.28, 0.58);
+        }
+        if (this.bobberHaloSprite?.material) {
+            this.bobberHaloSprite.material.opacity = THREE.MathUtils.clamp(0.34 * intensity, 0.24, 0.52);
+            const spriteScale = 0.48 * intensity;
+            this.bobberHaloSprite.scale.set(spriteScale, spriteScale, 1);
+        }
+    }
+
     createBobber() {
         // Create simple bobber geometry (smaller, more realistic size)
         const geometry = new THREE.SphereGeometry(0.08, 16, 16); // Smaller bobber
         const material = new THREE.MeshStandardMaterial({
-            color: 0xff0000, // Bright red bobber
+            color: 0xff1a1a,
             roughness: 0.2,
             metalness: 0.3,
-            emissive: 0xff0000, // Red glow for visibility
-            emissiveIntensity: 0.3
+            emissive: 0xff2200,
+            emissiveIntensity: 0.48
         });
         material.transparent = true;
         material.opacity = 1.0;
@@ -678,8 +756,10 @@ export class Fishing {
         this.bobber.visible = false;
         this.bobber.castShadow = true;
         this.bobber.receiveShadow = true;
+        this.bobber.renderOrder = 1001;
         this.bobber.name = 'Bobber';
         this.sceneRef.scene.add(this.bobber);
+        this.createBobberHalo();
         console.log('Bobber created - size:', 0.08);
 
         this.defaultBobberAppearance = {
@@ -905,6 +985,7 @@ export class Fishing {
         this.updateStarlightMode();
         this.updateStarlightEffect(delta);
         const elapsedTime = this.sceneRef?.clock?.elapsedTime ?? 0;
+        this.updateBobberHalo(elapsedTime);
         this.tickBobberStrikeAnimations(elapsedTime);
         if (this.starfishCelebration?.active) {
             this.starfishCelebration.timer += delta;
@@ -1044,14 +1125,9 @@ export class Fishing {
                 // Set floating state
                 this.bobber.userData.floating = true;
                 
-                // Trigger splash effects (visual only - temporarily disable sound from splash system)
+                // Bobber landing — soft ripple + cast splash sound
                 if (this.splash) {
-                    // Temporarily disable splash system sound so only bobber_splash plays
-                    const originalSoundManager = this.splash.soundManager;
-                    this.splash.soundManager = null;
-                    this.splash.trigger(this.bobber.position);
-                    // Restore sound manager after trigger (for other splashes)
-                    this.splash.soundManager = originalSoundManager;
+                    this.splash.triggerRipple(this.bobber.position);
                 }
                 
                 // Play ONLY bobber splash sound when bobber lands during cast
@@ -1346,22 +1422,54 @@ export class Fishing {
                 this.updateReel(delta);
             }
             
-            // Bobber wake: V-shaped ripples trailing the bobber during HOOKED_FIGHT
+            // Bobber wake + fight ripples during hooked fight and landing
+            const fishState = fishInstance?.state;
+
+            const fightWaterActive =
+                this.fishOnLine &&
+                this.bobber.visible &&
+                !fishInstance?._gentleReunion &&
+                (
+                    fishState === 'HOOKED_FIGHT' ||
+                    fishState === 'LANDING'
+                );
+
             if (this.bobberWake && this.bobber) {
-                const fightWake = fishInstance
-                    && fishInstance.state === 'HOOKED_FIGHT'
-                    && !fishInstance._gentleReunion
-                    && this.bobber.visible;
-                const shaderRipple = (this.water?.mesh?.splashAt)
-                    ? (x, z) => this.water.mesh.splashAt(x, z)
-                    : null;
                 this.bobberWake.update(
                     delta,
                     this.bobber.position,
-                    !!fightWake,
+                    fightWaterActive,
                     (x, z) => this.water.getWaterHeight(x, z),
-                    shaderRipple
+                    null
                 );
+            }
+
+            if (fightWaterActive && this.splash && this.bobber) {
+                this.fightRippleTimer += delta;
+
+                const rippleInterval =
+                    fishState === 'LANDING'
+                        ? 0.24
+                        : 0.34;
+
+                if (this.fightRippleTimer >= rippleInterval) {
+                    const ripplePos = this.bobber.position.clone();
+
+                    const waterY = this.water.getWaterHeight(
+                        ripplePos.x,
+                        ripplePos.z
+                    );
+
+                    ripplePos.y = waterY + 0.015;
+
+                    this.splash.triggerRipple(ripplePos, {
+                        maxScale: fishState === 'LANDING' ? 2.5 : 2.0
+                    });
+
+                    this.fightRippleTimer = 0;
+                }
+            } else {
+                this.fightRippleTimer = 0;
             }
             
             // Pass camera and time for screen clamping and surface height
@@ -1384,54 +1492,6 @@ export class Fishing {
                     tempRodTip: null
                 };
                 updateRodTip(rod, lineTension, delta);
-            }
-            
-            // Handle LANDED state - finalize catch
-            if (fishInstance && fishInstance.state === 'LANDED') {
-                // Fish is caught, complete the reel
-                    if (!this._didFinalSplash && this.splash && this.bobber.visible) {
-                        this._didFinalSplash = true;
-                        
-                        // Play ONLY fish caught splash sound FIRST (before visual splash)
-                        // This ensures it plays and isn't affected by splash system
-                        if (this.sfx && this.bobber) {
-                            // Verify sound is loaded before playing
-                            const soundBuffer = this.sfx.cache ? this.sfx.cache.get("fish_caught_splash") : null;
-                            if (soundBuffer) {
-                                this.sfx.play3D("fish_caught_splash", this.bobber.position, this.sceneRef.scene, 0.9, 1.0);
-                            } else {
-                                console.warn('[FISHING] fish_caught_splash sound not loaded');
-                            }
-                        }
-                        
-                        // Final splash when fish breaks water (visual only - NO sound from splash system)
-                        // Completely disable splash system sound by temporarily removing soundManager
-                        // Do this AFTER playing the sound file to ensure no timing issues
-                        const originalSoundManager = this.splash.soundManager;
-                        // Force disable soundManager to prevent pop sound
-                        this.splash.soundManager = null;
-                        // Trigger visual splash (no sound will play since soundManager is null)
-                        this.splash.trigger(this.bobber.position);
-                        // Restore sound manager immediately after trigger (for other splashes)
-                        this.splash.soundManager = originalSoundManager;
-                        
-                        // Trigger water ripple at bobber position
-                        if (this.water && this.water.mesh && this.water.mesh.splashAt) {
-                            this.water.mesh.splashAt(this.bobber.position.x, this.bobber.position.z);
-                        }
-                    
-                    for (let i = 0; i < 2; i++) {
-                        setTimeout(() => {
-                            if (this.splash) {
-                                this.splash.triggerRipple(this.bobber.position);
-                            }
-                            // Additional water ripples during fight
-                            if (this.water && this.water.mesh && this.water.mesh.splashAt) {
-                                this.water.mesh.splashAt(this.bobber.position.x, this.bobber.position.z);
-                            }
-                        }, i * 100);
-                    }
-                }
             }
         } else if (this.rope && this.isCasting) {
             // During cast: skip rope physics entirely, just render kinematic line

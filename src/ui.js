@@ -7,7 +7,30 @@ import { getFishImagePaths, getRelicImagePaths } from './utils/imageAssets.js';
 import { getCollectionSpeciesTotal, getUnlockedVisibleFishCount } from './fishTypes.js';
 import { switchToDifferentAccount } from './savePinSetup.js';
 import { pickMissMessage } from './config/missMessages.js';
+import {
+    getCatchWeightClass,
+    normalizeCatchRarityClass,
+    pickCatchHalleyLine
+} from './config/catchPresentation.js';
 import { hasPrivilegedAccess } from './admin/adminAuth.js';
+import {
+    AD_ENERGY_REWARD,
+    LEVEL_UP_ENERGY_BONUS,
+    OUT_OF_ENERGY_LINES
+} from './config/energy.js';
+import {
+    applyOfflineEnergyRegen,
+    applyFirstCatchOfDayBonus,
+    canAffordCast,
+    CAST_ENERGY_COST,
+    claimDailyBonus,
+    grantLuckyBait,
+    isDailyBonusAvailable,
+    spendCastEnergy,
+    tryNineLives,
+    addBonusEnergy
+} from './energy.js';
+import { showRewardedAd } from './rewardedAds.js';
 
 const FRIEND_ONLINE_THRESHOLD_MS = 5 * 60 * 1000;
 const FRIEND_CATCH_TOAST_RARITIES = new Set(['Epic', 'Legendary', 'Trophy']);
@@ -54,6 +77,8 @@ export class UI {
         this.toastContainer = null;
         this.toastStyleInjected = false;
         this.pendingAchievementCheck = false;
+        this._energyBlocked = false;
+        this._energyAdInFlight = false;
         this.starfishAdviceIndex = 0;
         this.starfishAdviceLines = [
             "You've already caught the Starfish of Eternity, Halley. Cast again only when your heart is curious, not restless.",
@@ -66,6 +91,9 @@ export class UI {
             "You've already caught the Starfish of Eternity. The universe is impressed; now go feed your crew."
         ];
         this.starfishFirstCatchLine = "You've spent your life chasing wonders.\n\nBut the light you sought was always within you.";
+        this._catchPresentationBound = false;
+        this._catchPresentationTimer = null;
+        this._catchCoinRaf = null;
     }
 
     init() {
@@ -118,6 +146,8 @@ export class UI {
         this.initTabs();
         this.initModals();
         this.initFriendsUI();
+        this._bindCatchPresentationControls();
+        this.initEnergySystem();
         this.updatePlayerInfo();
         this.renderFriends();
         this.ensureFriendActivityPolling();
@@ -129,10 +159,267 @@ export class UI {
             this.evaluateAchievements('startup');
         }, 1000);
         
-        // Update player info periodically
+        // Update player info periodically (energy regen ticks here too)
         setInterval(() => {
+            this.tickEnergy();
             this.updatePlayerInfo();
         }, 1000);
+    }
+
+    initEnergySystem() {
+        if (this.player) {
+            const gained = applyOfflineEnergyRegen(this.player);
+            if (gained > 0) {
+                this.player.save({ skipSync: true });
+            }
+        }
+
+        const energyModal = document.getElementById('energy-modal');
+        const dailyModal = document.getElementById('daily-bonus-modal');
+
+        document.getElementById('energy-ad-btn')?.addEventListener('click', () => {
+            this.watchAdForEnergy();
+        });
+        document.getElementById('energy-wait-btn')?.addEventListener('click', () => {
+            this.hideOutOfEnergyModal();
+        });
+        document.getElementById('energy-close-btn')?.addEventListener('click', () => {
+            this.hideOutOfEnergyModal();
+        });
+        document.getElementById('daily-bonus-claim-btn')?.addEventListener('click', () => {
+            this.claimDailyCatchBonus();
+        });
+
+        energyModal?.addEventListener('click', (event) => {
+            if (event.target === energyModal) {
+                this.hideOutOfEnergyModal();
+            }
+        });
+        dailyModal?.addEventListener('click', (event) => {
+            if (event.target === dailyModal) {
+                this.hideDailyBonusModal();
+            }
+        });
+
+        window.setTimeout(() => this.maybeShowDailyBonus(), 1200);
+    }
+
+    tickEnergy() {
+        if (!this.player) return;
+
+        const gained = applyOfflineEnergyRegen(this.player);
+        if (gained > 0) {
+            this.player.save({ skipSync: true });
+        }
+
+        if (this._energyBlocked && canAffordCast(this.player)) {
+            this.hideOutOfEnergyModal();
+        }
+    }
+
+    maybeShowDailyBonus() {
+        if (!this.player || !isDailyBonusAvailable(this.player)) return;
+        const modal = document.getElementById('daily-bonus-modal');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+    }
+
+    hideDailyBonusModal() {
+        const modal = document.getElementById('daily-bonus-modal');
+        modal?.classList.add('hidden');
+        modal?.setAttribute('aria-hidden', 'true');
+    }
+
+    claimDailyCatchBonus() {
+        if (!this.player) return;
+        const result = claimDailyBonus(this.player);
+        if (!result) {
+            this.hideDailyBonusModal();
+            return;
+        }
+        this.hideDailyBonusModal();
+        this.updatePlayerInfo();
+        const max = this.player.maxEnergy ?? 100;
+        const overCap = this.player.energy > max;
+        this.showToast({
+            type: 'success',
+            title: '🎁 Daily Catch Bonus',
+            body: overCap
+                ? `+${result.energyGained} Energy (${this.player.energy}/${max}) and +${result.coins} coins!`
+                : `+${result.energyGained} Energy and +${result.coins} coins!`
+        });
+    }
+
+    pickOutOfEnergyLine() {
+        const line = OUT_OF_ENERGY_LINES[Math.floor(Math.random() * OUT_OF_ENERGY_LINES.length)];
+        return `"${line}"`;
+    }
+
+    showOutOfEnergyModal() {
+        const modal = document.getElementById('energy-modal');
+        const message = document.getElementById('energy-modal-message');
+        if (!modal) return;
+
+        this._energyBlocked = true;
+        document.body.classList.add('energy-blocked');
+        if (message) {
+            message.textContent = this.pickOutOfEnergyLine();
+        }
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+    }
+
+    hideOutOfEnergyModal() {
+        const modal = document.getElementById('energy-modal');
+        this._energyBlocked = false;
+        document.body.classList.remove('energy-blocked');
+        modal?.classList.add('hidden');
+        modal?.setAttribute('aria-hidden', 'true');
+    }
+
+    isEnergyBlocked() {
+        return this._energyBlocked;
+    }
+
+    async watchAdForEnergy() {
+        if (!this.player || this._energyAdInFlight) return;
+        this._energyAdInFlight = true;
+        const adBtn = document.getElementById('energy-ad-btn');
+        if (adBtn) adBtn.disabled = true;
+
+        try {
+            await showRewardedAd('energy');
+            addBonusEnergy(this.player, AD_ENERGY_REWARD);
+            this.player.save();
+            this.updatePlayerInfo();
+            this.showToast({
+                type: 'success',
+                title: 'Energy restored',
+                body: `+${AD_ENERGY_REWARD} Energy from the ad.`
+            });
+            if (canAffordCast(this.player)) {
+                this.hideOutOfEnergyModal();
+            }
+        } catch (error) {
+            console.warn('[UI] Rewarded ad failed:', error);
+            this.showToast({
+                type: 'error',
+                title: 'Ad unavailable',
+                body: 'Try again in a moment.'
+            });
+        } finally {
+            this._energyAdInFlight = false;
+            if (adBtn) adBtn.disabled = false;
+        }
+    }
+
+    renderShopBoosts() {
+        const container = document.getElementById('shop-boosts');
+        if (!container || !this.player) return;
+
+        const doubleActive = this.player.doubleCoinsNextCatch === true;
+
+        container.innerHTML = `
+            <div class="shop-boost-card">
+                <div class="shop-boost-copy">
+                    <div class="shop-boost-title">📺 Double Coins</div>
+                    <div class="shop-boost-desc">Double coins on your next fish caught.</div>
+                </div>
+                <button type="button" class="shop-boost-btn" id="boost-double-coins" ${doubleActive ? 'disabled' : ''}>
+                    ${doubleActive ? 'Active' : 'Watch Ad'}
+                </button>
+            </div>
+            <div class="shop-boost-card">
+                <div class="shop-boost-copy">
+                    <div class="shop-boost-title">📺 Lucky Bait</div>
+                    <div class="shop-boost-desc">Random premium bait, free.</div>
+                </div>
+                <button type="button" class="shop-boost-btn" id="boost-lucky-bait">Watch Ad</button>
+            </div>
+        `;
+
+        document.getElementById('boost-double-coins')?.addEventListener('click', () => {
+            this.watchAdForDoubleCoins();
+        });
+        document.getElementById('boost-lucky-bait')?.addEventListener('click', () => {
+            this.watchAdForLuckyBait();
+        });
+    }
+
+    async watchAdForDoubleCoins() {
+        if (!this.player || this.player.doubleCoinsNextCatch) return;
+        try {
+            await showRewardedAd('double_coins');
+            this.player.doubleCoinsNextCatch = true;
+            this.player.save();
+            this.renderShopBoosts();
+            this.showToast({
+                type: 'success',
+                title: 'Double Coins ready',
+                body: 'Your next catch pays double!'
+            });
+        } catch (error) {
+            this.showToast({ type: 'error', title: 'Ad unavailable', body: 'Try again later.' });
+        }
+    }
+
+    async watchAdForLuckyBait() {
+        if (!this.player) return;
+        try {
+            await showRewardedAd('lucky_bait');
+            const bait = grantLuckyBait(this.player);
+            this.renderShopBoosts();
+            if (this.currentShopTab === 'baits') {
+                this.renderShop(this.currentShopTab);
+            }
+            this.showToast({
+                type: 'success',
+                title: 'Lucky Bait!',
+                body: bait ? `You received ${bait.name}!` : 'Premium bait added to your tackle box.'
+            });
+        } catch (error) {
+            this.showToast({ type: 'error', title: 'Ad unavailable', body: 'Try again later.' });
+        }
+    }
+
+    trySpendCastEnergy() {
+        if (!this.player) return true;
+
+        if (!canAffordCast(this.player)) {
+            if (tryNineLives(this.player)) {
+                this.player.save();
+                this.updatePlayerInfo();
+                this.showToast({
+                    type: 'success',
+                    title: '🐾 Nine Lives!',
+                    body: 'Halley gets a free second wind. +50 Energy'
+                });
+                return canAffordCast(this.player);
+            }
+            this.showOutOfEnergyModal();
+            return false;
+        }
+
+        spendCastEnergy(this.player);
+        this.player.save();
+        this.updatePlayerInfo();
+
+        if (this.player.energy <= 0) {
+            if (tryNineLives(this.player)) {
+                this.player.save();
+                this.updatePlayerInfo();
+                this.showToast({
+                    type: 'success',
+                    title: '🐾 Nine Lives!',
+                    body: 'Halley gets a free second wind. +50 Energy'
+                });
+            } else {
+                this.showOutOfEnergyModal();
+            }
+        }
+
+        return true;
     }
 
     maybeStartGameplayOnboarding() {
@@ -291,6 +578,205 @@ export class UI {
 
         toast.addEventListener('click', removeToast);
         setTimeout(removeToast, duration);
+    }
+
+    _clearFirstCatchOfDayBonusNotice() {
+        this._firstCatchOfDayBonusApplied = null;
+    }
+
+    _bindCatchPresentationControls() {
+        if (this._catchPresentationBound) return;
+        const overlay = document.getElementById('catch-presentation');
+        if (!overlay) return;
+
+        this._catchPresentationBound = true;
+        const dismiss = () => this.hideCatchPresentation();
+        document.getElementById('catch-presentation-close')?.addEventListener('click', dismiss);
+        overlay.querySelector('[data-catch-dismiss]')?.addEventListener('click', dismiss);
+    }
+
+    _animateCatchCoinCount(valueEl, coinsWrap, targetValue, durationMs = 900) {
+        if (!valueEl) return;
+
+        if (this._catchCoinRaf) {
+            cancelAnimationFrame(this._catchCoinRaf);
+            this._catchCoinRaf = null;
+        }
+
+        const target = Math.max(0, Math.floor(targetValue || 0));
+        if (target === 0) {
+            valueEl.textContent = '0';
+            return;
+        }
+
+        const start = performance.now();
+        coinsWrap?.classList.add('is-counting');
+
+        const tick = (now) => {
+            const t = Math.min(1, (now - start) / durationMs);
+            const eased = 1 - Math.pow(1 - t, 3);
+            valueEl.textContent = String(Math.round(target * eased));
+            if (t < 1) {
+                this._catchCoinRaf = requestAnimationFrame(tick);
+            } else {
+                this._catchCoinRaf = null;
+                coinsWrap?.classList.remove('is-counting');
+            }
+        };
+
+        valueEl.textContent = '0';
+        this._catchCoinRaf = requestAnimationFrame(tick);
+    }
+
+    hideCatchPresentation() {
+        const overlay = document.getElementById('catch-presentation');
+        if (!overlay || overlay.classList.contains('hidden')) return;
+
+        if (this._catchPresentationTimer) {
+            clearTimeout(this._catchPresentationTimer);
+            this._catchPresentationTimer = null;
+        }
+        if (this._catchCoinRaf) {
+            cancelAnimationFrame(this._catchCoinRaf);
+            this._catchCoinRaf = null;
+        }
+
+        overlay.classList.remove('is-visible');
+        overlay.classList.add('is-exiting');
+        overlay.setAttribute('aria-hidden', 'true');
+
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+            overlay.classList.remove('is-exiting');
+            const image = document.getElementById('catch-fish-image');
+            const badge = document.getElementById('catch-rarity-badge');
+            image?.classList.remove('is-popping');
+            badge?.classList.remove('is-flashing');
+        }, 320);
+    }
+
+    showCatchPresentation(fishData, options = {}) {
+        if (!fishData) {
+            console.warn('[UI] No fish data for catch presentation');
+            return;
+        }
+
+        this._bindCatchPresentationControls();
+
+        const overlay = document.getElementById('catch-presentation');
+        if (!overlay) {
+            console.warn('[UI] Catch presentation markup missing');
+            return;
+        }
+
+        if (this._catchPresentationTimer) {
+            clearTimeout(this._catchPresentationTimer);
+            this._catchPresentationTimer = null;
+        }
+        if (this._catchCoinRaf) {
+            cancelAnimationFrame(this._catchCoinRaf);
+            this._catchCoinRaf = null;
+        }
+        overlay.classList.remove('is-exiting', 'is-visible');
+
+        const fishName = fishData.species || fishData.name || 'Fish';
+        const weight = typeof fishData.weight === 'number' ? fishData.weight : 0;
+        const rarity = fishData.rarity || 'Common';
+        const coins = Math.floor(options.coins ?? fishData.value ?? 0);
+        const xp = Math.floor(options.xp ?? fishData.experience ?? 0);
+        const isFirstCatch = !!options.isFirstCatch;
+        const { primary: imagePath, fallback: imageFallback } = getFishImagePaths(fishName);
+
+        const titleEl = document.getElementById('catch-presentation-title');
+        const badgeEl = document.getElementById('catch-rarity-badge');
+        const firstBadgeEl = document.getElementById('catch-first-badge');
+        const imageEl = document.getElementById('catch-fish-image');
+        const placeholderEl = document.getElementById('catch-fish-placeholder');
+        const nameEl = document.getElementById('catch-fish-name');
+        const weightEl = document.getElementById('catch-fish-weight');
+        const bonusEl = document.getElementById('catch-first-bonus');
+        const coinsWrap = document.getElementById('catch-coins');
+        const coinsValueEl = document.getElementById('catch-coins-value');
+        const xpEl = document.getElementById('catch-xp');
+        const halleyTextEl = document.getElementById('catch-halley-text');
+
+        if (titleEl) {
+            titleEl.textContent = isFirstCatch ? 'New Fish!' : 'Caught!';
+        }
+        if (badgeEl) {
+            badgeEl.textContent = rarity;
+            badgeEl.className = `catch-rarity-badge catch-rarity-${normalizeCatchRarityClass(rarity)} is-flashing`;
+        }
+        if (firstBadgeEl) {
+            firstBadgeEl.classList.toggle('hidden', !isFirstCatch);
+        }
+        if (nameEl) nameEl.textContent = fishName;
+        if (weightEl) {
+            weightEl.textContent = `${weight.toFixed(2)} lbs`;
+            weightEl.className = `catch-fish-weight ${getCatchWeightClass(weight)}`;
+        }
+        if (bonusEl) {
+            const bonus = this._firstCatchOfDayBonusApplied;
+            if (bonus) {
+                bonusEl.textContent = `☀️ First catch today: +${bonus.coins} coins, +${bonus.energyGained} energy`;
+                bonusEl.classList.remove('hidden');
+            } else {
+                bonusEl.textContent = '';
+                bonusEl.classList.add('hidden');
+            }
+        }
+        if (xpEl) {
+            xpEl.textContent = xp > 0 ? `+${xp} XP` : '';
+            xpEl.style.display = xp > 0 ? '' : 'none';
+        }
+        if (halleyTextEl) {
+            halleyTextEl.textContent = pickCatchHalleyLine(fishData, {
+                isFirstCatch,
+                isHuge: options.isHuge
+            });
+        }
+
+        const halleyLineEl = document.getElementById('catch-halley-line');
+        if (halleyLineEl) {
+            halleyLineEl.style.animation = 'none';
+            void halleyLineEl.offsetWidth;
+            halleyLineEl.style.animation = '';
+        }
+
+        if (imageEl) {
+            imageEl.classList.remove('is-popping');
+            imageEl.style.display = '';
+            imageEl.alt = fishName;
+            imageEl.onload = () => {
+                if (placeholderEl) placeholderEl.style.display = 'none';
+                requestAnimationFrame(() => imageEl.classList.add('is-popping'));
+            };
+            imageEl.onerror = () => {
+                if (!imageEl.dataset.fallback) {
+                    imageEl.dataset.fallback = '1';
+                    imageEl.src = imageFallback;
+                    return;
+                }
+                imageEl.style.display = 'none';
+                if (placeholderEl) placeholderEl.style.display = 'flex';
+            };
+            imageEl.removeAttribute('data-fallback');
+            imageEl.src = imagePath;
+            if (imageEl.complete && imageEl.naturalWidth > 0) {
+                imageEl.onload?.();
+            }
+        }
+
+        overlay.classList.remove('hidden', 'is-exiting');
+        overlay.setAttribute('aria-hidden', 'false');
+        requestAnimationFrame(() => overlay.classList.add('is-visible'));
+
+        this._animateCatchCoinCount(coinsValueEl, coinsWrap, coins);
+
+        const autoCloseMs = isFirstCatch ? 5500 : 5000;
+        this._catchPresentationTimer = setTimeout(() => this.hideCatchPresentation(), autoCloseMs);
+
+        this._clearFirstCatchOfDayBonusNotice();
     }
 
     getNextStarfishAdvice() {
@@ -716,12 +1202,16 @@ export class UI {
         const nameEl = document.getElementById('player-name');
         const levelEl = document.getElementById('player-level');
         const moneyEl = document.getElementById('player-money');
+        const energyEl = document.getElementById('player-energy');
+        const energyMaxEl = document.getElementById('player-energy-max');
         const expEl = document.getElementById('player-exp');
         const expBar = document.getElementById('exp-bar');
         
         if (nameEl) nameEl.textContent = this.player.name || 'Guest';
         if (levelEl) levelEl.textContent = this.player.level;
         if (moneyEl) moneyEl.textContent = `$${this.player.money}`;
+        if (energyEl) energyEl.textContent = String(Math.floor(this.player.energy ?? 0));
+        if (energyMaxEl) energyMaxEl.textContent = String(this.player.maxEnergy ?? 100);
         
         if (expEl && expBar && this.player) {
             const expForCurrentLevel = this.player.calculateExpForLevel(this.player.level);
@@ -1857,6 +2347,8 @@ export class UI {
     
     renderShop(category) {
         if (!this.player) return;
+
+        this.renderShopBoosts();
         
         this.currentShopTab = category;
         document.querySelectorAll('.shop-tab').forEach(tab => {
@@ -2340,6 +2832,10 @@ export class UI {
             return;
         }
 
+        if (this.isEnergyBlocked()) {
+            return;
+        }
+
         const castButton = document.getElementById('cast-button');
         const currentState = castButton?.getAttribute('data-state');
 
@@ -2382,6 +2878,10 @@ export class UI {
                 title: 'Celestial Depths locked',
                 body: 'Collect all ten sea relics and forge the Starlight Lure first.'
             });
+            return;
+        }
+
+        if (!this.trySpendCastEnergy()) {
             return;
         }
         
@@ -2808,22 +3308,29 @@ export class UI {
         
         // Show bite animation/effect
         if (this.fishing?.bobber) {
+            // Bite pop (triggerRipple is visual-only)
+            if (this.game?.soundManager?.playSplash) {
+                this.game.soundManager.playSplash();
+            }
+
             // Trigger bobber strike animation
             this.fishing.bobber.userData.biteStrike = true;
-            this.fishing.bobber.userData.biteStrikeTime = this.fishing.sceneRef?.clock?.elapsedTime || Date.now() / 1000;
-            
-            // Trigger splash effect at bobber
+            this.fishing.bobber.userData.biteStrikeTime =
+                this.fishing.sceneRef?.clock?.elapsedTime || Date.now() / 1000;
+
+            // Ripple visuals only
             if (this.fishing.splash && this.fishing.bobber) {
-                this.fishing.splash.trigger(this.fishing.bobber.position);
+                this.fishing.splash.triggerRipple(this.fishing.bobber.position);
+
                 for (let i = 0; i < 3; i++) {
                     setTimeout(() => {
-                        if (this.fishing.splash) {
+                        if (this.fishing?.splash && this.fishing?.bobber) {
                             this.fishing.splash.triggerRipple(this.fishing.bobber.position);
                         }
                     }, i * 100);
                 }
             }
-            
+
             console.log('[UI] Fish strikes!');
         }
         
@@ -3073,6 +3580,20 @@ export class UI {
                 experience: rewardExperience,
                 reactionTimeMs
             }, this.game?.locations, TackleShop);
+
+            this._firstCatchOfDayBonusApplied = applyFirstCatchOfDayBonus(this.player);
+            if (this._firstCatchOfDayBonusApplied) {
+                this.updatePlayerInfo();
+                const bonus = this._firstCatchOfDayBonusApplied;
+                setTimeout(() => {
+                    this.showToast({
+                        type: 'success',
+                        title: '☀️ First Catch of the Day',
+                        body: `+${bonus.coins} coins and +${bonus.energyGained} energy!`,
+                        duration: 4500
+                    });
+                }, 2000);
+            }
             
             // Handle unlock if player leveled up (single unlock per level)
             if (newUnlocks) {
@@ -3197,131 +3718,12 @@ export class UI {
     }
     
     showFishCatchPopup() {
-        // Get fish data from fish instance
         const fishData = this.fish.getCurrentFish();
         if (!fishData) {
             console.warn('[UI] No fish data available for popup');
             return;
         }
-        
-        // Remove existing popup if any
-        const existingPopup = document.getElementById('fish-catch-popup');
-        if (existingPopup) {
-            existingPopup.remove();
-        }
-        
-        // Create popup element
-        const popup = document.createElement('div');
-        popup.id = 'fish-catch-popup';
-        popup.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px 40px;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            z-index: 10000;
-            font-family: 'Arial', sans-serif;
-            text-align: center;
-            min-width: 300px;
-            animation: popupFadeIn 0.3s ease-out;
-        `;
-        
-        // Add animation keyframes to style tag if not exists
-        if (!document.getElementById('popup-animations')) {
-            const style = document.createElement('style');
-            style.id = 'popup-animations';
-            style.textContent = `
-                @keyframes popupFadeIn {
-                    from {
-                        opacity: 0;
-                        transform: translate(-50%, -50%) scale(0.8);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translate(-50%, -50%) scale(1);
-                    }
-                }
-                @keyframes popupFadeOut {
-                    from {
-                        opacity: 1;
-                        transform: translate(-50%, -50%) scale(1);
-                    }
-                    to {
-                        opacity: 0;
-                        transform: translate(-50%, -50%) scale(0.8);
-                    }
-                }
-            `;
-            document.head.appendChild(style);
-        }
-        
-        // Determine size color for weight display
-        const weight = fishData.weight;
-        let sizeColor = '#fff';
-        
-        if (weight < 3.0) {
-            sizeColor = '#4ade80';
-        } else if (weight < 4.0) {
-            sizeColor = '#60a5fa';
-        } else if (weight < 6.0) {
-            sizeColor = '#f59e0b';
-        } else if (weight < 10.0) {
-            sizeColor = '#f97316';
-        } else {
-            sizeColor = '#ef4444';
-        }
-        
-        // Create popup content
-        popup.innerHTML = `
-            <div style="font-size: 24px; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;">
-                🎣 Caught!
-            </div>
-            <div style="font-size: 20px; margin-bottom: 8px; font-weight: 600;">
-                ${fishData.species || 'Fish'}
-            </div>
-            <div style="font-size: 28px; font-weight: bold; margin-bottom: 15px; color: ${sizeColor};">
-                ${weight.toFixed(2)} lbs
-            </div>
-            <div style="font-size: 16px; margin-bottom: 8px; color: #c4d9ff;">
-                +${Math.floor(fishData.experience || 0)} XP
-            </div>
-            <button id="popup-close-btn" style="
-                margin-top: 20px;
-                padding: 10px 30px;
-                background: rgba(255, 255, 255, 0.2);
-                border: 2px solid white;
-                border-radius: 25px;
-                color: white;
-                font-size: 14px;
-                font-weight: bold;
-                cursor: pointer;
-                transition: all 0.2s;
-            " onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
-                Close
-            </button>
-        `;
-        
-        // Add to document
-        document.body.appendChild(popup);
-        
-        // Close button handler
-        const closeBtn = document.getElementById('popup-close-btn');
-        closeBtn.addEventListener('click', () => {
-            popup.style.animation = 'popupFadeOut 0.3s ease-out';
-            setTimeout(() => popup.remove(), 300);
-        });
-        
-        // Auto-close after 5 seconds
-        setTimeout(() => {
-            if (popup.parentNode) {
-                popup.style.animation = 'popupFadeOut 0.3s ease-out';
-                setTimeout(() => popup.remove(), 300);
-            }
-        }, 5000);
+        this.showCatchPresentation(fishData);
     }
     
     showFirstCatchPopup(fishData) {
@@ -3329,110 +3731,7 @@ export class UI {
             console.warn('[UI] No fish data for first catch popup');
             return;
         }
-        
-        // Remove existing popup if any
-        const existingPopup = document.getElementById('first-catch-popup');
-        if (existingPopup) {
-            existingPopup.remove();
-        }
-        
-        // Import fishTypes for image path only
-        import('./fishTypes.js').then(() => {
-            const fishName = fishData.species || fishData.name || 'Fish';
-            const weight = fishData.weight || 0;
-            const rarity = fishData.rarity || 'Common';
-            const { primary: imagePath, fallback: imageFallback } = getFishImagePaths(fishName);
-            
-            // Rarity colors
-            const rarityColors = {
-                'Common': '#4ade80',
-                'Uncommon': '#60a5fa',
-                'Rare': '#f59e0b',
-                'Epic': '#f97316',
-                'Legendary': '#ef4444',
-                'Trophy': '#fbbf24'
-            };
-            const rarityColor = rarityColors[rarity] || '#fff';
-            
-            // Create simple popup element
-            const popup = document.createElement('div');
-            popup.id = 'first-catch-popup';
-            popup.style.cssText = `
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                padding: 30px 40px;
-                border-radius: 15px;
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-                z-index: 10001;
-                font-family: 'Arial', sans-serif;
-                text-align: center;
-                min-width: 300px;
-                max-width: 90vw;
-                animation: popupFadeIn 0.3s ease-out;
-            `;
-            
-            // Create simple popup content - just image, title, fish name, and weight
-            popup.innerHTML = `
-                <div style="font-size: 24px; font-weight: bold; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; color: #fbbf24;">
-                    🎉 NEW FISH CAUGHT! 🎉
-                </div>
-                <div style="margin-bottom: 20px; position: relative; width: 200px; height: 200px; margin: 0 auto;">
-                    <img src="${imagePath}" alt="${fishName}" 
-                         style="max-width: 200px; max-height: 200px; width: auto; height: auto; border-radius: 10px; border: 3px solid ${rarityColor}; display: block;"
-                         decoding="async"
-                         onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${imageFallback}';}else{this.onerror=null;this.style.display='none';this.parentElement.querySelector('.fish-placeholder').style.display='flex';}">
-                    <div class="fish-placeholder" style="display: none; width: 200px; height: 200px; background: rgba(255,255,255,0.1); border-radius: 10px; border: 3px solid ${rarityColor}; position: absolute; top: 0; left: 0; flex-direction: column; align-items: center; justify-content: center; font-size: 48px;">
-                        🐟
-                    </div>
-                </div>
-                <div style="font-size: 22px; margin-bottom: 15px; font-weight: 600;">
-                    ${fishName}
-                </div>
-                <div style="font-size: 28px; font-weight: bold; margin-bottom: 20px; color: #fbbf24;">
-                    ${weight.toFixed(2)} lbs
-                </div>
-                <button id="first-catch-close-btn" style="
-                    margin-top: 10px;
-                    padding: 10px 30px;
-                    background: rgba(255, 255, 255, 0.2);
-                    border: 2px solid white;
-                    border-radius: 25px;
-                    color: white;
-                    font-size: 14px;
-                    font-weight: bold;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                " onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
-                    Close
-                </button>
-            `;
-            
-            // Add to document
-            document.body.appendChild(popup);
-            
-            // Close button handler
-            const closeBtn = document.getElementById('first-catch-close-btn');
-            closeBtn.addEventListener('click', () => {
-                popup.style.animation = 'popupFadeOut 0.3s ease-out';
-                setTimeout(() => popup.remove(), 300);
-            });
-            
-            // Auto-close after 4 seconds
-            setTimeout(() => {
-                if (popup.parentNode) {
-                    popup.style.animation = 'popupFadeOut 0.3s ease-out';
-                    setTimeout(() => popup.remove(), 300);
-                }
-            }, 4000);
-        }).catch(error => {
-            console.error('[UI] Failed to load fishTypes:', error);
-            // Fallback to regular popup
-            this.showFishCatchPopup();
-        });
+        this.showCatchPresentation(fishData, { isFirstCatch: true });
     }
 
     showStarfishPopup(fishData, isFirstCatch) {
@@ -3610,6 +3909,7 @@ export class UI {
         
         // Show level up popup near top of screen
         this.showLevelUpPopup(unlockDetails || newUnlock);
+        this.updatePlayerInfo();
         
         // Check for achievement unlocks after level up
         this.evaluateAchievements('levelup');
@@ -3647,6 +3947,7 @@ export class UI {
         const newLevel = this.player.level;
         let unlockText = '';
         let unlockIcon = '🎉';
+        const energyNote = `<div style="margin-top:8px;color:#fde68a;font-size:14px;">⚡ +${LEVEL_UP_ENERGY_BONUS} Energy!</div>`;
         
         if (newUnlock.type === 'location') {
             const location = newUnlock.location;
@@ -3690,9 +3991,11 @@ export class UI {
             <div style="font-size: 20px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">
                 🎊 You've Reached Level ${newLevel}! 🎊
             </div>
+            ${unlockText ? `
             <div style="font-size: 16px; font-weight: 600; margin-top: 10px; color: #1a1a2e;">
                 ${unlockIcon} ${unlockText}
-            </div>
+            </div>` : ''}
+            ${energyNote}
         `;
         
         document.body.appendChild(popup);
@@ -4159,6 +4462,17 @@ export class UI {
             this.player.top10BiggestFish = [];
             this.player.caughtFish = {};
             this.player.caughtFishCollection = {};
+            this.player.energy = MAX_ENERGY;
+            this.player.maxEnergy = MAX_ENERGY;
+            this.player.lastEnergyRegenAt = Date.now();
+            this.player.lastDailyBonusDate = null;
+            this.player.lastFirstCatchBonusDate = null;
+            this.player.lastNineLivesAt = null;
+            this.player.doubleCoinsNextCatch = false;
+            this._energyBlocked = false;
+            document.body.classList.remove('energy-blocked');
+            this.hideOutOfEnergyModal();
+            this.hideDailyBonusModal();
             this.player.seasonalCatches = {
                 spring: { caught: 0, biggest: 0 },
                 summer: { caught: 0, biggest: 0 },

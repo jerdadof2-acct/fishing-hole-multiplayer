@@ -5,9 +5,13 @@ import { GROUND_SIZE, LAKE_MASK_PROFILE } from '../buildLakeMask.js';
 
 /** Sand floor depth below the water surface at Coral Kingdoms. */
 export const REEF_BED_OFFSET = 0.28;
-const TARGET_COLONIES = 210;
-const TARGET_FILLER_COLONIES = 95;
-const TARGET_LARGE_COLONIES = 16;
+
+const isMobileReef = typeof navigator !== 'undefined'
+    && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
+const TARGET_COLONIES = isMobileReef ? 90 : 210;
+const TARGET_FILLER_COLONIES = isMobileReef ? 35 : 95;
+const TARGET_LARGE_COLONIES = isMobileReef ? 8 : 16;
 const MIN_COLONY_SPACING = 1.35;
 const MIN_FILLER_SPACING = 0.95;
 const MIN_LARGE_SPACING = 4.6;

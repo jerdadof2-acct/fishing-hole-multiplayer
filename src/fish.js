@@ -10,10 +10,8 @@ import {
     isStarfishReunionEncounter,
     resolveLocationFishIds
 } from './config/starfishEncounter.js';
-import {
-    createFishShadowSprite,
-    updateFishShadowSprite
-} from './effects/waterAmbience.js';
+import { debugLog } from './config/debug.js';
+import { getCatchSplashDuration } from './splash.js';
 
 // Minimal fish FSM: IDLE -> HOOKED_FIGHT -> LANDING -> LANDED
 export const FishState = {
@@ -39,7 +37,6 @@ export class Fish {
         // Create test fish mesh
         this.createTestFish();
         this.mesh = this.fish;
-        this.fishShadow = createFishShadowSprite(this.sceneRef.scene);
         
         this.speedFight = 1.25;             // m/s, not too fast
         this.speedLanding = 3.5;            // controlled homeward pull (slowed for smoother landing)
@@ -100,7 +97,7 @@ export class Fish {
         const duration = baseDuration + Math.random() * randomVariation;
         
         // Log fight duration for debugging
-        console.log(`[FISH] Weight: ${weight.toFixed(2)} lbs, Fight duration: ${duration.toFixed(2)}s`);
+        debugLog(`[FISH] Weight: ${weight.toFixed(2)} lbs, Fight duration: ${duration.toFixed(2)}s`);
         
         return duration;
     }
@@ -132,7 +129,7 @@ export class Fish {
         // Get bobber's EXACT world position - use world coords to avoid coordinate space issues
         const bobberWorld = new THREE.Vector3();
         this.fishing.bobber.getWorldPosition(bobberWorld);
-        console.log('[FISH] Hooking at bobber world position:', bobberWorld);
+        debugLog('[FISH] Hooking at bobber world position:', bobberWorld);
         
         // Position fish EXACTLY at bobber world location (fish bites right where bobber is)
         // Ensure world matrix is updated
@@ -221,18 +218,21 @@ export class Fish {
         
         // Keep fish hidden visually for now (will add proper fish images later)
         this.mesh.visible = false;
-        this._syncFishShadow(true);
         
-        // Trigger splash on hook — soft for Starfish reunion
+        // Set hook — second pop + ripple (visualOnly avoids a third synthetic layer on catch)
         if (this.fishing.splash && this.fishing.bobber) {
-            this.fishing.splash.trigger(this.fishing.bobber.position);
-            const rippleCount = this._gentleReunion ? 1 : 3;
-            for (let i = 0; i < rippleCount; i++) {
-                setTimeout(() => {
-                    if (this.fishing.splash) {
-                        this.fishing.splash.triggerRipple(this.fishing.bobber.position);
-                    }
-                }, i * (this._gentleReunion ? 200 : 100));
+            if (this._gentleReunion) {
+                this.fishing.splash.triggerRipple(this.fishing.bobber.position);
+            } else {
+                this.fishing.splash.soundManager?.playSplash?.();
+                this.fishing.splash.triggerRipple(this.fishing.bobber.position);
+                for (let i = 0; i < 2; i++) {
+                    setTimeout(() => {
+                        if (this.fishing?.splash && this.fishing?.bobber) {
+                            this.fishing.splash.triggerRipple(this.fishing.bobber.position);
+                        }
+                    }, (i + 1) * 100);
+                }
             }
         }
 
@@ -240,7 +240,7 @@ export class Fish {
             const catXZ = this._getCatWorldXZ();
             this._reunionHookPos = new THREE.Vector3(this.mesh.position.x, 0, this.mesh.position.z);
             this._reunionMaxDist = this._reunionHookPos.distanceTo(catXZ);
-            console.log(`[FISH] Starfish reunion — gentle approach for ${this._fightDur}s`, {
+            debugLog(`[FISH] Starfish reunion — gentle approach for ${this._fightDur}s`, {
                 hook: `(${this._reunionHookPos.x.toFixed(1)}, ${this._reunionHookPos.z.toFixed(1)})`,
                 home: `(${catXZ.x.toFixed(1)}, ${catXZ.z.toFixed(1)})`,
                 maxDist: this._reunionMaxDist.toFixed(1)
@@ -255,7 +255,7 @@ export class Fish {
             this.state = FishState.LANDING;
             this._landingStartLogged = false;
             this._lastLandingLogTime = 0;
-            console.log('[FISH] startLanding() called, state set to LANDING');
+            debugLog('[FISH] startLanding() called, state set to LANDING');
             if (this._gentleReunion) {
                 const castButton = document.getElementById('cast-button');
                 if (castButton) {
@@ -267,22 +267,11 @@ export class Fish {
         }
     }
     
-    _syncFishShadow(visible) {
-        if (!this.mesh) return;
-        const waterY = this.water?.waterY ?? 0;
-        const show = visible && (
-            this.state === FishState.HOOKED_FIGHT ||
-            this.state === FishState.LANDING
-        );
-        updateFishShadowSprite(this.fishShadow, this.mesh.position, waterY, show);
-    }
-
     markLanded() {
         // Prevent infinite recursion - only execute once
         if (this.state === FishState.LANDED) return;
         
         this.state = FishState.LANDED;
-        this._syncFishShadow(false);
         this.isHooked = true;
         
         // Log catch
@@ -291,26 +280,55 @@ export class Fish {
             if (typeof this.fishing?.lastReactionTimeMs === 'number') {
                 reactionLog = ` (reaction ${this.fishing.lastReactionTimeMs} ms)`;
             }
-            console.log(`Caught: ${this.currentFish.species} - ${this.currentFish.weight.toFixed(2)} lbs${reactionLog}`);
+            debugLog(`Caught: ${this.currentFish.species} - ${this.currentFish.weight.toFixed(2)} lbs${reactionLog}`);
         }
         
-        // Trigger big splash at bobber position when fish is caught (visual only - no sound)
+        // Catch celebration splash — bigger for rare fish
         if (this.fishing?.bobber && this.fishing?.splash) {
             const bobberPos = this.fishing.bobber.position.clone();
-            // Disable soundManager to prevent synthetic splash sound from playing
-            // Only the fish_caught_splash sound file should play
-            const originalSoundManager = this.fishing.splash.soundManager;
-            this.fishing.splash.soundManager = null;
-            // Trigger big splash that lasts 1-1.5 seconds (visual only)
-            this.fishing.splash.triggerBigSplash(bobberPos, 1.2);
-            // Restore sound manager after trigger
-            this.fishing.splash.soundManager = originalSoundManager;
-            console.log(`[FISH] Big catch splash triggered at bobber position: (${bobberPos.x.toFixed(2)}, ${bobberPos.z.toFixed(2)})`);
-            
-            // Trigger water ripple at catch position
-            if (this.fishing?.water && this.fishing.water.mesh && this.fishing.water.mesh.splashAt) {
+            const rarity = this.currentFish?.rarity || 'Common';
+            const duration = getCatchSplashDuration(rarity);
+            this.fishing._didFinalSplash = true;
+
+            if (this.fishing.sfx) {
+                const soundBuffer = this.fishing.sfx.cache?.get('fish_caught_splash');
+                if (soundBuffer) {
+                    this.fishing.sfx.play3D(
+                        'fish_caught_splash',
+                        bobberPos,
+                        this.fishing.sceneRef.scene,
+                        0.9,
+                        1.0
+                    );
+                }
+            }
+
+            this.fishing.splash.visualOnly(() => {
+                this.fishing.splash.triggerBigSplash(bobberPos, duration);
+            });
+
+            if (this.fishing?.water?.mesh?.splashAt) {
                 this.fishing.water.mesh.splashAt(bobberPos.x, bobberPos.z);
             }
+
+            const bonusRipples = rarity === 'Trophy' || rarity === 'Legendary'
+                ? 3
+                : (rarity === 'Epic' || rarity === 'Rare' ? 2 : 1);
+            for (let i = 0; i < bonusRipples; i++) {
+                setTimeout(() => {
+                    if (this.fishing?.splash && this.fishing?.bobber) {
+                        this.fishing.splash.triggerRipple(this.fishing.bobber.position);
+                    }
+                    if (this.fishing?.water?.mesh?.splashAt && this.fishing?.bobber) {
+                        this.fishing.water.mesh.splashAt(
+                            this.fishing.bobber.position.x,
+                            this.fishing.bobber.position.z
+                        );
+                    }
+                }, 180 + i * 140);
+            }
+
+            debugLog(`[FISH] Catch splash (${rarity}, ${duration.toFixed(2)}s) at (${bobberPos.x.toFixed(2)}, ${bobberPos.z.toFixed(2)})`);
         }
         
         // Trigger catch callback only once
@@ -324,7 +342,7 @@ export class Fish {
                     ? this.fishing.getCelebrateDurationForCatch(this.currentFish)
                     : 1.6;
                 this.fishing.cat.startCelebrate(celebrationDuration);
-                console.log('[FISH] Cat celebration triggered!', 'duration:', celebrationDuration);
+                debugLog('[FISH] Cat celebration triggered!', 'duration:', celebrationDuration);
             }
         }
     }
@@ -412,7 +430,7 @@ export class Fish {
                 0,
                 this.mesh.position.z - catXZ.z
             ).length();
-            console.log(`[FISH] Starfish reunion approach: ${this._fightT.toFixed(1)}s / ${this._fightDur.toFixed(1)}s, dist to boat ${distToCat.toFixed(1)}`);
+            debugLog(`[FISH] Starfish reunion approach: ${this._fightT.toFixed(1)}s / ${this._fightDur.toFixed(1)}s, dist to boat ${distToCat.toFixed(1)}`);
         }
     }
 
@@ -446,13 +464,13 @@ export class Fish {
             
             // After freeze, log that fish is now moving
             if (this._hookFreezeTime === 0 && this._fightT < 0.2) {
-                console.log('[FISH] Freeze ended, fish starting to move');
+                debugLog('[FISH] Freeze ended, fish starting to move');
             }
 
             if (this._gentleReunion) {
                 this._updateGentleReunionFight(delta);
                 if (this._fightT >= this._fightDur) {
-                    console.log('[FISH] Starfish reunion approach complete — gliding in');
+                    debugLog('[FISH] Starfish reunion approach complete — gliding in');
                     this.startLanding();
                 }
                 return;
@@ -499,7 +517,7 @@ export class Fish {
             
             // Debug: log movement every 0.1 seconds during fight
             if (Math.floor(this._fightT * 10) !== Math.floor((this._fightT - delta) * 10)) {
-                console.log(`[FISH] Moving: delta=(${moveX.toFixed(3)}, ${moveZ.toFixed(3)}), pos=(${this.mesh.position.x.toFixed(2)}, ${this.mesh.position.z.toFixed(2)})`);
+                debugLog(`[FISH] Moving: delta=(${moveX.toFixed(3)}, ${moveZ.toFixed(3)}), pos=(${this.mesh.position.x.toFixed(2)}, ${this.mesh.position.z.toFixed(2)})`);
             }
             
             // Keep fish just under water surface
@@ -546,12 +564,12 @@ export class Fish {
             
             // Debug: log fight progress every 0.5 seconds
             if (Math.floor(this._fightT * 2) !== Math.floor((this._fightT - delta) * 2)) {
-                console.log(`[FISH] Fighting: ${this._fightT.toFixed(2)}s / ${this._fightDur.toFixed(2)}s, pos: (${this.mesh.position.x.toFixed(2)}, ${this.mesh.position.z.toFixed(2)})`);
+                debugLog(`[FISH] Fighting: ${this._fightT.toFixed(2)}s / ${this._fightDur.toFixed(2)}s, pos: (${this.mesh.position.x.toFixed(2)}, ${this.mesh.position.z.toFixed(2)})`);
             }
             
             // after a few seconds, go land
             if (this._fightT >= this._fightDur) {
-                console.log('[FISH] Fight duration complete, transitioning to LANDING');
+                debugLog('[FISH] Fight duration complete, transitioning to LANDING');
                 this.startLanding();
             }
         }
@@ -579,7 +597,7 @@ export class Fish {
             // Always log first frame of LANDING state
             if (this._landingStartLogged === undefined) {
                 this._landingStartLogged = true;
-                console.log(`[FISH] LANDING state started! bobber pos=(${bobberPos.x.toFixed(2)}, ${bobberPos.z.toFixed(2)}), dock pos=(${dockRefPos.x.toFixed(2)}, ${dockRefPos.z.toFixed(2)}), dist=${bobberDistToDock.toFixed(2)}`);
+                debugLog(`[FISH] LANDING state started! bobber pos=(${bobberPos.x.toFixed(2)}, ${bobberPos.z.toFixed(2)}), dock pos=(${dockRefPos.x.toFixed(2)}, ${dockRefPos.z.toFixed(2)}), dist=${bobberDistToDock.toFixed(2)}`);
             }
             
             // Debug: log distance to dock every 0.5 seconds
@@ -587,7 +605,7 @@ export class Fish {
             this._lastLandingLogTime += delta;
             if (this._lastLandingLogTime >= 0.5) {
                 this._lastLandingLogTime = 0;
-                console.log(`[FISH] Landing: bobber dist to dock=${bobberDistToDock.toFixed(2)}, bobber pos=(${bobberPos.x.toFixed(2)}, ${bobberPos.z.toFixed(2)})`);
+                debugLog(`[FISH] Landing: bobber dist to dock=${bobberDistToDock.toFixed(2)}, bobber pos=(${bobberPos.x.toFixed(2)}, ${bobberPos.z.toFixed(2)})`);
             }
             
             // Fish still moves homeward during landing (reel pulls bobber in)
@@ -633,7 +651,7 @@ export class Fish {
                 const CATCH_DISTANCE_TIP = 15.0; // Large enough to allow reaching perfect spot
                 // Only catch if bobber is at perfect landing range (8.0-8.5 from dock) AND close to tip
                 if (bobberDistToTip < CATCH_DISTANCE_TIP && bobberDistToDock >= 8.0 && bobberDistToDock < 8.5 && this.state !== FishState.LANDED) {
-                    console.log(`[FISH] Bobber is at perfect landing position (${bobberDistToDock.toFixed(2)}), marking fish as caught`);
+                    debugLog(`[FISH] Bobber is at perfect landing position (${bobberDistToDock.toFixed(2)}), marking fish as caught`);
                     catchTriggered = true;
                 }
             }
@@ -644,7 +662,7 @@ export class Fish {
             const CATCH_DISTANCE_DOCK = 8.5; // Catch at perfect landing position (~8.3 units)
             const MIN_DOCK_DISTANCE = 8.0; // Don't catch before reaching perfect landing
             if (!catchTriggered && bobberDistToDock < CATCH_DISTANCE_DOCK && bobberDistToDock >= MIN_DOCK_DISTANCE && this.state !== FishState.LANDED) {
-                console.log(`[FISH] Bobber is at perfect landing position (${bobberDistToDock.toFixed(2)}), marking fish as caught`);
+                debugLog(`[FISH] Bobber is at perfect landing position (${bobberDistToDock.toFixed(2)}), marking fish as caught`);
                 catchTriggered = true;
             }
             
@@ -653,7 +671,7 @@ export class Fish {
             } else if (bobberDistToDock < 3.5 || (rodTip && bobberPos.distanceTo(rodTip) < 4.0)) {
                 // Log when getting close (updated threshold)
                 const tipDist = rodTip ? bobberPos.distanceTo(rodTip).toFixed(2) : 'N/A';
-                console.log(`[FISH] Bobber getting close - dock: ${bobberDistToDock.toFixed(2)}, tip: ${tipDist}`);
+                debugLog(`[FISH] Bobber getting close - dock: ${bobberDistToDock.toFixed(2)}, tip: ${tipDist}`);
             }
         }
         
@@ -668,8 +686,6 @@ export class Fish {
         if (this._dir.lengthSq() > 1e-4) {
             this.mesh.rotation.y = Math.atan2(-this._dir.z, this._dir.x);
         }
-
-        this._syncFishShadow(true);
     }
     
     clampPlayArea(p) {
@@ -739,7 +755,7 @@ export class Fish {
                 currentLocation = locations.getCurrentLocation();
                 availableFishIds = resolveLocationFishIds(currentLocation, player);
             }
-            console.log('[FISH] spawnFish selecting fish - location:', currentLocation?.name, 'ids:', availableFishIds);
+            debugLog('[FISH] spawnFish selecting fish - location:', currentLocation?.name, 'ids:', availableFishIds);
             
             if (availableFishIds.length === 0) {
                 console.warn('[FISH] No fish available at', currentLocation?.name);
@@ -783,7 +799,6 @@ export class Fish {
             this._gentleReunion = false;
             this._reunionHookPos = null;
             this._reunionMaxDist = 0;
-            this._syncFishShadow(false);
         }
     }
     

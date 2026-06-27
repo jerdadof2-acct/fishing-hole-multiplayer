@@ -25,6 +25,50 @@ const WAVE_AMP = 2.1;
 const SHADOW_DEPTH = 0.036;
 const SURFACE_RENDER_ORDER = 12;
 
+/** World-space dock footprint (matches platform at z=-1.5, depth 14, width 3). */
+const DOCK_CENTER_Z = -1.5;
+const DOCK_HALF_DEPTH = 7;
+const DOCK_HALF_WIDTH = 1.65;
+const DOCK_FRONT_Z = DOCK_CENTER_Z + DOCK_HALF_DEPTH;
+/** Clearance past dock edge when routing the shadow through open water. */
+const DOCK_ROUTE_CLEARANCE = 0.48;
+
+function smoothstep(edge0, edge1, x) {
+    const t = THREE.MathUtils.clamp((x - edge0) / (edge1 - edge0), 0, 1);
+    return t * t * (3 - 2 * t);
+}
+
+/**
+ * Gently push spine samples around the dock footprint instead of snapping Z.
+ * Keeps the serpenoid wave smooth — no per-point cliffs at the plank boundary.
+ */
+function routeSpineAroundDock(x, z, routeSide = 1) {
+    const dockBackZ = DOCK_CENTER_Z - DOCK_HALF_DEPTH;
+    const side = routeSide >= 0 ? 1 : -1;
+    const targetX = side * (DOCK_HALF_WIDTH + DOCK_ROUTE_CLEARANCE);
+
+    const zOverlap =
+        smoothstep(dockBackZ - 1.1, dockBackZ + 2.0, z)
+        * (1 - smoothstep(DOCK_FRONT_Z - 1.2, DOCK_FRONT_Z + 1.8, z));
+    const xOverlap = 1 - smoothstep(DOCK_HALF_WIDTH - 0.25, DOCK_HALF_WIDTH + 0.85, Math.abs(x));
+    const influence = zOverlap * xOverlap;
+
+    if (influence < 1e-4) {
+        return { x, z };
+    }
+
+    const routedX = x + (targetX - x) * influence;
+
+    // If still grazing the front lip after lateral push, ease Z forward — blended, not snapped.
+    const frontNudge =
+        smoothstep(DOCK_FRONT_Z - 2.5, DOCK_FRONT_Z + 0.35, z)
+        * (1 - smoothstep(DOCK_HALF_WIDTH + 0.15, DOCK_HALF_WIDTH + 1.1, Math.abs(routedX)));
+    const passZ = DOCK_FRONT_Z + 1.05;
+    const routedZ = z + (passZ - z) * frontNudge * influence * 0.65;
+
+    return { x: routedX, z: routedZ };
+}
+
 let sharedRibbonTexture = null;
 
 function resetAnacondaTextures() {
@@ -43,16 +87,16 @@ function createRibbonTexture() {
     const ctx = canvas.getContext('2d');
 
     const grad = ctx.createLinearGradient(0, 0, 0, 256);
-    grad.addColorStop(0, 'rgba(3, 7, 5, 0.95)');
-    grad.addColorStop(0.12, 'rgba(4, 8, 6, 0.88)');
-    grad.addColorStop(0.5, 'rgba(4, 8, 6, 0.72)');
-    grad.addColorStop(0.88, 'rgba(3, 6, 5, 0.55)');
-    grad.addColorStop(1, 'rgba(2, 5, 4, 0.2)');
+    grad.addColorStop(0, 'rgba(3, 7, 5, 0.78)');
+    grad.addColorStop(0.12, 'rgba(4, 8, 6, 0.7)');
+    grad.addColorStop(0.5, 'rgba(4, 8, 6, 0.56)');
+    grad.addColorStop(0.88, 'rgba(3, 6, 5, 0.4)');
+    grad.addColorStop(1, 'rgba(2, 5, 4, 0.14)');
 
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 64, 256);
 
-    ctx.strokeStyle = 'rgba(2, 5, 4, 0.18)';
+    ctx.strokeStyle = 'rgba(2, 5, 4, 0.11)';
     ctx.lineWidth = 2;
     for (let i = 0; i < 9; i++) {
         const y = 18 + i * 26;
@@ -119,7 +163,7 @@ function buildRibbonMesh() {
     const material = new THREE.MeshBasicMaterial({
         map: createRibbonTexture(),
         transparent: true,
-        opacity: 0.58,
+        opacity: 0.44,
         depthWrite: false,
         depthTest: false,
         side: THREE.DoubleSide
@@ -153,6 +197,7 @@ export class AmazonAnacondaShadow {
         this.perp = new THREE.Vector2(0, 1);
         this._waveOmega = (Math.PI * 2) / WAVE_PERIOD;
         this._waveK = (Math.PI * 2) / WAVE_LENGTH;
+        this._dockRouteSide = 1;
         this._spineScratch = [];
         for (let i = 0; i < SPINE_SAMPLES; i++) {
             this._spineScratch.push({ x: 0, z: 0 });
@@ -224,8 +269,9 @@ export class AmazonAnacondaShadow {
         const margin = this.groundSize * (closer ? 0.06 : 0.1);
         this.startX = upstreamX * margin;
         this.startZ = closer
-            ? 3.6 + (Math.random() - 0.5) * 8
+            ? 7.4 + (Math.random() - 0.5) * 3
             : upstreamZ * margin + (Math.random() - 0.5) * 38;
+        this._dockRouteSide = Math.random() < 0.5 ? 1 : -1;
 
         if (this.root) {
             this.root.visible = true;
@@ -274,27 +320,28 @@ export class AmazonAnacondaShadow {
         const time = this.animTime;
         const spine = this._spineScratch;
         const ds = BODY_LENGTH / (SPINE_SAMPLES - 1);
-        const y = this.waterY - SHADOW_DEPTH;
+        const routeSide = this._dockRouteSide;
 
         for (let i = 0; i < SPINE_SAMPLES; i++) {
             const s = i * ds;
             const p = this._spineAt(s, headX, headZ, time);
-            spine[i].x = p.x;
-            spine[i].z = p.z;
+            const routed = routeSpineAroundDock(p.x, p.z, routeSide);
+            spine[i].x = routed.x;
+            spine[i].z = routed.z;
         }
 
         const positions = this.ribbon.geometry.attributes.position.array;
-        const tangentStep = ds * 0.85;
+        const shadowY = this.waterY - SHADOW_DEPTH;
 
         for (let i = 0; i < SPINE_SAMPLES; i++) {
             const s = i * ds;
             const t = s / BODY_LENGTH;
             const halfW = widthEnvelope(t);
 
-            const pPrev = this._spineAt(Math.max(0, s - tangentStep), headX, headZ, time);
-            const pNext = this._spineAt(Math.min(BODY_LENGTH, s + tangentStep), headX, headZ, time);
-            let tx = pNext.x - pPrev.x;
-            let tz = pNext.z - pPrev.z;
+            const iPrev = Math.max(0, i - 1);
+            const iNext = Math.min(SPINE_SAMPLES - 1, i + 1);
+            let tx = spine[iNext].x - spine[iPrev].x;
+            let tz = spine[iNext].z - spine[iPrev].z;
             const tLen = Math.hypot(tx, tz);
             if (tLen < 1e-6) {
                 tx = this.downstream.x;
@@ -311,10 +358,10 @@ export class AmazonAnacondaShadow {
 
             const li = i * 6;
             positions[li] = cx + nx * halfW;
-            positions[li + 1] = y;
+            positions[li + 1] = shadowY;
             positions[li + 2] = cz + nz * halfW;
             positions[li + 3] = cx - nx * halfW;
-            positions[li + 4] = y;
+            positions[li + 4] = shadowY;
             positions[li + 5] = cz - nz * halfW;
         }
 

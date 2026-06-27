@@ -94,7 +94,9 @@ export class FishingRope {
         
         const mat = new THREE.MeshStandardMaterial({
             color: 0xffffff,
-            roughness: 0.5
+            roughness: 0.5,
+            transparent: true,
+            opacity: 1.0
         });
         const geom = new THREE.TubeGeometry(
             new THREE.CatmullRomCurve3([
@@ -624,7 +626,40 @@ export class FishingRope {
         const lastNode = this.rope[this.rope.length - 1];
         if (!lastNode || !lastNode.pos) return;
         
-        const end = lastNode.pos.clone();
+        let end = lastNode.pos.clone();
+        let bobberIsSubmerged = false;
+
+        if (this.bobber && this.floating) {
+            const waterHeight = this.water.getWaterHeight(
+                this.bobber.position.x,
+                this.bobber.position.z
+            );
+
+            const bobberTopY = this.bobber.position.y + 0.08;
+
+            if (bobberTopY < waterHeight + 0.015) {
+                bobberIsSubmerged = true;
+
+                // Stop the visible line just above the water, at the bobber's X/Z.
+                end.set(
+                    this.bobber.position.x,
+                    waterHeight + 0.025,
+                    this.bobber.position.z
+                );
+
+                // Pull the endpoint slightly back toward the rod tip so it does not
+                // appear to run through or past the submerged bobber.
+                const toTip = end.clone().sub(tip);
+                if (toTip.lengthSq() > 1e-6) {
+                    toTip.normalize().multiplyScalar(0.10);
+                    end.sub(toTip);
+                }
+            }
+        }
+
+        if (this.lineMesh.material) {
+            this.lineMesh.material.opacity = bobberIsSubmerged ? 0.55 : 1.0;
+        }
         
         // Validate that tip and end are valid Vector3 objects
         if (!tip || !end || !isFinite(tip.x) || !isFinite(end.x)) return;
@@ -655,10 +690,18 @@ export class FishingRope {
             } else if (this.fightingMode || this.landingMode || (this.reeling && this.fightingMode)) {
                 // Fish hooked/fighting/landing: taut line (straight from tip to bobber with minimal sag)
                 // Once fish bites, line stays tight all the way until caught
-                const mid = tip.clone().lerp(end, 0.5);
-                mid.y -= Math.min(0.15, tip.distanceTo(end) * 0.02); // Minimal sag - line is tight
-                const curve = new THREE.CatmullRomCurve3([tip, mid, end], false, 'catmullrom', 0.5);
-                this.lineMesh.geometry = new THREE.TubeGeometry(curve, 48, 0.008, 6, false); // Thin fishing line
+                let curve;
+
+                if (bobberIsSubmerged) {
+                    // Straight clipped line into the water. No sag, no curve overshoot.
+                    curve = new THREE.LineCurve3(tip, end);
+                } else {
+                    const mid = tip.clone().lerp(end, 0.5);
+                    mid.y -= Math.min(0.15, tip.distanceTo(end) * 0.02); // Minimal sag - line is tight
+                    curve = new THREE.CatmullRomCurve3([tip, mid, end], false, 'catmullrom', 0.5);
+                }
+
+                this.lineMesh.geometry = new THREE.TubeGeometry(curve, 32, 0.008, 6, false); // Thin fishing line
             } else if (this.reeling) {
                 // Reeling without fish: use rope points for physics accuracy
                 // Filter out any invalid nodes before mapping

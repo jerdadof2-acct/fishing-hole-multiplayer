@@ -20,8 +20,11 @@ import {
 import {
     createAmbientSplashRings,
     createCausticsLayer,
+    createWaterSparkles,
+    placeWaterSparkles,
     tickAmbientSplashes,
     tickCausticsLayer,
+    tickWaterSparkles,
     setCausticsLayerMode
 } from './effects/waterAmbience.js';
 import { getDockPostSplashPositions, getStylizedDockWorldBounds } from './scene/stylizedDock.js';
@@ -87,6 +90,7 @@ export class Water2Lake {
         this.celestialTime = 0; // Time accumulator for celestial twinkle
         this.causticsLayer = null;
         this.ambientSplashes = null;
+        this.waterSparkles = null;
         this.lakeBedGround = null;
         this.pondSubmergedGrass = null;
         this._pondGrassLocationEnabled = false;
@@ -1357,6 +1361,9 @@ export class Water2Lake {
             width: visibleRadius * 2,
             depth: visibleRadius * 2
         };
+
+        this.waterSparkles = createWaterSparkles(this.sceneRef.scene, this.waterY);
+        placeWaterSparkles(this.waterSparkles, this);
     }
 
     update(delta) {
@@ -1389,6 +1396,7 @@ export class Water2Lake {
             this,
             (x, z) => this.mesh?.splashAt?.(x, z)
         );
+        tickWaterSparkles(this.waterSparkles, delta, this);
         
         if (this.water && this.water.material && this.water.material.uniforms) {
             // Update time uniform for wave animation

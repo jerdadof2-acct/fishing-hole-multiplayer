@@ -3,6 +3,9 @@ import {
     getCollectionSpeciesTotal,
     getUnlockedVisibleFishCount
 } from './fishTypes.js';
+import { MAX_ENERGY, addBonusEnergy } from './energy.js';
+import { LEVEL_UP_ENERGY_BONUS } from './config/energy.js';
+import { debugLog } from './config/debug.js';
 import {
     CELESTIAL_DEPTHS_LOCATION_INDEX,
     HIDDEN_RELICS,
@@ -66,6 +69,15 @@ export class Player {
         this.level = 1;
         this.money = 100;
         this.experience = 0;
+
+        // Energy (v1.0)
+        this.energy = MAX_ENERGY;
+        this.maxEnergy = MAX_ENERGY;
+        this.lastEnergyRegenAt = Date.now();
+        this.lastDailyBonusDate = null;
+        this.lastFirstCatchBonusDate = null;
+        this.lastNineLivesAt = null;
+        this.doubleCoinsNextCatch = false;
         
         // Player stats (0-100, default 50)
         this.stats = {
@@ -181,7 +193,7 @@ export class Player {
         const leveledUp = this.level > previousLevel;
         
         if (unlockResult || leveledUp) {
-            console.log(`[PLAYER] Leveled up to ${this.level}!`);
+            debugLog(`[PLAYER] Leveled up to ${this.level}!`);
         }
         
         this.save();
@@ -243,6 +255,7 @@ export class Player {
             // Deduct the experience needed for this level up
             this.experience -= expNeededForNext;
             this.level++;
+            addBonusEnergy(this, LEVEL_UP_ENERGY_BONUS);
             leveledUp = true;
             
             // Check for ONE new unlock when level increases (only last level up gets unlock)
@@ -278,7 +291,7 @@ export class Player {
                 }
                 if (!this.locationUnlocks.includes(index) && this.level >= location.unlockLevel) {
                     this.locationUnlocks.push(index);
-                    console.log(`[PLAYER] Location unlocked: ${location.name} (Level ${location.unlockLevel})`);
+                    debugLog(`[PLAYER] Location unlocked: ${location.name} (Level ${location.unlockLevel})`);
                     this.save();
                     return {
                         type: 'location',
@@ -310,7 +323,7 @@ export class Player {
                         const item = availableItems[0];
                         this.tackleNotified[category].push(item.id);
                         this.save();
-                        console.log(`[PLAYER] Tackle available for purchase: ${item.name} (Level ${item.unlockLevel})`);
+                        debugLog(`[PLAYER] Tackle available for purchase: ${item.name} (Level ${item.unlockLevel})`);
                         return {
                             type: 'tackle',
                             tackle: {
@@ -392,8 +405,13 @@ export class Player {
         this.caughtFish[fishName] = true;
         
         // Add experience and money (returns unlocks if leveled up)
+        let payout = value;
+        if (this.doubleCoinsNextCatch && payout > 0) {
+            payout *= 2;
+            this.doubleCoinsNextCatch = false;
+        }
         const newUnlocks = this.addExperience(experience, locations, tackleShop);
-        this.addMoney(value);
+        this.addMoney(payout);
         
         this.save();
         return newUnlocks;
@@ -468,7 +486,14 @@ export class Player {
                 hiddenRelicsCollected: this.hiddenRelicsCollected,
                 starlightLureCrafted: this.starlightLureCrafted,
                 relicCastAttempts: this.relicCastAttempts,
-                hasSeenGameplayOnboarding: this.hasSeenGameplayOnboarding === true
+                hasSeenGameplayOnboarding: this.hasSeenGameplayOnboarding === true,
+                energy: this.energy,
+                maxEnergy: this.maxEnergy,
+                lastEnergyRegenAt: this.lastEnergyRegenAt,
+                lastDailyBonusDate: this.lastDailyBonusDate,
+                lastFirstCatchBonusDate: this.lastFirstCatchBonusDate,
+                lastNineLivesAt: this.lastNineLivesAt,
+                doubleCoinsNextCatch: this.doubleCoinsNextCatch === true
             };
             
             if (this.userId) {
@@ -483,7 +508,7 @@ export class Player {
             // Create backup
             localStorage.setItem('kittyCreekPlayer_backup', JSON.stringify(playerData));
             
-            console.log('[PLAYER] Data saved');
+            debugLog('[PLAYER] Data saved');
         } catch (error) {
             console.error('[PLAYER] Failed to save:', error);
         }
@@ -682,6 +707,20 @@ export class Player {
                     : {};
                 this.hasSeenGameplayOnboarding = playerData.hasSeenGameplayOnboarding === true;
 
+                if (typeof playerData.energy === 'number') {
+                    this.energy = Math.max(0, playerData.energy);
+                }
+                if (typeof playerData.maxEnergy === 'number') {
+                    this.maxEnergy = playerData.maxEnergy;
+                }
+                if (typeof playerData.lastEnergyRegenAt === 'number') {
+                    this.lastEnergyRegenAt = playerData.lastEnergyRegenAt;
+                }
+                this.lastDailyBonusDate = playerData.lastDailyBonusDate ?? null;
+                this.lastFirstCatchBonusDate = playerData.lastFirstCatchBonusDate ?? null;
+                this.lastNineLivesAt = playerData.lastNineLivesAt ?? null;
+                this.doubleCoinsNextCatch = playerData.doubleCoinsNextCatch === true;
+
                 if (playerData.userId) {
                     this.userId = playerData.userId;
                 }
@@ -691,7 +730,7 @@ export class Player {
                 
                 this.normalizeTackleState();
                 this.syncStoryUnlocks();
-                console.log('[PLAYER] Data loaded');
+                debugLog('[PLAYER] Data loaded');
             }
         } catch (error) {
             console.error('[PLAYER] Failed to load:', error);
@@ -703,7 +742,7 @@ export class Player {
                     Object.assign(this, playerData);
                     this.normalizeTackleState();
                     this.syncStoryUnlocks();
-                    console.log('[PLAYER] Loaded from backup');
+                    debugLog('[PLAYER] Loaded from backup');
                 }
             } catch (backupError) {
                 console.error('[PLAYER] Backup load also failed:', backupError);

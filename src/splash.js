@@ -7,6 +7,17 @@ function easeOutCubic(t) {
     return 1 - Math.pow(1 - t, 3);
 }
 
+export function getCatchSplashDuration(rarity = 'Common') {
+    switch (rarity) {
+        case 'Trophy': return 2.5;
+        case 'Legendary': return 2.15;
+        case 'Epic': return 1.85;
+        case 'Rare': return 1.55;
+        case 'Uncommon': return 1.35;
+        default: return 1.2;
+    }
+}
+
 export class Splash {
     constructor(scene, waterY = 0, soundManager = null) {
         this.sceneRef = scene;
@@ -171,13 +182,33 @@ export class Splash {
         }
     }
 
-    triggerRipple(pos) {
+    triggerRipple(pos, options = {}) {
         this._spawnRipple(pos, {
             delay: 0,
             duration: 1.2,
             maxScale: 2.0,
-            peakOpacity: 0.45
+            peakOpacity: 0.45,
+            ...options
         });
+    }
+
+    /** Light bite / hook — ripple only, no particle burst. */
+    triggerSmallSplash(pos) {
+        this._spawnRippleSet(pos, [
+            { delay: 0, duration: 0.95, maxScale: 1.85, peakOpacity: 0.52 },
+            { delay: 0.1, duration: 0.85, maxScale: 1.35, peakOpacity: 0.3 }
+        ]);
+    }
+
+    /** Run a visual splash without synthetic pop / big-splash audio. */
+    visualOnly(fn) {
+        const original = this.soundManager;
+        this.soundManager = null;
+        try {
+            fn();
+        } finally {
+            this.soundManager = original;
+        }
     }
 
     triggerBigSplash(pos, duration = 1.2) {

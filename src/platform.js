@@ -4,6 +4,7 @@ import {
     PORTRAIT_CAMERA_OFFSET_LARGE_BOAT
 } from './config/idlePortrait.js';
 import { buildStylizedDock } from './scene/stylizedDock.js';
+import { debugLog } from './config/debug.js';
 
 function makeBox(w, h, d, mat, x, y, z, name = '') {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
@@ -42,6 +43,8 @@ export class Platform {
         this.platformMesh = null;
         this.waveTime = 0; // Wave phase for rocking animation
         this.previousWaterType = null; // Track previous water type for dock recreation
+        /** 0 = frozen deck, 1 = full wave rocking (Coral Kingdoms uses a low value). */
+        this.boatRockingScale = 1;
         
         // Dock configuration (matches existing dock)
         this.dockWidth = 3;
@@ -96,7 +99,7 @@ export class Platform {
      */
     createDock() {
         const waterType = this.water?.waterBodyType || 'LAKE';
-        console.log('[DOCK] Creating stylized dock - waterBodyType:', waterType);
+        debugLog('[DOCK] Creating stylized dock - waterBodyType:', waterType);
 
         this.platformMesh = buildStylizedDock({
             water: this.water,
@@ -715,7 +718,7 @@ export class Platform {
         this.platformMesh.receiveShadow = true;
         
         const smallBoatBBox = new THREE.Box3().setFromObject(this.platformMesh);
-        console.log(
+        debugLog(
             '[PLATFORM][SMALL_BOAT] BBox',
             {
                 min: { x: smallBoatBBox.min.x.toFixed(3), z: smallBoatBBox.min.z.toFixed(3) },
@@ -749,7 +752,7 @@ export class Platform {
             const limitText = maxAbsZLimit != null
                 ? `limits x=${maxAbsXAllowed.toFixed(3)} z=${maxAbsZLimit.toFixed(3)}`
                 : `limit x=${maxAbsXAllowed.toFixed(3)}`;
-            console.log(`[PLATFORM][${label}] Checking mesh extents (${limitText})`);
+            debugLog(`[PLATFORM][${label}] Checking mesh extents (${limitText})`);
             group.updateMatrixWorld(true);
             const groupInverse = new THREE.Matrix4().copy(group.matrixWorld).invert();
             const childInGroup = new THREE.Matrix4();
@@ -818,7 +821,7 @@ export class Platform {
             const extentText = maxAbsZLimit != null
                 ? `max |x| ${maxAbsX.toFixed(3)}, max |z| ${maxAbsZ.toFixed(3)}`
                 : `max |x| ${maxAbsX.toFixed(3)}`;
-            console.log(`[PLATFORM][${label}] Extents: ${extentText}`);
+            debugLog(`[PLATFORM][${label}] Extents: ${extentText}`);
             if (offenders.length) {
                 offenders.forEach(entry => {
                     console.warn(
@@ -1622,7 +1625,7 @@ export class Platform {
         this.platformMesh.receiveShadow = true;
         
         const largeBoatBBox = new THREE.Box3().setFromObject(this.platformMesh);
-        console.log('[PLATFORM][LARGE_BOAT] BBox', {
+        debugLog('[PLATFORM][LARGE_BOAT] BBox', {
             min: { x: largeBoatBBox.min.x.toFixed(3), z: largeBoatBBox.min.z.toFixed(3) },
             max: { x: largeBoatBBox.max.x.toFixed(3), z: largeBoatBBox.max.z.toFixed(3) }
         });
@@ -1715,6 +1718,20 @@ export class Platform {
         }
         return PORTRAIT_CAMERA_OFFSET.clone();
     }
+
+    /**
+     * Scale boat pitch/roll/bob (1 = normal, ~0.04 = almost still for calm reef fishing).
+     * @param {number} scale
+     */
+    setBoatRockingScale(scale) {
+        this.boatRockingScale = THREE.MathUtils.clamp(scale, 0, 1);
+        if (this.boatRockingScale <= 0 && this.platformMesh && this.currentPlatformType !== 'DOCK') {
+            this.platformMesh.rotation.x = 0;
+            this.platformMesh.rotation.z = 0;
+            const baseY = this.water.waterY + 0.35;
+            this.platformMesh.position.y = baseY;
+        }
+    }
     
     /**
      * Update platform animation (wave rocking for boats)
@@ -1762,6 +1779,11 @@ export class Platform {
             roll = Math.cos(slowWave1Phase * 0.8) * 0.03 + Math.sin(slowWave3Phase) * 0.015; // ~2 degrees max (reduced)
             yOffset = Math.sin(slowWave1Phase * 1.2) * 0.008; // Very small up/down motion (reduced from 0.015)
         }
+
+        const rock = this.boatRockingScale ?? 1;
+        pitch *= rock;
+        roll *= rock;
+        yOffset *= rock;
         
         // Apply rotations (convert to radians)
         this.platformMesh.rotation.x = pitch; // Pitch (front/back)
@@ -1779,7 +1801,7 @@ export class Platform {
      * Switch to a different platform type
      */
     switchPlatform(newType) {
-        console.log('[PLATFORM] switchPlatform called with:', newType, 'Current type:', this.currentPlatformType);
+        debugLog('[PLATFORM] switchPlatform called with:', newType, 'Current type:', this.currentPlatformType);
         
         // For dock platforms, always recreate if switching between POND and RIVER (same platform type but different styles)
         const isDock = newType === 'DOCK';
@@ -1790,20 +1812,20 @@ export class Platform {
         if (newType === this.currentPlatformType) {
             // If both are docks but water type changed (POND vs RIVER), force recreation
             if (isDock && wasDock && waterType !== previousWaterType) {
-                console.log('[PLATFORM] Dock platform type same but water type changed (', previousWaterType, '->', waterType, '), recreating dock');
+                debugLog('[PLATFORM] Dock platform type same but water type changed (', previousWaterType, '->', waterType, '), recreating dock');
                 this.previousWaterType = waterType;
                 this.createPlatform(newType);
-                console.log('[PLATFORM] Platform created. Current type:', this.currentPlatformType);
+                debugLog('[PLATFORM] Platform created. Current type:', this.currentPlatformType);
                 return;
             }
-            console.log('[PLATFORM] Already on this platform type, skipping');
+            debugLog('[PLATFORM] Already on this platform type, skipping');
             return; // Already on this platform
         }
         
-        console.log('[PLATFORM] Creating new platform:', newType);
+        debugLog('[PLATFORM] Creating new platform:', newType);
         this.previousWaterType = waterType; // Store current water type
         this.createPlatform(newType);
-        console.log('[PLATFORM] Platform created. Current type:', this.currentPlatformType);
+        debugLog('[PLATFORM] Platform created. Current type:', this.currentPlatformType);
     }
     
     /**

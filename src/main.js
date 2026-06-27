@@ -8,6 +8,7 @@ import { Platform } from './platform.js';
 import { Locations, AMAZON_DEPTHS_NAME, FROZEN_FJORDS_NAME, CORAL_KINGDOMS_NAME } from './locations.js';
 import { applyDevOceanUnlocks, isDevMode } from './dev/devMode.js';
 import { hasPrivilegedAccess } from './admin/adminAuth.js';
+import { debugLog } from './config/debug.js';
 import { Fishing } from './fishing.js';
 import { Fish } from './fish.js';
 import { UI } from './ui.js';
@@ -333,7 +334,7 @@ export class Game {
                     rotationSpeed: this.waterParticles.userData?.rotationSpeed ?? 0.00025
                 };
             }
-            console.log('Water particles created');
+            debugLog('Water particles created');
             
             loadingProgress.update(44, 'Growing grass around the lake...');
             this.grass = new Grass(this.scene, this.lakeMask, 400, 0);
@@ -365,7 +366,7 @@ export class Game {
                 this.fishCollection.setUserContext({ userId: this.playerContext.userId });
             }
 
-            console.log('[GAME] Gameplay systems initialized');
+            debugLog('[GAME] Gameplay systems initialized');
             this.ensureStarlightLureUnlocked();
             
             // Initialize location system
@@ -383,7 +384,7 @@ export class Game {
                 }
                 if (unlocksAdded) {
                     this.player.save({ skipSync: true });
-                    console.log('[LOCATIONS] Temporary unlocks granted for testing:', this.player.locationUnlocks);
+                    debugLog('[LOCATIONS] Temporary unlocks granted for testing:', this.player.locationUnlocks);
                 }
             }
             if (this.player) {
@@ -403,7 +404,7 @@ export class Game {
                 }
             }
             const currentLocation = this.locations.getCurrentLocation();
-            console.log('[LOCATIONS] Current location:', currentLocation.name, 'Water type:', currentLocation.waterBodyType, 'Platform:', currentLocation.platformType);
+            debugLog('[LOCATIONS] Current location:', currentLocation.name, 'Water type:', currentLocation.waterBodyType, 'Platform:', currentLocation.platformType);
             
             // Coral / fjord flags before water type so LAKE+coral tuning applies correctly
             this.water.setCoralReefEnabled(this.locations.getCurrentLocation()?.name === CORAL_KINGDOMS_NAME);
@@ -427,7 +428,8 @@ export class Game {
             loadingProgress.update(58, `Building ${currentLocation.name}...`);
             this.platform = new Platform(this.scene, this.water);
             this.platform.createPlatform(currentLocation.platformType);
-            console.log('[PLATFORM] Created platform:', currentLocation.platformType);
+            this.applyPlatformBoatRocking(currentLocation);
+            debugLog('[PLATFORM] Created platform:', currentLocation.platformType);
 
             // Keep dock reference for backward compatibility with Camera class
             this.dock = new Dock(this.scene, this.water);
@@ -463,18 +465,18 @@ export class Game {
             } finally {
                 stopCatLoadPulse();
             }
-            console.log('Cat loaded, position:', this.cat.getModel()?.position);
+            debugLog('Cat loaded, position:', this.cat.getModel()?.position);
             
             // Position cat on platform (feet aligned to dock surface)
             const platformPos = this.platform.getSurfacePosition();
             applyCatPlatformHeight(this.cat, currentLocation.platformType, platformPos, this.platform);
-            console.log('[PLATFORM] Cat positioned at:', this.cat.savedPosition);
+            debugLog('[PLATFORM] Cat positioned at:', this.cat.savedPosition);
             
             loadingProgress.update(92, 'Rigging fishing line and bobber...');
             this.fishing = new Fishing(this.scene, this.cat, this.water);
             this.fishing.game = this;
             await this.fishing.init();
-            console.log('Fishing system initialized');
+            debugLog('Fishing system initialized');
             
             const catModel = this.cat.getModel();
             if (catModel) {
@@ -483,17 +485,17 @@ export class Game {
             
             // Initialize sound manager
             this.soundManager = new SoundManager();
-            console.log('Sound manager initialized');
+            debugLog('Sound manager initialized');
             
             // Create splash effects with sound support
             this.splash = new Splash(this.scene, 0, this.soundManager);
             this.fishing.setSplash(this.splash);
-            console.log('Splash effects created');
+            debugLog('Splash effects created');
             
             // Initialize rope system after everything is ready
             if (this.fishing.rope) {
                 this.fishing.rope.create();
-                console.log('Rope system initialized');
+                debugLog('Rope system initialized');
             }
             
             // Set up fish system
@@ -508,7 +510,7 @@ export class Game {
             /*
             setTimeout(() => {
                 if (this.tempRod?.rodRoot) {
-                    console.log('[ROD DRAG] Setting up rod dragging...');
+                    debugLog('[ROD DRAG] Setting up rod dragging...');
                     this.setupRodDragging();
                 } else {
                     console.warn('[ROD DRAG] Rod not found, dragging not set up');
@@ -566,7 +568,7 @@ export class Game {
                     return null;
                 })
             ]).then(() => {
-                console.log('SFX sounds loaded (if available)');
+                debugLog('SFX sounds loaded (if available)');
             }).catch((error) => {
                 console.warn('Some sound files could not be loaded (non-blocking):', error);
             });
@@ -579,7 +581,7 @@ export class Game {
             // Update camera again after a short delay to ensure models are positioned
             setTimeout(() => {
                 this.camera.updateCamera();
-                console.log('Final camera position:', this.scene.camera.position);
+                debugLog('Final camera position:', this.scene.camera.position);
             }, 200);
             
             loadingProgress.update(96, 'Loading sounds and UI...');
@@ -804,7 +806,7 @@ export class Game {
                         // Store a more complete state signature to detect any changes
                         const stateSignature = `${isFishing}-${isIdle}-${this.fishing?.isCasting}-${this.fishing?.isReeling}-${this.fishing?.fishOnLine}-${bobberInWater}-${fishState}-${sequenceComplete}`;
                         if (!this._lastStateSignature || this._lastStateSignature !== stateSignature) {
-                            console.log(`[HAND] State change: isFishing=${isFishing}, isIdle=${isIdle}, ` +
+                            debugLog(`[HAND] State change: isFishing=${isFishing}, isIdle=${isIdle}, ` +
                                 `isCasting=${this.fishing?.isCasting}, isReeling=${this.fishing?.isReeling}, ` +
                                 `fishOnLine=${this.fishing?.fishOnLine}, bobberInWater=${bobberInWater}, ` +
                                 `fishState=${fishState}, sequenceComplete=${sequenceComplete}`);
@@ -880,7 +882,7 @@ export class Game {
         
         const onPointerDown = (event) => {
             if (!this.tempRod?.rodRoot) {
-                console.log('[ROD DRAG] Rod root not found');
+                debugLog('[ROD DRAG] Rod root not found');
                 return;
             }
             
@@ -894,16 +896,16 @@ export class Game {
             
             // Collect all meshes from rod hierarchy
             const rodMeshes = collectRodMeshes(this.tempRod.rodRoot);
-            console.log(`[ROD DRAG] Found ${rodMeshes.length} meshes in rod hierarchy`);
+            debugLog(`[ROD DRAG] Found ${rodMeshes.length} meshes in rod hierarchy`);
             
             // Raycast to check if clicking on rod or X-axis indicator
             raycaster.setFromCamera(mouse, this.scene.camera);
             const intersects = raycaster.intersectObjects(rodMeshes, true);
             
-            console.log(`[ROD DRAG] Raycast intersects: ${intersects.length} objects`);
+            debugLog(`[ROD DRAG] Raycast intersects: ${intersects.length} objects`);
             if (intersects.length > 0) {
                 intersects.forEach((intersect, i) => {
-                    console.log(`[ROD DRAG] Intersect ${i}:`, intersect.object.name, intersect.object.type);
+                    debugLog(`[ROD DRAG] Intersect ${i}:`, intersect.object.name, intersect.object.type);
                 });
             }
             
@@ -912,7 +914,7 @@ export class Game {
                 const name = obj.object?.name || '';
                 const isRodRelated = name.includes('Rod') || name.includes('XAxis') || name.includes('Handle') || 
                                     name.includes('Blank') || name.includes('Reel');
-                console.log(`[ROD DRAG] Checking object: ${name}, isRodRelated: ${isRodRelated}`);
+                debugLog(`[ROD DRAG] Checking object: ${name}, isRodRelated: ${isRodRelated}`);
                 return isRodRelated;
             });
             
@@ -933,7 +935,7 @@ export class Game {
                 
                 // Allow dragging if within 100 pixels of rod center in screen space
                 if (distanceToRod < 100) {
-                    console.log(`[ROD DRAG] Click near rod (${distanceToRod.toFixed(1)}px away), enabling drag`);
+                    debugLog(`[ROD DRAG] Click near rod (${distanceToRod.toFixed(1)}px away), enabling drag`);
                     clickedOnRod = true;
                 }
             }
@@ -943,10 +945,10 @@ export class Game {
                 this.rodDragStartX = event.clientX;
                 this.rodDragStartOffset = this.tempRod.rodRoot.userData?.rodPositionOffset?.clone() || new THREE.Vector3(0, 0, 0);
                 canvas.style.cursor = 'grabbing';
-                console.log('[ROD DRAG] Drag started, initial offset:', this.rodDragStartOffset);
+                debugLog('[ROD DRAG] Drag started, initial offset:', this.rodDragStartOffset);
                 event.preventDefault();
             } else {
-                console.log('[ROD DRAG] Click not on rod');
+                debugLog('[ROD DRAG] Click not on rod');
             }
         };
             
@@ -994,7 +996,7 @@ export class Game {
             
             // Log current position (throttled)
             if (!this._dragLogTime || performance.now() - this._dragLogTime > 100) {
-                console.log(`[ROD DRAG] X offset: ${newOffset.x.toFixed(3)}, Z: ${newOffset.z.toFixed(3)}`);
+                debugLog(`[ROD DRAG] X offset: ${newOffset.x.toFixed(3)}, Z: ${newOffset.z.toFixed(3)}`);
                 this._dragLogTime = performance.now();
             }
             
@@ -1008,8 +1010,8 @@ export class Game {
                 
                 // Log final position
                 const finalOffset = this.tempRod.rodRoot.userData?.rodPositionOffset || new THREE.Vector3(0, 0, 0);
-                console.log(`[ROD DRAG] Final position - X: ${finalOffset.x.toFixed(3)}, Y: ${finalOffset.y.toFixed(3)}, Z: ${finalOffset.z.toFixed(3)}`);
-                console.log(`[ROD DRAG] Update rodPositionOffset to: new THREE.Vector3(${finalOffset.x.toFixed(3)}, ${finalOffset.y.toFixed(3)}, ${finalOffset.z.toFixed(3)})`);
+                debugLog(`[ROD DRAG] Final position - X: ${finalOffset.x.toFixed(3)}, Y: ${finalOffset.y.toFixed(3)}, Z: ${finalOffset.z.toFixed(3)}`);
+                debugLog(`[ROD DRAG] Update rodPositionOffset to: new THREE.Vector3(${finalOffset.x.toFixed(3)}, ${finalOffset.y.toFixed(3)}, ${finalOffset.z.toFixed(3)})`);
                 
                 event.preventDefault();
             }
@@ -1029,7 +1031,7 @@ export class Game {
         // Also listen globally for mouseup in case user drags outside canvas
         window.addEventListener('pointerup', onPointerUpGlobal);
         
-        console.log('[ROD DRAG] Event listeners added');
+        debugLog('[ROD DRAG] Event listeners added');
         
         // Store cleanup function
         this.rodDragCleanup = () => {
@@ -1105,6 +1107,13 @@ export class Game {
         }
     }
 
+    /** Coral Kingdoms: calm the small boat so Halley and the camera stay steady on the reef. */
+    applyPlatformBoatRocking(location) {
+        if (!this.platform) return;
+        const calmReef = location?.name === CORAL_KINGDOMS_NAME;
+        this.platform.setBoatRockingScale(calmReef ? 0.04 : 1);
+    }
+
     applyLocationEnvironment(location) {
         if (!location) {
             return;
@@ -1159,11 +1168,29 @@ export class Game {
                     ambientIntensity: 0.4
                 },
                 waterParticles: defaultParticleSettings
+            },
+            CORAL: {
+                scene: {
+                    fogColor: 0x72d8f2,
+                    fogNear: 35,
+                    fogFar: 190,
+                    hemisphereSkyColor: 0xe8fbff,
+                    hemisphereGroundColor: 0x1f8fb0,
+                    hemisphereIntensity: 0.78,
+                    directionalColor: 0xffffff,
+                    directionalIntensity: 0.72,
+                    ambientColor: 0xbdf5ff,
+                    ambientIntensity: 0.32
+                },
+                waterParticles: defaultParticleSettings
             }
         };
 
         const waterType = location.waterBodyType || 'DEFAULT';
-        const profile = profiles[waterType] || profiles.DEFAULT;
+        const profileKey = location.name === CORAL_KINGDOMS_NAME
+            ? 'CORAL'
+            : waterType;
+        const profile = profiles[profileKey] || profiles.DEFAULT;
 
         if (this.scene?.setEnvironment) {
             this.scene.setEnvironment(profile.scene || {});
@@ -1273,7 +1300,7 @@ export class Game {
             return false;
         }
         
-        console.log('[LOCATION SWITCH] Switching to:', location.name, 'Water type:', location.waterBodyType, 'Platform:', location.platformType);
+        debugLog('[LOCATION SWITCH] Switching to:', location.name, 'Water type:', location.waterBodyType, 'Platform:', location.platformType);
         
         // Update current location
         this.locations.setCurrentLocation(locationIndex);
@@ -1294,12 +1321,13 @@ export class Game {
         
         // Switch platform
         this.platform.switchPlatform(location.platformType);
+        this.applyPlatformBoatRocking(location);
         
         // Reposition cat on new platform
         const newPlatformPos = this.platform.getSurfacePosition();
         if (this.cat) {
             applyCatPlatformHeight(this.cat, location.platformType, newPlatformPos, this.platform);
-            console.log('[LOCATION SWITCH] Cat repositioned to:', this.cat.savedPosition);
+            debugLog('[LOCATION SWITCH] Cat repositioned to:', this.cat.savedPosition);
         }
 
         return true;

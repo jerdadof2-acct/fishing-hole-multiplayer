@@ -26,7 +26,11 @@ export const VOICEOVER_LINES = {
         { text: 'Tell me that was a floating log. Lie to me.' },
         { text: 'The jungle special just swam by…' },
         { text: 'My tail says we should have brought a bigger boat.' },
-        { text: 'I came for catfish. Not… whatever THAT is.' }
+        { text: 'I came for catfish. Not… whatever THAT is.' },
+        { text: 'He does not look so big—OH, THERE\'S THE REST OF HIM.' },
+        { text: 'There is not enough dock between me and that thing.' },
+        { text: 'I am going to stand very still and look unappetizing.' },
+        { text: 'This seems like a good time to become an indoor cat.' }
     ]
 };
 

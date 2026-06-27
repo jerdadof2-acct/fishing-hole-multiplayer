@@ -1,44 +1,5 @@
 import * as THREE from 'three';
 
-function createFishShadowTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 64;
-    canvas.height = 64;
-    const ctx = canvas.getContext('2d');
-    const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-    gradient.addColorStop(0, 'rgba(28, 32, 38, 0.55)');
-    gradient.addColorStop(0.55, 'rgba(28, 32, 38, 0.22)');
-    gradient.addColorStop(1, 'rgba(28, 32, 38, 0)');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 64, 64);
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.needsUpdate = true;
-    return texture;
-}
-
-/** Dark ellipse under the fish — visible while the mesh stays hidden during fights. */
-export function createFishShadowSprite(scene) {
-    const material = new THREE.SpriteMaterial({
-        map: createFishShadowTexture(),
-        transparent: true,
-        opacity: 0.4,
-        depthWrite: false
-    });
-    const sprite = new THREE.Sprite(material);
-    sprite.visible = false;
-    sprite.renderOrder = 3;
-    sprite.scale.set(1.4, 1.0, 1);
-    scene.add(sprite);
-    return sprite;
-}
-
-export function updateFishShadowSprite(shadow, fishPosition, waterY = 0, visible = false) {
-    if (!shadow) return;
-    shadow.visible = visible;
-    if (!visible) return;
-    shadow.position.set(fishPosition.x, waterY + 0.02, fishPosition.z);
-}
-
 /**
  * Scrolling caustics on the lake bed (additive plane just under the surface).
  * World-space UVs + dual-layer soft blend hide tile seams and axis-aligned lines.
@@ -289,5 +250,142 @@ export function tickAmbientSplashes(ambience, delta, water, splashAt) {
             ring.visible = false;
             ring.userData.age = ring.userData.lifetime;
         }
+    });
+}
+
+let sharedSparkleTexture = null;
+
+function createSparkleTexture() {
+    if (sharedSparkleTexture) {
+        return sharedSparkleTexture;
+    }
+
+    const size = 64;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    const cx = size * 0.5;
+    const cy = size * 0.5;
+
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 30);
+    grad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+    grad.addColorStop(0.4, 'rgba(210, 240, 255, 0.45)');
+    grad.addColorStop(1, 'rgba(180, 220, 255, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, size);
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 26);
+    ctx.lineTo(cx, cy + 26);
+    ctx.moveTo(cx - 26, cy);
+    ctx.lineTo(cx + 26, cy);
+    ctx.stroke();
+
+    sharedSparkleTexture = new THREE.CanvasTexture(canvas);
+    sharedSparkleTexture.needsUpdate = true;
+    return sharedSparkleTexture;
+}
+
+/**
+ * Small surface glints — fixed pool, slow fade in/out (never spawns more at runtime).
+ * @param {THREE.Scene} scene
+ * @param {number} waterY
+ * @param {{ count?: number }} [options]
+ */
+export function createWaterSparkles(scene, waterY, options = {}) {
+    const isMobile = typeof navigator !== 'undefined'
+        && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    const count = Math.min(20, Math.max(10, options.count ?? (isMobile ? 10 : 16)));
+    const texture = createSparkleTexture();
+    const sparkles = [];
+
+    for (let i = 0; i < count; i++) {
+        const material = new THREE.MeshBasicMaterial({
+            map: texture,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+            side: THREE.DoubleSide
+        });
+        const size = 0.14 + Math.random() * 0.2;
+        const mesh = new THREE.Mesh(new THREE.PlaneGeometry(size, size), material);
+        mesh.rotation.x = -Math.PI / 2;
+        mesh.rotation.z = Math.random() * Math.PI * 2;
+        mesh.position.y = waterY + 0.022;
+        mesh.renderOrder = 11;
+        mesh.frustumCulled = false;
+        mesh.name = 'water-sparkle';
+        mesh.userData = {
+            phase: Math.random(),
+            cycleSpeed: 0.035 + Math.random() * 0.045,
+            maxOpacity: 0.28 + Math.random() * 0.38,
+            driftAmpX: 0.04 + Math.random() * 0.12,
+            driftAmpZ: 0.04 + Math.random() * 0.12,
+            driftFreq: 0.18 + Math.random() * 0.22,
+            driftPhase: Math.random() * Math.PI * 2,
+            baseX: 0,
+            baseZ: 0
+        };
+        scene.add(mesh);
+        sparkles.push(mesh);
+    }
+
+    return {
+        sparkles,
+        waterY,
+        placed: false,
+        time: 0
+    };
+}
+
+/** One-time scatter across open water (fixed count — no runtime spawn). */
+export function placeWaterSparkles(system, water) {
+    if (!system?.sparkles?.length || system.placed || !water?.getRandomSpot) {
+        return;
+    }
+
+    system.sparkles.forEach((sparkle) => {
+        const spot = water.getRandomSpot();
+        if (!spot) {
+            return;
+        }
+        sparkle.userData.baseX = spot.x;
+        sparkle.userData.baseZ = spot.z;
+        sparkle.position.x = spot.x;
+        sparkle.position.z = spot.z;
+    });
+    system.placed = true;
+}
+
+export function tickWaterSparkles(system, delta, water) {
+    if (!system?.sparkles?.length) {
+        return;
+    }
+
+    if (!system.placed) {
+        placeWaterSparkles(system, water);
+    }
+
+    system.time = (system.time || 0) + delta;
+    const baseY = system.waterY ?? water?.waterY ?? 0;
+
+    system.sparkles.forEach((sparkle) => {
+        const ud = sparkle.userData;
+        ud.phase = (ud.phase + delta * ud.cycleSpeed) % 1;
+
+        const envelope = Math.sin(ud.phase * Math.PI);
+        const pulse = envelope * envelope;
+        sparkle.material.opacity = ud.maxOpacity * pulse;
+
+        const driftT = system.time * ud.driftFreq + ud.driftPhase;
+        sparkle.position.x = ud.baseX + Math.sin(driftT) * ud.driftAmpX;
+        sparkle.position.z = ud.baseZ + Math.cos(driftT * 0.87) * ud.driftAmpZ;
+        sparkle.position.y = (water?.getWaterHeight?.(sparkle.position.x, sparkle.position.z) ?? baseY) + 0.022;
+
+        sparkle.visible = sparkle.material.opacity > 0.015;
     });
 }

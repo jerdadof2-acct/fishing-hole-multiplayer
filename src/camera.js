@@ -9,6 +9,7 @@ import {
     PORTRAIT_SPRING_STIFFNESS_BLEND_FACTOR,
     CAMERA_SPRING_DAMPING
 } from './config/idlePortrait.js';
+import { debugLog } from './config/debug.js';
 
 export class Camera {
     constructor(scene, cat, dock, water) {
@@ -56,11 +57,11 @@ export class Camera {
             // Get cat position from SAVED position (not affected by bone attachments)
             // The saved position is set when cat is first positioned and protected from modifications
             const catPos = this.cat.getSavedPosition();
-            console.log('Camera setup: Cat saved position:', catPos);
+            debugLog('Camera setup: Cat saved position:', catPos);
             
             // Verify model position matches (should be same unless modified)
             const modelPos = catModel.position.clone();
-            console.log('Camera setup: Cat model position (for comparison):', modelPos);
+            debugLog('Camera setup: Cat model position (for comparison):', modelPos);
             
             // If positions don't match, use saved position (it's the correct one)
             if (modelPos.distanceTo(catPos) > 0.1) {
@@ -104,9 +105,9 @@ export class Camera {
             const lookAtPoint = new THREE.Vector3(lookAtX, lookAtY, lookAtZ);
             this.camera.lookAt(lookAtPoint);
             
-            console.log('Camera positioned at:', this.camera.position);
-            console.log('Camera looking at:', lookAtPoint);
-            console.log('Camera is ABOVE water?', this.camera.position.y > 0);
+            debugLog('Camera positioned at:', this.camera.position);
+            debugLog('Camera looking at:', lookAtPoint);
+            debugLog('Camera is ABOVE water?', this.camera.position.y > 0);
             
             // Set up spring camera follow for smooth movement
             // Target is cat position, with offset

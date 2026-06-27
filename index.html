@@ -45,6 +45,9 @@
                 </div>
                 <div class="player-stat-line">
                     <span class="player-money-label">💰 <span id="player-money">$100</span></span>
+                    <span class="player-energy-label">⚡ <span id="player-energy">100</span>/<span id="player-energy-max">100</span></span>
+                </div>
+                <div class="player-stat-line player-exp-row">
                     <span class="player-exp-label" id="player-exp">0/100</span>
                 </div>
                 <div id="exp-bar-container">
@@ -102,7 +105,34 @@
                     <button class="shop-tab" data-shop-tab="hooks">Hooks</button>
                     <button class="shop-tab" data-shop-tab="baits">Baits</button>
                 </div>
+                <div id="shop-boosts" class="shop-boosts"></div>
                 <div id="shop-items" class="shop-items"></div>
+            </div>
+        </div>
+
+        <!-- Out of energy -->
+        <div id="energy-modal" class="modal energy-modal hidden" aria-hidden="true">
+            <div class="modal-content energy-modal-content">
+                <h2 class="energy-modal-title">⚡ You're Out of Energy!</h2>
+                <p id="energy-modal-message" class="energy-modal-message"></p>
+                <div class="energy-modal-actions">
+                    <button type="button" id="energy-ad-btn" class="control-button energy-modal-btn">📺 Watch Ad (+20 Energy)</button>
+                    <button type="button" id="energy-wait-btn" class="energy-modal-btn secondary">🕒 Wait</button>
+                    <button type="button" id="energy-close-btn" class="energy-modal-btn secondary">❌ Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Daily catch bonus -->
+        <div id="daily-bonus-modal" class="modal energy-modal hidden" aria-hidden="true">
+            <div class="modal-content energy-modal-content daily-bonus-content">
+                <h2 class="energy-modal-title">🎁 Daily Catch Bonus</h2>
+                <p class="energy-modal-message">Halley's glad you're back!</p>
+                <ul class="daily-bonus-rewards">
+                    <li>+25 Energy</li>
+                    <li>+100 Coins</li>
+                </ul>
+                <button type="button" id="daily-bonus-claim-btn" class="control-button energy-modal-btn">Claim</button>
             </div>
         </div>
         
@@ -344,6 +374,37 @@
 
 <div id="notification-stack"></div>
 <div id="cat-bark-bubble" class="cat-bark-bubble hidden" aria-live="polite"></div>
+
+<!-- Catch presentation — fish card, coins, Halley quip (HTML/CSS only) -->
+<div id="catch-presentation" class="catch-presentation hidden" aria-hidden="true" role="dialog" aria-labelledby="catch-presentation-title">
+    <div class="catch-presentation-backdrop" data-catch-dismiss></div>
+    <article class="catch-presentation-card">
+        <div class="catch-presentation-top">
+            <span id="catch-rarity-badge" class="catch-rarity-badge">Common</span>
+            <span id="catch-first-badge" class="catch-first-badge hidden">New!</span>
+        </div>
+        <h2 id="catch-presentation-title" class="catch-presentation-title">Caught!</h2>
+        <div class="catch-fish-image-wrap">
+            <img id="catch-fish-image" class="catch-fish-image" alt="" decoding="async" />
+            <div id="catch-fish-placeholder" class="catch-fish-placeholder" aria-hidden="true">🐟</div>
+        </div>
+        <p id="catch-fish-name" class="catch-fish-name"></p>
+        <p id="catch-fish-weight" class="catch-fish-weight"></p>
+        <div id="catch-first-bonus" class="catch-first-bonus hidden"></div>
+        <div class="catch-reward-row">
+            <span class="catch-coins" id="catch-coins">
+                <span class="catch-coins-icon" aria-hidden="true">💰</span>
+                +<span id="catch-coins-value" class="catch-coins-value">0</span>
+            </span>
+            <span class="catch-xp" id="catch-xp"></span>
+        </div>
+        <blockquote class="catch-halley-line" id="catch-halley-line">
+            <span class="catch-halley-avatar" aria-hidden="true">🐱</span>
+            <span id="catch-halley-text" class="catch-halley-text"></span>
+        </blockquote>
+        <button type="button" class="catch-presentation-close" id="catch-presentation-close">Nice!</button>
+    </article>
+</div>
 
     <!-- Import maps on iOS Safari + global load errors -->
     <script async src="https://cdn.jsdelivr.net/npm/es-module-shims@1.10.0/dist/es-module-shims.js"></script>

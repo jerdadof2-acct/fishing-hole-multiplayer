@@ -1,5 +1,11 @@
 ## Expansion Location Roadmap
 
+### Detailed Design Briefs
+
+Planned locations with full specs live in [future-locations/](./future-locations/README.md).
+
+- **Cortez Backwaters** — Gulf Coast Florida inshore estuary; mangroves, docks, and the legendary Silver King tarpon. [Design brief](./future-locations/cortez-backwaters.md)
+
 ### Real-World Inspired Packs
 
 #### Norwegian Fjords (Arctic Pack)
