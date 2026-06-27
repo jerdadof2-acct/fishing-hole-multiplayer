@@ -923,7 +923,7 @@ export class Fishing {
         if (fishInstance && this.fishOnLine && fishInstance.state === 'HOOKED_FIGHT' && fishInstance.mesh) {
             if (fishInstance._gentleReunion) {
                 const t = fishInstance._gentlePulseT ?? 0;
-                return 0.22 + Math.sin(t * 2.1) * 0.12;
+                return 0.18 + Math.sin(t * 2.1) * 0.08;
             }
             const moveX = fishInstance.mesh.position.x - (fishInstance._lastPosX ?? fishInstance.mesh.position.x);
             const moveZ = fishInstance.mesh.position.z - (fishInstance._lastPosZ ?? fishInstance.mesh.position.z);
@@ -1474,8 +1474,9 @@ export class Fishing {
             
             // Pass camera and time for screen clamping and surface height
             const t = this.sceneRef.clock.elapsedTime;
-            const gentleReunionFight = fishInstance?._gentleReunion && fishInstance.state === 'HOOKED_FIGHT';
-            if (gentleReunionFight) {
+            const gentleReunionLine = fishInstance?._gentleReunion
+                && (fishInstance.state === 'HOOKED_FIGHT' || fishInstance.state === 'LANDING');
+            if (gentleReunionLine) {
                 this._pinGentleReunionLine(fishInstance);
                 this.rope.updateLineGeometry(delta);
             } else {
@@ -1698,8 +1699,8 @@ export class Fishing {
             return; // Don't reel during freeze
         }
 
-        // Starfish reunion: fish drives position; reel nudge fights homeward glide
-        if (fish?._gentleReunion && fish.state === 'HOOKED_FIGHT') {
+        // Starfish reunion: fish drives position; reel nudge fights the homeward glide
+        if (fish?._gentleReunion && (fish.state === 'HOOKED_FIGHT' || fish.state === 'LANDING')) {
             return;
         }
         

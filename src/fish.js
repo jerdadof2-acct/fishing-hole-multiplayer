@@ -616,7 +616,10 @@ export class Fish {
                 const toTarget = new THREE.Vector3().subVectors(landingTarget, this.mesh.position);
                 toTarget.y = 0;
                 const distToTarget = toTarget.length();
-                if (distToTarget > 0.01) {
+                if (this._gentleReunion && distToTarget < 0.15) {
+                    this.mesh.position.x = landingTarget.x;
+                    this.mesh.position.z = landingTarget.z;
+                } else if (distToTarget > 0.01) {
                     toTarget.normalize();
                     const landingSpeed = this._gentleReunion ? STARFISH_LANDING_FISH_SPEED : this.speedLanding;
                     const step = Math.min(landingSpeed * delta, distToTarget);
@@ -637,11 +640,27 @@ export class Fish {
             this.mesh.visible = false;
             
             // Check if bobber is close enough to rod tip OR dock for catch
-            // Use rod tip distance as primary check (more reliable than dock distance)
-            // Make sure bobber is right up against the dock before catching
             let catchTriggered = false;
-            
-            if (rodTip) {
+
+            if (this._gentleReunion) {
+                const home = this._getReunionHomeTarget();
+                const fishDistToHome = new THREE.Vector3(
+                    this.mesh.position.x - home.x,
+                    0,
+                    this.mesh.position.z - home.z
+                ).length();
+                const bobberDistToHome = new THREE.Vector3(
+                    bobberPos.x - home.x,
+                    0,
+                    bobberPos.z - home.z
+                ).length();
+
+                // Starfish glides to the boat during fight — do not use the 8.0–8.5 dock band.
+                if (fishDistToHome < 1.25 && bobberDistToHome < 1.5) {
+                    debugLog(`[FISH] Starfish reunion at boat (fish ${fishDistToHome.toFixed(2)}, bobber ${bobberDistToHome.toFixed(2)}), marking caught`);
+                    catchTriggered = true;
+                }
+            } else if (rodTip) {
                 const toTip = new THREE.Vector3().subVectors(bobberPos, rodTip);
                 const bobberDistToTip = toTip.length();
                 
@@ -657,6 +676,7 @@ export class Fish {
             }
             
             // Also check dock distance - catch at perfect landing position (~8.3 units)
+            if (!this._gentleReunion) {
             // Perfect landing position: bobber oscillates around 8.3 units from dock (position ~0, 3.9)
             // Only catch when bobber reaches this perfect landing position (8.2-8.5 range)
             const CATCH_DISTANCE_DOCK = 8.5; // Catch at perfect landing position (~8.3 units)
@@ -664,6 +684,7 @@ export class Fish {
             if (!catchTriggered && bobberDistToDock < CATCH_DISTANCE_DOCK && bobberDistToDock >= MIN_DOCK_DISTANCE && this.state !== FishState.LANDED) {
                 debugLog(`[FISH] Bobber is at perfect landing position (${bobberDistToDock.toFixed(2)}), marking fish as caught`);
                 catchTriggered = true;
+            }
             }
             
             if (catchTriggered) {
