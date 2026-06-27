@@ -1699,6 +1699,18 @@ export class Fishing {
             return; // Don't reel during freeze
         }
 
+        if (fish?.state === 'LANDED' && this.fishOnLine) {
+            this.isReeling = false;
+            this.setFishOnLine(false);
+            if (this.rope) {
+                this.rope.setReeling(false);
+                this.rope.setFightingMode(false);
+                this.rope.setLandingMode(false);
+                this.rope.setFloating(false);
+            }
+            return;
+        }
+
         // Starfish reunion: fish drives position; reel nudge fights the homeward glide
         if (fish?._gentleReunion && (fish.state === 'HOOKED_FIGHT' || fish.state === 'LANDING')) {
             return;

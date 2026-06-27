@@ -273,6 +273,17 @@ export class Fish {
         
         this.state = FishState.LANDED;
         this.isHooked = true;
+
+        if (this.fishing) {
+            this.fishing.isReeling = false;
+            this.fishing.setFishOnLine(false);
+            if (this.fishing.rope) {
+                this.fishing.rope.setReeling(false);
+                this.fishing.rope.setFightingMode(false);
+                this.fishing.rope.setLandingMode(false);
+                this.fishing.rope.setFloating(false);
+            }
+        }
         
         // Log catch
         if (this.currentFish) {
@@ -347,7 +358,11 @@ export class Fish {
         }
     }
     
-    _getCatWorldXZ() {
+    _getCatAnchorXZ() {
+        const saved = this.fishing?.cat?.getSavedPosition?.();
+        if (saved) {
+            return new THREE.Vector3(saved.x, 0, saved.z);
+        }
         const anchor = this.fishing?.cat?.getModel?.() || this.fishing?.sceneRef?.cat?.getModel?.();
         const pos = new THREE.Vector3();
         if (anchor) {
@@ -356,8 +371,61 @@ export class Fish {
         } else {
             pos.set(0, 0, -4.4);
         }
+        return new THREE.Vector3(pos.x, 0, pos.z);
+    }
+
+    _getCatWorldXZ() {
+        const anchor = this._getCatAnchorXZ();
         // Same landing offset used when reeling fish to the boat
-        return new THREE.Vector3(pos.x, 0, pos.z + 0.65);
+        return new THREE.Vector3(anchor.x, 0, anchor.z + 0.65);
+    }
+
+    _checkGentleReunionCatch() {
+        if (!this._gentleReunion || this.state === FishState.LANDED) return;
+        if (this.state !== FishState.HOOKED_FIGHT && this.state !== FishState.LANDING) return;
+
+        const bobberPos = this.fishing?.bobber?.position;
+        if (!bobberPos) return;
+
+        const fishToBobber = new THREE.Vector3(
+            this.mesh.position.x - bobberPos.x,
+            0,
+            this.mesh.position.z - bobberPos.z
+        ).length();
+
+        const catAnchor = this._getCatAnchorXZ();
+        const fishToCat = new THREE.Vector3(
+            this.mesh.position.x - catAnchor.x,
+            0,
+            this.mesh.position.z - catAnchor.z
+        ).length();
+        const bobberToCat = new THREE.Vector3(
+            bobberPos.x - catAnchor.x,
+            0,
+            bobberPos.z - catAnchor.z
+        ).length();
+
+        const synced = fishToBobber < 0.4;
+        const atBoat = fishToCat < 3.2 && bobberToCat < 3.2;
+
+        if (!synced || !atBoat) return;
+
+        if (this.state === FishState.HOOKED_FIGHT) {
+            const home = this._getReunionHomeTarget();
+            const fishDistHome = new THREE.Vector3(
+                this.mesh.position.x - home.x,
+                0,
+                this.mesh.position.z - home.z
+            ).length();
+            const progress = this._fightT / Math.max(this._fightDur, 0.01);
+            if (progress < 0.92 && fishDistHome > 0.6) return;
+        }
+
+        debugLog(
+            `[FISH] Starfish reunion complete at boat `
+            + `(fish→cat ${fishToCat.toFixed(2)}, bobber→cat ${bobberToCat.toFixed(2)})`
+        );
+        this.markLanded();
     }
 
     _getReunionHomeTarget() {
@@ -469,6 +537,8 @@ export class Fish {
 
             if (this._gentleReunion) {
                 this._updateGentleReunionFight(delta);
+                this._checkGentleReunionCatch();
+                if (this.state === FishState.LANDED) return;
                 if (this._fightT >= this._fightDur) {
                     debugLog('[FISH] Starfish reunion approach complete — gliding in');
                     this.startLanding();
@@ -643,23 +713,8 @@ export class Fish {
             let catchTriggered = false;
 
             if (this._gentleReunion) {
-                const home = this._getReunionHomeTarget();
-                const fishDistToHome = new THREE.Vector3(
-                    this.mesh.position.x - home.x,
-                    0,
-                    this.mesh.position.z - home.z
-                ).length();
-                const bobberDistToHome = new THREE.Vector3(
-                    bobberPos.x - home.x,
-                    0,
-                    bobberPos.z - home.z
-                ).length();
-
-                // Starfish glides to the boat during fight — do not use the 8.0–8.5 dock band.
-                if (fishDistToHome < 1.25 && bobberDistToHome < 1.5) {
-                    debugLog(`[FISH] Starfish reunion at boat (fish ${fishDistToHome.toFixed(2)}, bobber ${bobberDistToHome.toFixed(2)}), marking caught`);
-                    catchTriggered = true;
-                }
+                this._checkGentleReunionCatch();
+                if (this.state === FishState.LANDED) return;
             } else if (rodTip) {
                 const toTip = new THREE.Vector3().subVectors(bobberPos, rodTip);
                 const bobberDistToTip = toTip.length();
@@ -689,7 +744,7 @@ export class Fish {
             
             if (catchTriggered) {
                 this.markLanded();
-            } else if (bobberDistToDock < 3.5 || (rodTip && bobberPos.distanceTo(rodTip) < 4.0)) {
+            } else if (!this._gentleReunion && (bobberDistToDock < 3.5 || (rodTip && bobberPos.distanceTo(rodTip) < 4.0))) {
                 // Log when getting close (updated threshold)
                 const tipDist = rodTip ? bobberPos.distanceTo(rodTip).toFixed(2) : 'N/A';
                 debugLog(`[FISH] Bobber getting close - dock: ${bobberDistToDock.toFixed(2)}, tip: ${tipDist}`);

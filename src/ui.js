@@ -3475,9 +3475,15 @@ export class UI {
         if (this.fishing) {
             this.fishing.isCasting = false;
             this.fishing.isReeling = false;
-            this.fishing.fishOnLine = false;
+            this.fishing.setFishOnLine(false);
             if (this.fishing.bobber) {
                 this.fishing.bobber.visible = false;
+            }
+            if (this.fishing.rope) {
+                this.fishing.rope.setReeling(false);
+                this.fishing.rope.setFightingMode(false);
+                this.fishing.rope.setLandingMode(false);
+                this.fishing.rope.setFloating(false);
             }
         }
 
@@ -3536,6 +3542,17 @@ export class UI {
         this.biteStrikeTime = null;
         this.hookSetSuccess = false;
         this.fishing?.clearBobberWaitFlags?.();
+
+        if (this.fishing) {
+            this.fishing.isReeling = false;
+            this.fishing.setFishOnLine(false);
+            if (this.fishing.rope) {
+                this.fishing.rope.setReeling(false);
+                this.fishing.rope.setFightingMode(false);
+                this.fishing.rope.setLandingMode(false);
+                this.fishing.rope.setFloating(false);
+            }
+        }
         
         // Reset button for next cast
         setTimeout(() => {
