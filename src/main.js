@@ -1,12 +1,17 @@
 import * as THREE from 'three';
 import { Scene } from './scene.js';
-import { Cat, applyCatPlatformHeight } from './cat.js?v=20260622-deploy';
+import { Cat, applyCatPlatformHeight } from './cat.js?v=20260627-gem-locked2';
 import { Water2Lake } from './water2.js?v=20250625-anaconda-bark2';
 import { Grass } from './grass.js';
 import { Dock } from './dock.js';
 import { Platform } from './platform.js';
-import { Locations, AMAZON_DEPTHS_NAME, FROZEN_FJORDS_NAME, CORAL_KINGDOMS_NAME } from './locations.js';
+import { Locations, AMAZON_DEPTHS_NAME, FROZEN_FJORDS_NAME, CORAL_KINGDOMS_NAME, CORTEZ_BACKWATERS_NAME, CRAGGY_COAST_NAME, STORMBREAKER_BAY_NAME, FORGOTTEN_REEFS_NAME, TWILIGHT_TRENCH_NAME, DESERT_LAGOON_NAME } from './locations.js';
 import { applyDevOceanUnlocks, isDevMode } from './dev/devMode.js';
+import {
+    initDevFaceCameraFromUrl,
+    isDevFaceCameraEnabled
+} from './dev/devFaceCamera.js';
+import { canAccessCortezBackwaters } from './config/cortezBackwaters.js';
 import { hasPrivilegedAccess } from './admin/adminAuth.js';
 import { debugLog } from './config/debug.js';
 import { Fishing } from './fishing.js';
@@ -22,7 +27,10 @@ import { Voiceover } from './audio/voiceover.js';
 import {
     CelestialDepthsMusic,
     AmazonDepthsAmbience,
-    CrescentPondAmbience
+    CrescentPondAmbience,
+    CortezBackwatersAmbience,
+    CraggyCoastAmbience,
+    StormbreakerBayAmbience
 } from './audio/locationMusic.js?v=20250625-pond-ambience';
 import { VOICEOVER_TAP_COOLDOWN_MS, VOICEOVER_ANACONDA_COOLDOWN_MS } from './config/voiceover.js';
 
@@ -39,11 +47,16 @@ import { collectGalleryImageUrls, warmImageCache } from './utils/imageAssets.js'
 import { showAdBanner } from './ads.js';
 import {
     IDLE_PORTRAIT_DELAY_SEC,
-    PORTRAIT_BOBBER_TRACKING_CUTOFF
+    PORTRAIT_BOBBER_TRACKING_CUTOFF,
+    PORTRAIT_CAMERA_OFFSET_CORTEZ
 } from './config/idlePortrait.js';
 import { preloadDockWoodTexture } from './scene/dockTextures.js';
 import { preloadFarShoreGroundTextures } from './scene/farShoreGroundTextures.js';
-import { loadSkyEnvironment, applySkyEnvironment } from './environment/loadSkyEnvironment.js';
+import { loadSkyEnvironment, applySkyEnvironment, applyDarkMoonlightSky } from './environment/loadSkyEnvironment.js';
+import {
+    SUN_DIRECTIONAL_POSITION,
+    SUN_DIRECTIONAL_TARGET
+} from './scene/sunShadowDirection.js';
 import {
     createCrescentPondFarShore,
     rebuildCrescentPondFarShore,
@@ -51,6 +64,32 @@ import {
     isCrescentPondLocation,
     CRESCENT_POND_NAME
 } from './scene/crescentPondFarShore.js';
+import {
+    createCrescentPondSky,
+    updateCrescentPondSky,
+    syncCrescentPondSkyVisibility,
+    applyCrescentPondSkyLook,
+    restoreDefaultSkyLook
+} from './scene/crescentPondSky.js';
+import {
+    createCrescentPondVegetation,
+    rebuildCrescentPondVegetation,
+    syncCrescentPondVegetationVisibility
+} from './effects/pondVegetation.js';
+import {
+    createCortezMangroves,
+    syncCortezMangrovesVisibility,
+    updateMangroveCameraObstruction
+} from './effects/mangroves.js';
+import {
+    createDesertLagoonPalms,
+    syncDesertLagoonPalmsVisibility,
+    updatePalmBaseRipples
+} from './effects/desertLagoonPalms.js';
+import {
+    createCortezDockWaterEffects,
+    syncCortezDockWaterVisibility
+} from './effects/dockLappingWater.js';
 
 export class Game {
     constructor(options = {}) {
@@ -77,6 +116,9 @@ export class Game {
         this.celestialMusic = new CelestialDepthsMusic();
         this.amazonAmbience = new AmazonDepthsAmbience();
         this.crescentPondAmbience = new CrescentPondAmbience();
+        this.cortezAmbience = new CortezBackwatersAmbience();
+        this.craggyCoastAmbience = new CraggyCoastAmbience();
+        this.stormbreakerBayAmbience = new StormbreakerBayAmbience();
         
         // Gameplay systems
         this.player = null;
@@ -90,10 +132,15 @@ export class Game {
         this.idlePortraitDelaySec = IDLE_PORTRAIT_DELAY_SEC;
         this.lastActivityTime = performance.now();
         this._portraitIdleActive = false;
+        this._savedRimIntensity = null;
         this.deferReveal = options.deferReveal === true;
         this._revealed = false;
         this.skyEnv = null;
         this.crescentFarShore = null;
+        this.crescentPondSky = null;
+        this.crescentPondVegetation = null;
+        this.cortezMangroves = null;
+        this.desertLagoonPalms = null;
         if (this.deferReveal) {
             document.getElementById('game-container')?.classList.add('pre-entry');
         }
@@ -122,6 +169,10 @@ export class Game {
 
         if (this.ui && typeof this.ui.maybeStartGameplayOnboarding === 'function') {
             this.ui.maybeStartGameplayOnboarding();
+        }
+
+        if (isDevFaceCameraEnabled()) {
+            this.syncDevFaceCamera();
         }
     }
 
@@ -302,6 +353,7 @@ export class Game {
     }
 
     async init() {
+        initDevFaceCameraFromUrl();
         try {
             loadingProgress.update(22, 'Starting 3D engine...');
             this.scene = new Scene();
@@ -408,10 +460,15 @@ export class Game {
             
             // Coral / fjord flags before water type so LAKE+coral tuning applies correctly
             this.water.setCoralReefEnabled(this.locations.getCurrentLocation()?.name === CORAL_KINGDOMS_NAME);
+            this.water.setCortezBackwatersEnabled(this.locations.getCurrentLocation()?.name === CORTEZ_BACKWATERS_NAME);
+            this.water.setCraggyCoastEnabled(this.locations.getCurrentLocation()?.name === CRAGGY_COAST_NAME);
+            this.water.setStormbreakerBayEnabled(this.locations.getCurrentLocation()?.name === STORMBREAKER_BAY_NAME);
+            this.water.setForgottenReefsEnabled(this.locations.getCurrentLocation()?.name === FORGOTTEN_REEFS_NAME);
+            this.water.setTwilightTrenchEnabled(this.locations.getCurrentLocation()?.name === TWILIGHT_TRENCH_NAME);
             this.water.setAmazonAnacondaEnabled(this.locations.getCurrentLocation()?.name === AMAZON_DEPTHS_NAME);
             this.water.setWaterBodyType(currentLocation.waterBodyType);
             this.applyLakeMaskForWaterBody(currentLocation.waterBodyType);
-            this.water.setPondSubmergedGrassEnabled(isCrescentPondLocation(this.locations));
+            this.syncPondSubmergedGrassForLocation(currentLocation);
             this.water.setFjordIceFloesEnabled(this.locations.getCurrentLocation()?.name === FROZEN_FJORDS_NAME);
             this.applyLocationEnvironment(currentLocation);
             this.applyCelestialBaitPreference(currentLocation);
@@ -424,6 +481,45 @@ export class Game {
             ]);
 
             this.crescentFarShore = createCrescentPondFarShore(this.scene.scene);
+            this.crescentPondSky = createCrescentPondSky(this.scene.scene);
+            syncCrescentPondSkyVisibility(
+                this.crescentPondSky,
+                currentLocation.name === CRESCENT_POND_NAME
+            );
+            this.crescentPondVegetation = createCrescentPondVegetation(
+                this.scene.scene,
+                this.water?.waterY ?? 0
+            );
+            syncCrescentPondVegetationVisibility(
+                this.crescentPondVegetation,
+                currentLocation.name === CRESCENT_POND_NAME
+            );
+            this.cortezMangroves = createCortezMangroves(
+                this.scene.scene,
+                this.water?.waterY ?? 0
+            );
+            syncCortezMangrovesVisibility(
+                this.cortezMangroves,
+                currentLocation.name === CORTEZ_BACKWATERS_NAME
+            );
+
+            this.desertLagoonPalms = createDesertLagoonPalms(
+                this.scene.scene,
+                this.water?.waterY ?? 0
+            );
+            syncDesertLagoonPalmsVisibility(
+                this.desertLagoonPalms,
+                currentLocation.name === DESERT_LAGOON_NAME
+            );
+
+            this.cortezDockWater = createCortezDockWaterEffects(
+                this.scene.scene,
+                this.water?.waterY ?? 0
+            );
+            syncCortezDockWaterVisibility(
+                this.cortezDockWater,
+                currentLocation.name === CORTEZ_BACKWATERS_NAME
+            );
 
             loadingProgress.update(58, `Building ${currentLocation.name}...`);
             this.platform = new Platform(this.scene, this.water);
@@ -520,9 +616,14 @@ export class Game {
             
             // Set up camera (after everything is loaded) - delayed to ensure models are ready
             this.camera = new Camera(this.scene, this.cat, this.dock, this.water);
-            this.camera.resolvePortraitOffset = () => (
-                this.platform?.getPortraitCameraOffset?.() ?? this.camera.portraitOffset
-            );
+            this.camera.resolvePortraitOffset = () => {
+                const isCortez =
+                    this.locations?.getCurrentLocation()?.name === CORTEZ_BACKWATERS_NAME;
+                if (isCortez) {
+                    return PORTRAIT_CAMERA_OFFSET_CORTEZ.clone();
+                }
+                return this.camera.portraitOffset;
+            };
             this.camera.setup();
             
             // Initialize Sfx system with camera
@@ -662,9 +763,82 @@ export class Game {
         this.celestialMusic?.resumeAfterGesture?.();
         this.amazonAmbience?.resumeAfterGesture?.();
         this.crescentPondAmbience?.resumeAfterGesture?.();
+        this.cortezAmbience?.resumeAfterGesture?.();
+        this.craggyCoastAmbience?.resumeAfterGesture?.();
+        this.stormbreakerBayAmbience?.resumeAfterGesture?.();
+        if (isDevFaceCameraEnabled()) {
+            return;
+        }
         if (this._portraitIdleActive && this.camera) {
             this._portraitIdleActive = false;
             this.camera.setPortraitMode(false);
+        }
+    }
+
+    /** Minimal eligibility while dev face-camera lock is on. */
+    isDevFaceCameraEligible() {
+        const usernameModal = document.getElementById('username-modal');
+        if (usernameModal && !usernameModal.classList.contains('hidden')) {
+            return false;
+        }
+
+        const prologue = document.getElementById('story-prologue');
+        if (prologue && !prologue.classList.contains('hidden')) {
+            return false;
+        }
+
+        const activeTab = document.querySelector('.tab-button.active')?.getAttribute('data-tab');
+        return !activeTab || activeTab === 'game';
+    }
+
+    /** Lock portrait camera + cat facing for gem dial-in (dev only). */
+    syncDevFaceCamera() {
+        if (!isDevFaceCameraEnabled() || !this.camera || !this.isDevFaceCameraEligible()) {
+            this._devFaceCameraActive = false;
+            return;
+        }
+
+        if (!this._devFaceCameraActive) {
+            this._devFaceCameraActive = true;
+            this.cat?.setDevDragOverride?.(false);
+            this.cat?.clearDevManualRotation?.();
+            if (this.cat && this.platform) {
+                this.cat.positionOnSurface(this.platform.getSurfacePosition(), true);
+            }
+            this.cat?.resetMedallionGemPosition?.();
+        }
+
+        if (!this._portraitIdleActive) {
+            this._portraitIdleActive = true;
+            this.cat?.enterPortraitIdle?.();
+            this.camera.setPortraitMode(true);
+        }
+
+        this.camera.portraitTarget = 1;
+        this.camera.portraitBlend = 1;
+        if (this.camera.spring) {
+            this.camera.spring.portraitBlend = 1;
+        }
+    }
+
+    clearDevFaceCamera() {
+        if (!this._portraitIdleActive || !this.camera) {
+            this._devFaceCameraActive = false;
+            return;
+        }
+        this._devFaceCameraActive = false;
+        this._portraitIdleActive = false;
+        this.camera.setPortraitMode(false);
+        this.resetCatToDock();
+    }
+
+    /** Snap Halley back onto the platform (dev face-cam reset). */
+    resetCatToDock() {
+        this.cat?.setDevDragOverride?.(false);
+        this.cat?.clearDevManualRotation?.();
+        if (this.cat && this.platform) {
+            const preserveFacing = isDevFaceCameraEnabled();
+            this.cat.positionOnSurface(this.platform.getSurfacePosition(), preserveFacing);
         }
     }
 
@@ -703,6 +877,13 @@ export class Game {
     updateIdlePortrait() {
         if (!this.camera) return;
 
+        if (isDevFaceCameraEnabled()) {
+            if (this.isDevFaceCameraEligible()) {
+                this.syncDevFaceCamera();
+            }
+            return;
+        }
+
         const idleSec = (performance.now() - this.lastActivityTime) / 1000;
         const wantPortrait = this.isPortraitEligible() && idleSec >= this.idlePortraitDelaySec;
 
@@ -732,6 +913,17 @@ export class Game {
             this.water.update(delta);
         }
 
+        if (this.cortezDockWater?.visible) {
+            this.cortezDockWater.userData.update?.(delta);
+        }
+
+        if (this.desertLagoonPalms?.visible) {
+            updatePalmBaseRipples(
+                this.desertLagoonPalms,
+                this.water?.time ?? 0
+            );
+        }
+
         this.checkAnacondaInFrontOfCat();
         
         // Update grass (wind sway)
@@ -749,7 +941,7 @@ export class Game {
         if (this.camera) {
             this.camera.advancePortraitBlend(delta);
         }
-        const portraitBlend = this._portraitIdleActive
+        const portraitBlend = (this._portraitIdleActive || isDevFaceCameraEnabled())
             ? (this.camera?.portraitBlend ?? 0)
             : 0;
 
@@ -759,28 +951,58 @@ export class Game {
             isCrescentPondLocation(this.locations)
         );
 
+        updateCrescentPondSky(this.crescentPondSky, delta, portraitBlend);
+
+        const isCortez =
+            this.locations?.getCurrentLocation()?.name === CORTEZ_BACKWATERS_NAME;
+
+        if (this.cortezMangroves) {
+            if (isCortez && this.scene?.camera && this.cat) {
+                const halleyPosition =
+                    this.cat.getHeadWorldPosition?.() ??
+                    this.cat.getSavedPosition?.();
+
+                if (halleyPosition) {
+                    updateMangroveCameraObstruction(
+                        this.cortezMangroves,
+                        this.scene.camera,
+                        halleyPosition,
+                        true
+                    );
+                }
+            } else {
+                updateMangroveCameraObstruction(
+                    this.cortezMangroves,
+                    null,
+                    null,
+                    false
+                );
+            }
+        }
+
         // Lake-facing reset before animation (portrait keeps turned pose); feet aligned after update
         if (this.cat && this.platform) {
-            const preserveFacing = this._portraitIdleActive === true;
+            const preserveFacing = this._portraitIdleActive === true || isDevFaceCameraEnabled();
             this.cat.applyLakeFacing(preserveFacing);
         }
         
         // Update cat with sway and bobber tracking (only when idle - not casting or reeling)
             if (this.cat) {
-                // Get bobber position if bobber is active and visible
-                let bobberPos = null;
-                if (portraitBlend < PORTRAIT_BOBBER_TRACKING_CUTOFF && this.fishing?.bobber && this.fishing.bobber.visible) {
-                    bobberPos = this.fishing.bobber.position.clone();
-                }
-                
-                // IDLE = before any fishing sequence starts (no bobber in water, no buttons active)
-                // This is the starting state, right hand OFF rod
-                const bobberInWater = this.fishing?.bobber && this.fishing.bobber.visible;
-                
-                // Check if fishing sequence is complete (fish caught, sequence done)
                 const fishState = this.fish?.state;
                 const fishCaught = fishState === 'LANDED';
                 const sequenceComplete = fishCaught && !this.fishing.isReeling && !this.fishing.fishOnLine;
+                const bobberInWater = this.fishing?.bobber && this.fishing.bobber.visible;
+
+                // Bobber tracking only during an active fishing sequence — not post-catch idle
+                // (avoids fighting applyLakeFacing when the bobber sits near Halley's feet).
+                let bobberPos = null;
+                if (
+                    portraitBlend < PORTRAIT_BOBBER_TRACKING_CUTOFF &&
+                    bobberInWater &&
+                    !sequenceComplete
+                ) {
+                    bobberPos = this.fishing.bobber.position.clone();
+                }
                 
                 // Sequence starts immediately when cast button is clicked (isCasting = true)
                 // OR when bobber is in water (after cast completes, BEFORE sequence completes)
@@ -818,7 +1040,7 @@ export class Game {
             }
 
         // After animation pose updates, align feet to the deck marker (boats pitch with waves)
-        if (this.cat && this.platform) {
+        if (this.cat && this.platform && !this.cat._devDragOverride) {
             this.cat.alignFeetToSurface(this.platform.getSurfacePosition());
         }
         
@@ -1107,11 +1329,59 @@ export class Game {
         }
     }
 
-    /** Coral Kingdoms: calm the small boat so Halley and the camera stay steady on the reef. */
+    /** Coral Kingdoms: calm the small boat. Stormbreaker uses normal deck rocking — swell is in the water shader. */
     applyPlatformBoatRocking(location) {
         if (!this.platform) return;
         const calmReef = location?.name === CORAL_KINGDOMS_NAME;
         this.platform.setBoatRockingScale(calmReef ? 0.04 : 1);
+    }
+
+    shouldEnablePondSubmergedGrass(location) {
+        return isCrescentPondLocation(this.locations) || location?.name === CORTEZ_BACKWATERS_NAME;
+    }
+
+    syncPondSubmergedGrassForLocation(location) {
+        const enabled = this.shouldEnablePondSubmergedGrass(location);
+        this.water.setPondSubmergedGrassEnabled(enabled);
+        this.water.setPondSubmergedGrassProfile(
+            location?.name === CORTEZ_BACKWATERS_NAME ? 'cortez' : 'crescent'
+        );
+    }
+
+    applyMoonlightSunLighting() {
+        const sun = this.scene?.directionalLight;
+        if (!sun) {
+            return;
+        }
+        sun.position.set(6, 44, 4);
+        sun.target.position.set(0, 0, 2);
+        sun.target.updateMatrixWorld();
+        if (this.scene.rimLight) {
+            if (this._savedRimIntensity == null) {
+                this._savedRimIntensity = this.scene.rimLight.intensity;
+            }
+            this.scene.rimLight.intensity = 0.05;
+        }
+    }
+
+    /** @deprecated use applyMoonlightSunLighting */
+    applyTwilightTrenchMoonlight() {
+        this.applyMoonlightSunLighting();
+    }
+
+    restoreDefaultSunLighting() {
+        const sun = this.scene?.directionalLight;
+        if (!sun) {
+            return;
+        }
+        sun.position.copy(SUN_DIRECTIONAL_POSITION);
+        sun.target.position.copy(SUN_DIRECTIONAL_TARGET);
+        sun.target.updateMatrixWorld();
+        if (this.scene.rimLight) {
+            this.scene.rimLight.intensity = this.scene.currentEnvironment?.rimIntensity
+                ?? this._savedRimIntensity
+                ?? 0.32;
+        }
     }
 
     applyLocationEnvironment(location) {
@@ -1133,17 +1403,18 @@ export class Game {
             },
             CELESTIAL: {
                 scene: {
-                    background: 0x04050a,
-                    fogColor: 0x04050a,
-                    fogNear: 12,
-                    fogFar: 160,
-                    hemisphereSkyColor: 0x222845,
-                    hemisphereGroundColor: 0x050509,
-                    hemisphereIntensity: 0.28,
-                    directionalColor: 0xb7c4ff,
-                    directionalIntensity: 0.55,
-                    ambientColor: 0x1c2a4a,
-                    ambientIntensity: 0.24
+                    background: 0x02040c,
+                    fogColor: 0x050818,
+                    fogNear: 18,
+                    fogFar: 140,
+                    hemisphereSkyColor: 0x7888a8,
+                    hemisphereGroundColor: 0x010204,
+                    hemisphereIntensity: 0.24,
+                    directionalColor: 0xd8e8ff,
+                    directionalIntensity: 0.54,
+                    ambientColor: 0x1a2840,
+                    ambientIntensity: 0.14,
+                    rimIntensity: 0.04
                 },
                 waterParticles: {
                     size: 0.22,
@@ -1183,24 +1454,136 @@ export class Game {
                     ambientIntensity: 0.32
                 },
                 waterParticles: defaultParticleSettings
+            },
+            CORTEZ: {
+                scene: {
+                    fogColor: 0xb8d2c3,
+                    fogNear: 26,
+                    fogFar: 168,
+                    hemisphereSkyColor: 0xfff4d6,
+                    hemisphereGroundColor: 0x3d7a62,
+                    hemisphereIntensity: 0.72,
+                    directionalColor: 0xffe8b8,
+                    directionalIntensity: 0.78,
+                    ambientColor: 0x9ecfb8,
+                    ambientIntensity: 0.38,
+                    rimIntensity: 0.06
+                },
+                waterParticles: {
+                    ...defaultParticleSettings,
+                    opacity: 0.55,
+                    color: 0xd8f5e8
+                }
+            },
+            DEEP_REEF: {
+                scene: {
+                    fogColor: 0x2a6cb0,
+                    fogNear: 22,
+                    fogFar: 175,
+                    hemisphereSkyColor: 0x88c4f0,
+                    hemisphereGroundColor: 0x0c2d5c,
+                    hemisphereIntensity: 0.58,
+                    directionalColor: 0xc0e0ff,
+                    directionalIntensity: 0.64,
+                    ambientColor: 0x2a68a8,
+                    ambientIntensity: 0.32,
+                    rimIntensity: 0.05
+                },
+                waterParticles: {
+                    ...defaultParticleSettings,
+                    opacity: 0.44,
+                    color: 0x5ab0e8
+                }
+            },
+            MOONLIGHT: {
+                scene: {
+                    background: 0x02040c,
+                    fogColor: 0x050818,
+                    fogNear: 18,
+                    fogFar: 140,
+                    hemisphereSkyColor: 0x7888a8,
+                    hemisphereGroundColor: 0x010204,
+                    hemisphereIntensity: 0.24,
+                    directionalColor: 0xd8e8ff,
+                    directionalIntensity: 0.54,
+                    ambientColor: 0x1a2840,
+                    ambientIntensity: 0.14,
+                    rimIntensity: 0.04
+                },
+                waterParticles: {
+                    ...defaultParticleSettings,
+                    opacity: 0.32,
+                    color: 0xc8d8f0
+                }
+            },
+            STORM: {
+                scene: {
+                    background: 0x5a6570,
+                    fogColor: 0x4a5560,
+                    fogNear: 16,
+                    fogFar: 128,
+                    hemisphereSkyColor: 0x8a94a0,
+                    hemisphereGroundColor: 0x2e3640,
+                    hemisphereIntensity: 0.4,
+                    directionalColor: 0xb8c2cc,
+                    directionalIntensity: 0.34,
+                    ambientColor: 0x5a6470,
+                    ambientIntensity: 0.26,
+                    rimIntensity: 0.03
+                },
+                waterParticles: {
+                    ...defaultParticleSettings,
+                    opacity: 0.42,
+                    color: 0xaab4be
+                }
             }
         };
 
         const waterType = location.waterBodyType || 'DEFAULT';
+        const isMoonlightLocation = location.name === TWILIGHT_TRENCH_NAME
+            || waterType === 'CELESTIAL';
         const profileKey = location.name === CORAL_KINGDOMS_NAME
             ? 'CORAL'
-            : waterType;
+            : location.name === CORTEZ_BACKWATERS_NAME
+                ? 'CORTEZ'
+                : location.name === STORMBREAKER_BAY_NAME
+                    ? 'STORM'
+                    : location.name === FORGOTTEN_REEFS_NAME
+                        ? 'DEEP_REEF'
+                        : isMoonlightLocation
+                            ? 'MOONLIGHT'
+                            : waterType;
         const profile = profiles[profileKey] || profiles.DEFAULT;
+        const skipHdriSky = location.name === STORMBREAKER_BAY_NAME
+            || isMoonlightLocation;
 
         if (this.scene?.setEnvironment) {
             this.scene.setEnvironment(profile.scene || {});
         }
 
-        if (waterType !== 'CELESTIAL' && this.skyEnv) {
-            applySkyEnvironment(this.scene.scene, this.skyEnv);
+        if (isMoonlightLocation) {
+            this.applyMoonlightSunLighting();
+        } else {
+            this.restoreDefaultSunLighting();
         }
 
-        if (profile.waterParticles) {
+        if (!skipHdriSky && this.skyEnv) {
+            applySkyEnvironment(this.scene.scene, this.skyEnv);
+        } else if (isMoonlightLocation) {
+            applyDarkMoonlightSky(this.scene.scene, {
+                background: profile.scene?.background ?? 0x02040c
+            });
+        }
+
+        if (location.name === CRESCENT_POND_NAME && waterType !== 'CELESTIAL') {
+            applyCrescentPondSkyLook(this.scene.scene);
+        } else if (waterType !== 'CELESTIAL' && !skipHdriSky) {
+            restoreDefaultSkyLook(this.scene.scene);
+        }
+
+        if (waterType === 'CELESTIAL' && profiles.CELESTIAL.waterParticles) {
+            this.applyWaterParticleSettings(profiles.CELESTIAL.waterParticles);
+        } else if (profile.waterParticles) {
             this.applyWaterParticleSettings(profile.waterParticles);
         } else if (this.waterParticleDefaults) {
             this.applyWaterParticleSettings(this.waterParticleDefaults);
@@ -1253,10 +1636,16 @@ export class Game {
             && this.player?.canAccessCelestialDepths?.() === true;
         const playAmazon = location?.name === AMAZON_DEPTHS_NAME;
         const playCrescentPond = location?.name === CRESCENT_POND_NAME;
+        const playCortez = location?.name === CORTEZ_BACKWATERS_NAME;
+        const playCraggy = location?.name === CRAGGY_COAST_NAME;
+        const playStormbreaker = location?.name === STORMBREAKER_BAY_NAME;
 
         if (playCelestial) {
             this.amazonAmbience?.stop();
             this.crescentPondAmbience?.stop();
+            this.cortezAmbience?.stop();
+            this.craggyCoastAmbience?.stop();
+            this.stormbreakerBayAmbience?.stop();
             this.celestialMusic?.start();
             return;
         }
@@ -1264,13 +1653,49 @@ export class Game {
         if (playAmazon) {
             this.celestialMusic?.stop();
             this.crescentPondAmbience?.stop();
+            this.cortezAmbience?.stop();
+            this.craggyCoastAmbience?.stop();
+            this.stormbreakerBayAmbience?.stop();
             this.amazonAmbience?.start();
+            return;
+        }
+
+        if (playCortez) {
+            this.celestialMusic?.stop();
+            this.amazonAmbience?.stop();
+            this.crescentPondAmbience?.stop();
+            this.craggyCoastAmbience?.stop();
+            this.stormbreakerBayAmbience?.stop();
+            this.cortezAmbience?.start();
+            return;
+        }
+
+        if (playCraggy) {
+            this.celestialMusic?.stop();
+            this.amazonAmbience?.stop();
+            this.crescentPondAmbience?.stop();
+            this.cortezAmbience?.stop();
+            this.stormbreakerBayAmbience?.stop();
+            this.craggyCoastAmbience?.start();
+            return;
+        }
+
+        if (playStormbreaker) {
+            this.celestialMusic?.stop();
+            this.amazonAmbience?.stop();
+            this.crescentPondAmbience?.stop();
+            this.cortezAmbience?.stop();
+            this.craggyCoastAmbience?.stop();
+            this.stormbreakerBayAmbience?.start();
             return;
         }
 
         if (playCrescentPond) {
             this.celestialMusic?.stop();
             this.amazonAmbience?.stop();
+            this.cortezAmbience?.stop();
+            this.craggyCoastAmbience?.stop();
+            this.stormbreakerBayAmbience?.stop();
             this.crescentPondAmbience?.start();
             return;
         }
@@ -1278,6 +1703,9 @@ export class Game {
         this.celestialMusic?.stop();
         this.amazonAmbience?.stop();
         this.crescentPondAmbience?.stop();
+        this.cortezAmbience?.stop();
+        this.craggyCoastAmbience?.stop();
+        this.stormbreakerBayAmbience?.stop();
     }
     
     /**
@@ -1299,6 +1727,11 @@ export class Game {
             console.warn('[LOCATION SWITCH] Celestial Depths locked — collect all relics and forge the Starlight Lure first');
             return false;
         }
+
+        if (location.requiresStarfishCatch && !hasPrivilegedAccess(this.player) && !canAccessCortezBackwaters(this.player)) {
+            console.warn('[LOCATION SWITCH] Cortez Backwaters locked — catch the Starfish of Eternity first');
+            return false;
+        }
         
         debugLog('[LOCATION SWITCH] Switching to:', location.name, 'Water type:', location.waterBodyType, 'Platform:', location.platformType);
         
@@ -1307,14 +1740,44 @@ export class Game {
         
         // Reef / ice flags before water type so location-specific tuning sticks on return
         this.water.setCoralReefEnabled(location.name === CORAL_KINGDOMS_NAME);
+        this.water.setCortezBackwatersEnabled(location.name === CORTEZ_BACKWATERS_NAME);
+        this.water.setCraggyCoastEnabled(location.name === CRAGGY_COAST_NAME);
+        this.water.setStormbreakerBayEnabled(location.name === STORMBREAKER_BAY_NAME);
+        this.water.setForgottenReefsEnabled(location.name === FORGOTTEN_REEFS_NAME);
+        this.water.setTwilightTrenchEnabled(location.name === TWILIGHT_TRENCH_NAME);
         this.water.setAmazonAnacondaEnabled(location.name === AMAZON_DEPTHS_NAME);
         this.water.setFjordIceFloesEnabled(location.name === FROZEN_FJORDS_NAME);
         this.water.setWaterBodyType(location.waterBodyType);
         this.applyLakeMaskForWaterBody(location.waterBodyType);
-        this.water.setPondSubmergedGrassEnabled(isCrescentPondLocation(this.locations));
+        this.syncPondSubmergedGrassForLocation(location);
         if (location.name === CRESCENT_POND_NAME) {
             this.crescentFarShore = rebuildCrescentPondFarShore(this.scene.scene, this.crescentFarShore);
+            this.crescentPondVegetation = rebuildCrescentPondVegetation(
+                this.scene.scene,
+                this.crescentPondVegetation,
+                this.water?.waterY ?? 0
+            );
         }
+        syncCrescentPondSkyVisibility(
+            this.crescentPondSky,
+            location.name === CRESCENT_POND_NAME
+        );
+        syncCrescentPondVegetationVisibility(
+            this.crescentPondVegetation,
+            location.name === CRESCENT_POND_NAME
+        );
+        syncCortezMangrovesVisibility(
+            this.cortezMangroves,
+            location.name === CORTEZ_BACKWATERS_NAME
+        );
+        syncDesertLagoonPalmsVisibility(
+            this.desertLagoonPalms,
+            location.name === DESERT_LAGOON_NAME
+        );
+        syncCortezDockWaterVisibility(
+            this.cortezDockWater,
+            location.name === CORTEZ_BACKWATERS_NAME
+        );
         this.applyLocationEnvironment(location);
         this.applyCelestialBaitPreference(location);
         this.syncLocationMusic(location);

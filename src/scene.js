@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import {
+    SUN_DIRECTIONAL_POSITION,
+    SUN_DIRECTIONAL_TARGET
+} from './scene/sunShadowDirection.js';
 
 export class Scene {
     constructor() {
@@ -49,11 +53,9 @@ export class Scene {
         this.hemisphereLight = hemisphereLight;
 
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        // Position light coming from upper left (to match shadow orientation)
-        // Camera is at (0, 12, -8) looking at (0, 1.5, 3)
-        // Upper left on screen = negative X (left), positive Y (up), positive Z (toward dock from behind)
-        // Light position: upper left = (-X, +Y, +Z) = (-10, 20, 10)
-        directionalLight.position.set(-10, 20, 10);
+        directionalLight.position.copy(SUN_DIRECTIONAL_POSITION);
+        directionalLight.target.position.copy(SUN_DIRECTIONAL_TARGET);
+        this.scene.add(directionalLight.target);
         directionalLight.castShadow = true;
         directionalLight.shadow.mapSize.width = 2048;
         directionalLight.shadow.mapSize.height = 2048;

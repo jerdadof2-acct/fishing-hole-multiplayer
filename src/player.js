@@ -12,6 +12,8 @@ import {
     STARLIGHT_LURE_BAIT_ID,
     isStarlightLureBait
 } from './config/hiddenRelics.js';
+import { CORTEZ_BACKWATERS_LOCATION_INDEX } from './config/cortezBackwaters.js';
+import { STARFISH_ID } from './config/starfishEncounter.js';
 
 /**
  * Player State Management System
@@ -286,7 +288,7 @@ export class Player {
         // Priority 1: Check for location unlocks first
         if (locations && locations.locations) {
             for (const [index, location] of locations.locations.entries()) {
-                if (location.requiresStarlightLure || location.waterBodyType === 'CELESTIAL') {
+                if (location.requiresStarlightLure || location.requiresStarfishCatch || location.waterBodyType === 'CELESTIAL') {
                     continue;
                 }
                 if (!this.locationUnlocks.includes(index) && this.level >= location.unlockLevel) {
@@ -838,6 +840,18 @@ export class Player {
             }
             if (isStarlightLureBait(this.gear?.bait)) {
                 this.gear.bait = 'Basic Bait';
+            }
+        }
+
+        const cortezIdx = CORTEZ_BACKWATERS_LOCATION_INDEX;
+        if (this.isFishUnlocked(STARFISH_ID)) {
+            if (!this.locationUnlocks.includes(cortezIdx)) {
+                this.locationUnlocks.push(cortezIdx);
+            }
+        } else {
+            this.locationUnlocks = this.locationUnlocks.filter((index) => index !== cortezIdx);
+            if (this.currentLocationIndex === cortezIdx) {
+                this.currentLocationIndex = this.locationUnlocks[0] ?? 0;
             }
         }
     }

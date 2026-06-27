@@ -9,15 +9,114 @@ import {
     PORTRAIT_BLEND_ACTIVE_THRESHOLD
 } from './config/idlePortrait.js';
 import { debugLog } from './config/debug.js';
+import { loadDevGemOffset, clearDevGemOffset } from './dev/devGemOffset.js';
 
-const CAT_MODEL_URL = 'assets/glb/Cat.glb?v=webp1';
+const CAT_MODEL_URL = 'assets/glb/Cat.glb?v=20260627-sanitize';
 const CAT_TARGET_HEIGHT = 2.0;
 const CAT_TARGET_HEIGHT_LARGE_BOAT = 2.2;
 /** Extra sole clearance below foot bones (ankle ≠ ground contact). */
 const FOOT_SOLE_PADDING = 0.06;
 /** Per-frame blend toward deck target — planted feel on rocking boats. */
 const PLATFORM_ALIGN_LERP = 0.12;
+/**
+ * LOCKED procedural gem on Spine2 (verified on clasp 2026-06-27).
+ * Spine2 local +Z = chest front (not model root -Z).
+ */
+const MEDALLION_GEM_OFFSET = new THREE.Vector3(-0.007, 0.024, 0.315);
+const MEDALLION_GEM_LIGHT_Z = 0.055;
+
+function resolveMedallionGemOffset() {
+    return loadDevGemOffset(MEDALLION_GEM_OFFSET);
+}
+const MEDALLION_CHEST_BONE_NAMES = ['mixamorig:Spine2', 'Spine2'];
 // Lake-facing rotation: see CAT_FACING_Y in src/config/idlePortrait.js (locked).
+
+const RIG_HELPER_MESH_NAMES = new Set(['Plane', 'Circle', 'Cube']);
+const CHARACTER_MESH_NAMES = new Set(['Body.001', 'Body', 'Vest', 'Hat', 'Eyes', 'defaultMaterial']);
+
+function isRigHelperMesh(node) {
+    if (!node?.isMesh) {
+        return false;
+    }
+    if (RIG_HELPER_MESH_NAMES.has(node.name)) {
+        return true;
+    }
+    let parent = node.parent;
+    while (parent) {
+        if (parent.name === 'cs_grp' || /^cs_/i.test(parent.name)) {
+            return true;
+        }
+        parent = parent.parent;
+    }
+    return false;
+}
+
+/** Blender exports often include rig control widgets — strip them before sizing/placement. */
+function sanitizeCatModel(model) {
+    if (!model) {
+        return;
+    }
+
+    const toRemove = [];
+    model.traverse((child) => {
+        if (isRigHelperMesh(child)) {
+            toRemove.push(child);
+        }
+    });
+
+    for (const mesh of toRemove) {
+        const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        for (const material of materials) {
+            material?.dispose?.();
+        }
+        mesh.geometry?.dispose?.();
+        mesh.parent?.remove(mesh);
+    }
+
+    if (toRemove.length > 0) {
+        console.warn(`[CAT] Removed ${toRemove.length} rig helper mesh(es) from Cat.glb export`);
+    }
+}
+
+function computeBindHeight(model) {
+    if (!model) {
+        return CAT_TARGET_HEIGHT;
+    }
+
+    model.updateMatrixWorld(true);
+    const box = new THREE.Box3();
+    const meshBox = new THREE.Box3();
+    let hasCharacterMesh = false;
+
+    model.traverse((node) => {
+        if (!node.isMesh?.geometry || isRigHelperMesh(node)) {
+            return;
+        }
+        if (!CHARACTER_MESH_NAMES.has(node.name) && !node.name.startsWith('Body')) {
+            return;
+        }
+        if (!node.geometry.boundingBox) {
+            node.geometry.computeBoundingBox();
+        }
+        meshBox.copy(node.geometry.boundingBox).applyMatrix4(node.matrixWorld);
+        if (!hasCharacterMesh) {
+            box.copy(meshBox);
+            hasCharacterMesh = true;
+        } else {
+            box.union(meshBox);
+        }
+    });
+
+    if (hasCharacterMesh) {
+        const size = box.getSize(new THREE.Vector3());
+        if (size.y > 0.1) {
+            return size.y;
+        }
+    }
+
+    const fallbackBox = new THREE.Box3().setFromObject(model);
+    return Math.max(fallbackBox.getSize(new THREE.Vector3()).y, 0.1);
+}
 
 function isFootBone(name) {
     const key = String(name || '').toLowerCase().replace(/^mixamorig:?/, '').replace(/[._]/g, '');
@@ -53,7 +152,7 @@ function computeFeetYOffsetFromMeshes(model) {
     let hasMesh = false;
 
     model.traverse((node) => {
-        if (!node.isMesh?.geometry) return;
+        if (!node.isMesh?.geometry || isRigHelperMesh(node)) return;
         const geometry = node.geometry;
         if (!geometry.boundingBox) geometry.computeBoundingBox();
         meshBox.copy(geometry.boundingBox).applyMatrix4(
@@ -162,6 +261,12 @@ export class Cat {
         this._rodTipVertexIndex = undefined;
         this.catAnchor = null;
         this.feetYOffset = 0;
+        this._medallionFx = null;
+        this._medallionGlowTime = 0;
+        this._gemDragActive = false;
+        this._devDragOverride = false;
+        this._devManualRotation = false;
+        this._devRotationY = 0;
         this._holdReelingAfterThrow = false;
     }
 
@@ -178,13 +283,12 @@ export class Cat {
                 (gltf) => {
                     clearTimeout(timeoutId);
                     this.model = gltf.scene;
-                    const box = new THREE.Box3().setFromObject(this.model);
-                    const size = box.getSize(new THREE.Vector3());
-                    this.bindHeight = size.y;
+                    sanitizeCatModel(this.model);
+                    this.bindHeight = computeBindHeight(this.model);
                     this.targetHeight = CAT_TARGET_HEIGHT;
                     const scale = this.targetHeight / this.bindHeight;
                     this.model.scale.setScalar(scale);
-                    debugLog('Cat model size:', size, 'Scale applied:', scale);
+                    debugLog('Cat bind height:', this.bindHeight, 'Scale applied:', scale);
                     
                     this.setupAnimations(gltf);
                     this.setupRodTip();
@@ -227,6 +331,9 @@ export class Cat {
                             const materials = Array.isArray(child.material) ? child.material : [child.material];
                             materials.forEach((mat) => {
                                 if (mat && mat.isMeshStandardMaterial) {
+                                    if (mat.name === 'Comet_Medallion') {
+                                        return;
+                                    }
                                     mat.emissive = new THREE.Color(0x111111);
                                     mat.emissiveIntensity = 0.08;
                                     mat.needsUpdate = true;
@@ -234,7 +341,9 @@ export class Cat {
                             });
                         }
                     });
-                    
+
+                    this._setupMedallionGlow();
+
                     this.sceneRef.scene.add(this.catAnchor);
                     debugLog('Cat model added to scene. Position:', this.catAnchor.position);
                     debugLog('Cat model scale:', this.model.scale);
@@ -253,6 +362,266 @@ export class Cat {
                 }
             );
         });
+    }
+
+    _findMedallionChestBone() {
+        if (!this.model) {
+            return null;
+        }
+
+        for (const name of MEDALLION_CHEST_BONE_NAMES) {
+            const bone = this.model.getObjectByName(name);
+            if (bone) {
+                return bone;
+            }
+        }
+
+        return this.allBones.find((bone) => /spine2/i.test(bone.name || '')) || null;
+    }
+
+    /** Prefer exported Comet_Medallion material; otherwise attach a small 3D gem. */
+    _setupMedallionGlow() {
+        if (this._setupMedallionMaterial()) {
+            return;
+        }
+        this._setupMedallionGem();
+    }
+
+    /**
+     * Glow on Comet_Medallion material — used when Blender export includes it.
+     * @returns {boolean}
+     */
+    _setupMedallionMaterial() {
+        if (!this.model) {
+            return false;
+        }
+
+        let medallionMaterial = null;
+        let medallionMesh = null;
+
+        this.model.traverse((object) => {
+            if (!object.isMesh) {
+                return;
+            }
+
+            const materials = Array.isArray(object.material)
+                ? object.material
+                : [object.material];
+
+            for (const material of materials) {
+                if (material?.name === 'Comet_Medallion') {
+                    medallionMaterial = material;
+                    medallionMesh = object;
+                }
+            }
+
+            if (object.name === 'CometShard') {
+                medallionMesh = object;
+                if (!medallionMaterial) {
+                    medallionMaterial = Array.isArray(object.material)
+                        ? object.material[0]
+                        : object.material;
+                }
+            }
+        });
+
+        if (!medallionMaterial) {
+            return false;
+        }
+
+        medallionMaterial.emissive = new THREE.Color(0x29aaff);
+        medallionMaterial.emissiveIntensity = 1.4;
+        medallionMaterial.roughness = 0.2;
+        medallionMaterial.metalness = 0.12;
+        medallionMaterial.transparent = false;
+        medallionMaterial.opacity = 1;
+        medallionMaterial.depthTest = true;
+        medallionMaterial.depthWrite = true;
+        medallionMaterial.side = THREE.FrontSide;
+
+        if (medallionMaterial.emissiveMap) {
+            medallionMaterial.emissiveMap.wrapS = THREE.RepeatWrapping;
+            medallionMaterial.emissiveMap.wrapT = THREE.RepeatWrapping;
+            medallionMaterial.emissiveMap.center.set(0.5, 0.5);
+        }
+
+        medallionMaterial.needsUpdate = true;
+
+        const bindScale = medallionMesh
+            ? medallionMesh.scale.clone()
+            : new THREE.Vector3(1, 1, 1);
+
+        this._medallionFx = {
+            mode: 'material',
+            mesh: medallionMesh,
+            material: medallionMaterial,
+            bindScale,
+            attractionStrength: 0
+        };
+
+        debugLog('[CAT] Real comet medallion material found:', medallionMaterial.name);
+        return true;
+    }
+
+    /** Opaque flattened gem on the chest bone — no transparent overlay. */
+    _setupMedallionGem() {
+        const chestBone = this._findMedallionChestBone();
+
+        if (!chestBone) {
+            console.warn('[CAT] Could not attach medallion gem — Spine2 was not found');
+            return false;
+        }
+
+        const gemGeometry = new THREE.SphereGeometry(0.046, 32, 20);
+        gemGeometry.scale(1, 1, 0.3);
+
+        const gemMaterial = new THREE.MeshStandardMaterial({
+            color: 0x168cff,
+            emissive: new THREE.Color(0x16aaff),
+            emissiveIntensity: 2,
+            roughness: 0.16,
+            metalness: 0.04,
+            transparent: false,
+            opacity: 1,
+            depthTest: true,
+            depthWrite: true,
+            side: THREE.FrontSide,
+            toneMapped: false
+        });
+
+        const gem = new THREE.Mesh(gemGeometry, gemMaterial);
+        gem.name = 'CometMedallionGem';
+        gem.position.copy(resolveMedallionGemOffset());
+        gem.rotation.set(0, 0, 0);
+        gem.castShadow = false;
+        gem.receiveShadow = false;
+        chestBone.add(gem);
+
+        const light = new THREE.PointLight(0x2aaaff, 0.7, 0.55, 2);
+        light.position.set(0, 0, MEDALLION_GEM_LIGHT_Z);
+        gem.add(light);
+
+        this._medallionFx = {
+            mode: 'gem',
+            gem,
+            material: gemMaterial,
+            light,
+            baseScale: gem.scale.clone(),
+            attractionStrength: 0
+        };
+
+        chestBone.updateWorldMatrix(true, false);
+        gem.updateMatrixWorld(true);
+
+        const worldPosition = new THREE.Vector3();
+        gem.getWorldPosition(worldPosition);
+
+        console.log('[CAT] Visible comet gem attached', {
+            bone: chestBone.name,
+            localPosition: gem.position.toArray(),
+            worldPosition: worldPosition.toArray()
+        });
+
+        return true;
+    }
+
+    /** Snap procedural gem back to locked clasp offset (e.g. after dev reset). */
+    resetMedallionGemPosition() {
+        const fx = this._medallionFx;
+        if (fx?.mode !== 'gem' || !fx.gem) {
+            return;
+        }
+        fx.gem.position.copy(resolveMedallionGemOffset());
+        fx.gem.rotation.set(0, 0, 0);
+        if (fx.light) {
+            fx.light.position.set(0, 0, MEDALLION_GEM_LIGHT_Z);
+        }
+        if (fx.baseScale) {
+            fx.gem.scale.copy(fx.baseScale);
+        }
+    }
+
+    /** Dev: clear saved gem tweak and restore MEDALLION_GEM_OFFSET. */
+    resetMedallionGemToDefault() {
+        clearDevGemOffset();
+        this.resetMedallionGemPosition();
+    }
+
+    updateMedallionGlow(delta) {
+        const fx = this._medallionFx;
+        if (!fx?.material) {
+            return;
+        }
+
+        this._medallionGlowTime += delta;
+        const time = this._medallionGlowTime;
+        const attraction = THREE.MathUtils.clamp(fx.attractionStrength || 0, 0, 1);
+
+        if (fx.mode === 'gem') {
+            const pulse = 0.5 + 0.5 * Math.sin(time * 1.9);
+            const shimmer = 0.5 + 0.5 * Math.sin(time * 4.6 + Math.sin(time * 1.3));
+
+            fx.material.emissiveIntensity =
+                1.75 + pulse * 0.9 + shimmer * 0.2 + attraction * 1.8;
+
+            fx.material.emissive.setRGB(
+                0.025,
+                0.42 + pulse * 0.14,
+                1
+            );
+
+            const scale = 1 + pulse * 0.018 + attraction * 0.03;
+            fx.gem.scale.set(
+                fx.baseScale.x * scale,
+                fx.baseScale.y * scale,
+                fx.baseScale.z * scale
+            );
+
+            if (fx.light) {
+                fx.light.intensity = 0.45 + pulse * 0.5 + attraction * 1.1;
+            }
+
+            return;
+        }
+
+        const slowPulse = 0.5 + 0.5 * Math.sin(time * 1.4);
+        const shimmer = 0.5 + 0.5 * Math.sin(time * 4.1 + Math.sin(time * 1.7));
+
+        fx.material.emissiveIntensity =
+            1.25 + slowPulse * 0.45 + shimmer * 0.15 + attraction * 2.4;
+
+        fx.material.emissive.setRGB(
+            0.08 + attraction * 0.04,
+            0.45 + shimmer * 0.12,
+            0.95
+        );
+
+        if (fx.material.emissiveMap) {
+            fx.material.emissiveMap.rotation = time * 0.35;
+            fx.material.emissiveMap.center.set(0.5, 0.5);
+            fx.material.emissiveMap.offset.x = Math.sin(time * 0.7) * 0.025;
+            fx.material.emissiveMap.offset.y = Math.cos(time * 0.55) * 0.025;
+        }
+
+        if (fx.mesh && fx.bindScale) {
+            const scalePulse = 1 + slowPulse * 0.012 + attraction * 0.025;
+            fx.mesh.scale.set(
+                fx.bindScale.x * scalePulse,
+                fx.bindScale.y * scalePulse,
+                fx.bindScale.z * scalePulse
+            );
+        }
+    }
+
+    /**
+     * Starfish / story pull — 0 idle, up to 1 when the Starfish calls Halley.
+     * @param {number} [strength=0]
+     */
+    setMedallionAttraction(strength = 0) {
+        if (!this._medallionFx) {
+            return;
+        }
+        this._medallionFx.attractionStrength = THREE.MathUtils.clamp(strength, 0, 1);
     }
 
     setupAnimations(gltf) {
@@ -2453,6 +2822,39 @@ export class Cat {
         return this.catAnchor || this.model;
     }
 
+    /** Dev face-camera drag — skip per-frame position snap-back. */
+    setDevDragOverride(active) {
+        this._devDragOverride = active === true;
+    }
+
+    clearDevManualRotation() {
+        this._devManualRotation = false;
+    }
+
+    setDevManualRotation(yRadians) {
+        const anchor = this.catAnchor || this.model;
+        if (!anchor) {
+            return;
+        }
+        this._devManualRotation = true;
+        this._devRotationY = yRadians;
+        anchor.rotation.x = 0;
+        anchor.rotation.z = 0;
+        anchor.rotation.y = yRadians;
+    }
+
+    /** Move Halley anchor during dev drag; keeps savedPosition in sync. */
+    applyDevDragPosition(position) {
+        const anchor = this.catAnchor || this.model;
+        if (!anchor || !position) {
+            return;
+        }
+        anchor.position.copy(position);
+        anchor.updateMatrixWorld(true);
+        this.savedPosition = anchor.position.clone();
+        this._devDragOverride = true;
+    }
+
     /** Meshes used for tap / poke raycasts on Halley. */
     getTapTargets() {
         const root = this.catAnchor || this.model;
@@ -2476,7 +2878,7 @@ export class Cat {
      */
                 getSavedPosition() {
                     const anchor = this.catAnchor || this.model;
-                    if (this.savedPosition && anchor) {
+                    if (this.savedPosition && anchor && !this._devDragOverride) {
                         if (anchor.position.distanceTo(this.savedPosition) > 0.01) {
                             if (!this._driftWarned || anchor.position.distanceTo(this.savedPosition) > 0.5) {
                                 if (!this._driftWarned) {
@@ -2507,8 +2909,10 @@ export class Cat {
                 update(delta, isIdle = true, bobberPosition = null, isFishing = false, portraitBlend = 0) {
                     const anchor = this.catAnchor || this.model;
                     if (!anchor) return;
+
+                    this.updateMedallionGlow(delta);
                     
-                    if (this.savedPosition) {
+                    if (this.savedPosition && !this._devDragOverride) {
                         if (anchor.position.distanceTo(this.savedPosition) > 0.01) {
                             const currentRotationY = anchor.rotation.y;
                             anchor.position.copy(this.savedPosition);
@@ -2525,7 +2929,9 @@ export class Cat {
                         anchor.rotation.x = 0;
                         anchor.rotation.z = 0;
 
-                        if (portraitBlend > PORTRAIT_BLEND_ACTIVE_THRESHOLD) {
+                        if (this._devManualRotation) {
+                            anchor.rotation.y = this._devRotationY;
+                        } else if (portraitBlend > PORTRAIT_BLEND_ACTIVE_THRESHOLD) {
                             const targetY = this.baseRotationY + PORTRAIT_CAT_TURN_RADIANS * portraitBlend;
                             anchor.rotation.y = THREE.MathUtils.lerp(
                                 anchor.rotation.y,

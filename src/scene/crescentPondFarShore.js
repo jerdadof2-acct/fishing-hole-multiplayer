@@ -1,7 +1,5 @@
 import * as THREE from 'three';
 import { GROUND_SIZE, POND_MASK_PROFILE } from '../buildLakeMask.js';
-import { applyShoreRockToMesh } from './shoreRockMaterial.js';
-import { createPineTrunkMaterial, createPineFoliageMaterial } from './pineTreeMaterials.js';
 
 export const CRESCENT_POND_NAME = 'Crescent Pond';
 
@@ -9,33 +7,101 @@ const MASK_A = POND_MASK_PROFILE.a;
 const MASK_B = POND_MASK_PROFILE.b;
 const MASK_ROTATE = POND_MASK_PROFILE.rotate;
 
-const FOLIAGE_COLORS = [0x4f9a58, 0x5aad64, 0x64ba6e];
+/** Wide enough that PC landscape / ultrawide never shows side seams. */
+const BANK_X_MIN = -130;
+const BANK_X_MAX = 130;
+/** Pond mask is narrower — clamp shore Z lookup so side wings extrapolate cleanly. */
+const SHORE_X_CLAMP = 58;
+const LAND_DEPTH = 68;
+const BEACH_DEPTH = 5.5;
+/** Rear zone that rises into soft rolling hills against the sky. */
+const HILL_DEPTH = 26;
+const HILL_WIDTH = 272;
+/** Green slope begins this far past the beach strip. */
+const SLOPE_INSET = 5;
+/** Tuck mesh lip under the waterline so the center view has no sky seam. */
+const SHORE_WATER_OVERLAP = 1.5;
+/** Max rear approach length; also caps how far forward the mesh may extend. */
+const TERRAIN_APPROACH_DEPTH = 26;
+/** Ignore far wing shore points so sides do not pull terrain into the fishing view. */
+const TERRAIN_CENTER_X_LIMIT = 72;
+const WATER_SURFACE_Y = 0;
 
-const PORTRAIT_FADE_START = 0.15;
-const PORTRAIT_FADE_END = 0.75;
+let grassTexture = null;
 
-/** Far bank spans the pond arc (not lake-wide). */
-const BANK_X_MIN = -48;
-const BANK_X_MAX = 48;
-const LAND_DEPTH = 50;
-const BEACH_DEPTH = 6;
+function getGrassTexture() {
+    if (grassTexture) {
+        return grassTexture;
+    }
 
-/** Dense treeline on the opposite bank. */
-const TREE_X_STEP = 5.5;
-const TREE_Z_STEP = 4.2;
-const TREE_ALONG_MIN = 6;
-const TREE_ALONG_MAX = 42;
-const TREE_KEEP_CHANCE = 0.88;
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
 
-function mulberry32(seed) {
-    let state = seed;
-    return () => {
-        state += 0x6d2b79f5;
-        let t = state;
-        t = Math.imul(t ^ (t >>> 15), t | 1);
-        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#7f9f5e';
+    ctx.fillRect(0, 0, 256, 256);
+
+    for (let i = 0; i < 1400; i++) {
+        const x = Math.random() * 256;
+        const y = Math.random() * 256;
+        const w = 2 + Math.random() * 6;
+        const h = 1 + Math.random() * 5;
+
+        const shade = Math.floor(90 + Math.random() * 45);
+        const green = Math.floor(120 + Math.random() * 55);
+
+        ctx.fillStyle = `rgba(${shade}, ${green}, ${65 + Math.random() * 30}, 0.32)`;
+        ctx.fillRect(x, y, w, h);
+    }
+
+    for (let i = 0; i < 340; i++) {
+        const x = Math.random() * 256;
+        const y = Math.random() * 256;
+        const r = 2 + Math.random() * 7;
+
+        ctx.fillStyle = `rgba(${70 + Math.random() * 35}, ${100 + Math.random() * 35}, ${48 + Math.random() * 25}, 0.2)`;
+        ctx.beginPath();
+        ctx.ellipse(x, y, r, r * (0.55 + Math.random() * 0.6), Math.random() * Math.PI, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    grassTexture = new THREE.CanvasTexture(canvas);
+    grassTexture.wrapS = THREE.RepeatWrapping;
+    grassTexture.wrapT = THREE.RepeatWrapping;
+    grassTexture.colorSpace = THREE.SRGBColorSpace;
+    grassTexture.anisotropy = 4;
+
+    return grassTexture;
+}
+
+function createGrassMaterial({
+    tint = 0xffffff,
+    repeatX = 8,
+    repeatY = 8
+} = {}) {
+    const map = getGrassTexture().clone();
+    map.wrapS = THREE.RepeatWrapping;
+    map.wrapT = THREE.RepeatWrapping;
+    map.repeat.set(repeatX, repeatY);
+    map.colorSpace = THREE.SRGBColorSpace;
+    map.needsUpdate = true;
+
+    return new THREE.MeshStandardMaterial({
+        color: tint,
+        map,
+        roughness: 0.98,
+        metalness: 0
+    });
+}
+
+function createBankEdgeMaterial() {
+    return new THREE.MeshStandardMaterial({
+        color: 0xa89d76,
+        roughness: 1,
+        metalness: 0
+    });
 }
 
 function isInsideWater(x, z) {
@@ -50,220 +116,193 @@ function isInsideWater(x, z) {
     return (eu / MASK_A) ** 2 + (ev / MASK_B) ** 2 < 1;
 }
 
-/** Furthest +Z on the pond edge for a given X (matches pond lake mask). */
+/** Furthest +Z on the pond edge for a given X. */
 function farShoreZAtX(x) {
+    const queryX = Math.max(-SHORE_X_CLAMP, Math.min(SHORE_X_CLAMP, x));
+
     let lo = 0;
     let hi = 80;
+
     for (let i = 0; i < 22; i++) {
         const mid = (lo + hi) * 0.5;
-        if (isInsideWater(x, mid)) {
+        if (isInsideWater(queryX, mid)) {
             lo = mid;
         } else {
             hi = mid;
         }
     }
+
     return lo;
 }
 
-function scatterFarBankTrees() {
-    const rand = mulberry32(0x0c2e5c01);
-    const trees = [];
-    let rowIndex = 0;
+function shoreZAtX(x, shorePoints) {
+    if (x <= shorePoints[0].x) {
+        return shorePoints[0].z;
+    }
 
-    for (let along = TREE_ALONG_MIN; along <= TREE_ALONG_MAX; along += TREE_Z_STEP) {
-        const rowOffset = (rowIndex % 2) * (TREE_X_STEP * 0.5);
-        rowIndex += 1;
+    if (x >= shorePoints[shorePoints.length - 1].x) {
+        return shorePoints[shorePoints.length - 1].z;
+    }
 
-        for (let x = BANK_X_MIN + rowOffset; x <= BANK_X_MAX; x += TREE_X_STEP) {
-            if (rand() > TREE_KEEP_CHANCE) continue;
+    for (let i = 0; i < shorePoints.length - 1; i++) {
+        const a = shorePoints[i];
+        const b = shorePoints[i + 1];
 
-            const jx = x + (rand() - 0.5) * 2.6;
-            const jAlong = along + (rand() - 0.5) * 2.2;
-            const shoreZ = farShoreZAtX(jx);
-            const depthFactor = jAlong / TREE_ALONG_MAX;
-            const scale = 0.72 + rand() * 0.78 - depthFactor * 0.08;
-
-            trees.push({
-                x: jx,
-                z: shoreZ + jAlong,
-                scale,
-                rot: (rand() - 0.5) * 0.65,
-                foliageIndex: Math.floor(rand() * 12)
-            });
+        if (x >= a.x && x <= b.x) {
+            const t = (x - a.x) / (b.x - a.x);
+            return a.z + (b.z - a.z) * t;
         }
     }
 
-    return trees;
+    return shorePoints[0].z;
 }
 
-function jitterConeGeometry(geometry, rand, amount) {
-    const pos = geometry.attributes.position;
-    const vertex = new THREE.Vector3();
-    let maxY = -Infinity;
+/** Forward edge of terrain: seals the pond in center view without wing overreach. */
+function computeTerrainMeshFrontZ(shorePoints, hillRampStartZ) {
+    const centerPoints = shorePoints.filter((point) => Math.abs(point.x) <= TERRAIN_CENTER_X_LIMIT);
+    const slopeStarts = centerPoints.map(
+        (point) => point.z + BEACH_DEPTH + SLOPE_INSET
+    );
+    const centerLead = Math.min(...slopeStarts) - SHORE_WATER_OVERLAP;
+    const rampLead = hillRampStartZ - TERRAIN_APPROACH_DEPTH;
 
-    for (let i = 0; i < pos.count; i++) {
-        vertex.fromBufferAttribute(pos, i);
-        if (vertex.y > maxY) maxY = vertex.y;
+    return Math.min(centerLead, rampLead);
+}
+
+/**
+ * One continuous green bank: rises from the water edge, then rolls into hills at the horizon.
+ */
+function rollingHillHeight(x, z, shorePoints, hillRampStartZ, hillBackZ, landY) {
+    const shoreZ = shoreZAtX(x, shorePoints);
+    const slopeStartZ = shoreZ + BEACH_DEPTH + SLOPE_INSET;
+    const bankTopY = landY + 0.02;
+
+    if (z <= slopeStartZ) {
+        return WATER_SURFACE_Y + 0.01;
     }
 
-    for (let i = 0; i < pos.count; i++) {
-        vertex.fromBufferAttribute(pos, i);
-        const heightT = maxY > 0 ? vertex.y / maxY : 0;
-        const edgeBias = 1.0 - heightT * 0.55;
-        const jitter = amount * edgeBias;
+    if (z < hillRampStartZ) {
+        const span = Math.max(hillRampStartZ - slopeStartZ, 0.001);
+        const t = (z - slopeStartZ) / span;
+        const ease = t * t * (3 - 2 * t);
+        const lift = ease * (bankTopY - WATER_SURFACE_Y - 0.01);
+        const roll = Math.sin(x * 0.05 + z * 0.018) * 0.032 * ease;
+        return WATER_SURFACE_Y + 0.01 + lift + roll;
+    }
 
-        vertex.x += (rand() - 0.5) * jitter * 2.2;
-        vertex.z += (rand() - 0.5) * jitter * 2.2;
-        if (heightT > 0.35) {
-            vertex.y += (rand() - 0.5) * jitter * 0.65;
-        }
-        pos.setXYZ(i, vertex.x, vertex.y, vertex.z);
+    const depthSpan = Math.max(hillBackZ - hillRampStartZ, 0.001);
+    const t = Math.max(0, Math.min(1, (z - hillRampStartZ) / depthSpan));
+    const ramp = t * t * (3 - 2 * t);
+
+    const wave =
+        Math.sin(x * 0.034 + 0.55) * 0.62 +
+        Math.sin(x * 0.068 + 2.1) * 0.34 +
+        Math.sin(x * 0.017 + 1.2) * 0.88 +
+        Math.sin(x * 0.095 - 0.35) * 0.22;
+
+    const centerRise = Math.exp(-(x * x) / (48 * 48)) * 0.55;
+    const edgeFalloff = 0.72 + 0.28 * Math.exp(-(x * x) / (118 * 118));
+
+    const peak = (1.08 + wave * 1.0 + centerRise) * edgeFalloff;
+    return bankTopY + ramp * peak;
+}
+
+function createRollingHillsGeometry(
+    meshFrontZ,
+    shorePoints,
+    hillRampStartZ,
+    hillBackZ,
+    landY
+) {
+    const meshDepth = hillBackZ - meshFrontZ;
+    const segmentsX = 80;
+    const segmentsZ = Math.max(18, Math.round(meshDepth * 0.55));
+
+    const geom = new THREE.PlaneGeometry(HILL_WIDTH, meshDepth, segmentsX, segmentsZ);
+    geom.rotateX(-Math.PI / 2);
+
+    const pos = geom.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i);
+        const z = pos.getZ(i) + meshFrontZ + meshDepth * 0.5;
+
+        pos.setY(
+            i,
+            rollingHillHeight(x, z, shorePoints, hillRampStartZ, hillBackZ, landY)
+        );
+        pos.setZ(i, z);
     }
 
     pos.needsUpdate = true;
-    geometry.computeVertexNormals();
-}
+    geom.computeVertexNormals();
 
-function addFoliageClump(parent, options) {
-    const {
-        x,
-        y,
-        z,
-        radius,
-        height,
-        material,
-        rand,
-        jitter = 0.1
-    } = options;
-
-    const segments = 7 + Math.floor(rand() * 5);
-    const rings = 2 + Math.floor(rand() * 2);
-    const geometry = new THREE.ConeGeometry(radius, height, segments, rings);
-    jitterConeGeometry(geometry, rand, jitter);
-
-    const clump = new THREE.Mesh(geometry, material);
-    clump.position.set(x, y, z);
-    clump.rotation.y = rand() * Math.PI * 2;
-    clump.rotation.z = (rand() - 0.5) * 0.18;
-    clump.rotation.x = (rand() - 0.5) * 0.12;
-    clump.scale.set(
-        0.82 + rand() * 0.38,
-        0.88 + rand() * 0.28,
-        0.82 + rand() * 0.38
-    );
-    parent.add(clump);
-}
-
-function makePineTree(scale = 1, foliageIndex = 0) {
-    const tree = new THREE.Group();
-    const h = 4.2 * scale;
-    const trunkH = h * 0.36;
-    const rand = mulberry32(0x5a1c0031 + foliageIndex * 97);
-
-    const trunk = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.07 * scale, 0.12 * scale, trunkH, 8),
-        createPineTrunkMaterial({ repeatV: 1.6 + rand() * 0.8 })
-    );
-    trunk.position.y = trunkH * 0.5;
-    trunk.rotation.z = (rand() - 0.5) * 0.05;
-    tree.add(trunk);
-
-    const tierCount = 5;
-    for (let tier = 0; tier < tierCount; tier++) {
-        const tierT = tier / Math.max(1, tierCount - 1);
-        const baseY = trunkH + (0.08 + tier * 0.2) * h;
-        const tierRadius = (0.88 - tierT * 0.52 + (rand() - 0.5) * 0.1) * scale;
-        const tierHeight = (0.34 - tierT * 0.08 + (rand() - 0.5) * 0.04) * h;
-        const tint = FOLIAGE_COLORS[(foliageIndex + tier) % FOLIAGE_COLORS.length];
-        const material = createPineFoliageMaterial(tint, {
-            repeat: 1.8 + rand() * 1.4,
-            variation: rand() - 0.5
-        });
-
-        const clumpCount = tier < 2 ? 3 : 2;
-        for (let c = 0; c < clumpCount; c++) {
-            const angle = rand() * Math.PI * 2;
-            const spread = (0.06 + tierT * 0.14) * scale;
-            const dist = rand() * spread;
-            addFoliageClump(tree, {
-                x: Math.cos(angle) * dist,
-                y: baseY + (rand() - 0.5) * 0.06 * h,
-                z: Math.sin(angle) * dist,
-                radius: tierRadius * (0.72 + rand() * 0.45),
-                height: tierHeight * (0.8 + rand() * 0.35),
-                material,
-                rand,
-                jitter: 0.08 * scale + tierT * 0.04
-            });
-        }
-    }
-
-    const tipTint = FOLIAGE_COLORS[(foliageIndex + tierCount) % FOLIAGE_COLORS.length];
-    addFoliageClump(tree, {
-        x: (rand() - 0.5) * 0.08 * scale,
-        y: trunkH + 1.02 * h,
-        z: (rand() - 0.5) * 0.08 * scale,
-        radius: 0.28 * scale * (0.85 + rand() * 0.3),
-        height: 0.22 * h * (0.9 + rand() * 0.25),
-        material: createPineFoliageMaterial(tipTint, {
-            repeat: 2.2 + rand(),
-            variation: rand() - 0.5
-        }),
-        rand,
-        jitter: 0.06 * scale
-    });
-
-    tree.rotation.z = (rand() - 0.5) * 0.07;
-    return tree;
+    return geom;
 }
 
 function buildFarBankMeshes(landY) {
-    const steps = 32;
-    const landDepth = LAND_DEPTH;
-    const beachDepth = BEACH_DEPTH;
+    const steps = 42;
 
     const shorePoints = [];
     for (let i = 0; i <= steps; i++) {
         const x = BANK_X_MIN + ((BANK_X_MAX - BANK_X_MIN) * i) / steps;
-        shorePoints.push({ x, z: farShoreZAtX(x) + 0.6 });
+        shorePoints.push({
+            x,
+            z: farShoreZAtX(x) + 0.6
+        });
     }
 
-    const landShape = new THREE.Shape();
-    landShape.moveTo(shorePoints[0].x, shorePoints[0].z);
+    const frontZAverage =
+        shorePoints.reduce((sum, point) => sum + point.z, 0) /
+        shorePoints.length;
+
+    const hillBackZ = frontZAverage + LAND_DEPTH;
+    const hillRampStartZ = hillBackZ - HILL_DEPTH;
+    const hillMeshFrontZ = computeTerrainMeshFrontZ(shorePoints, hillRampStartZ);
+
+    const bankShape = new THREE.Shape();
+    bankShape.moveTo(shorePoints[0].x, shorePoints[0].z);
+
     for (let i = 1; i < shorePoints.length; i++) {
-        landShape.lineTo(shorePoints[i].x, shorePoints[i].z);
+        bankShape.lineTo(shorePoints[i].x, shorePoints[i].z);
     }
-    const backZ = shorePoints[shorePoints.length - 1].z + landDepth;
-    const backZStart = shorePoints[0].z + landDepth;
-    landShape.lineTo(shorePoints[shorePoints.length - 1].x, backZ);
-    landShape.lineTo(shorePoints[0].x, backZStart);
-    landShape.closePath();
 
-    const landGeom = new THREE.ShapeGeometry(landShape);
-    landGeom.rotateX(-Math.PI / 2);
-    const land = new THREE.Mesh(landGeom);
-    applyShoreRockToMesh(land, 0x7a6a58, 2.6);
-    land.position.y = landY;
-    land.renderOrder = 2;
-
-    const beachShape = new THREE.Shape();
-    beachShape.moveTo(shorePoints[0].x, shorePoints[0].z);
-    for (let i = 1; i < shorePoints.length; i++) {
-        beachShape.lineTo(shorePoints[i].x, shorePoints[i].z);
-    }
     for (let i = shorePoints.length - 1; i >= 0; i--) {
-        beachShape.lineTo(shorePoints[i].x, shorePoints[i].z + beachDepth);
+        bankShape.lineTo(shorePoints[i].x, shorePoints[i].z + BEACH_DEPTH);
     }
-    beachShape.closePath();
 
-    const beachGeom = new THREE.ShapeGeometry(beachShape);
-    beachGeom.rotateX(-Math.PI / 2);
-    const beach = new THREE.Mesh(beachGeom);
-    applyShoreRockToMesh(beach, 0x8f7d68, 2.2);
-    beach.position.y = landY - 0.02;
-    beach.renderOrder = 2;
+    bankShape.closePath();
 
-    return { land, beach };
+    const bankGeom = new THREE.ShapeGeometry(bankShape);
+    bankGeom.rotateX(-Math.PI / 2);
+
+    const bank = new THREE.Mesh(bankGeom, createBankEdgeMaterial());
+    bank.position.y = landY + 0.015;
+    bank.receiveShadow = true;
+    bank.renderOrder = 2;
+
+    const hillsGeom = createRollingHillsGeometry(
+        hillMeshFrontZ,
+        shorePoints,
+        hillRampStartZ,
+        hillBackZ,
+        landY
+    );
+
+    const hills = new THREE.Mesh(
+        hillsGeom,
+        createGrassMaterial({
+            tint: 0xa6c27a,
+            repeatX: 26,
+            repeatY: 14
+        })
+    );
+    hills.material.polygonOffset = true;
+    hills.material.polygonOffsetFactor = -2;
+    hills.material.polygonOffsetUnits = -2;
+    hills.receiveShadow = true;
+    hills.renderOrder = 1;
+
+    return { bank, hills };
 }
 
 function disposeObject3D(object) {
@@ -271,50 +310,31 @@ function disposeObject3D(object) {
         if (obj.geometry) {
             obj.geometry.dispose();
         }
+
         if (obj.material) {
-            const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-            mats.forEach((mat) => {
-                if (mat.map && !mat.userData?.sharedMaps) mat.map.dispose();
-                if (mat.normalMap && !mat.userData?.sharedMaps) mat.normalMap.dispose();
-                if (mat.roughnessMap && !mat.userData?.sharedMaps) mat.roughnessMap.dispose();
-                mat.dispose();
+            const materials = Array.isArray(obj.material)
+                ? obj.material
+                : [obj.material];
+
+            materials.forEach((material) => {
+                if (material.map && material.map !== grassTexture) {
+                    material.map.dispose?.();
+                }
+                material.dispose?.();
             });
         }
     });
 }
 
-function collectOpacityMeshes(root) {
-    const opacityMeshes = [];
-    root.traverse((obj) => {
-        if (obj.isMesh && obj.material) {
-            opacityMeshes.push(obj);
-        }
-    });
-    root.userData.opacityMeshes = opacityMeshes;
-}
-
 function populateFarShoreRoot(root) {
     const landY = 0.11;
-    const { land, beach } = buildFarBankMeshes(landY);
-    root.add(land);
-    root.add(beach);
+    const { bank, hills } = buildFarBankMeshes(landY);
 
-    const treePlacements = scatterFarBankTrees();
-    treePlacements.forEach((slot, index) => {
-        const tree = makePineTree(slot.scale ?? 1, slot.foliageIndex ?? index);
-        tree.position.set(slot.x, landY, slot.z);
-        if (slot.rot) {
-            tree.rotation.y = slot.rot;
-        }
-        root.add(tree);
-    });
-
-    collectOpacityMeshes(root);
+    root.add(hills);
+    root.add(bank);
 }
 
 /**
- * Far bank of Crescent Pond — land + trees across the water from the dock.
- * Only meant to read during idle portrait (fades with portrait blend).
  * @param {THREE.Scene} scene
  * @returns {THREE.Group}
  */
@@ -322,13 +342,14 @@ export function createCrescentPondFarShore(scene) {
     const root = new THREE.Group();
     root.name = 'crescentPondFarShore';
     root.visible = false;
+
     populateFarShoreRoot(root);
     scene.add(root);
+
     return root;
 }
 
 /**
- * Rebuild far-bank geometry after the pond shoreline mask changes.
  * @param {THREE.Scene} scene
  * @param {THREE.Group | null} group
  * @returns {THREE.Group}
@@ -345,6 +366,7 @@ export function rebuildCrescentPondFarShore(scene, group) {
     }
 
     populateFarShoreRoot(group);
+
     return group;
 }
 
@@ -353,34 +375,15 @@ export function isCrescentPondLocation(locations) {
 }
 
 /**
- * Fade far bank in with portrait camera blend (Crescent Pond only).
+ * Always visible while at Crescent Pond.
  * @param {THREE.Group | null} group
- * @param {number} portraitBlend
+ * @param {number} _portraitBlend
  * @param {boolean} isCrescentPond
  */
-export function updateCrescentPondFarShore(group, portraitBlend, isCrescentPond) {
-    if (!group) return;
-
-    const active = isCrescentPond && portraitBlend > PORTRAIT_FADE_START;
-    if (!active) {
-        group.visible = false;
+export function updateCrescentPondFarShore(group, _portraitBlend, isCrescentPond) {
+    if (!group) {
         return;
     }
 
-    group.visible = true;
-    const t = Math.min(
-        1,
-        (portraitBlend - PORTRAIT_FADE_START) / (PORTRAIT_FADE_END - PORTRAIT_FADE_START)
-    );
-
-    const meshes = group.userData.opacityMeshes;
-    if (!meshes) return;
-
-    for (let i = 0; i < meshes.length; i++) {
-        const mat = meshes[i].material;
-        if (!mat) continue;
-        mat.transparent = t < 0.98;
-        mat.opacity = t;
-        mat.depthWrite = t > 0.5;
-    }
+    group.visible = isCrescentPond === true;
 }

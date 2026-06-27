@@ -41,22 +41,29 @@ export const CORAL_KINGDOMS_WATER_TUNING = {
     sparkleStrength: 0.34
 };
 
-/** Re-apply locked Coral Kingdoms bay water to live shader uniforms. */
-export function applyCoralKingdomsWaterColors(material) {
+/**
+ * Cortez Backwaters — same shallow bay shader as Coral Kingdoms, darker green-blue palette.
+ */
+export const CORTEZ_BACKWATERS_WATER_DEEP_HEX = 0x155f62;
+export const CORTEZ_BACKWATERS_WATER_SHALLOW_HEX = 0x45aaa0;
+export const CORTEZ_BACKWATERS_WATER_FOG_HEX = 0x287f79;
+
+/** Shared with Coral Kingdoms — only water tint differs at Cortez. */
+function applyShallowBayWaterColors(material, deepHex, shallowHex, fogHex, tuning = CORAL_KINGDOMS_WATER_TUNING) {
     if (!material?.uniforms) {
         return;
     }
     const u = material.uniforms;
-    u.uColorDeep.value.setHex(CORAL_KINGDOMS_WATER_DEEP_HEX);
-    u.uColorShallow.value.setHex(CORAL_KINGDOMS_WATER_SHALLOW_HEX);
-    u.uFogColor.value.setHex(CORAL_KINGDOMS_WATER_FOG_HEX);
-    u.uAbsorption.value = CORAL_KINGDOMS_WATER_TUNING.absorption;
-    u.uTurbidity.value = CORAL_KINGDOMS_WATER_TUNING.turbidity;
-    u.uOpacity.value = CORAL_KINGDOMS_WATER_TUNING.opacity;
-    u.uFogIntensity.value = CORAL_KINGDOMS_WATER_TUNING.fogIntensity;
-    u.uFogDepth.value = CORAL_KINGDOMS_WATER_TUNING.fogDepth;
+    u.uColorDeep.value.setHex(deepHex);
+    u.uColorShallow.value.setHex(shallowHex);
+    u.uFogColor.value.setHex(fogHex);
+    u.uAbsorption.value = tuning.absorption;
+    u.uTurbidity.value = tuning.turbidity;
+    u.uOpacity.value = tuning.opacity;
+    u.uFogIntensity.value = tuning.fogIntensity;
+    u.uFogDepth.value = tuning.fogDepth;
     if (u.uSparkleStrength) {
-        u.uSparkleStrength.value = CORAL_KINGDOMS_WATER_TUNING.sparkleStrength;
+        u.uSparkleStrength.value = tuning.sparkleStrength;
     }
     if (u.uOpaqueDeep) {
         u.uOpaqueDeep.value = 0.0;
@@ -70,6 +77,345 @@ export function applyCoralKingdomsWaterColors(material) {
     if (u.uEnvIntensity) {
         u.uEnvIntensity.value = 0.44;
     }
+    if (u.uShallowBedMix) {
+        u.uShallowBedMix.value = 0.0;
+    }
+}
+
+/** LAKE chop + ripples — Coral Kingdoms uses these (not POND defaults). */
+export function applyCoralKingdomsLakeWaves(material) {
+    if (!material?.uniforms) {
+        return;
+    }
+    const lake = getWaterBodyConfig('LAKE');
+    const u = material.uniforms;
+    if (u.waveScale) {
+        u.waveScale.value = lake.waveScale;
+    }
+    if (u.waveSpeed) {
+        u.waveSpeed.value = lake.waveSpeed;
+    }
+    if (u.waveAmplitude) {
+        u.waveAmplitude.value = lake.waveAmplitude;
+    }
+    if (u.rippleAmp) {
+        u.rippleAmp.value = 0.12;
+    }
+    if (u.uScroll1 && lake.windScroll1) {
+        u.uScroll1.value.copy(lake.windScroll1);
+    }
+    if (u.uScroll2 && lake.windScroll2) {
+        u.uScroll2.value.copy(lake.windScroll2);
+    }
+}
+
+/** Craggy Coast — wind-lashed Great Lakes shoreline chop (LAKE body only). */
+export const CRAGGY_COAST_WATER_WAVES = {
+    waveScale: 2.05,
+    waveSpeed: 3.05,
+    waveAmplitude: 0.135,
+    chopMultiplier: 1.75,
+    sparkleStrength: 0.38,
+    rippleAmp: 0.14,
+    windScroll1: new THREE.Vector2(0.04, 0.022),
+    windScroll2: new THREE.Vector2(-0.026, 0.03)
+};
+
+export function applyLakeDefaultWaves(material, config = getWaterBodyConfig('LAKE')) {
+    if (!material?.uniforms || !config) {
+        return;
+    }
+    const u = material.uniforms;
+    if (u.waveScale) {
+        u.waveScale.value = config.waveScale ?? 1.1;
+    }
+    if (u.waveSpeed) {
+        u.waveSpeed.value = config.waveSpeed ?? 2.0;
+    }
+    if (u.waveAmplitude) {
+        u.waveAmplitude.value = config.waveAmplitude ?? 0.07;
+    }
+    if (u.chopMultiplier) {
+        u.chopMultiplier.value = config.chopMultiplier ?? 1.0;
+    }
+    if (u.uSparkleStrength) {
+        u.uSparkleStrength.value = config.sparkleStrength ?? 0.3;
+    }
+    if (u.rippleAmp) {
+        u.rippleAmp.value = 0.12;
+    }
+    if (u.uScroll1 && config.windScroll1) {
+        u.uScroll1.value.copy(config.windScroll1);
+    }
+    if (u.uScroll2 && config.windScroll2) {
+        u.uScroll2.value.copy(config.windScroll2);
+    }
+}
+
+export function applyCraggyCoastWaterWaves(material) {
+    if (!material?.uniforms) {
+        return;
+    }
+    const w = CRAGGY_COAST_WATER_WAVES;
+    const u = material.uniforms;
+    if (u.waveScale) {
+        u.waveScale.value = w.waveScale;
+    }
+    if (u.waveSpeed) {
+        u.waveSpeed.value = w.waveSpeed;
+    }
+    if (u.waveAmplitude) {
+        u.waveAmplitude.value = w.waveAmplitude;
+    }
+    if (u.chopMultiplier) {
+        u.chopMultiplier.value = w.chopMultiplier;
+    }
+    if (u.uSparkleStrength) {
+        u.uSparkleStrength.value = w.sparkleStrength;
+    }
+    if (u.rippleAmp) {
+        u.rippleAmp.value = w.rippleAmp;
+    }
+    if (u.uScroll1) {
+        u.uScroll1.value.copy(w.windScroll1);
+    }
+    if (u.uScroll2) {
+        u.uScroll2.value.copy(w.windScroll2);
+    }
+}
+
+/** Stormbreaker Bay — dark grey open ocean, heavy wind chop (OCEAN body only). */
+export const STORMBREAKER_BAY_WATER = {
+    deepColor: new THREE.Color(0x2a3540),
+    shallowColor: new THREE.Color(0x5a6878),
+    fogColor: new THREE.Color(0x38444f),
+    fogDepth: 28.0,
+    fogIntensity: 0.78,
+    turbidity: 0.36,
+    absorption: 0.88,
+    opacity: 0.96,
+    sparkleStrength: 0.52,
+    waveScale: 3.75,
+    waveSpeed: 4.2,
+    waveAmplitude: 0.27,
+    chopMultiplier: 2.1,
+    rippleAmp: 0.17,
+    windScroll1: new THREE.Vector2(0.058, 0.03),
+    windScroll2: new THREE.Vector2(-0.036, 0.04),
+    envIntensity: 0.58,
+    fresnelScale: 1.22
+};
+
+export function applyStormbreakerBayWater(material) {
+    if (!material?.uniforms) {
+        return;
+    }
+    const w = STORMBREAKER_BAY_WATER;
+    const u = material.uniforms;
+    u.uColorDeep.value.copy(w.deepColor);
+    u.uColorShallow.value.copy(w.shallowColor);
+    u.uFogColor.value.copy(w.fogColor);
+    u.uFogDepth.value = w.fogDepth;
+    u.uFogIntensity.value = w.fogIntensity;
+    u.uTurbidity.value = w.turbidity;
+    u.uAbsorption.value = w.absorption;
+    u.uOpacity.value = w.opacity;
+    if (u.uSparkleStrength) {
+        u.uSparkleStrength.value = w.sparkleStrength;
+    }
+    if (u.waveScale) {
+        u.waveScale.value = w.waveScale;
+    }
+    if (u.waveSpeed) {
+        u.waveSpeed.value = w.waveSpeed;
+    }
+    if (u.waveAmplitude) {
+        u.waveAmplitude.value = w.waveAmplitude;
+    }
+    if (u.chopMultiplier) {
+        u.chopMultiplier.value = w.chopMultiplier;
+    }
+    if (u.rippleAmp) {
+        u.rippleAmp.value = w.rippleAmp;
+    }
+    if (u.uScroll1) {
+        u.uScroll1.value.copy(w.windScroll1);
+    }
+    if (u.uScroll2) {
+        u.uScroll2.value.copy(w.windScroll2);
+    }
+    if (u.uEnvIntensity) {
+        u.uEnvIntensity.value = w.envIntensity;
+    }
+    if (u.uFresnelScale && w.fresnelScale != null) {
+        u.uFresnelScale.value = w.fresnelScale;
+    }
+}
+
+/** Forgotten Reefs — ~100 ft deep cobalt abyss (OCEAN only). */
+export const FORGOTTEN_REEFS_WATER = {
+    deepColor: new THREE.Color(0x001e45),
+    shallowColor: new THREE.Color(0x035a8f),
+    fogColor: new THREE.Color(0x002850),
+    fogDepth: 52.0,
+    fogIntensity: 0.82,
+    turbidity: 0.06,
+    absorption: 0.95,
+    opacity: 0.99,
+    sparkleStrength: 0.28,
+    waveScale: 2.85,
+    waveSpeed: 2.75,
+    waveAmplitude: 0.16,
+    chopMultiplier: 1.35,
+    rippleAmp: 0.1,
+    windScroll1: new THREE.Vector2(0.032, 0.016),
+    windScroll2: new THREE.Vector2(-0.02, 0.024),
+    envIntensity: 0.26
+};
+
+export function applyForgottenReefsWater(material) {
+    if (!material?.uniforms) {
+        return;
+    }
+    const w = FORGOTTEN_REEFS_WATER;
+    const u = material.uniforms;
+    u.uColorDeep.value.copy(w.deepColor);
+    u.uColorShallow.value.copy(w.shallowColor);
+    u.uFogColor.value.copy(w.fogColor);
+    u.uFogDepth.value = w.fogDepth;
+    u.uFogIntensity.value = w.fogIntensity;
+    u.uTurbidity.value = w.turbidity;
+    u.uAbsorption.value = w.absorption;
+    u.uOpacity.value = w.opacity;
+    if (u.uSparkleStrength) {
+        u.uSparkleStrength.value = w.sparkleStrength;
+    }
+    if (u.waveScale) {
+        u.waveScale.value = w.waveScale;
+    }
+    if (u.waveSpeed) {
+        u.waveSpeed.value = w.waveSpeed;
+    }
+    if (u.waveAmplitude) {
+        u.waveAmplitude.value = w.waveAmplitude;
+    }
+    if (u.chopMultiplier) {
+        u.chopMultiplier.value = w.chopMultiplier;
+    }
+    if (u.rippleAmp) {
+        u.rippleAmp.value = w.rippleAmp;
+    }
+    if (u.uScroll1) {
+        u.uScroll1.value.copy(w.windScroll1);
+    }
+    if (u.uScroll2) {
+        u.uScroll2.value.copy(w.windScroll2);
+    }
+    if (u.uEnvIntensity) {
+        u.uEnvIntensity.value = w.envIntensity;
+    }
+    if (u.uFresnelScale) {
+        u.uFresnelScale.value = 1.0;
+    }
+    if (u.uHasLakeBed) {
+        u.uHasLakeBed.value = 0.0;
+    }
+    if (u.uOpaqueDeep) {
+        u.uOpaqueDeep.value = 1.0;
+    }
+}
+
+/** Twilight Trench — black abyss with moonlit surface glints (OCEAN only). */
+export const TWILIGHT_TRENCH_WATER = {
+    deepColor: new THREE.Color(0x000103),
+    shallowColor: new THREE.Color(0x03060e),
+    fogColor: new THREE.Color(0x010208),
+    fogDepth: 58.0,
+    fogIntensity: 0.94,
+    turbidity: 0.04,
+    absorption: 0.99,
+    opacity: 0.99,
+    sparkleStrength: 0.22,
+    waveScale: 2.4,
+    waveSpeed: 2.1,
+    waveAmplitude: 0.12,
+    chopMultiplier: 1.15,
+    rippleAmp: 0.08,
+    windScroll1: new THREE.Vector2(0.022, 0.011),
+    windScroll2: new THREE.Vector2(-0.014, 0.016),
+    envIntensity: 0.12
+};
+
+export function applyTwilightTrenchWater(material) {
+    if (!material?.uniforms) {
+        return;
+    }
+    const w = TWILIGHT_TRENCH_WATER;
+    const u = material.uniforms;
+    u.uColorDeep.value.copy(w.deepColor);
+    u.uColorShallow.value.copy(w.shallowColor);
+    u.uFogColor.value.copy(w.fogColor);
+    u.uFogDepth.value = w.fogDepth;
+    u.uFogIntensity.value = w.fogIntensity;
+    u.uTurbidity.value = w.turbidity;
+    u.uAbsorption.value = w.absorption;
+    u.uOpacity.value = w.opacity;
+    if (u.uSparkleStrength) {
+        u.uSparkleStrength.value = w.sparkleStrength;
+    }
+    if (u.waveScale) {
+        u.waveScale.value = w.waveScale;
+    }
+    if (u.waveSpeed) {
+        u.waveSpeed.value = w.waveSpeed;
+    }
+    if (u.waveAmplitude) {
+        u.waveAmplitude.value = w.waveAmplitude;
+    }
+    if (u.chopMultiplier) {
+        u.chopMultiplier.value = w.chopMultiplier;
+    }
+    if (u.rippleAmp) {
+        u.rippleAmp.value = w.rippleAmp;
+    }
+    if (u.uScroll1) {
+        u.uScroll1.value.copy(w.windScroll1);
+    }
+    if (u.uScroll2) {
+        u.uScroll2.value.copy(w.windScroll2);
+    }
+    if (u.uEnvIntensity) {
+        u.uEnvIntensity.value = w.envIntensity;
+    }
+    if (u.uFresnelScale) {
+        u.uFresnelScale.value = 0.92;
+    }
+    if (u.uHasLakeBed) {
+        u.uHasLakeBed.value = 0.0;
+    }
+    if (u.uOpaqueDeep) {
+        u.uOpaqueDeep.value = 1.0;
+    }
+}
+
+/** Re-apply Cortez Backwaters shallow bay water to live shader uniforms. */
+export function applyCortezBackwatersWaterColors(material) {
+    applyShallowBayWaterColors(
+        material,
+        CORTEZ_BACKWATERS_WATER_DEEP_HEX,
+        CORTEZ_BACKWATERS_WATER_SHALLOW_HEX,
+        CORTEZ_BACKWATERS_WATER_FOG_HEX
+    );
+}
+
+/** Re-apply locked Coral Kingdoms bay water to live shader uniforms. */
+export function applyCoralKingdomsWaterColors(material) {
+    applyShallowBayWaterColors(
+        material,
+        CORAL_KINGDOMS_WATER_DEEP_HEX,
+        CORAL_KINGDOMS_WATER_SHALLOW_HEX,
+        CORAL_KINGDOMS_WATER_FOG_HEX
+    );
 }
 
 /** Restore default LAKE water uniforms (when leaving Coral Kingdoms). */

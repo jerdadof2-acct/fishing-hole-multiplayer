@@ -1,6 +1,9 @@
 /** Large-boat locations for local boat / ocean preview. */
 export const DEV_OCEAN_BOAT_LOCATION_INDICES = [5, 6, 7, 8, 9];
 
+/** Post-story hidden locations for local preview. */
+export const DEV_HIDDEN_LOCATION_INDICES = [11];
+
 /**
  * True on localhost, 127.0.0.1, or when ?dev=1 / ?storytest=1 is in the URL.
  */
@@ -23,6 +26,14 @@ export function applyDevOceanUnlocks(player, locations) {
 
     let added = false;
     for (const index of DEV_OCEAN_BOAT_LOCATION_INDICES) {
+        if (index < 0 || index >= locations.locations.length) continue;
+        if (!player.locationUnlocks.includes(index)) {
+            player.locationUnlocks.push(index);
+            added = true;
+        }
+    }
+
+    for (const index of DEV_HIDDEN_LOCATION_INDICES) {
         if (index < 0 || index >= locations.locations.length) continue;
         if (!player.locationUnlocks.includes(index)) {
             player.locationUnlocks.push(index);

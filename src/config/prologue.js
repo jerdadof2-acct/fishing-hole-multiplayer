@@ -97,3 +97,19 @@ export const PROLOGUE_STORY_PARAGRAPHS = [
     'Maybe it\'s destiny.',
     'Either way, Halley\'s not done casting yet.'
 ];
+
+/**
+ * Next prologue scroll (medallion origin + Crescent Pond pulse).
+ * See DOCS/halleys-big-catch-story.md — swap into PROLOGUE_STORY_PARAGRAPHS and
+ * bump PROLOGUE_GAME_VERSION when intro voiceover is re-recorded to match.
+ */
+export const PROLOGUE_STORY_PARAGRAPHS_NEXT = [
+    'On the night a small kitten was born, Halley\'s Comet crossed the sky.',
+    'As it passed overhead, glowing fragments broke away and scattered across the world. One of them landed in his family\'s yard.',
+    'His father named him Halley after the comet and later placed the fragment inside a medallion he made for his son.',
+    'For years, the stone gave off only a faint blue glow, and Halley thought of it as little more than a treasured gift from his father.',
+    'Then one quiet morning at Crescent Pond, the medallion began to pulse.',
+    'The water grew still. A strange warmth spread across Halley\'s chest, and he felt something distant stirring far beneath the surface.',
+    'Something mysterious was calling to him from the deep.',
+    'And for the first time, the medallion seemed to know the way.'
+];

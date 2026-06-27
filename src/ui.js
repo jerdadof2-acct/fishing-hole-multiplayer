@@ -3,6 +3,8 @@ import { ACHIEVEMENTS, evaluateAchievements as evaluateAchievementDefs, getAchie
 import { replayStoryPrologue } from './prologue.js';
 import { STARLIGHT_LURE_IMAGE, isStarlightLureBait } from './config/hiddenRelics.js';
 import { isCelestialStarfishHook } from './config/starfishEncounter.js';
+import { canAccessCortezBackwaters } from './config/cortezBackwaters.js';
+import { CORTEZ_BACKWATERS_NAME } from './locations.js';
 import { getFishImagePaths, getRelicImagePaths } from './utils/imageAssets.js';
 import { getCollectionSpeciesTotal, getUnlockedVisibleFishCount } from './fishTypes.js';
 import { switchToDifferentAccount } from './savePinSetup.js';
@@ -1560,7 +1562,7 @@ export class UI {
                     }
                 } catch (error) {
                     console.warn('[UI] Failed to load fish types:', error);
-                    this.totalFishTypes = 38;
+                    this.totalFishTypes = 44;
                 }
             }
 
@@ -2786,6 +2788,16 @@ export class UI {
             this.updateLocationSelector();
             return;
         }
+
+        if (location.requiresStarfishCatch && !hasPrivilegedAccess(this.player) && !canAccessCortezBackwaters(this.player)) {
+            this.showToast({
+                type: 'error',
+                title: 'Cortez Backwaters locked',
+                body: 'Catch the Starfish of Eternity at the Celestial Depths to unlock this hidden destination.'
+            });
+            this.updateLocationSelector();
+            return;
+        }
         
         // Check if player can afford the location
         if (!hasPrivilegedAccess(this.player) && this.player.money < location.cost) {
@@ -3581,6 +3593,7 @@ export class UI {
             
             // Check if first catch of this fish
             const isFirstCatch = this.fishCollection.unlockFish(fishId);
+            this.player.unlockFish?.(fishId);
             
             // Add to player catch tracking (returns unlocks if leveled up)
             const newUnlocks = this.player.addCatch({
@@ -3685,6 +3698,17 @@ export class UI {
             
             // Show first catch popup if needed
             const isFirstStarfishCatch = isStarfishCatch && isCelestialCatch && isFirstCatch;
+            if (isFirstStarfishCatch) {
+                this.player.syncStoryUnlocks?.();
+                this.updateLocationSelector?.();
+                setTimeout(() => {
+                    this.showBannerNotification?.(
+                        `${CORTEZ_BACKWATERS_NAME} unlocked — Halley can return to the Gulf.`,
+                        '#fcd34d',
+                        5200
+                    );
+                }, 5200);
+            }
             if (isFirstStarfishCatch && this.fishing?.beginStarfishFirstCatchCelebration) {
                 this.fishing.beginStarfishFirstCatchCelebration({
                     duration: 4.5,

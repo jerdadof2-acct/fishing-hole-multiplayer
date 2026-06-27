@@ -1,8 +1,4 @@
 import * as THREE from 'three';
-import {
-    PORTRAIT_CAMERA_OFFSET,
-    PORTRAIT_CAMERA_OFFSET_LARGE_BOAT
-} from './config/idlePortrait.js';
 import { buildStylizedDock } from './scene/stylizedDock.js';
 import { debugLog } from './config/debug.js';
 
@@ -824,7 +820,7 @@ export class Platform {
             debugLog(`[PLATFORM][${label}] Extents: ${extentText}`);
             if (offenders.length) {
                 offenders.forEach(entry => {
-                    console.warn(
+                    debugLog(
                         `[PLATFORM][${label}] Out-of-bounds mesh ` +
                         `${entry.name} uuid=${entry.uuid} parent=${entry.parentName || 'null'} ` +
                         `pos=(${entry.position.x}, ${entry.position.y}, ${entry.position.z}) ` +
@@ -1079,22 +1075,26 @@ export class Platform {
         const topY = railY + gunwaleHeight * 0.5 - topCapHeight * 0.5 + 0.008;
 
         const leftTopCap = new THREE.Mesh(sideTopGeom, gunwaleTopMaterial);
+        leftTopCap.name = 'largeBoat-leftRailTopCap';
         leftTopCap.position.set(leftRail.position.x, topY, 0);
         leftTopCap.castShadow = false;
         boatGroup.add(leftTopCap);
 
         const rightTopCap = new THREE.Mesh(sideTopGeom, gunwaleTopMaterial);
+        rightTopCap.name = 'largeBoat-rightRailTopCap';
         rightTopCap.position.set(rightRail.position.x, topY, 0);
         rightTopCap.castShadow = false;
         boatGroup.add(rightTopCap);
 
         const frontTopCap = new THREE.Mesh(foreAftTopGeom, gunwaleTopMaterial);
+        frontTopCap.name = 'largeBoat-frontRailTopCap';
         frontTopCap.position.set(0, topY, frontRailZ);
         frontTopCap.castShadow = false;
         frontTopCap.visible = true;
         boatGroup.add(frontTopCap);
 
         const backTopCap = new THREE.Mesh(foreAftTopGeom, gunwaleTopMaterial);
+        backTopCap.name = 'largeBoat-backRailTopCap';
         backTopCap.position.set(0, topY, backRailZ);
         backTopCap.castShadow = false;
         backTopCap.visible = true;
@@ -1630,8 +1630,11 @@ export class Platform {
             max: { x: largeBoatBBox.max.x.toFixed(3), z: largeBoatBBox.max.z.toFixed(3) }
         });
         
-        // Debug helper: report max extents to track down protruding geometry
-        this.reportPlatformExtents(this.platformMesh, hullOuterEdge, 'LARGE_BOAT', boatLength);
+        // Debug helper: gunwales + rub rails sit outside hullOuterEdge by design
+        const gunwaleOuterX = railCenterX + railThick * 0.5;
+        const rubRailOuterX = railCenterX + 0.10 + 0.04;
+        const maxAbsXAllowed = Math.max(gunwaleOuterX, rubRailOuterX) + 0.02;
+        this.reportPlatformExtents(this.platformMesh, maxAbsXAllowed, 'LARGE_BOAT', boatLength);
         
         // Store initial rotation for animation
         this.platformMesh.userData.initialRotation = new THREE.Euler(0, 0, 0);
@@ -1707,16 +1710,6 @@ export class Platform {
             default:
                 return new THREE.Vector3(0, 0.36, 3.4);
         }
-    }
-
-    /**
-     * Portrait camera offset — sportfisher uses side-elevated framing so chair does not block Halley.
-     */
-    getPortraitCameraOffset() {
-        if (this.currentPlatformType === 'LARGE_BOAT') {
-            return PORTRAIT_CAMERA_OFFSET_LARGE_BOAT.clone();
-        }
-        return PORTRAIT_CAMERA_OFFSET.clone();
     }
 
     /**

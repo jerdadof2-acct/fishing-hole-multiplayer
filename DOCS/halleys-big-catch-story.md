@@ -8,7 +8,23 @@
 
 ### Prologue — Born Under the Comet
 
-Over forty years ago, a brilliant comet streaked across the night sky — a blazing silver trail that touched both land and sea. On that same night, two lives were born from the same light. In a quiet village by a pond, a curious kitten named Halley took his first breath while the comet shimmered like a promise above him. Deep beneath the ocean, where starlight pierced the deepest water, the Starfish of Eternity awakened — a luminous creature of wisdom and memory. Neither knew the other existed, yet their fates were forever linked by that celestial spark.
+On the night a small kitten was born, Halley’s Comet crossed the sky.
+
+As it passed overhead, glowing fragments broke away and scattered across the world. One of them landed in his family’s yard.
+
+His father named him Halley after the comet and later placed the fragment inside a medallion he made for his son.
+
+For years, the stone gave off only a faint blue glow, and Halley thought of it as little more than a treasured gift from his father.
+
+Then one quiet morning at Crescent Pond, the medallion began to pulse.
+
+The water grew still. A strange warmth spread across Halley’s chest, and he felt something distant stirring far beneath the surface.
+
+Something mysterious was calling to him from the deep.
+
+And for the first time, the medallion seemed to know the way.
+
+> **Gameplay tie-in:** Halley’s chest medallion is a comet fragment in a faint always-on blue glow; the pulse at Crescent Pond is the story beat that begins the player’s journey (see `MEDALLION_GEM_OFFSET` / comet gem in `src/cat.js`).
 
 ### Chapter 1 — The Call of the Horizon
 
@@ -74,18 +90,22 @@ Dawn revealed The Shooting Star drifting on tranquil water. The Starfish had van
 
 ### First-Time Entrance Sequence
 
-Before gameplay begins, new players see a cinematic scrolling prologue (movie-credit style) accompanied by an eventual voiceover:
+Before gameplay begins, new players see a cinematic scrolling prologue (movie-credit style) accompanied by an eventual voiceover.
 
-> Forty years ago, a comet crossed the sky — a streak of light that touched both sea and shore.  
-> On that night, a kitten named Halley was born… and the ocean hasn’t been quiet since.  
-> While others chased mice, Halley chased horizons — building his boat, The Shooting Star, and setting out to see what waited beyond the tide.  
-> He’s sailed through jungle rivers, coral kingdoms, and frozen seas… chasing the biggest, wildest catches the world has ever known.  
-> But there’s something out there he still can’t name — something ancient, calling to him from the deep.  
-> Maybe it’s a legend.  
-> Maybe it’s destiny.  
-> Either way, Halley’s not done casting yet.
+**Canonical scroll text (2026-06):**
+
+> On the night a small kitten was born, Halley’s Comet crossed the sky.  
+> As it passed overhead, glowing fragments broke away and scattered across the world. One of them landed in his family’s yard.  
+> His father named him Halley after the comet and later placed the fragment inside a medallion he made for his son.  
+> For years, the stone gave off only a faint blue glow, and Halley thought of it as little more than a treasured gift from his father.  
+> Then one quiet morning at Crescent Pond, the medallion began to pulse.  
+> The water grew still. A strange warmth spread across Halley’s chest, and he felt something distant stirring far beneath the surface.  
+> Something mysterious was calling to him from the deep.  
+> And for the first time, the medallion seemed to know the way.
 
 As the narration ends, the entrance screen transitions to the main title featuring Halleycat and the Halley’s Big Catch logo.
+
+**Implementation note:** `PROLOGUE_STORY_PARAGRAPHS_NEXT` in `src/config/prologue.js` holds this text for the in-game scroll. Swap it into `PROLOGUE_STORY_PARAGRAPHS` and bump `PROLOGUE_GAME_VERSION` when the intro voiceover is re-recorded to match.
 
 ### Core Themes
 

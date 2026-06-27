@@ -30,8 +30,16 @@ const DOCK_CENTER_Z = -1.5;
 const DOCK_HALF_DEPTH = 7;
 const DOCK_HALF_WIDTH = 1.65;
 const DOCK_FRONT_Z = DOCK_CENTER_Z + DOCK_HALF_DEPTH;
-/** Clearance past dock edge when routing the shadow through open water. */
-const DOCK_ROUTE_CLEARANCE = 0.48;
+/** Comfortable swim center — far enough ahead that S-curves never hit a hard boundary. */
+const SWIM_LANE_CENTER_Z = DOCK_FRONT_Z + 5.4;
+/** Spawn only in the inner part of the lane (not near enforcement edges). */
+const SWIM_LANE_SPAWN_JITTER = 1.05;
+/** Lateral wave can reach ~±this in Z; keep dock push below this padding. */
+const SERPENTINE_Z_PADDING = WAVE_AMP * 1.12 + 0.45;
+/** Soft repulsion begins below this Z when crossing in front of the dock. */
+const DOCK_LIP_Z = DOCK_FRONT_Z + 1.15;
+const DOCK_PUSH_TARGET_Z = DOCK_FRONT_Z + 3.85;
+const DOCK_X_GUARD = DOCK_HALF_WIDTH + 3.2;
 
 function smoothstep(edge0, edge1, x) {
     const t = THREE.MathUtils.clamp((x - edge0) / (edge1 - edge0), 0, 1);
@@ -39,34 +47,22 @@ function smoothstep(edge0, edge1, x) {
 }
 
 /**
- * Gently push spine samples around the dock footprint instead of snapping Z.
- * Keeps the serpenoid wave smooth — no per-point cliffs at the plank boundary.
+ * Soft dock avoidance only — never a hard lane wall that flattens the serpentine wave.
  */
-function routeSpineAroundDock(x, z, routeSide = 1) {
-    const dockBackZ = DOCK_CENTER_Z - DOCK_HALF_DEPTH;
-    const side = routeSide >= 0 ? 1 : -1;
-    const targetX = side * (DOCK_HALF_WIDTH + DOCK_ROUTE_CLEARANCE);
-
-    const zOverlap =
-        smoothstep(dockBackZ - 1.1, dockBackZ + 2.0, z)
-        * (1 - smoothstep(DOCK_FRONT_Z - 1.2, DOCK_FRONT_Z + 1.8, z));
-    const xOverlap = 1 - smoothstep(DOCK_HALF_WIDTH - 0.25, DOCK_HALF_WIDTH + 0.85, Math.abs(x));
-    const influence = zOverlap * xOverlap;
-
-    if (influence < 1e-4) {
+function softenDockApproach(x, z) {
+    const nearDockX = 1 - smoothstep(DOCK_X_GUARD, DOCK_X_GUARD + 6.5, Math.abs(x));
+    if (nearDockX < 1e-4) {
         return { x, z };
     }
 
-    const routedX = x + (targetX - x) * influence;
+    const safeZ = DOCK_LIP_Z + SERPENTINE_Z_PADDING;
+    if (z >= safeZ) {
+        return { x, z };
+    }
 
-    // If still grazing the front lip after lateral push, ease Z forward — blended, not snapped.
-    const frontNudge =
-        smoothstep(DOCK_FRONT_Z - 2.5, DOCK_FRONT_Z + 0.35, z)
-        * (1 - smoothstep(DOCK_HALF_WIDTH + 0.15, DOCK_HALF_WIDTH + 1.1, Math.abs(routedX)));
-    const passZ = DOCK_FRONT_Z + 1.05;
-    const routedZ = z + (passZ - z) * frontNudge * influence * 0.65;
-
-    return { x: routedX, z: routedZ };
+    const danger = smoothstep(safeZ, DOCK_LIP_Z - 0.35, z);
+    const easedZ = z + (DOCK_PUSH_TARGET_Z - z) * danger * nearDockX * 0.5;
+    return { x, z: easedZ };
 }
 
 let sharedRibbonTexture = null;
@@ -197,7 +193,6 @@ export class AmazonAnacondaShadow {
         this.perp = new THREE.Vector2(0, 1);
         this._waveOmega = (Math.PI * 2) / WAVE_PERIOD;
         this._waveK = (Math.PI * 2) / WAVE_LENGTH;
-        this._dockRouteSide = 1;
         this._spineScratch = [];
         for (let i = 0; i < SPINE_SAMPLES; i++) {
             this._spineScratch.push({ x: 0, z: 0 });
@@ -265,13 +260,9 @@ export class AmazonAnacondaShadow {
         this.setFlowDirection(this.flowDirection);
 
         const upstreamX = -this.downstream.x;
-        const upstreamZ = -this.downstream.y;
         const margin = this.groundSize * (closer ? 0.06 : 0.1);
         this.startX = upstreamX * margin;
-        this.startZ = closer
-            ? 7.4 + (Math.random() - 0.5) * 3
-            : upstreamZ * margin + (Math.random() - 0.5) * 38;
-        this._dockRouteSide = Math.random() < 0.5 ? 1 : -1;
+        this.startZ = SWIM_LANE_CENTER_Z + (Math.random() - 0.5) * 2 * SWIM_LANE_SPAWN_JITTER;
 
         if (this.root) {
             this.root.visible = true;
@@ -320,12 +311,11 @@ export class AmazonAnacondaShadow {
         const time = this.animTime;
         const spine = this._spineScratch;
         const ds = BODY_LENGTH / (SPINE_SAMPLES - 1);
-        const routeSide = this._dockRouteSide;
 
         for (let i = 0; i < SPINE_SAMPLES; i++) {
             const s = i * ds;
             const p = this._spineAt(s, headX, headZ, time);
-            const routed = routeSpineAroundDock(p.x, p.z, routeSide);
+            const routed = softenDockApproach(p.x, p.z);
             spine[i].x = routed.x;
             spine[i].z = routed.z;
         }

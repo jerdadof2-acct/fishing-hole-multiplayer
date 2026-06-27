@@ -2503,6 +2503,27 @@ canvas {
     background: rgba(255, 220, 140, 0.32);
 }
 
+.story-test-facecam {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0 0 8px;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    cursor: pointer;
+    user-select: none;
+}
+
+.story-test-facecam input {
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.story-test-panel-hint code {
+    font-size: 0.72rem;
+    color: #fde68a;
+}
+
 .story-test-panel-hint {
     margin: 4px 0 0;
     font-size: 0.65rem;

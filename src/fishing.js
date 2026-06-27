@@ -415,6 +415,10 @@ export class Fishing {
         }
 
         this.settleLineAfterCatch();
+
+        if (this.bobber) {
+            this.bobber.visible = false;
+        }
     }
 
     updateStarlightMode() {

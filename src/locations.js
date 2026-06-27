@@ -6,6 +6,12 @@
 export const AMAZON_DEPTHS_NAME = 'Amazon Depths';
 export const FROZEN_FJORDS_NAME = 'Frozen Fjords';
 export const CORAL_KINGDOMS_NAME = 'Coral Kingdoms';
+export const CORTEZ_BACKWATERS_NAME = 'Cortez Backwaters';
+export const CRAGGY_COAST_NAME = 'Craggy Coast';
+export const STORMBREAKER_BAY_NAME = 'Stormbreaker Bay';
+export const FORGOTTEN_REEFS_NAME = 'Forgotten Reefs';
+export const TWILIGHT_TRENCH_NAME = 'Twilight Trench';
+export const DESERT_LAGOON_NAME = 'Desert Lagoon';
 
 export class Locations {
     constructor() {
@@ -120,6 +126,25 @@ export class Locations {
                 description: 'Hidden oasis — look to the stars that guide the waves',
                 waterBodyType: 'POND',
                 platformType: 'DOCK'
+            },
+            {
+                name: CORTEZ_BACKWATERS_NAME,
+                difficulty: 'Hard',
+                fish: [39, 40, 41, 42, 43, 44],
+                cost: 0,
+                unlockLevel: 99,
+                description: 'Weathered docks and warm Gulf tides — the Silver King still rules these backwaters',
+                waterBodyType: 'LAKE',
+                platformType: 'DOCK',
+                requiresStarfishCatch: true,
+                fishSpawnWeights: {
+                    39: 34,
+                    40: 25,
+                    41: 18,
+                    42: 12,
+                    43: 8,
+                    44: 3
+                }
             }
         ];
 

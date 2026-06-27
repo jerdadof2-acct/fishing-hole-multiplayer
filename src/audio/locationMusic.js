@@ -22,6 +22,15 @@ export const CRESCENT_POND_AMBIENCE_URL =
     '/src/audio/freesound_community-water-lap-against-rocks-lake-27442.mp3';
 export const CRESCENT_POND_AMBIENCE_VOLUME = 0.34;
 
+export const CORTEZ_BACKWATERS_AMBIENCE_URL =
+    '/src/audio/jonathanslattermusic-sea-gently-lapping-waves-far-away-seagulls-486892.mp3';
+/** Below prologue ocean ambience (0.3). */
+export const CORTEZ_BACKWATERS_AMBIENCE_VOLUME = 0.22;
+
+export const CRAGGY_COAST_AMBIENCE_URL =
+    '/src/audio/soundreality-wind-blowing-457954.mp3';
+export const CRAGGY_COAST_AMBIENCE_VOLUME = 0.32;
+
 export class LoopingLocationAmbience {
     /**
      * @param {{ resolveSource: () => string, peakVolume: number }} options
@@ -219,5 +228,52 @@ export class CrescentPondAmbience extends LoopingLocationAmbience {
             resolveSource: () => CRESCENT_POND_AMBIENCE_URL,
             peakVolume: CRESCENT_POND_AMBIENCE_VOLUME
         });
+    }
+}
+
+export class CortezBackwatersAmbience extends LoopingLocationAmbience {
+    constructor() {
+        super({
+            resolveSource: () => CORTEZ_BACKWATERS_AMBIENCE_URL,
+            peakVolume: CORTEZ_BACKWATERS_AMBIENCE_VOLUME
+        });
+    }
+}
+
+export class CraggyCoastAmbience extends LoopingLocationAmbience {
+    constructor() {
+        super({
+            resolveSource: () => CRAGGY_COAST_AMBIENCE_URL,
+            peakVolume: CRAGGY_COAST_AMBIENCE_VOLUME
+        });
+    }
+}
+
+/** Stormbreaker Bay — wind + distant surf/seagulls layered together. */
+export class StormbreakerBayAmbience {
+    constructor() {
+        this.wind = new LoopingLocationAmbience({
+            resolveSource: () => CRAGGY_COAST_AMBIENCE_URL,
+            peakVolume: CRAGGY_COAST_AMBIENCE_VOLUME
+        });
+        this.surf = new LoopingLocationAmbience({
+            resolveSource: () => CORTEZ_BACKWATERS_AMBIENCE_URL,
+            peakVolume: CORTEZ_BACKWATERS_AMBIENCE_VOLUME
+        });
+    }
+
+    start() {
+        this.wind.start();
+        this.surf.start();
+    }
+
+    stop() {
+        this.wind.stop();
+        this.surf.stop();
+    }
+
+    resumeAfterGesture() {
+        this.wind.resumeAfterGesture();
+        this.surf.resumeAfterGesture();
     }
 }

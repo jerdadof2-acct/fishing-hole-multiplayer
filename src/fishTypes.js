@@ -62,7 +62,15 @@ export const FishTypes = [
     { id: 35, name: 'Blue Tang', rarity: 'Uncommon', minWeight: 0.3, maxWeight: 1.8, recordWeight: 2.5, value: 26, experience: 14, season: 'All' },
     { id: 36, name: 'Pufferfish', rarity: 'Uncommon', minWeight: 0.5, maxWeight: 3.5, recordWeight: 5.0, value: 38, experience: 18, season: 'All' },
     { id: 37, name: 'Lionfish', rarity: 'Rare', minWeight: 1.0, maxWeight: 4.5, recordWeight: 6.5, value: 65, experience: 26, season: 'All' },
-    { id: 38, name: 'Queen Angelfish', rarity: 'Epic', minWeight: 0.8, maxWeight: 3.2, recordWeight: 4.8, value: 92, experience: 34, season: 'All' }
+    { id: 38, name: 'Queen Angelfish', rarity: 'Epic', minWeight: 0.8, maxWeight: 3.2, recordWeight: 4.8, value: 92, experience: 34, season: 'All' },
+
+    // Cortez Backwaters inshore Gulf species (39-44)
+    { id: 39, name: 'Speckled Trout', rarity: 'Common', minWeight: 1.0, maxWeight: 6.0, recordWeight: 17.0, value: 22, experience: 10, season: 'All' },
+    { id: 40, name: 'Southern Flounder', rarity: 'Common', minWeight: 1.5, maxWeight: 8.0, recordWeight: 20.0, value: 28, experience: 12, season: 'All' },
+    { id: 41, name: 'Sheepshead', rarity: 'Uncommon', minWeight: 2.0, maxWeight: 10.0, recordWeight: 21.0, value: 42, experience: 18, season: 'All' },
+    { id: 42, name: 'Redfish', rarity: 'Rare', minWeight: 4.0, maxWeight: 18.0, recordWeight: 52.0, value: 85, experience: 30, season: 'All' },
+    { id: 43, name: 'Snook', rarity: 'Trophy', minWeight: 6.0, maxWeight: 28.0, recordWeight: 44.0, value: 140, experience: 48, season: 'All' },
+    { id: 44, name: 'Tarpon', rarity: 'Legendary', minWeight: 40.0, maxWeight: 120.0, recordWeight: 286.0, value: 900, experience: 95, season: 'All' }
 ];
 
 // Fish facts database
@@ -105,7 +113,13 @@ export const FishFacts = {
     'Blue Tang': { fact: 'A surgeonfish with a razor-sharp spine tucked near its tail.', fun: 'Grazes algae all day — the reef\'s original lawn service!', real: 'Uses its caudal spine for defense and is a powerful algae grazer on coral reefs.' },
     'Pufferfish': { fact: 'Inflates into a spiky ball when threatened and packs a potent toxin.', fun: 'Looks cuddly until you make it mad — then it\'s a beach ball with attitude!', real: 'Many species contain tetrodotoxin; their fused teeth form a beak for crushing shells.' },
     'Lionfish': { fact: 'Striped ambush hunter with venomous dorsal spines.', fun: 'Fans out its fins like a underwater lion\'s mane before it pounces!', real: 'Native to the Indo-Pacific; invasive in the Atlantic where it has few natural predators.' },
-    'Queen Angelfish': { fact: 'Electric blue and gold royalty of the reef — fiercely territorial around its home coral head.', fun: 'Dresses fancier than the tourists and knows it!', real: 'Holacanthus ciliaris pairs for life and can live over 15 years on Caribbean reefs.' }
+    'Queen Angelfish': { fact: 'Electric blue and gold royalty of the reef — fiercely territorial around its home coral head.', fun: 'Dresses fancier than the tourists and knows it!', real: 'Holacanthus ciliaris pairs for life and can live over 15 years on Caribbean reefs.' },
+    'Speckled Trout': { fact: 'Coastal ambusher with a mouth built for shrimp and baitfish.', fun: 'Spotted like a star map — and just as easy to miss in the grass!', real: 'Spotted seatrout thrive in shallow Gulf grass flats and oyster bars.' },
+    'Southern Flounder': { fact: 'Both eyes migrate to one side so it can lie flat and vanish on the bottom.', fun: 'Swims sideways through life and still catches more than you!', real: 'Flounder bury in sand and strike prey that passes overhead.' },
+    'Sheepshead': { fact: 'Dock-pilings specialist with teeth that look unsettlingly human.', fun: 'Smiles like it already stole your bait — because it probably did!', real: 'Sheepshead crush barnacles and crabs with powerful jaws.' },
+    'Redfish': { fact: 'Bronze bulldog of the flats with a signature spot near the tail.', fun: 'One black dot, zero doubts about who owns this flat!', real: 'Red drum tail on shallow flats when feeding — a classic sight-fishing target.' },
+    'Snook': { fact: 'Linesider built for mangroves, docks, and sudden bursts of speed.', fun: 'Turns structure into a shortcut and your line into a stress test!', real: 'Snook are temperature-sensitive and famously hard fighters inshore.' },
+    'Tarpon': { fact: 'Silver-scaled giant that has haunted Gulf passes for generations.', fun: 'The Silver King of Cortez — bow to the jump!', real: 'Atlantic tarpon can exceed 200 pounds and are prized for their acrobatic fights.' }
 };
 
 /**
@@ -179,8 +193,25 @@ export function getRandomFishForLocation(fishIds, options = {}) {
     const smallWaterBody = waterBodyType === 'POND' || waterBodyType === 'RIVER';
     const aggressiveScaling = earlyGameLocation || smallWaterBody;
     
-    // Select random fish from available fish
-    const randomFishId = pool[Math.floor(Math.random() * pool.length)];
+    let randomFishId;
+    if (location?.fishSpawnWeights && Object.keys(location.fishSpawnWeights).length > 0) {
+        const weights = location.fishSpawnWeights;
+        const entries = Object.entries(weights).filter(([id]) => pool.includes(Number(id)));
+        const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
+        if (total > 0) {
+            let roll = Math.random() * total;
+            for (const [id, weight] of entries) {
+                roll -= weight;
+                if (roll <= 0) {
+                    randomFishId = Number(id);
+                    break;
+                }
+            }
+        }
+    }
+    if (randomFishId === undefined) {
+        randomFishId = pool[Math.floor(Math.random() * pool.length)];
+    }
     const fishType = getFishTypeById(randomFishId);
     
     if (!fishType) {

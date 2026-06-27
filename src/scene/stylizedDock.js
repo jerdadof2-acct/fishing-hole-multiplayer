@@ -40,6 +40,21 @@ function computeDeckFrontZ(dockDepth, plankCount) {
 }
 
 /**
+ * Dock-local XZ span for waterline effects (LAKE/river dock uses 11 planks).
+ * @param {number} [dockDepth=14]
+ * @param {number} [plankCount=11]
+ */
+export function getStylizedDockLocalMetrics(dockDepth = 14, plankCount = 11) {
+    const plankGap = 0.01;
+    const plankDepth = (dockDepth * 0.94) / plankCount - plankGap;
+    const zStart = -dockDepth * 0.47;
+    const deckFrontZ = zStart + plankCount * plankDepth + (plankCount - 1) * plankGap;
+    const dockLength = deckFrontZ - zStart;
+    const dockCenterZ = (zStart + deckFrontZ) * 0.5;
+    return { zStart, deckFrontZ, dockLength, dockCenterZ };
+}
+
+/**
  * World XZ positions for gentle ripple rings where dock posts meet the water.
  * @param {string} [waterBodyType='POND']
  * @returns {{ x: number, z: number, innerRadius: number }[]}

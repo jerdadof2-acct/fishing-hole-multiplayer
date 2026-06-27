@@ -3,6 +3,10 @@ Poly Haven assets used in Kitty Creek (CC0 1.0 — no attribution required)
 clean_pebbles — lake bed (Diffuse, Normal GL, Roughness, 1K JPG)
   https://polyhaven.com/a/clean_pebbles
 
+coast_land_rocks_01 — Craggy Coast rocky lake bed (Diffuse, Normal GL, Roughness, 1K JPG)
+  assets/textures/lakeBed/craggyCoast/
+  https://polyhaven.com/a/coast_land_rocks_01
+
 caustics_loop — underwater light caustics (JPG, scrolling on lake/reef bed)
   assets/textures/caustics_loop.jpg
 

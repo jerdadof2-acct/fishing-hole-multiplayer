@@ -66,3 +66,35 @@ export function applySkyEnvironment(scene, env) {
         scene.fog.far = 210;
     }
 }
+
+/**
+ * Night / moonlight locations — drop bright HDRI IBL so boats are not sun-lit.
+ * @param {THREE.Scene} scene
+ * @param {{ background?: number, environmentIntensity?: number }} [options]
+ */
+export function applyDarkMoonlightSky(scene, options = {}) {
+    if (!scene) return;
+
+    const {
+        background = 0x02040c,
+        environmentIntensity = 0.06
+    } = options;
+
+    scene.environment = null;
+
+    if (scene.background?.isColor) {
+        scene.background.set(background);
+    } else {
+        scene.background = new THREE.Color(background);
+    }
+
+    if ('environmentIntensity' in scene) {
+        scene.environmentIntensity = environmentIntensity;
+    }
+    if ('backgroundBlurriness' in scene) {
+        scene.backgroundBlurriness = 0;
+    }
+    if ('backgroundIntensity' in scene) {
+        scene.backgroundIntensity = 1.0;
+    }
+}

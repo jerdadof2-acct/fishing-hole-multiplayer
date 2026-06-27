@@ -66,7 +66,8 @@ export function makeWaterMaterial({
     uRiverMode: { value: riverMode ? 1.0 : 0.0 },
     uOpaqueDeep: { value: opaqueDeepWater ? 1.0 : 0.0 },
     uFlatWater: { value: flatWaterColor ? 1.0 : 0.0 },
-    uSandBed: { value: 0.0 }
+    uSandBed: { value: 0.0 },
+    uShallowBedMix: { value: 0.0 }
   };
 
   const vert = /* glsl */`
@@ -120,6 +121,7 @@ export function makeWaterMaterial({
     uniform float uOpaqueDeep;
     uniform float uFlatWater;
     uniform float uSandBed;
+    uniform float uShallowBedMix;
 
     varying vec3 vWorldPos;
     varying vec3 vNormal;
@@ -221,12 +223,17 @@ export function makeWaterMaterial({
       float depth = max(depthY, depthDistance * 0.6);
       depth = pow(depth, 1.35);
 
+      float viewDepth = depth;
+      if (uSandBed > 0.5) {
+        viewDepth = pow(depth, 2.35);
+      }
+
       float depthBlend = uSandBed > 0.5 ? pow(depth, 2.5) : depth;
       vec3 base = mix(uColorShallow, uColorDeep, depthBlend);
       if (uFlatWater > 0.5) {
         base = uColorDeep;
       }
-      float absorptionFactor = 1.0 - (depth * uAbsorption * 0.45);
+      float absorptionFactor = 1.0 - (viewDepth * uAbsorption * 0.45);
       base *= max(absorptionFactor, uFlatWater > 0.5 ? 0.92 : 0.35);
 
       float spec = pow(ndh, 180.0);
@@ -289,13 +296,14 @@ export function makeWaterMaterial({
           vec3 bedD = texture2D(uLakeBed, bedUV + vec2(0.003, -0.004)).rgb;
           bed = (bed + bedB + bedC + bedD) * 0.25;
         }
-        float shallow = 1.0 - depth;
+        float shallow = 1.0 - viewDepth;
         shallow = pow(shallow, 2.2);
         vec3 bedTint = uSandBed > 0.5
           ? vec3(0.58, 0.84, 0.98)
           : (uRiverMode > 0.5 ? vec3(0.9, 0.74, 0.52) : vec3(0.72, 0.86, 0.98));
+        float sandMix = uShallowBedMix > 0.001 ? uShallowBedMix : 0.16;
         float bedMix = uSandBed > 0.5
-          ? shallow * 0.16
+          ? shallow * sandMix
           : (uRiverMode > 0.5 ? shallow * 0.24 : shallow * 0.38);
         if (uOpaqueDeep > 0.5) {
           bedMix *= (1.0 - pow(clamp(depth, 0.0, 1.0), 1.6));
@@ -303,8 +311,8 @@ export function makeWaterMaterial({
         color = mix(color, bed * bedTint, bedMix);
       }
 
-      float fogAmount = depth * uFogIntensity;
-      float turbidityAmount = depth * uTurbidity;
+      float fogAmount = viewDepth * uFogIntensity;
+      float turbidityAmount = viewDepth * uTurbidity;
       if (uFlatWater < 0.5) {
         color = mix(color, uFogColor, fogAmount * 0.28);
         color = mix(color, uFogColor * 0.7, turbidityAmount * 0.18);
@@ -312,11 +320,11 @@ export function makeWaterMaterial({
 
       float finalOpacity;
       if (uOpaqueDeep > 0.5) {
-        float d = pow(clamp(depth, 0.0, 1.0), uFlatWater > 0.5 ? 0.35 : 0.65);
+        float d = pow(clamp(viewDepth, 0.0, 1.0), uFlatWater > 0.5 ? 0.35 : 0.65);
         finalOpacity = mix(uOpacity * (uFlatWater > 0.5 ? 0.95 : 0.78), 1.0, d);
       } else {
-        finalOpacity = mix(uOpacity, uOpacity + (1.0 - uOpacity) * 0.45, depth);
-        finalOpacity = mix(finalOpacity * 0.58, finalOpacity, depth);
+        finalOpacity = mix(uOpacity, uOpacity + (1.0 - uOpacity) * 0.45, viewDepth);
+        finalOpacity = mix(finalOpacity * 0.58, finalOpacity, viewDepth);
       }
 
       gl_FragColor = vec4(color, finalOpacity);

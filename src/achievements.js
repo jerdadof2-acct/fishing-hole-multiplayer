@@ -222,7 +222,7 @@ export const ACHIEVEMENTS = [
             { target: 25, reward: { experience: 210, money: 340 } },
             { target: 30, reward: { experience: 270, money: 450 } },
             { target: 35, reward: { experience: 310, money: 560 } },
-            { target: 38, reward: { experience: 330, money: 600 } } // Full catalog incl. Starfish
+            { target: 44, reward: { experience: 330, money: 600 } } // Full catalog incl. Starfish + Cortez
         ]
     },
     {
