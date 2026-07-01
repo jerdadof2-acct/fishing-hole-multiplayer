@@ -210,7 +210,8 @@ canvas {
 #game-container.pre-entry #player-info,
 #game-container.pre-entry #game-area,
 #game-container.pre-entry #tab-bar,
-#game-container.pre-entry #ad-banner {
+#game-container.pre-entry #ad-banner,
+#game-container.pre-entry #site-legal-footer {
     display: none !important;
 }
 
@@ -592,6 +593,43 @@ canvas {
     width: 10px;
     height: 10px;
     padding: 0;
+}
+
+.site-legal-footer {
+    position: fixed;
+    bottom: calc(58px + env(safe-area-inset-bottom));
+    left: 0;
+    right: 0;
+    text-align: center;
+    z-index: 140;
+    pointer-events: none;
+}
+
+.site-legal-footer a {
+    pointer-events: auto;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.45);
+    text-decoration: underline;
+}
+
+.site-legal-footer a:hover {
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.site-legal-footer.hidden {
+    display: none;
+}
+
+.auth-privacy-note {
+    margin: 12px 0 0;
+    font-size: 12px;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.62);
+    text-align: center;
+}
+
+.auth-privacy-note a {
+    color: #7eb8ff;
 }
 
 /* Modals */

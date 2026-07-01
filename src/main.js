@@ -157,6 +157,7 @@ export class Game {
         document.getElementById('player-info')?.classList.remove('hidden');
         document.getElementById('game-area')?.classList.remove('hidden');
         document.getElementById('tab-bar')?.classList.remove('hidden');
+        document.getElementById('site-legal-footer')?.classList.remove('hidden');
         showAdBanner();
 
         this.startGalleryImageWarmup();
