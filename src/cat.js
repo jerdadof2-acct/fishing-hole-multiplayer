@@ -14,6 +14,8 @@ import { loadDevGemOffset, clearDevGemOffset } from './dev/devGemOffset.js';
 const CAT_MODEL_URL = 'assets/glb/Cat.glb?v=20260627-sanitize';
 const CAT_TARGET_HEIGHT = 2.0;
 const CAT_TARGET_HEIGHT_LARGE_BOAT = 2.2;
+/** Above dock (20), boat (5), and underwater fish shadows — keeps Halley visible in close-up. */
+export const HALLEY_RENDER_ORDER = 22;
 /** Extra sole clearance below foot bones (ankle ≠ ground contact). */
 const FOOT_SOLE_PADDING = 0.06;
 /** Per-frame blend toward deck target — planted feel on rocking boats. */
@@ -178,6 +180,16 @@ function computeFeetYOffset(model) {
     return computeFeetYOffsetFromBones(model) ?? computeFeetYOffsetFromMeshes(model);
 }
 
+/** Keep Halley drawing above water shadows, grass, and dock planks. */
+export function applyHalleyRenderOrder(cat) {
+    if (!cat?.model) return;
+    cat.model.traverse((child) => {
+        if (child.isMesh) {
+            child.renderOrder = HALLEY_RENDER_ORDER;
+        }
+    });
+}
+
 /** @param {Cat} cat @param {'DOCK'|'SMALL_BOAT'|'LARGE_BOAT'} platformType @param {THREE.Vector3} [surfacePos] @param {import('./platform.js').Platform} [platform] */
 export function applyCatPlatformHeight(cat, platformType, surfacePos = null, platform = null) {
     if (!cat?.model || !cat.bindHeight) return;
@@ -198,12 +210,7 @@ export function applyCatPlatformHeight(cat, platformType, surfacePos = null, pla
     }
     cat.model.updateMatrixWorld(true);
     cat.feetYOffset = computeFeetYOffset(cat.model);
-
-    if (platformType !== 'DOCK' && cat.model) {
-        cat.model.traverse((child) => {
-            if (child.isMesh) child.renderOrder = 8;
-        });
-    }
+    applyHalleyRenderOrder(cat);
 
     if (surfacePos && typeof cat.positionOnSurface === 'function') {
         cat.positionOnSurface(surfacePos);
@@ -343,6 +350,7 @@ export class Cat {
                     });
 
                     this._setupMedallionGlow();
+                    applyHalleyRenderOrder(this);
 
                     this.sceneRef.scene.add(this.catAnchor);
                     debugLog('Cat model added to scene. Position:', this.catAnchor.position);

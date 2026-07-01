@@ -32,6 +32,9 @@ const CORTEZ_BED_OFFSET = REEF_BED_OFFSET;
 /** Gentle reef tide — small drift along swim direction, not sideways crab-walking. */
 const TIDE_DRIFT = 0.05;
 
+/** Draw below water (2), dock/boat (5–20), and Halley (22). */
+const FISH_SHADOW_RENDER_ORDER = 0;
+
 /** Global swim speed scale for reef shadows. */
 const SPEED_MULTIPLIER = 0.72;
 
@@ -127,13 +130,12 @@ function createZoneSampler(zone, lakeMask, groundSize) {
     };
 }
 
-function makeFishGroup(baseScale, material, cortezStyle = false) {
+function makeFishGroup(baseScale, material) {
     const group = new THREE.Group();
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.58, 1), material);
     mesh.rotation.x = -Math.PI / 2;
     mesh.scale.set(baseScale * 1.15, baseScale * 1.65, 1);
-    // Cortez: draw above water/grass/bed so waves do not clip the shadow decal.
-    mesh.renderOrder = cortezStyle ? 5 : 1;
+    mesh.renderOrder = FISH_SHADOW_RENDER_ORDER;
     group.add(mesh);
     return group;
 }
@@ -165,10 +167,13 @@ function spawnFish(rand, tier, zoneSampler, waterY, bedOffset, zone = 'reef') {
         transparent: true,
         opacity: shadowOpacity,
         depthWrite: false,
-        depthTest: !isCortez,
+        depthTest: true,
+        polygonOffset: isCortez,
+        polygonOffsetFactor: isCortez ? -1 : 0,
+        polygonOffsetUnits: isCortez ? -1 : 0,
         side: THREE.DoubleSide
     });
-    const group = makeFishGroup(tier.scale, material, isCortez);
+    const group = makeFishGroup(tier.scale, material);
     group.position.set(x, swimY, z);
 
     const dx = target.x - x;
