@@ -133,6 +133,11 @@ canvas {
     cursor: not-allowed;
 }
 
+#cast-button[data-state="waiting"][aria-disabled="true"] {
+    opacity: 0.72;
+    cursor: wait;
+}
+
 /* Loading Screen */
 .loading-screen {
     position: absolute;

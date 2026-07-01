@@ -30,6 +30,13 @@ import {
     spendCastEnergy,
     addBonusEnergy
 } from './energy.js';
+import {
+    WAITING_SCOLD_COOLDOWN_MS,
+    WAITING_SCOLD_LINES,
+    WAITING_SCOLD_TURN_MS,
+    WAITING_SPAM_CLICK_THRESHOLD,
+    WAITING_SPAM_WINDOW_MS
+} from './config/waitingScold.js';
 import { showRewardedAd } from './rewardedAds.js';
 
 const FRIEND_ONLINE_THRESHOLD_MS = 5 * 60 * 1000;
@@ -95,6 +102,10 @@ export class UI {
         this._catchPresentationBound = false;
         this._catchPresentationTimer = null;
         this._catchCoinRaf = null;
+        this._waitingSpamClicks = 0;
+        this._waitingSpamFirstAt = 0;
+        this._waitingScoldLastAt = 0;
+        this._waitingScoldLineIndex = 0;
     }
 
     init() {
@@ -2882,12 +2893,58 @@ export class UI {
             return;
         }
 
-        if (currentState === 'waiting' || currentState === 'fighting') {
+        if (currentState === 'waiting') {
+            this.handleWaitingSpamClick();
+            return;
+        }
+
+        if (currentState === 'fighting') {
             return;
         }
         
         // Otherwise, cast
         this.handleCast();
+    }
+
+    resetWaitingSpamTracking() {
+        this._waitingSpamClicks = 0;
+        this._waitingSpamFirstAt = 0;
+    }
+
+    handleWaitingSpamClick() {
+        if (!this.waitingForBite || this.biteStrikeTime) {
+            return;
+        }
+
+        const now = Date.now();
+        if (
+            this._waitingSpamFirstAt
+            && (now - this._waitingSpamFirstAt) > WAITING_SPAM_WINDOW_MS
+        ) {
+            this.resetWaitingSpamTracking();
+        }
+
+        if (!this._waitingSpamFirstAt) {
+            this._waitingSpamFirstAt = now;
+        }
+        this._waitingSpamClicks += 1;
+
+        if (
+            this._waitingSpamClicks >= WAITING_SPAM_CLICK_THRESHOLD
+            && (now - (this._waitingScoldLastAt || 0)) >= WAITING_SCOLD_COOLDOWN_MS
+        ) {
+            this.triggerWaitingScold();
+            this.resetWaitingSpamTracking();
+        }
+    }
+
+    triggerWaitingScold() {
+        this._waitingScoldLastAt = Date.now();
+        const line = WAITING_SCOLD_LINES[this._waitingScoldLineIndex % WAITING_SCOLD_LINES.length];
+        this._waitingScoldLineIndex += 1;
+
+        this.game?.cat?.beginScoldTurn?.(WAITING_SCOLD_TURN_MS);
+        this.game?.showCatBark?.(line, WAITING_SCOLD_TURN_MS);
     }
 
     handleCast() {
@@ -2914,12 +2971,14 @@ export class UI {
         }
         
         // Reset bite detection state
+        this.resetWaitingSpamTracking();
         this.waitingForBite = false;
         this.biteStrikeTime = null;
         this.relicDiscoveryActive = false;
         this.hookSetSuccess = false;
         
-        castButton.disabled = true;
+        castButton.disabled = false;
+        castButton.setAttribute('aria-disabled', 'true');
         castButton.textContent = 'WAITING...'; // Change to WAITING immediately after cast
         castButton.setAttribute('data-state', 'waiting');
         
@@ -2978,8 +3037,8 @@ export class UI {
             console.log(`[UI] Waiting for bite: ${(biteTime / 1000).toFixed(1)}s`);
             
             this.waitingForBite = true;
-            // Button already shows "WAITING..." from handleCast, so we just keep it disabled
-            castButton.disabled = true;
+            castButton.disabled = false;
+            castButton.setAttribute('aria-disabled', 'true');
             
             // Wait for bite
             setTimeout(async () => {
@@ -3002,6 +3061,7 @@ export class UI {
                 }
                 
                 // Fish strikes!
+                this.resetWaitingSpamTracking();
                 this.biteStrikeTime = Date.now();
                 this.handleFishBite();
                 
@@ -3363,6 +3423,7 @@ export class UI {
         }
         
         // Change button to "SET HOOK!"
+        castButton.removeAttribute('aria-disabled');
         castButton.textContent = 'SET HOOK!';
         castButton.disabled = false;
         castButton.style.background = 'rgba(255, 100, 100, 0.9)'; // Red for urgency
@@ -3484,6 +3545,7 @@ export class UI {
     handleMiss(reason, escapedFish = null) {
         const castButton = document.getElementById('cast-button');
         
+        this.resetWaitingSpamTracking();
         this.waitingForBite = false;
         this.biteStrikeTime = null;
         this.hookSetSuccess = false;
@@ -3496,6 +3558,7 @@ export class UI {
         // Reset button
         castButton.textContent = 'CAST';
         castButton.disabled = false;
+        castButton.removeAttribute('aria-disabled');
         castButton.style.background = '';
         castButton.removeAttribute('data-state');
         

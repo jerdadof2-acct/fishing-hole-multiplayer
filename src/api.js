@@ -354,6 +354,10 @@ export class API {
         return this.request(`/admin/players/lookup?q=${encoded}`);
     }
 
+    async resetAdminSpeedBoard() {
+        return this.request('/admin/leaderboard/speed/reset', { method: 'POST' });
+    }
+
     async deleteAdminPlayer(playerId, confirmUsername) {
         return this.request(`/admin/players/${playerId}`, {
             method: 'DELETE',

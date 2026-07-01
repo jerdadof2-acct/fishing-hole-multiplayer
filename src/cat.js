@@ -907,6 +907,38 @@ export class Cat {
         this.playIdle();
     }
 
+    /** Brief turn toward camera when Halley scolds spam-clicking WAITING. */
+    beginScoldTurn(durationMs = 3600) {
+        this._scoldTurnStart = performance.now();
+        this._scoldTurnDuration = Math.max(durationMs, 1200);
+        this.playIdle?.();
+    }
+
+    getScoldTurnBlend() {
+        if (!this._scoldTurnStart || !this._scoldTurnDuration) {
+            return 0;
+        }
+
+        const elapsed = performance.now() - this._scoldTurnStart;
+        if (elapsed >= this._scoldTurnDuration) {
+            this._scoldTurnStart = 0;
+            this._scoldTurnDuration = 0;
+            return 0;
+        }
+
+        const rampUpMs = 350;
+        const rampDownMs = 650;
+        const holdEnd = this._scoldTurnDuration - rampDownMs;
+
+        if (elapsed < rampUpMs) {
+            return elapsed / rampUpMs;
+        }
+        if (elapsed < holdEnd) {
+            return 1;
+        }
+        return Math.max(0, 1 - (elapsed - holdEnd) / rampDownMs);
+    }
+
     /**
      * Resize cat for platform (larger on sportfisher deck).
      * @param {'DOCK'|'SMALL_BOAT'|'LARGE_BOAT'} platformType

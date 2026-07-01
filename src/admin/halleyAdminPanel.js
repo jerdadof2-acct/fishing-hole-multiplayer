@@ -81,6 +81,9 @@ export function initHalleyAdminPanel(game) {
         <button type="button" data-action="preset-live">🎣 Halley is fishing live!</button>
         <button type="button" data-action="preset-event">🏆 Trophy hour — legendary fish are biting!</button>
         <button type="button" data-action="preset-thanks">💛 Thanks for fishing with me today!</button>
+        <div class="command-panel-section">Leaderboards</div>
+        <button type="button" data-action="reset-speed-board" class="halley-admin-mini-btn halley-admin-danger-btn">Reset speed board stats</button>
+        <p class="command-panel-hint">Clears all hook reaction times globally.</p>
         <div class="command-panel-section">Player management</div>
         <label class="halley-admin-label">Username or friend code</label>
         <div class="halley-admin-travel-row">
@@ -406,6 +409,33 @@ export function initHalleyAdminPanel(game) {
 
         if (action === 'lookup-player') {
             await lookupPlayer();
+            return;
+        }
+
+        if (action === 'reset-speed-board') {
+            const button = event.target.closest('[data-action="reset-speed-board"]');
+            if (button) button.disabled = true;
+            try {
+                const result = await game.api.resetAdminSpeedBoard();
+                game.leaderboard?.clearSpeedBoard?.();
+                game.ui.speedLeaderboardCache = { entries: [], fetchedAt: 0 };
+                if (game.ui.activeLeaderboardTab === 'speed') {
+                    await game.ui.renderSpeedLeaderboard?.();
+                }
+                game.ui?.showToast?.({
+                    type: 'success',
+                    title: 'Speed board reset',
+                    body: `Cleared ${result?.playerCatchesCleared ?? 0} catch times and ${result?.leaderboardEntriesCleared ?? 0} leaderboard entries.`
+                });
+            } catch (error) {
+                game.ui?.showToast?.({
+                    type: 'error',
+                    title: 'Reset failed',
+                    body: error?.message || 'Could not reset speed board.'
+                });
+            } finally {
+                if (button) button.disabled = false;
+            }
             return;
         }
 

@@ -1408,7 +1408,7 @@ app.post('/api/leaderboard/catch', authenticate, async (req, res) => {
         let reactionTime = null;
         if (reactionTimeMs !== undefined && reactionTimeMs !== null) {
             const parsedReaction = Number(reactionTimeMs);
-            if (Number.isFinite(parsedReaction) && parsedReaction >= 0) {
+            if (Number.isFinite(parsedReaction) && parsedReaction >= 200) {
                 reactionTime = Math.round(parsedReaction);
             }
         }
@@ -1489,6 +1489,33 @@ app.get('/api/leaderboard/global', authenticate, async (req, res) => {
         res.json(result.rows);
     } catch (error) {
         console.error('[API] Leaderboard fetch error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Clear all hook reaction times (Halley admin — resets global speed board)
+app.post('/api/admin/leaderboard/speed/reset', authenticate, requireAdmin, async (req, res) => {
+    try {
+        const [catchesResult, leaderboardResult] = await Promise.all([
+            pool.query(
+                `UPDATE player_catches
+                 SET reaction_time_ms = NULL
+                 WHERE reaction_time_ms IS NOT NULL`
+            ),
+            pool.query(
+                `UPDATE leaderboard_catches
+                 SET reaction_time_ms = NULL
+                 WHERE reaction_time_ms IS NOT NULL`
+            )
+        ]);
+
+        res.json({
+            success: true,
+            playerCatchesCleared: catchesResult.rowCount ?? 0,
+            leaderboardEntriesCleared: leaderboardResult.rowCount ?? 0
+        });
+    } catch (error) {
+        console.error('[API] Admin speed board reset error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

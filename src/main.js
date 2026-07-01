@@ -945,6 +945,8 @@ export class Game {
         const portraitBlend = (this._portraitIdleActive || isDevFaceCameraEnabled())
             ? (this.camera?.portraitBlend ?? 0)
             : 0;
+        const scoldBlend = this.cat?.getScoldTurnBlend?.() ?? 0;
+        const catFacingBlend = Math.max(portraitBlend, scoldBlend);
 
         updateCrescentPondFarShore(
             this.crescentFarShore,
@@ -1037,7 +1039,7 @@ export class Game {
                             this._lastIsFishingState = isFishing;
                         }
                 
-                this.cat.update(delta, isIdle, bobberPos, isFishing, portraitBlend);
+                this.cat.update(delta, isIdle, bobberPos, isFishing, catFacingBlend);
             }
 
         // After animation pose updates, align feet to the deck marker (boats pitch with waves)

@@ -280,6 +280,13 @@ export class Leaderboard {
         return map;
     }
 
+    /** Clear local speed leaderboard data on this device. */
+    clearSpeedBoard() {
+        this.speedBoard = [];
+        this.speedBoardMap = {};
+        this.save();
+    }
+
     /** Clear local weight + speed leaderboard data on this device. */
     resetAll() {
         this.leaderboards = {};
