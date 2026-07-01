@@ -2252,19 +2252,24 @@ canvas {
     position: fixed;
     z-index: 1150;
     transform: translate(-50%, -100%);
-    padding: 8px 14px;
+    padding: 10px 14px;
     border-radius: 14px;
     background: rgba(12, 18, 36, 0.92);
     border: 1px solid rgba(255, 233, 168, 0.45);
     color: #fff8e0;
-    font-size: 0.95rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
+    font-size: 0.92rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1.45;
+    text-align: center;
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.15s ease;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
-    white-space: nowrap;
+    white-space: normal;
+    max-width: min(280px, calc(100vw - 28px));
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
 }
 
 .cat-bark-bubble::after {

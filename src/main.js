@@ -194,14 +194,19 @@ export class Game {
 
         const projected = headPos.clone().project(camera);
         const rect = canvas.getBoundingClientRect();
-        const x = (projected.x * 0.5 + 0.5) * rect.width + rect.left;
+        let x = (projected.x * 0.5 + 0.5) * rect.width + rect.left;
         const y = (-projected.y * 0.5 + 0.5) * rect.height + rect.top;
 
         bubble.textContent = text;
-        bubble.style.left = `${x}px`;
-        bubble.style.top = `${y}px`;
         bubble.classList.remove('hidden');
         bubble.classList.add('visible');
+
+        const margin = 14;
+        const halfWidth = bubble.offsetWidth / 2;
+        x = Math.max(margin + halfWidth, Math.min(window.innerWidth - margin - halfWidth, x));
+
+        bubble.style.left = `${x}px`;
+        bubble.style.top = `${y}px`;
 
         if (this._catBarkTimer) {
             clearTimeout(this._catBarkTimer);
@@ -947,6 +952,9 @@ export class Game {
             : 0;
         const scoldBlend = this.cat?.getScoldTurnBlend?.() ?? 0;
         const catFacingBlend = Math.max(portraitBlend, scoldBlend);
+        const preserveCatFacing = this._portraitIdleActive === true
+            || isDevFaceCameraEnabled()
+            || scoldBlend > 0.001;
 
         updateCrescentPondFarShore(
             this.crescentFarShore,
@@ -983,10 +991,9 @@ export class Game {
             }
         }
 
-        // Lake-facing reset before animation (portrait keeps turned pose); feet aligned after update
+        // Lake-facing reset before animation (portrait/scold keeps turned pose); feet aligned after update
         if (this.cat && this.platform) {
-            const preserveFacing = this._portraitIdleActive === true || isDevFaceCameraEnabled();
-            this.cat.applyLakeFacing(preserveFacing);
+            this.cat.applyLakeFacing(preserveCatFacing);
         }
         
         // Update cat with sway and bobber tracking (only when idle - not casting or reeling)
@@ -1000,7 +1007,7 @@ export class Game {
                 // (avoids fighting applyLakeFacing when the bobber sits near Halley's feet).
                 let bobberPos = null;
                 if (
-                    portraitBlend < PORTRAIT_BOBBER_TRACKING_CUTOFF &&
+                    catFacingBlend < PORTRAIT_BOBBER_TRACKING_CUTOFF &&
                     bobberInWater &&
                     !sequenceComplete
                 ) {
