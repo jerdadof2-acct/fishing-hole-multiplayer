@@ -1,3 +1,8 @@
+/** Google AdSense publisher ID (PWA — set banner slot when AdSense provides one). */
+export const ADSENSE_CLIENT = 'ca-pub-8602130362499092';
+/** Create a Display ad unit in AdSense, then paste the slot ID here (e.g. '1234567890'). */
+export const ADSENSE_BANNER_SLOT = '';
+
 /** Fictional cat-product ads — emoji mini “product shots”, no real sponsors. */
 const ADS = [
     {
@@ -159,6 +164,31 @@ function buildEmojiStack(emojis) {
         .join('');
 }
 
+function mountAdsenseBanner(container) {
+    if (!ADSENSE_CLIENT || !ADSENSE_BANNER_SLOT) {
+        return false;
+    }
+
+    container.innerHTML = '';
+    const ins = document.createElement('ins');
+    ins.className = 'adsbygoogle';
+    ins.style.display = 'block';
+    ins.setAttribute('data-ad-client', ADSENSE_CLIENT);
+    ins.setAttribute('data-ad-slot', ADSENSE_BANNER_SLOT);
+    ins.setAttribute('data-ad-format', 'auto');
+    ins.setAttribute('data-full-width-responsive', 'true');
+    container.appendChild(ins);
+
+    try {
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch (err) {
+        console.warn('[ads] AdSense push failed:', err);
+        return false;
+    }
+
+    return true;
+}
+
 function createPlaceholder() {
     const placeholder = document.createElement('div');
     placeholder.className = 'ad-placeholder';
@@ -230,9 +260,18 @@ export function initAdRotator() {
     bannerContent.innerHTML = '';
     stopRotation();
 
-    const adsEnabled = getAdsEnabled() && ADS.length > 0;
+    const adsEnabled = getAdsEnabled();
 
     if (!adsEnabled) {
+        bannerContent.appendChild(createPlaceholder());
+        return;
+    }
+
+    if (mountAdsenseBanner(bannerContent)) {
+        return;
+    }
+
+    if (ADS.length === 0) {
         bannerContent.appendChild(createPlaceholder());
         return;
     }
