@@ -448,6 +448,41 @@ app.get('/api/admin/online-count', authenticate, requireAdmin, async (req, res) 
     }
 });
 
+// Registered anglers — count who have played, plus full username roster (Halley admin only)
+app.get('/api/admin/players/registry', authenticate, requireAdmin, async (req, res) => {
+    try {
+        const adminName = getAdminUsername();
+        const [countResult, namesResult] = await Promise.all([
+            pool.query(
+                `SELECT COUNT(*)::int AS count
+                 FROM players
+                 WHERE LOWER(username) != LOWER($1)
+                   AND (
+                       total_caught > 0
+                       OR experience > 0
+                       OR level > 1
+                   )`,
+                [adminName]
+            ),
+            pool.query(
+                `SELECT username
+                 FROM players
+                 WHERE LOWER(username) != LOWER($1)
+                 ORDER BY LOWER(username) ASC`,
+                [adminName]
+            )
+        ]);
+
+        res.json({
+            activePlayerCount: countResult.rows[0]?.count ?? 0,
+            usernames: namesResult.rows.map((row) => row.username)
+        });
+    } catch (error) {
+        console.error('[API] Admin player registry error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Send a toast or banner to every player (delivered on their next poll)
 app.post('/api/admin/announcements', authenticate, requireAdmin, async (req, res) => {
     try {
@@ -1008,6 +1043,25 @@ app.get('/api/friends', authenticate, async (req, res) => {
         
         await ensureHalleyFriendship(pool, req.userId);
 
+        const viewerResult = await pool.query(
+            'SELECT username FROM players WHERE id = $1',
+            [req.userId]
+        );
+        const viewerUsername = viewerResult.rows[0]?.username;
+        const viewerIsAdmin = isAdminUsername(viewerUsername);
+
+        const recentMinutesRaw = Number(req.query.recentMinutes);
+        const recentMinutes = viewerIsAdmin && Number.isFinite(recentMinutesRaw) && recentMinutesRaw > 0
+            ? Math.min(Math.max(Math.round(recentMinutesRaw), 1), 1440)
+            : null;
+
+        const params = [req.userId, getAdminUsername()];
+        let recentFilter = '';
+        if (recentMinutes) {
+            params.push(String(recentMinutes));
+            recentFilter = ` AND p.last_active >= NOW() - ($3::text || ' minutes')::interval`;
+        }
+
         const result = await pool.query(
             `SELECT p.id, p.username, p.friend_code, p.level, p.experience,
                     p.total_caught, p.biggest_catch, p.player_stats, p.last_active
@@ -1018,11 +1072,11 @@ app.get('/api/friends', authenticate, async (req, res) => {
                      ELSE f.player1_id = p.id
                  END
              )
-             WHERE (f.player1_id = $1 OR f.player2_id = $1) AND f.status = 'accepted'
+             WHERE (f.player1_id = $1 OR f.player2_id = $1) AND f.status = 'accepted'${recentFilter}
              ORDER BY
                  CASE WHEN LOWER(p.username) = LOWER($2) THEN 0 ELSE 1 END,
-                 p.last_active DESC`,
-            [req.userId, getAdminUsername()]
+                 p.last_active DESC NULLS LAST`,
+            params
         );
         
         res.json(result.rows.map(decorateFriendRow));

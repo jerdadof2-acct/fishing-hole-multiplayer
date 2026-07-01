@@ -15,7 +15,7 @@
     <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
     <link rel="stylesheet" href="css/styles.css">
 
-    <!-- Google AdSense (site verification + ad serving) -->
+    <!-- Google AdSense — manual units only; turn OFF Auto ads in AdSense dashboard (see DOCS/adsense-manual-placement.md) -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8602130362499092"
         crossorigin="anonymous"></script>
 </head>
@@ -224,6 +224,14 @@
                                 <div id="friends-pending-sent" class="friends-placeholder">No pending requests.</div>
                             </div>
                         </div>
+                    </section>
+                    <section class="friends-section hidden" id="friends-admin-registry-section">
+                        <h3>All Anglers</h3>
+                        <p id="friends-admin-registry-summary" class="friends-tip">Loading angler roster…</p>
+                        <details id="friends-admin-registry-details" class="friends-admin-registry">
+                            <summary>All usernames</summary>
+                            <ul id="friends-admin-registry-list" class="friends-admin-name-list"></ul>
+                        </details>
                     </section>
                     <section class="friends-section friends-list-section">
                         <h3>Your Friends</h3>

@@ -35,6 +35,7 @@ import {
 import { showRewardedAd } from './rewardedAds.js';
 
 const FRIEND_ONLINE_THRESHOLD_MS = 5 * 60 * 1000;
+const FRIEND_RECENT_THRESHOLD_MINUTES = 60;
 const FRIEND_CATCH_TOAST_RARITIES = new Set(['Epic', 'Legendary', 'Trophy']);
 const FRIEND_ACTIVITY_POLL_MS = 30000;
 const PRESENCE_PING_MS = 90 * 1000;
@@ -1064,10 +1065,16 @@ export class UI {
         document.getElementById('friends-code-section')?.classList.toggle('hidden', isAdmin);
         document.getElementById('friends-add-section')?.classList.toggle('hidden', isAdmin);
         document.getElementById('friends-pending-section')?.classList.toggle('hidden', isAdmin);
+        document.getElementById('friends-admin-registry-section')?.classList.toggle('hidden', !isAdmin);
 
         const friendsHeading = document.querySelector('.friends-list-section h3');
         if (friendsHeading) {
-            friendsHeading.textContent = isAdmin ? 'Creek Crew' : 'Your Friends';
+            friendsHeading.textContent = isAdmin ? 'Online & Recent' : 'Your Friends';
+        }
+
+        const detailHeading = document.querySelector('#friends-detail-section h3');
+        if (detailHeading) {
+            detailHeading.textContent = isAdmin ? 'Online Angler Stats' : 'Friend Collection';
         }
     }
 
@@ -1294,10 +1301,19 @@ export class UI {
             ? Promise.resolve({ sent: [], received: [] })
             : this.api.getPendingRequests();
 
-        const [friendList, pending, activityList] = await Promise.all([
-            this.api.getFriends(),
+        const friendsPromise = this.isHalleyAdmin()
+            ? this.api.getFriends(FRIEND_RECENT_THRESHOLD_MINUTES)
+            : this.api.getFriends();
+
+        const registryPromise = this.isHalleyAdmin() && this.api.getAdminPlayerRegistry
+            ? this.api.getAdminPlayerRegistry()
+            : Promise.resolve(null);
+
+        const [friendList, pending, activityList, registry] = await Promise.all([
+            friendsPromise,
             pendingPromise,
-            activitiesPromise
+            activitiesPromise,
+            registryPromise
         ]);
 
         return {
@@ -1306,7 +1322,8 @@ export class UI {
                 sent: pending?.sent ?? [],
                 received: pending?.received ?? []
             },
-            activities: Array.isArray(activityList) ? activityList : []
+            activities: Array.isArray(activityList) ? activityList : [],
+            adminRegistry: registry
         };
     }
 
@@ -1460,6 +1477,10 @@ export class UI {
         const friends = this.friendData?.friends ?? [];
         const pending = this.friendData?.pending ?? { sent: [], received: [] };
 
+        if (this.isHalleyAdmin()) {
+            this.renderAdminPlayerRegistry(this.friendData?.adminRegistry);
+        }
+
         this.renderFriendList(friends);
         this.syncFriendDetailState(friends);
         if (!this.isHalleyAdmin()) {
@@ -1469,17 +1490,42 @@ export class UI {
         this.renderFriendActivities();
     }
 
+    renderAdminPlayerRegistry(registry = null) {
+        const summaryEl = document.getElementById('friends-admin-registry-summary');
+        const listEl = document.getElementById('friends-admin-registry-list');
+        if (!summaryEl || !listEl) return;
+
+        if (!registry) {
+            summaryEl.textContent = 'Could not load angler roster.';
+            listEl.innerHTML = '';
+            return;
+        }
+
+        const activeCount = Number(registry.activePlayerCount) || 0;
+        const usernames = Array.isArray(registry.usernames) ? registry.usernames : [];
+        const anglerLabel = activeCount === 1 ? 'angler has' : 'anglers have';
+        summaryEl.textContent = `${activeCount} registered ${anglerLabel} played at least a little. ${usernames.length} username${usernames.length === 1 ? '' : 's'} total.`;
+
+        listEl.innerHTML = usernames.length
+            ? usernames.map((name) => `<li>${this.safeText(name)}</li>`).join('')
+            : '<li class="friends-admin-name-empty">No usernames yet.</li>';
+    }
+
     renderFriendList(friends = []) {
         const listEl = document.getElementById('friends-list');
         if (!listEl) return;
 
         if (!friends.length) {
             const emptyMessage = this.isHalleyAdmin()
-                ? 'Every angler in the creek shows up here automatically.'
+                ? 'No anglers online or active in the last hour.'
                 : 'No friends yet. Halley joins your crew automatically — share your code to add more anglers!';
             this.setFriendsPlaceholder('friends-list', emptyMessage);
             this.activeFriendId = null;
-            this.setFriendDetailMessage('Add a friend to view their collection.');
+            this.setFriendDetailMessage(
+                this.isHalleyAdmin()
+                    ? 'Select an online angler to view their collection.'
+                    : 'Add a friend to view their collection.'
+            );
             return;
         }
 
@@ -1500,7 +1546,11 @@ export class UI {
             this.highlightFriendEntry(this.activeFriendId);
         } else {
             this.activeFriendId = null;
-            this.setFriendDetailMessage('Select a friend to view their collection.');
+            this.setFriendDetailMessage(
+                this.isHalleyAdmin()
+                    ? 'Select an online angler to view their collection.'
+                    : 'Select a friend to view their collection.'
+            );
         }
     }
 
@@ -1536,6 +1586,12 @@ export class UI {
 
         if (!this.isOnline()) {
             this.setFriendDetailMessage('Connect to view friend collections.');
+            return;
+        }
+
+        const friendMeta = this.getFriendById(friendId);
+        if (this.isHalleyAdmin() && !this.isFriendOnline(friendMeta)) {
+            this.setFriendDetailMessage('Stats and collection are only available while they\'re online.');
             return;
         }
 
@@ -1757,15 +1813,21 @@ export class UI {
         const id = this.safeAttr(friend?.id ?? '');
         const isHalleyCrew = friend?.is_auto_friend === true
             || String(friend?.username || '').toLowerCase() === 'halley';
+        const isAdminView = this.isHalleyAdmin();
+        const isOnline = this.isFriendOnline(friend);
+        const showStats = !isAdminView || isOnline;
         const name = this.safeText(friend?.username || 'Unknown angler');
         const displayName = isHalleyCrew ? `☄ ${name}` : name;
         const code = this.safeText(friend?.friend_code || '------');
         const level = friend?.level ?? '-';
         const statusInfo = this.getFriendStatus(friend);
-        const metaPieces = [`Level ${level}`];
+        const metaPieces = [];
+        if (showStats) {
+            metaPieces.push(`Level ${level}`);
+        }
         if (statusInfo.meta) metaPieces.push(statusInfo.meta);
 
-        const stats = this.parsePlayerStats(friend?.player_stats);
+        const stats = showStats ? this.parsePlayerStats(friend?.player_stats) : {};
         const statChips = [];
         if (stats.accuracy !== undefined) statChips.push(`🎯 ${stats.accuracy}`);
         if (stats.luck !== undefined) statChips.push(`🍀 ${stats.luck}`);
@@ -1775,12 +1837,16 @@ export class UI {
         const totalCaught = friend?.total_caught;
         const biggestCatch = friend?.biggest_catch;
         const extraPieces = [];
-        if (Number.isFinite(Number(biggestCatch))) {
+        if (showStats && Number.isFinite(Number(biggestCatch))) {
             extraPieces.push(`Biggest ${Number(biggestCatch).toFixed(2)} lbs`);
         }
-        if (Number.isFinite(Number(totalCaught))) {
+        if (showStats && Number.isFinite(Number(totalCaught))) {
             extraPieces.push(`${Number(totalCaught)} caught`);
         }
+
+        const metaLine = showStats
+            ? `Code ${code}${metaPieces.length ? ' · ' + metaPieces.join(' · ') : ''}`
+            : (metaPieces.join(' · ') || 'Recently active');
 
         return `
             <div class="friends-entry${isHalleyCrew ? ' friends-entry-halley' : ''}" data-friend-id="${id}"${isHalleyCrew ? ' data-auto-friend="true"' : ''}>
@@ -1789,15 +1855,16 @@ export class UI {
                     ${isHalleyCrew ? '<span class="friends-entry-star-label">Star of the creek</span>' : ''}
                     <div class="friends-entry-status">
                         <span class="friends-status-dot ${statusInfo.statusClass}"></span>
-                        <span class="friends-entry-meta">Code ${code}${metaPieces.length ? ' · ' + metaPieces.join(' · ') : ''}</span>
+                        <span class="friends-entry-meta">${metaLine}</span>
                     </div>
                     ${extraPieces.length ? `<div class="friends-entry-meta">${extraPieces.join(' · ')}</div>` : ''}
                     ${statChips.length ? `<div class="friends-entry-stats">${statChips.map(stat => `<span class="friends-entry-stat">${stat}</span>`).join('')}</div>` : ''}
                 </div>
+                ${isAdminView ? '' : `
                 <div class="friends-entry-actions">
                     <button class="friend-action-button neutral" data-action="copy" data-code="${code}">Copy</button>
                     ${isHalleyCrew ? '' : `<button class="friend-action-button decline" data-action="remove" data-id="${id}">Remove</button>`}
-                </div>
+                </div>`}
             </div>
         `;
     }

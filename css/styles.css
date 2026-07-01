@@ -1061,6 +1061,60 @@ canvas {
     text-align: center;
 }
 
+.friends-admin-registry {
+    margin-top: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(74, 144, 226, 0.25);
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.friends-admin-registry summary {
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    list-style: none;
+}
+
+.friends-admin-registry summary::-webkit-details-marker {
+    display: none;
+}
+
+.friends-admin-registry summary::before {
+    content: '▸ ';
+    display: inline-block;
+    transition: transform 0.15s ease;
+}
+
+.friends-admin-registry[open] summary::before {
+    transform: rotate(90deg);
+}
+
+.friends-admin-name-list {
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+    max-height: 220px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.friends-admin-name-list li {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.78);
+    padding: 4px 6px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.friends-admin-name-empty {
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.55);
+}
+
 .friends-activity-list {
     display: flex;
     flex-direction: column;
@@ -3256,6 +3310,27 @@ body.energy-blocked #location-select {
     width: min(420px, 94vw);
     color: #fff;
     text-align: center;
+}
+
+.rewarded-ad-frame--adsense {
+    width: min(480px, 96vw);
+}
+
+.adsense-energy-host {
+    width: 100%;
+    min-height: 280px;
+    max-height: min(70vh, 520px);
+    overflow: hidden;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.adsense-energy-host ins.adsbygoogle {
+    width: 100%;
+    min-height: 250px;
 }
 
 .rewarded-ad-top {

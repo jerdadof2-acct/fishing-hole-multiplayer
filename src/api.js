@@ -218,8 +218,11 @@ export class API {
      * Get all friends
      * @returns {Promise<Array>} Array of friend objects
      */
-    async getFriends() {
-        return this.request('/friends');
+    async getFriends(recentMinutes = null) {
+        const query = Number.isFinite(Number(recentMinutes)) && Number(recentMinutes) > 0
+            ? `?recentMinutes=${Math.round(Number(recentMinutes))}`
+            : '';
+        return this.request(`/friends${query}`);
     }
     
     /**
@@ -329,6 +332,10 @@ export class API {
 
     async getAdminOnlineCount(minutes = 5) {
         return this.request(`/admin/online-count?minutes=${minutes}`);
+    }
+
+    async getAdminPlayerRegistry() {
+        return this.request('/admin/players/registry');
     }
 
     async sendAdminAnnouncement(payload) {
