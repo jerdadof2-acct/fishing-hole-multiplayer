@@ -78,7 +78,6 @@ export class Player {
         this.lastEnergyRegenAt = Date.now();
         this.lastDailyBonusDate = null;
         this.lastFirstCatchBonusDate = null;
-        this.lastNineLivesAt = null;
         this.doubleCoinsNextCatch = false;
         
         // Player stats (0-100, default 50)
@@ -494,7 +493,6 @@ export class Player {
                 lastEnergyRegenAt: this.lastEnergyRegenAt,
                 lastDailyBonusDate: this.lastDailyBonusDate,
                 lastFirstCatchBonusDate: this.lastFirstCatchBonusDate,
-                lastNineLivesAt: this.lastNineLivesAt,
                 doubleCoinsNextCatch: this.doubleCoinsNextCatch === true
             };
             
@@ -720,7 +718,6 @@ export class Player {
                 }
                 this.lastDailyBonusDate = playerData.lastDailyBonusDate ?? null;
                 this.lastFirstCatchBonusDate = playerData.lastFirstCatchBonusDate ?? null;
-                this.lastNineLivesAt = playerData.lastNineLivesAt ?? null;
                 this.doubleCoinsNextCatch = playerData.doubleCoinsNextCatch === true;
 
                 if (playerData.userId) {

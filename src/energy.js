@@ -6,11 +6,8 @@ import {
     DAILY_BONUS_ENERGY,
     DAILY_BONUS_COINS,
     FIRST_CATCH_BONUS_COINS,
-    FIRST_CATCH_BONUS_ENERGY,
-    NINE_LIVES_ENERGY,
-    NINE_LIVES_COOLDOWN_MS
+    FIRST_CATCH_BONUS_ENERGY
 } from './config/energy.js';
-import { getTackleByCategory } from './tackleShop.js';
 
 /** @returns {string} YYYY-MM-DD in local timezone */
 export function getCalendarDateString(date = new Date()) {
@@ -74,30 +71,12 @@ export function addEnergy(player, amount) {
     return player.energy - before;
 }
 
-/** Daily bonus, ads, nine lives — may stack above max (e.g. 125/100). */
+/** Daily bonus, ads — may stack above max (e.g. 125/100). */
 export function addBonusEnergy(player, amount) {
     if (!player || amount <= 0) return 0;
     const before = player.energy ?? 0;
     player.energy = before + amount;
     return amount;
-}
-
-export function canUseNineLives(player) {
-    if (!player?.lastNineLivesAt) return true;
-    return Date.now() - player.lastNineLivesAt >= NINE_LIVES_COOLDOWN_MS;
-}
-
-export function tryNineLives(player) {
-    if (!player || !canUseNineLives(player)) {
-        return false;
-    }
-    if (player.energy > 0) {
-        return false;
-    }
-    player.lastNineLivesAt = Date.now();
-    addBonusEnergy(player, NINE_LIVES_ENERGY);
-    player.save();
-    return true;
 }
 
 export function isDailyBonusAvailable(player) {
@@ -133,32 +112,6 @@ export function applyFirstCatchOfDayBonus(player) {
     player.addMoney(FIRST_CATCH_BONUS_COINS);
     player.save();
     return { coins: FIRST_CATCH_BONUS_COINS, energyGained };
-}
-
-/** Premium bait ids for Lucky Bait rewarded ad. */
-const LUCKY_BAIT_POOL = [3, 4, 5];
-
-/**
- * Unlock one random premium bait the player does not own yet.
- * @returns {{ name: string }|null}
- */
-export function grantLuckyBait(player) {
-    if (!player) return null;
-
-    const owned = player.tackleUnlocks?.baits ?? [];
-    const candidates = LUCKY_BAIT_POOL.filter((id) => !owned.includes(id));
-    const pool = candidates.length ? candidates : LUCKY_BAIT_POOL;
-    const pickId = pool[Math.floor(Math.random() * pool.length)];
-    const items = getTackleByCategory('baits');
-    const bait = items.find((item) => item.id === pickId);
-    if (!bait) return null;
-
-    if (!player.tackleUnlocks.baits.includes(pickId)) {
-        player.tackleUnlocks.baits.push(pickId);
-    }
-    player.gear.bait = bait.name;
-    player.save();
-    return { name: bait.name };
 }
 
 export function getEnergyRegenProgress(player) {

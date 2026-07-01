@@ -1,7 +1,14 @@
-/** Google AdSense publisher ID (PWA — set banner slot when AdSense provides one). */
+/** Google AdSense publisher ID (PWA — manual placement only; disable Auto ads in AdSense dashboard). */
 export const ADSENSE_CLIENT = 'ca-pub-8602130362499092';
-/** Create a Display ad unit in AdSense, then paste the slot ID here (e.g. '1234567890'). */
-export const ADSENSE_BANNER_SLOT = '';
+
+/** Top banner — `#ad-banner` only. See DOCS/adsense-manual-placement.md */
+export const ADSENSE_BANNER_SLOT = '7906348086';
+
+/** Energy reward — shown only when user taps Watch Ad on out-of-energy modal. */
+export const ADSENSE_ENERGY_SLOT = '1178086965';
+
+/** Minimum view time before granting energy reward (real AdSense unit). */
+export const ADSENSE_ENERGY_VIEW_MS = 15000;
 
 /** Fictional cat-product ads — emoji mini “product shots”, no real sponsors. */
 const ADS = [
@@ -139,11 +146,57 @@ const DEFAULT_ADS_ENABLED = true;
 let currentIndex = 0;
 let rotationTimer = null;
 
+export function hasConfiguredBannerAd() {
+    return Boolean(ADSENSE_CLIENT && ADSENSE_BANNER_SLOT);
+}
+
+export function hasConfiguredEnergyAd() {
+    return Boolean(ADSENSE_CLIENT && ADSENSE_ENERGY_SLOT);
+}
+
 function getAdsEnabled() {
     if (typeof window !== 'undefined' && typeof window.__KITTY_CREEK_ADS_ENABLED__ === 'boolean') {
         return window.__KITTY_CREEK_ADS_ENABLED__;
     }
     return DEFAULT_ADS_ENABLED;
+}
+
+/**
+ * Mount one manual AdSense unit inside a container we own (never page-wide Auto ads).
+ * @param {HTMLElement} container
+ * @param {string} slotId
+ * @param {{ format?: string, fullWidthResponsive?: boolean }} [options]
+ */
+export function mountAdsenseUnit(container, slotId, options = {}) {
+    if (!ADSENSE_CLIENT || !slotId || !container) {
+        return false;
+    }
+
+    const {
+        format = 'auto',
+        fullWidthResponsive = true
+    } = options;
+
+    container.innerHTML = '';
+    const ins = document.createElement('ins');
+    ins.className = 'adsbygoogle';
+    ins.style.display = 'block';
+    ins.setAttribute('data-ad-client', ADSENSE_CLIENT);
+    ins.setAttribute('data-ad-slot', slotId);
+    ins.setAttribute('data-ad-format', format);
+    if (fullWidthResponsive) {
+        ins.setAttribute('data-full-width-responsive', 'true');
+    }
+    container.appendChild(ins);
+
+    try {
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch (err) {
+        console.warn('[ads] AdSense push failed:', err);
+        return false;
+    }
+
+    return true;
 }
 
 function normalizeEmojiList(ad) {
@@ -162,31 +215,6 @@ function buildEmojiStack(emojis) {
         .slice(0, 3)
         .map((char, index) => `<span class="ad-emoji ${slots[index] || 'ad-emoji-float-b'}">${char}</span>`)
         .join('');
-}
-
-function mountAdsenseBanner(container) {
-    if (!ADSENSE_CLIENT || !ADSENSE_BANNER_SLOT) {
-        return false;
-    }
-
-    container.innerHTML = '';
-    const ins = document.createElement('ins');
-    ins.className = 'adsbygoogle';
-    ins.style.display = 'block';
-    ins.setAttribute('data-ad-client', ADSENSE_CLIENT);
-    ins.setAttribute('data-ad-slot', ADSENSE_BANNER_SLOT);
-    ins.setAttribute('data-ad-format', 'auto');
-    ins.setAttribute('data-full-width-responsive', 'true');
-    container.appendChild(ins);
-
-    try {
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
-    } catch (err) {
-        console.warn('[ads] AdSense push failed:', err);
-        return false;
-    }
-
-    return true;
 }
 
 function createPlaceholder() {
@@ -267,7 +295,7 @@ export function initAdRotator() {
         return;
     }
 
-    if (mountAdsenseBanner(bannerContent)) {
+    if (mountAdsenseUnit(bannerContent, ADSENSE_BANNER_SLOT)) {
         return;
     }
 

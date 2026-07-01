@@ -10,8 +10,6 @@ export const FIRST_CATCH_BONUS_COINS = 50;
 export const FIRST_CATCH_BONUS_ENERGY = 10;
 export const LEVEL_UP_ENERGY_BONUS = 25;
 export const AD_ENERGY_REWARD = 20;
-export const NINE_LIVES_ENERGY = 50;
-export const NINE_LIVES_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 /** Halley-flavored lines when out of energy (random pick). */
 export const OUT_OF_ENERGY_LINES = [

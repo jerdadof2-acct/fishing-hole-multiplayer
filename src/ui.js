@@ -26,10 +26,8 @@ import {
     canAffordCast,
     CAST_ENERGY_COST,
     claimDailyBonus,
-    grantLuckyBait,
     isDailyBonusAvailable,
     spendCastEnergy,
-    tryNineLives,
     addBonusEnergy
 } from './energy.js';
 import { showRewardedAd } from './rewardedAds.js';
@@ -333,20 +331,10 @@ export class UI {
                     ${doubleActive ? 'Active' : 'Watch Ad'}
                 </button>
             </div>
-            <div class="shop-boost-card">
-                <div class="shop-boost-copy">
-                    <div class="shop-boost-title">📺 Lucky Bait</div>
-                    <div class="shop-boost-desc">Random premium bait, free.</div>
-                </div>
-                <button type="button" class="shop-boost-btn" id="boost-lucky-bait">Watch Ad</button>
-            </div>
         `;
 
         document.getElementById('boost-double-coins')?.addEventListener('click', () => {
             this.watchAdForDoubleCoins();
-        });
-        document.getElementById('boost-lucky-bait')?.addEventListener('click', () => {
-            this.watchAdForLuckyBait();
         });
     }
 
@@ -367,39 +355,10 @@ export class UI {
         }
     }
 
-    async watchAdForLuckyBait() {
-        if (!this.player) return;
-        try {
-            await showRewardedAd('lucky_bait');
-            const bait = grantLuckyBait(this.player);
-            this.renderShopBoosts();
-            if (this.currentShopTab === 'baits') {
-                this.renderShop(this.currentShopTab);
-            }
-            this.showToast({
-                type: 'success',
-                title: 'Lucky Bait!',
-                body: bait ? `You received ${bait.name}!` : 'Premium bait added to your tackle box.'
-            });
-        } catch (error) {
-            this.showToast({ type: 'error', title: 'Ad unavailable', body: 'Try again later.' });
-        }
-    }
-
     trySpendCastEnergy() {
         if (!this.player) return true;
 
         if (!canAffordCast(this.player)) {
-            if (tryNineLives(this.player)) {
-                this.player.save();
-                this.updatePlayerInfo();
-                this.showToast({
-                    type: 'success',
-                    title: '🐾 Nine Lives!',
-                    body: 'Halley gets a free second wind. +50 Energy'
-                });
-                return canAffordCast(this.player);
-            }
             this.showOutOfEnergyModal();
             return false;
         }
@@ -409,17 +368,7 @@ export class UI {
         this.updatePlayerInfo();
 
         if (this.player.energy <= 0) {
-            if (tryNineLives(this.player)) {
-                this.player.save();
-                this.updatePlayerInfo();
-                this.showToast({
-                    type: 'success',
-                    title: '🐾 Nine Lives!',
-                    body: 'Halley gets a free second wind. +50 Energy'
-                });
-            } else {
-                this.showOutOfEnergyModal();
-            }
+            this.showOutOfEnergyModal();
         }
 
         return true;
@@ -4569,7 +4518,6 @@ export class UI {
             this.player.lastEnergyRegenAt = Date.now();
             this.player.lastDailyBonusDate = null;
             this.player.lastFirstCatchBonusDate = null;
-            this.player.lastNineLivesAt = null;
             this.player.doubleCoinsNextCatch = false;
             this._energyBlocked = false;
             document.body.classList.remove('energy-blocked');

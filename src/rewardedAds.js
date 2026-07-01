@@ -1,14 +1,22 @@
 /**
- * Rewarded video ads (funny placeholders — swap for AdMob / Unity Ads later).
+ * Rewarded ads — energy boost (+20) when out of energy.
+ * Uses manual AdSense unit when ADSENSE_ENERGY_SLOT is set; otherwise mock overlay.
  */
 
-const REWARDED_AD_DURATION_MS = 5200;
+import {
+    mountAdsenseUnit,
+    ADSENSE_ENERGY_SLOT,
+    ADSENSE_ENERGY_VIEW_MS,
+    hasConfiguredEnergyAd
+} from './ads.js';
+
+const MOCK_REWARDED_AD_DURATION_MS = 5200;
 
 const ENERGY_ADS = [
     {
         badge: 'NOT A REAL AD',
         label: 'Emergency casting fuel',
-        headline: 'Nine Lives Energy Shot™',
+        headline: "Halley's Energy Shot™",
         tagline: 'One sip = 20 energy. Two sips = your vet calls Halley.',
         emoji: ['⚡', '🐱', '🥤'],
         gradient: 'linear-gradient(145deg, #facc15 0%, #f59e0b 45%, #b45309 100%)',
@@ -80,37 +88,13 @@ const DOUBLE_COINS_ADS = [
     }
 ];
 
-const LUCKY_BAIT_ADS = [
-    {
-        badge: 'PREMIUM BAIT',
-        headline: 'Catnip Chum Deluxe',
-        tagline: 'Brings fish to the boat and Halley to another dimension.',
-        emoji: ['🪣', '🌿', '😵‍💫'],
-        gradient: 'linear-gradient(145deg, #a3e635 0%, #65a30d 100%)',
-        finePrint: 'Do not lick. Halley licked.'
-    },
-    {
-        badge: 'LUCKY DROP',
-        headline: 'MouseTail Bobbers',
-        tagline: 'Half fishing gear. Half emotional crisis.',
-        emoji: ['🐭', '🎈', '😿'],
-        gradient: 'linear-gradient(145deg, #fcd34d 0%, #d97706 100%)',
-        finePrint: 'Squeak on impact.'
-    }
-];
-
 const REWARD_LABELS = {
     energy: '+20 Energy',
-    double_coins: 'Double Coins',
-    lucky_bait: 'Lucky Bait'
+    double_coins: 'Double Coins'
 };
 
 function pickAd(rewardType) {
-    const pool = rewardType === 'energy'
-        ? ENERGY_ADS
-        : rewardType === 'double_coins'
-            ? DOUBLE_COINS_ADS
-            : LUCKY_BAIT_ADS;
+    const pool = rewardType === 'energy' ? ENERGY_ADS : DOUBLE_COINS_ADS;
     return pool[Math.floor(Math.random() * pool.length)];
 }
 
@@ -128,15 +112,91 @@ function removeOverlay(overlay) {
     window.setTimeout(() => overlay.remove(), 280);
 }
 
+function runRewardTimer(overlay, durationMs, onComplete) {
+    const progressBar = overlay.querySelector('[data-progress]');
+    const timerEl = overlay.querySelector('[data-timer]');
+    const skipEl = overlay.querySelector('[data-skip]');
+    const startedAt = performance.now();
+
+    const tick = () => {
+        const elapsed = performance.now() - startedAt;
+        const t = Math.min(1, elapsed / durationMs);
+        if (progressBar) {
+            progressBar.style.width = `${t * 100}%`;
+        }
+        const remaining = Math.max(0, Math.ceil((durationMs - elapsed) / 1000));
+        if (timerEl) {
+            timerEl.textContent = `${remaining}s`;
+        }
+        if (skipEl && remaining > 0) {
+            skipEl.textContent = `Reward in ${remaining}s…`;
+        }
+        if (t < 1) {
+            requestAnimationFrame(tick);
+        } else if (skipEl) {
+            skipEl.textContent = 'Thanks for watching! 🐱';
+        }
+    };
+    requestAnimationFrame(tick);
+
+    window.setTimeout(() => {
+        removeOverlay(overlay);
+        onComplete();
+    }, durationMs);
+}
+
 /**
- * @param {'energy'|'double_coins'|'lucky_bait'} rewardType
- * @returns {Promise<{ success: boolean, type: string }>}
+ * Full-screen manual AdSense unit — only when user opts in via energy modal.
  */
-export function showRewardedAd(rewardType) {
+function showAdsenseEnergyReward() {
+    return new Promise((resolve, reject) => {
+        const durationMs = ADSENSE_ENERGY_VIEW_MS;
+        const durationSec = Math.ceil(durationMs / 1000);
+
+        const overlay = document.createElement('div');
+        overlay.className = 'rewarded-ad-overlay rewarded-ad-overlay--adsense';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-label', 'Sponsored message');
+        overlay.innerHTML = `
+            <div class="rewarded-ad-frame rewarded-ad-frame--adsense">
+                <div class="rewarded-ad-top">
+                    <span class="rewarded-ad-reward-tag">Reward: +20 Energy</span>
+                    <span class="rewarded-ad-timer" data-timer>${durationSec}s</span>
+                </div>
+                <div class="adsense-energy-host" id="adsense-energy-host"></div>
+                <div class="rewarded-ad-progress-track">
+                    <div class="rewarded-ad-progress-bar" data-progress></div>
+                </div>
+                <p class="rewarded-ad-skip" data-skip>Reward in ${durationSec}s…</p>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const host = overlay.querySelector('#adsense-energy-host');
+        const mounted = mountAdsenseUnit(host, ADSENSE_ENERGY_SLOT, {
+            format: 'auto',
+            fullWidthResponsive: true
+        });
+
+        if (!mounted) {
+            removeOverlay(overlay);
+            reject(new Error('AdSense energy unit failed to mount'));
+            return;
+        }
+
+        runRewardTimer(overlay, durationMs, () => {
+            resolve({ success: true, type: 'energy' });
+        });
+    });
+}
+
+function showMockRewardedAd(rewardType) {
     return new Promise((resolve) => {
         const ad = pickAd(rewardType);
         const rewardLabel = REWARD_LABELS[rewardType] || 'Reward';
-        const durationSec = Math.ceil(REWARDED_AD_DURATION_MS / 1000);
+        const durationMs = MOCK_REWARDED_AD_DURATION_MS;
+        const durationSec = Math.ceil(durationMs / 1000);
 
         const overlay = document.createElement('div');
         overlay.className = 'rewarded-ad-overlay';
@@ -166,35 +226,19 @@ export function showRewardedAd(rewardType) {
 
         document.body.appendChild(overlay);
 
-        const progressBar = overlay.querySelector('[data-progress]');
-        const timerEl = overlay.querySelector('[data-timer]');
-        const skipEl = overlay.querySelector('[data-skip]');
-        const startedAt = performance.now();
-
-        const tick = () => {
-            const elapsed = performance.now() - startedAt;
-            const t = Math.min(1, elapsed / REWARDED_AD_DURATION_MS);
-            if (progressBar) {
-                progressBar.style.width = `${t * 100}%`;
-            }
-            const remaining = Math.max(0, Math.ceil((REWARDED_AD_DURATION_MS - elapsed) / 1000));
-            if (timerEl) {
-                timerEl.textContent = `${remaining}s`;
-            }
-            if (skipEl && remaining > 0) {
-                skipEl.textContent = `Skip in ${remaining}s… (Halley says watch it)`;
-            }
-            if (t < 1) {
-                requestAnimationFrame(tick);
-            } else if (skipEl) {
-                skipEl.textContent = 'Thanks for watching! 🐱';
-            }
-        };
-        requestAnimationFrame(tick);
-
-        window.setTimeout(() => {
-            removeOverlay(overlay);
+        runRewardTimer(overlay, durationMs, () => {
             resolve({ success: true, type: rewardType });
-        }, REWARDED_AD_DURATION_MS);
+        });
     });
+}
+
+/**
+ * @param {'energy'|'double_coins'} rewardType
+ * @returns {Promise<{ success: boolean, type: string }>}
+ */
+export function showRewardedAd(rewardType) {
+    if (rewardType === 'energy' && hasConfiguredEnergyAd()) {
+        return showAdsenseEnergyReward();
+    }
+    return showMockRewardedAd(rewardType);
 }
