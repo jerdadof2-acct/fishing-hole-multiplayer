@@ -225,22 +225,18 @@ export function getTotalCatchBonus(player) {
     return bonus;
 }
 
+/** Hook-set window after a bite (ms) — generous for mobile, kids, and slower reflexes. */
+const HOOK_TIMING_BASE_MS = 1400;
+const HOOK_TIMING_REDUCTION_PER_LEVEL_MS = 20;
+const HOOK_TIMING_MIN_MS = 1000;
+
 /**
  * Get hook timing window from equipped hook, adjusted by player level
  * @param {Object} player - Player instance
  * @returns {number} Timing window in milliseconds
  */
 export function getHookTimingWindow(player) {
-    // Base timing window starts at 1000ms
-    const baseWindow = 1000;
-    
-    // Decrease by 30ms per level (player gets faster with experience)
-    const reductionPerLevel = 30;
-    const levelReduction = (player.level || 1) * reductionPerLevel;
-    
-    // Calculate timing window: base - level reduction, minimum 500ms
-    const timingWindow = Math.max(500, baseWindow - levelReduction);
-    
-    return timingWindow;
+    const levelReduction = (player.level || 1) * HOOK_TIMING_REDUCTION_PER_LEVEL_MS;
+    return Math.max(HOOK_TIMING_MIN_MS, HOOK_TIMING_BASE_MS - levelReduction);
 }
 
