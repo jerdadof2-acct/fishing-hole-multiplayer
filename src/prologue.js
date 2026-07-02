@@ -24,6 +24,9 @@ import { PrologueAudioBed } from './audio/prologueAmbience.js';
 import { ensureProloguePack } from './assetPack.js';
 import { loadingProgress } from './loadingProgress.js';
 
+/** Ends any in-flight prologue before starting a new one (e.g. settings replay). */
+let activePrologueSession = null;
+
 function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
 }
@@ -86,6 +89,7 @@ export function shouldShowReturnSplash() {
  * @param {{
  *   scrollSpeedMultiplier?: number,
  *   skipCredits?: boolean,
+ *   replay?: boolean,
  *   preloadedPack?: object,
  *   waitForReady?: () => Promise<unknown>,
  *   onLoadProgress?: (percent: number) => void
@@ -93,7 +97,11 @@ export function shouldShowReturnSplash() {
  * @returns {Promise<void>}
  */
 export async function playStoryPrologue(options = {}) {
-    const skipCredits = options.skipCredits === true;
+    activePrologueSession?.abort?.();
+    activePrologueSession = null;
+
+    const replay = options.replay === true;
+    const skipCredits = !replay && options.skipCredits === true;
 
     let pack = options.preloadedPack;
     if (!pack) {
@@ -123,6 +131,11 @@ export async function playStoryPrologue(options = {}) {
         return Promise.resolve();
     }
 
+    const gameContainer = document.getElementById('game-container');
+    if (replay) {
+        gameContainer?.classList.add('pre-entry');
+    }
+
     let scrollMultiplier = options.scrollSpeedMultiplier ?? loadSavedScrollMultiplier();
     let rafId = null;
     let enterTimer = null;
@@ -137,6 +150,11 @@ export async function playStoryPrologue(options = {}) {
     let interstitialTimer = null;
     let lastCreditLine = null;
     let creditsFinished = false;
+    let startGateAbort = null;
+
+    const refreshLastCreditLine = () => {
+        lastCreditLine = creditsInner.querySelector('.prologue-credit-line:last-child');
+    };
 
     const scheduleAmbienceFade = () => {
         if (ambienceFadeTimer) {
@@ -199,7 +217,7 @@ export async function playStoryPrologue(options = {}) {
         .map((text) => `<p class="prologue-credit-line">${text}</p>`)
         .join('');
 
-    lastCreditLine = creditsInner.querySelector('.prologue-credit-line:last-child');
+    refreshLastCreditLine();
 
     const creditsViewport = creditsPhase.querySelector('.prologue-credits-viewport');
     if (creditsViewport) {
@@ -249,6 +267,14 @@ export async function playStoryPrologue(options = {}) {
         const onFaster = () => setScrollMultiplier(scrollMultiplier + PROLOGUE_SCROLL_SPEED_STEP);
 
         const cleanup = () => {
+            if (activePrologueSession?.cleanup === cleanup) {
+                activePrologueSession = null;
+            }
+            startGateAbort?.abort();
+            startGateAbort = null;
+            if (replay) {
+                gameContainer?.classList.remove('pre-entry');
+            }
             if (ambienceFadeTimer) {
                 clearTimeout(ambienceFadeTimer);
                 ambienceFadeTimer = null;
@@ -299,6 +325,15 @@ export async function playStoryPrologue(options = {}) {
             cleanup();
             resolve();
         };
+
+        const abort = () => {
+            if (done) return;
+            done = true;
+            cleanup();
+            resolve();
+        };
+
+        activePrologueSession = { cleanup, abort };
 
         const onEnter = async () => {
             if (!canEnter) return;
@@ -452,22 +487,38 @@ export async function playStoryPrologue(options = {}) {
         loadPollId = window.setInterval(updateLoadHint, 350);
 
         const beginCreditsSequence = () => {
+            startGateAbort?.abort();
+            startGateAbort = null;
             startGate?.classList.add('hidden');
+            creditsFinished = false;
+            phase = 'credits';
+            creditsPhase.classList.remove('hidden');
+            interstitialPhase.classList.add('hidden');
+            titlePhase.classList.add('hidden');
+            overlay.classList.remove('is-title-phase', 'is-splash-only', 'is-interstitial-phase', 'is-fading', 'is-fading-credits', 'is-fading-interstitial');
+            refreshLastCreditLine();
             startAudioBed();
             lastTs = 0;
             rafId = requestAnimationFrame(tick);
         };
 
         const waitForPrologueStart = () => new Promise((resolveStart) => {
+            if (replay) {
+                beginCreditsSequence();
+                resolveStart();
+                return;
+            }
+
             if (!startGate) {
                 beginCreditsSequence();
                 resolveStart();
                 return;
             }
 
+            startGateAbort = new AbortController();
+            const { signal } = startGateAbort;
+
             const onStart = () => {
-                startGate.removeEventListener('click', onStart);
-                startGate.removeEventListener('keydown', onStartKey);
                 beginCreditsSequence();
                 resolveStart();
             };
@@ -480,8 +531,8 @@ export async function playStoryPrologue(options = {}) {
             };
 
             startGate.classList.remove('hidden');
-            startGate.addEventListener('click', onStart);
-            startGate.addEventListener('keydown', onStartKey);
+            startGate.addEventListener('click', onStart, { signal });
+            startGate.addEventListener('keydown', onStartKey, { signal });
         });
 
         if (skipCredits) {
@@ -500,11 +551,14 @@ export async function playStoryPrologue(options = {}) {
         }
 
         phase = 'credits';
-        overlay.classList.remove('hidden', 'is-title-phase', 'is-fading', 'is-fading-credits', 'is-fading-interstitial', 'is-interstitial-phase', 'can-enter');
+        creditsFinished = false;
+        overlay.classList.remove('hidden', 'is-title-phase', 'is-splash-only', 'is-fading', 'is-fading-credits', 'is-fading-interstitial', 'is-interstitial-phase', 'can-enter');
         creditsPhase.classList.remove('hidden');
         interstitialPhase.classList.add('hidden');
+        interstitialPhase.setAttribute('aria-hidden', 'true');
         titlePhase.classList.add('hidden');
         tapHint?.classList.add('hidden');
+        startGate?.classList.add('hidden');
         canEnter = false;
 
         const viewport = creditsPhase.querySelector('.prologue-credits-viewport');
@@ -531,6 +585,8 @@ export async function replayStoryPrologue() {
 
     await playStoryPrologue({
         preloadedPack: pack,
+        replay: true,
+        skipCredits: false,
         waitForReady,
         onLoadProgress: () => loadingProgress.getPercent()
     });
