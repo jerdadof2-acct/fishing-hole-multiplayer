@@ -7,7 +7,7 @@ import {
     PROLOGUE_SPLASH_PACK
 } from './config/prologue.js';
 
-const CACHE_NAME = 'halleys-big-catch-media-v8';
+const CACHE_NAME = 'halleys-big-catch-media-v9';
 const PROLOGUE_STORAGE_KEY = 'kittyCreekProloguePackVersion';
 const FULL_STORAGE_KEY = 'kittyCreekAssetPackVersion';
 const DOWNLOAD_CONCURRENCY = 6;

@@ -10,12 +10,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 
 /** Bump when adding/removing pack files — clients re-download on change. */
-export const PACK_VERSION = '20250624-6';
+export const PACK_VERSION = '20250627-1';
 
-/** Prologue-only — two images (~310 KB); audio streams when the story plays. */
+/** Prologue-only — story background + title poster; audio streams when the story plays. */
 const BOOT_URLS = [
     '/images/prologue-background.png',
-    '/images/halley-splash.png'
+    '/assets/images/loading-poster.png'
 ];
 
 const EXTRA_URLS = [

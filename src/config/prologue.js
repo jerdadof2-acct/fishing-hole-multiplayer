@@ -68,7 +68,7 @@ export const PROLOGUE_INTERSTITIAL_HOLD_MS = 2800;
 
 export const PROLOGUE_INTERSTITIAL_TEXT = 'A long time ago, on a lake not so far away…';
 
-export const PROLOGUE_ENTRANCE_IMAGE = 'images/halley-splash.png';
+export const PROLOGUE_ENTRANCE_IMAGE = 'assets/images/loading-poster.png';
 
 /** Full-screen art behind scrolling story credits. */
 export const PROLOGUE_SCROLL_BACKGROUND = 'images/prologue-background.png';

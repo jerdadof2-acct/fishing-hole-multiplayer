@@ -1,12 +1,12 @@
 {
-  "version": "20250624-6",
-  "generatedAt": "2026-06-27T15:34:45.225Z",
-  "count": 223,
+  "version": "20250627-1",
+  "generatedAt": "2026-07-02T00:11:08.599Z",
+  "count": 224,
   "bootCount": 2,
-  "deferredCount": 221,
+  "deferredCount": 222,
   "boot": [
     "/images/prologue-background.png",
-    "/images/halley-splash.png"
+    "/assets/images/loading-poster.png"
   ],
   "deferred": [
     "/",
@@ -204,6 +204,7 @@
     "/images/Tuna.png",
     "/images/Tyrannofin Rex.png",
     "/images/Walleye.png",
+    "/images/halley-splash.png",
     "/images/hiddenitems/brokenharpoon.png",
     "/images/hiddenitems/brokenharpoon.webp",
     "/images/hiddenitems/buriedtelescope.png",
@@ -372,6 +373,7 @@
     "/assets/images/hiddenitems/sunkentreasure.webp",
     "/assets/images/hiddenitems/weatheredbobber.png",
     "/assets/images/hiddenitems/weatheredbobber.webp",
+    "/assets/images/loading-poster.png",
     "/assets/textures/caustics_loop-sm.jpg",
     "/assets/textures/caustics_loop.jpg",
     "/assets/textures/dockWood-sm.jpg",

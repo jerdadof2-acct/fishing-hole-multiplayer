@@ -18,6 +18,7 @@ import { hasPrivilegedAccess } from './admin/adminAuth.js';
 import {
     AD_ENERGY_REWARD,
     LEVEL_UP_ENERGY_BONUS,
+    MAX_ENERGY,
     OUT_OF_ENERGY_LINES
 } from './config/energy.js';
 import {
