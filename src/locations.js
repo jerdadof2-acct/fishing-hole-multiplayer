@@ -82,9 +82,9 @@ export class Locations {
                 fish: [10, 11, 12],
                 cost: 100,
                 unlockLevel: 6,
-                description: 'Just off the beach in warm, shallow ocean water. Gentle surf, sun on your back, and steady action — a perfect day on the water.',
+                description: 'The Shooting Star anchored in warm, shallow water just offshore — the beach is close enough to hear the break. Steady bites and sunny conditions make this an easy favorite along the coast.',
                 briefTheme: 'sandy-shoals',
-                tagline: 'Warm surf-line fishing',
+                tagline: 'The Shooting Star, close to the beach',
                 waterBodyType: 'OCEAN',
                 platformType: 'LARGE_BOAT'
             },
