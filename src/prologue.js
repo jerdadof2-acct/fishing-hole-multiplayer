@@ -7,24 +7,46 @@ import {
     PROLOGUE_INTERSTITIAL_TEXT,
     PROLOGUE_PHASE_FADE_MS,
     PROLOGUE_SCROLL_BACKGROUND,
-    PROLOGUE_SCROLL_SPEED,
+    PROLOGUE_SCROLL_SPEED_DEFAULT,
+    PROLOGUE_SCROLL_SPEED_MAX,
+    PROLOGUE_SCROLL_SPEED_MIN,
+    PROLOGUE_SCROLL_SPEED_STEP,
+    PROLOGUE_SPEED_STORAGE_KEY,
     PROLOGUE_STORY_PARAGRAPHS,
     PROLOGUE_VERSION_STORAGE_KEY,
-    PROLOGUE_AMBIENCE_DUCK_RATIO,
-    PROLOGUE_AMBIENCE_FADE_DELAY_AFTER_VO_SEC,
     PROLOGUE_AMBIENCE_FADE_DURATION_SEC,
     PROLOGUE_AMBIENCE_URL,
     PROLOGUE_AMBIENCE_VOLUME,
-    PROLOGUE_MUSIC_DUCK_RATIO,
     PROLOGUE_MUSIC_URL,
-    PROLOGUE_MUSIC_VOLUME,
-    PROLOGUE_VOICEOVER_DELAY_SEC,
-    PROLOGUE_VOICEOVER_URL,
-    PROLOGUE_VOICEOVER_VOLUME
+    PROLOGUE_MUSIC_VOLUME
 } from './config/prologue.js';
 import { PrologueAudioBed } from './audio/prologueAmbience.js';
 import { ensureProloguePack } from './assetPack.js';
 import { loadingProgress } from './loadingProgress.js';
+
+function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+}
+
+function loadSavedScrollMultiplier() {
+    try {
+        const raw = localStorage.getItem(PROLOGUE_SPEED_STORAGE_KEY);
+        const parsed = raw ? parseFloat(raw) : PROLOGUE_SCROLL_SPEED_DEFAULT;
+        return Number.isFinite(parsed)
+            ? clamp(parsed, PROLOGUE_SCROLL_SPEED_MIN, PROLOGUE_SCROLL_SPEED_MAX)
+            : PROLOGUE_SCROLL_SPEED_DEFAULT;
+    } catch {
+        return PROLOGUE_SCROLL_SPEED_DEFAULT;
+    }
+}
+
+function saveScrollMultiplier(multiplier) {
+    try {
+        localStorage.setItem(PROLOGUE_SPEED_STORAGE_KEY, String(multiplier));
+    } catch {
+        /* ignore */
+    }
+}
 
 /** True when this build's prologue has not been shown yet (replay on each PROLOGUE_GAME_VERSION bump). */
 export function shouldPlayStoryPrologue() {
@@ -62,6 +84,7 @@ export function shouldShowReturnSplash() {
 /**
  * Full-screen cinematic prologue: scrolling story → interstitial card → splash art → tap anywhere to enter.
  * @param {{
+ *   scrollSpeedMultiplier?: number,
  *   skipCredits?: boolean,
  *   preloadedPack?: object,
  *   waitForReady?: () => Promise<unknown>,
@@ -77,7 +100,6 @@ export async function playStoryPrologue(options = {}) {
         pack = await ensureProloguePack({ full: !skipCredits });
     }
 
-    const preloadedVoiceover = pack.voiceover?.audio ?? null;
     const preloadedOcean = pack.ocean?.audio ?? null;
     const preloadedMusic = pack.music?.audio ?? null;
     const backgroundUrl = pack.background?.blobUrl ?? PROLOGUE_SCROLL_BACKGROUND;
@@ -89,6 +111,9 @@ export async function playStoryPrologue(options = {}) {
     const titlePhase = document.getElementById('prologue-title-phase');
     const creditsInner = document.getElementById('prologue-credits-inner');
     const interstitialText = interstitialPhase?.querySelector('.prologue-interstitial-text');
+    const speedLabel = document.getElementById('prologue-speed-label');
+    const slowerBtn = document.getElementById('prologue-slower');
+    const fasterBtn = document.getElementById('prologue-faster');
     const tapHint = document.getElementById('prologue-tap-hint');
     const loadHint = document.getElementById('prologue-load-hint');
     const startGate = document.getElementById('prologue-start-gate');
@@ -98,7 +123,7 @@ export async function playStoryPrologue(options = {}) {
         return Promise.resolve();
     }
 
-    const scrollMultiplier = PROLOGUE_SCROLL_SPEED;
+    let scrollMultiplier = options.scrollSpeedMultiplier ?? loadSavedScrollMultiplier();
     let rafId = null;
     let enterTimer = null;
     let loadPollId = null;
@@ -113,14 +138,14 @@ export async function playStoryPrologue(options = {}) {
     let lastCreditLine = null;
     let creditsFinished = false;
 
-    const scheduleAmbienceFadeAfterVoiceover = () => {
+    const scheduleAmbienceFade = () => {
         if (ambienceFadeTimer) {
             clearTimeout(ambienceFadeTimer);
         }
         ambienceFadeTimer = window.setTimeout(() => {
             ambienceFadeTimer = null;
             audioBed?.startFadeOut(PROLOGUE_AMBIENCE_FADE_DURATION_SEC);
-        }, PROLOGUE_AMBIENCE_FADE_DELAY_AFTER_VO_SEC * 1000);
+        }, 1000);
     };
 
     const haveLastWordsExited = () => {
@@ -146,29 +171,18 @@ export async function playStoryPrologue(options = {}) {
             tracks.ocean = {
                 audio: preloadedOcean ?? undefined,
                 url: preloadedOcean ? undefined : PROLOGUE_AMBIENCE_URL,
-                volume: PROLOGUE_AMBIENCE_VOLUME,
-                duckRatio: PROLOGUE_AMBIENCE_DUCK_RATIO
+                volume: PROLOGUE_AMBIENCE_VOLUME
             };
         }
         if (PROLOGUE_MUSIC_URL || preloadedMusic) {
             tracks.music = {
                 audio: preloadedMusic ?? undefined,
                 url: preloadedMusic ? undefined : PROLOGUE_MUSIC_URL,
-                volume: PROLOGUE_MUSIC_VOLUME,
-                duckRatio: PROLOGUE_MUSIC_DUCK_RATIO
-            };
-        }
-        if (PROLOGUE_VOICEOVER_URL) {
-            tracks.voiceover = {
-                audio: preloadedVoiceover ?? undefined,
-                url: preloadedVoiceover ? undefined : PROLOGUE_VOICEOVER_URL,
-                volume: PROLOGUE_VOICEOVER_VOLUME,
-                delaySec: PROLOGUE_VOICEOVER_DELAY_SEC,
-                onEnded: scheduleAmbienceFadeAfterVoiceover
+                volume: PROLOGUE_MUSIC_VOLUME
             };
         }
 
-        if (!tracks.ocean && !tracks.music && !tracks.voiceover) {
+        if (!tracks.ocean && !tracks.music) {
             return;
         }
 
@@ -219,6 +233,21 @@ export async function playStoryPrologue(options = {}) {
     };
 
     return new Promise((resolve) => {
+        const updateSpeedLabel = () => {
+            if (speedLabel) {
+                speedLabel.textContent = `${scrollMultiplier.toFixed(2)}×`;
+            }
+        };
+
+        const setScrollMultiplier = (next) => {
+            scrollMultiplier = clamp(next, PROLOGUE_SCROLL_SPEED_MIN, PROLOGUE_SCROLL_SPEED_MAX);
+            saveScrollMultiplier(scrollMultiplier);
+            updateSpeedLabel();
+        };
+
+        const onSlower = () => setScrollMultiplier(scrollMultiplier - PROLOGUE_SCROLL_SPEED_STEP);
+        const onFaster = () => setScrollMultiplier(scrollMultiplier + PROLOGUE_SCROLL_SPEED_STEP);
+
         const cleanup = () => {
             if (ambienceFadeTimer) {
                 clearTimeout(ambienceFadeTimer);
@@ -243,6 +272,8 @@ export async function playStoryPrologue(options = {}) {
             }
             document.removeEventListener('keydown', onKeyDown);
             overlay.removeEventListener('click', onOverlayTap);
+            slowerBtn?.removeEventListener('click', onSlower);
+            fasterBtn?.removeEventListener('click', onFaster);
             overlay.classList.remove('can-enter', 'is-splash-only', 'is-interstitial-phase', 'is-fading-interstitial');
             overlay.removeAttribute('role');
             overlay.removeAttribute('tabindex');
@@ -302,6 +333,7 @@ export async function playStoryPrologue(options = {}) {
 
         const onOverlayTap = (event) => {
             if (phase !== 'title' || !canEnter) return;
+            if (event.target.closest('.prologue-speed-controls')) return;
             onEnter();
         };
 
@@ -378,6 +410,7 @@ export async function playStoryPrologue(options = {}) {
             creditsInner.style.transform = `translate3d(0, ${scrollY}px, 0)`;
 
             if (haveLastWordsExited()) {
+                scheduleAmbienceFade();
                 goToInterstitialPhase();
                 return;
             }
@@ -394,15 +427,26 @@ export async function playStoryPrologue(options = {}) {
             if (event.key === ' ' || event.key === 'Spacebar') {
                 event.preventDefault();
                 if (phase === 'credits') {
+                    scheduleAmbienceFade();
                     goToInterstitialPhase({ immediate: true });
                 } else if (phase === 'interstitial') {
                     goToTitlePhase({ immediate: true });
                 }
+                return;
+            }
+            if (event.key === '-' || event.key === '_') {
+                setScrollMultiplier(scrollMultiplier - PROLOGUE_SCROLL_SPEED_STEP);
+            } else if (event.key === '=' || event.key === '+') {
+                setScrollMultiplier(scrollMultiplier + PROLOGUE_SCROLL_SPEED_STEP);
             }
         };
 
         overlay.addEventListener('click', onOverlayTap);
+        slowerBtn?.addEventListener('click', onSlower);
+        fasterBtn?.addEventListener('click', onFaster);
         document.addEventListener('keydown', onKeyDown);
+
+        updateSpeedLabel();
 
         updateLoadHint();
         loadPollId = window.setInterval(updateLoadHint, 350);

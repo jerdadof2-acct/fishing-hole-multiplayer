@@ -1,6 +1,6 @@
 /**
  * Story prologue — first-time entrance sequence (see DOCS/halleys-big-catch-story.md).
- * Scroll speed is fixed at PROLOGUE_SCROLL_SPEED for voiceover sync.
+ * Adjust scroll speed via on-screen controls or keyboard +/- while credits roll.
  */
 
 export const PROLOGUE_SEEN_STORAGE_KEY = 'kittyCreekPrologueSeen';
@@ -10,19 +10,27 @@ export const PROLOGUE_VERSION_STORAGE_KEY = 'kittyCreekPrologueVersion';
  * Bump this when shipping an update that should replay the entrance prologue.
  * Tied to deploys — change alongside package.json version when you release.
  */
-export const PROLOGUE_GAME_VERSION = '20250624-1';
+export const PROLOGUE_GAME_VERSION = '20250702-1';
+
+/** Persisted scroll speed multiplier between sessions. */
+export const PROLOGUE_SPEED_STORAGE_KEY = 'kittyCreekPrologueScrollSpeed';
 
 /** Base upward scroll speed in pixels per second at multiplier 1.0. */
 export const PROLOGUE_BASE_SCROLL_PX_PER_SEC = 42;
 
-/** Fixed scroll multiplier — synced to intro voiceover (not user-adjustable). */
-export const PROLOGUE_SCROLL_SPEED = 0.7;
+/** Default scroll multiplier — tune with on-screen controls while VO is in progress. */
+export const PROLOGUE_SCROLL_SPEED_DEFAULT = 0.65;
 
-/** @deprecated Use PROLOGUE_SCROLL_SPEED */
-export const PROLOGUE_SCROLL_SPEED_DEFAULT = PROLOGUE_SCROLL_SPEED;
+export const PROLOGUE_SCROLL_SPEED_MIN = 0.35;
+export const PROLOGUE_SCROLL_SPEED_MAX = 3.5;
+/** Fine steps so you can land between e.g. 0.60× and 0.70×. */
+export const PROLOGUE_SCROLL_SPEED_STEP = 0.05;
 
-/** Intro narration — plays after credits begin scrolling. */
-export const PROLOGUE_VOICEOVER_URL = '/assets/audio/halleys-big-catch-intro.mp3';
+/** @deprecated Use PROLOGUE_SCROLL_SPEED_DEFAULT */
+export const PROLOGUE_SCROLL_SPEED = PROLOGUE_SCROLL_SPEED_DEFAULT;
+
+/** Intro narration — disabled until new VO is recorded. */
+export const PROLOGUE_VOICEOVER_URL = null;
 
 /** Ocean + seagulls loop under the voiceover. */
 export const PROLOGUE_AMBIENCE_URL = '/assets/audio/prologue-ocean-seagulls.mp3';
@@ -73,11 +81,10 @@ export const PROLOGUE_ENTRANCE_IMAGE = 'assets/images/loading-poster.png';
 /** Full-screen art behind scrolling story credits. */
 export const PROLOGUE_SCROLL_BACKGROUND = 'images/prologue-background.png';
 
-/** All media required before the full story prologue can start (~2.8 MB compressed). */
+/** All media required before the full story prologue can start. */
 export const PROLOGUE_FULL_PACK = [
     { key: 'background', type: 'image', path: PROLOGUE_SCROLL_BACKGROUND, label: 'story background' },
     { key: 'splash', type: 'image', path: PROLOGUE_ENTRANCE_IMAGE, label: 'title art' },
-    { key: 'voiceover', type: 'audio', path: PROLOGUE_VOICEOVER_URL, label: 'narration', loop: false },
     { key: 'ocean', type: 'audio', path: PROLOGUE_AMBIENCE_URL, label: 'ocean sounds', loop: true },
     { key: 'music', type: 'audio', path: PROLOGUE_MUSIC_URL, label: 'music', loop: true }
 ];
@@ -88,22 +95,6 @@ export const PROLOGUE_SPLASH_PACK = [
 ];
 
 export const PROLOGUE_STORY_PARAGRAPHS = [
-    'Forty years ago, a comet crossed the sky — a streak of light that touched both sea and shore.',
-    'On that night, a kitten named Halley was born… and the ocean hasn\'t been quiet since.',
-    'While others chased mice, Halley chased horizons — building his boat, The Shooting Star, and setting out to see what waited beyond the tide.',
-    'He\'s sailed through jungle rivers, coral kingdoms, and frozen seas… chasing the biggest, wildest catches the world has ever known.',
-    'But there\'s something out there he still can\'t name — something ancient, calling to him from the deep.',
-    'Maybe it\'s a legend.',
-    'Maybe it\'s destiny.',
-    'Either way, Halley\'s not done casting yet.'
-];
-
-/**
- * Next prologue scroll (medallion origin + Crescent Pond pulse).
- * See DOCS/halleys-big-catch-story.md — swap into PROLOGUE_STORY_PARAGRAPHS and
- * bump PROLOGUE_GAME_VERSION when intro voiceover is re-recorded to match.
- */
-export const PROLOGUE_STORY_PARAGRAPHS_NEXT = [
     'On the night a small kitten was born, Halley\'s Comet crossed the sky.',
     'As it passed overhead, glowing fragments broke away and scattered across the world. One of them landed in his family\'s yard.',
     'His father named him Halley after the comet and later placed the fragment inside a medallion he made for his son.',
