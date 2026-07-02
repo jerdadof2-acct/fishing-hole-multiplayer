@@ -544,6 +544,76 @@ export class UI {
         setTimeout(removeToast, duration);
     }
 
+    showLocationBrief(location, options = {}) {
+        if (!location || typeof document === 'undefined') {
+            return;
+        }
+
+        document.getElementById('location-brief-popup')?.remove();
+
+        const difficulty = location.difficulty || 'Unknown';
+        const difficultyClass = difficulty.toLowerCase().replace(/\s+/g, '-');
+        const travelCost = options.travelCost ?? location.cost ?? 0;
+        const description = location.description?.trim()
+            || 'A new stretch of water awaits.';
+
+        const popup = document.createElement('div');
+        popup.id = 'location-brief-popup';
+        popup.className = 'location-brief-popup';
+        popup.setAttribute('role', 'status');
+        popup.setAttribute('aria-live', 'polite');
+
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'location-brief-close';
+        closeBtn.setAttribute('aria-label', 'Dismiss');
+        closeBtn.textContent = '×';
+
+        const header = document.createElement('div');
+        header.className = 'location-brief-header';
+
+        const title = document.createElement('h3');
+        title.className = 'location-brief-title';
+        title.textContent = location.name;
+
+        const difficultyEl = document.createElement('span');
+        difficultyEl.className = `location-brief-difficulty location-brief-difficulty--${difficultyClass}`;
+        difficultyEl.textContent = difficulty;
+
+        const body = document.createElement('p');
+        body.className = 'location-brief-description';
+        body.textContent = description;
+
+        header.append(title, difficultyEl);
+        popup.append(closeBtn, header, body);
+
+        if (travelCost > 0 && !hasPrivilegedAccess(this.player)) {
+            const cost = document.createElement('p');
+            cost.className = 'location-brief-cost';
+            cost.textContent = `Travel fare: $${travelCost}`;
+            popup.appendChild(cost);
+        }
+
+        document.body.appendChild(popup);
+
+        const dismiss = () => {
+            popup.classList.remove('visible');
+            window.setTimeout(() => popup.remove(), 280);
+        };
+
+        closeBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            dismiss();
+        });
+        popup.addEventListener('click', dismiss);
+
+        window.requestAnimationFrame(() => {
+            popup.classList.add('visible');
+        });
+
+        window.setTimeout(dismiss, 6000);
+    }
+
     _clearFirstCatchOfDayBonusNotice() {
         this._firstCatchOfDayBonusApplied = null;
     }
@@ -2838,6 +2908,8 @@ export class UI {
         }
         
         console.log('[UI] Changing location to:', location.name);
+
+        const previousIndex = this.game.locations.getCurrentLocationIndex();
         
         // Switch location (this will update water type and platform automatically)
         const switched = this.game.changeLocation(locationIndex);
@@ -2847,7 +2919,9 @@ export class UI {
         }
         
         // Deduct cost if not free
+        let travelCost = 0;
         if (!hasPrivilegedAccess(this.player) && location.cost > 0) {
+            travelCost = location.cost;
             this.player.spendMoney(location.cost);
             this.updatePlayerInfo();
         }
@@ -2859,12 +2933,10 @@ export class UI {
         
         // Update location selector to show current selection
         this.updateLocationSelector();
-        
-        this.showToast({
-            type: 'info',
-            title: 'Location updated',
-            body: `Now fishing at ${location.name}.`
-        });
+
+        if (previousIndex !== locationIndex) {
+            this.showLocationBrief(location, { travelCost });
+        }
     }
 
     handleCastOrSetHook() {

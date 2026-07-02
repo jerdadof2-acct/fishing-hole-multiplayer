@@ -120,6 +120,7 @@ export async function playStoryPrologue(options = {}) {
     const creditsInner = document.getElementById('prologue-credits-inner');
     const interstitialText = interstitialPhase?.querySelector('.prologue-interstitial-text');
     const speedLabel = document.getElementById('prologue-speed-label');
+    const speedControls = overlay?.querySelector('.prologue-speed-controls');
     const slowerBtn = document.getElementById('prologue-slower');
     const fasterBtn = document.getElementById('prologue-faster');
     const tapHint = document.getElementById('prologue-tap-hint');
@@ -266,6 +267,10 @@ export async function playStoryPrologue(options = {}) {
         const onSlower = () => setScrollMultiplier(scrollMultiplier - PROLOGUE_SCROLL_SPEED_STEP);
         const onFaster = () => setScrollMultiplier(scrollMultiplier + PROLOGUE_SCROLL_SPEED_STEP);
 
+        const setSpeedControlsVisible = (visible) => {
+            speedControls?.classList.toggle('hidden', !visible);
+        };
+
         const cleanup = () => {
             if (activePrologueSession?.cleanup === cleanup) {
                 activePrologueSession = null;
@@ -304,7 +309,8 @@ export async function playStoryPrologue(options = {}) {
             overlay.removeAttribute('role');
             overlay.removeAttribute('tabindex');
             overlay.classList.add('hidden');
-            overlay.classList.remove('is-title-phase', 'is-fading', 'is-fading-credits');
+            overlay.classList.remove('is-title-phase', 'is-fading', 'is-fading-credits', 'is-credits-phase');
+            setSpeedControlsVisible(false);
             creditsPhase.classList.remove('hidden');
             interstitialPhase.classList.add('hidden');
             interstitialPhase.setAttribute('aria-hidden', 'true');
@@ -374,7 +380,8 @@ export async function playStoryPrologue(options = {}) {
 
         const startTitlePhase = () => {
             phase = 'title';
-            overlay.classList.remove('is-fading', 'is-fading-credits', 'is-fading-interstitial', 'is-interstitial-phase');
+            setSpeedControlsVisible(false);
+            overlay.classList.remove('is-fading', 'is-fading-credits', 'is-fading-interstitial', 'is-interstitial-phase', 'is-credits-phase');
             overlay.classList.add('is-title-phase');
             if (skipCredits) {
                 overlay.classList.add('is-splash-only');
@@ -416,6 +423,8 @@ export async function playStoryPrologue(options = {}) {
                 rafId = null;
             }
 
+            setSpeedControlsVisible(false);
+            overlay.classList.remove('is-credits-phase');
             phase = 'interstitial';
             overlay.classList.add('is-fading-credits');
             window.setTimeout(() => {
@@ -496,6 +505,8 @@ export async function playStoryPrologue(options = {}) {
             interstitialPhase.classList.add('hidden');
             titlePhase.classList.add('hidden');
             overlay.classList.remove('is-title-phase', 'is-splash-only', 'is-interstitial-phase', 'is-fading', 'is-fading-credits', 'is-fading-interstitial');
+            overlay.classList.add('is-credits-phase');
+            setSpeedControlsVisible(true);
             refreshLastCreditLine();
             startAudioBed();
             lastTs = 0;
@@ -536,7 +547,8 @@ export async function playStoryPrologue(options = {}) {
         });
 
         if (skipCredits) {
-            overlay.classList.remove('hidden', 'is-title-phase', 'is-fading', 'is-fading-credits', 'is-fading-interstitial', 'is-interstitial-phase', 'can-enter');
+            setSpeedControlsVisible(false);
+            overlay.classList.remove('hidden', 'is-title-phase', 'is-fading', 'is-fading-credits', 'is-fading-interstitial', 'is-interstitial-phase', 'can-enter', 'is-credits-phase');
             creditsPhase.classList.add('hidden');
             interstitialPhase.classList.add('hidden');
             titlePhase.classList.add('hidden');
@@ -552,7 +564,8 @@ export async function playStoryPrologue(options = {}) {
 
         phase = 'credits';
         creditsFinished = false;
-        overlay.classList.remove('hidden', 'is-title-phase', 'is-splash-only', 'is-fading', 'is-fading-credits', 'is-fading-interstitial', 'is-interstitial-phase', 'can-enter');
+        setSpeedControlsVisible(false);
+        overlay.classList.remove('hidden', 'is-title-phase', 'is-splash-only', 'is-fading', 'is-fading-credits', 'is-fading-interstitial', 'is-interstitial-phase', 'can-enter', 'is-credits-phase');
         creditsPhase.classList.remove('hidden');
         interstitialPhase.classList.add('hidden');
         interstitialPhase.setAttribute('aria-hidden', 'true');
