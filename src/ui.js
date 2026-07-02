@@ -4459,8 +4459,13 @@ export class UI {
         document.body.appendChild(overlay);
 
         const closeOverlay = () => {
-            overlay.style.animation = 'popupFadeOut 0.3s ease-out';
-            window.setTimeout(() => overlay.remove(), 300);
+            if (overlay.dataset.closing === '1') {
+                return;
+            }
+            overlay.dataset.closing = '1';
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.25s ease';
+            window.setTimeout(() => overlay.remove(), 260);
         };
 
         const confirmBtn = overlay.querySelector('#reset-confirm-btn');
@@ -4627,11 +4632,9 @@ export class UI {
         this.closeModal('inventory-modal');
 
         if (this.player?.api && this.player?.userId && this.player.syncEnabled) {
-            try {
-                await this.player.syncToServer();
-            } catch (syncError) {
+            this.player.syncToServer().catch((syncError) => {
                 console.warn('[UI] Cloud sync after reset failed (local reset succeeded):', syncError);
-            }
+            });
         }
         
         // Show success message
