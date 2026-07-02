@@ -22,8 +22,15 @@
 <body>
     <div id="game-container">
         <div id="loading" class="loading-screen" aria-live="polite" aria-busy="true">
-            <div class="loading-panel">
-                <p class="loading-title">Halley's Big Catch</p>
+            <img
+                class="loading-poster"
+                src="assets/images/loading-poster.png"
+                alt="Halley's Big Catch — Cast your line. Catch adventure."
+                width="473"
+                height="1024"
+                decoding="async"
+            />
+            <div class="loading-overlay">
                 <p id="loading-message" class="loading-message">Loading...</p>
                 <div class="loading-bar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                     <div id="loading-bar-fill" class="loading-bar-fill"></div>

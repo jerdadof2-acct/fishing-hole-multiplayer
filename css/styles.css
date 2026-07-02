@@ -146,25 +146,28 @@ canvas {
     align-items: center;
     justify-content: center;
     z-index: 500;
-    background: radial-gradient(circle at center, rgba(26, 26, 46, 0.92) 0%, rgba(10, 10, 24, 0.98) 100%);
-    backdrop-filter: blur(6px);
+    overflow: hidden;
+    background: #0a0a18;
 }
 
-.loading-panel {
-    width: min(92vw, 420px);
-    padding: 28px 24px;
-    border-radius: 16px;
-    border: 1px solid rgba(74, 144, 226, 0.45);
-    background: rgba(15, 20, 40, 0.88);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+.loading-poster {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+}
+
+.loading-overlay {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+    padding: 24px 20px 28px;
     text-align: center;
-}
-
-.loading-title {
-    font-size: 1.35rem;
-    font-weight: 700;
-    color: #ffffff;
-    margin-bottom: 10px;
+    background: linear-gradient(180deg, rgba(10, 10, 24, 0) 0%, rgba(10, 10, 24, 0.72) 35%, rgba(10, 10, 24, 0.96) 100%);
 }
 
 .loading-message {
@@ -656,6 +659,92 @@ canvas {
 /* Stacked above inventory / collection modals */
 .fish-details-popup {
     z-index: 11200;
+}
+
+/* Reset progress confirmation — above all game modals */
+.reset-confirmation-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 11350;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.82);
+    backdrop-filter: blur(5px);
+}
+
+.reset-confirmation-dialog {
+    background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%);
+    color: white;
+    padding: 30px 40px;
+    border-radius: 15px;
+    border: 3px solid #ef4444;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+    font-family: 'Arial', sans-serif;
+    text-align: center;
+    min-width: 320px;
+    max-width: 90vw;
+    animation: popupFadeIn 0.3s ease-out;
+}
+
+.reset-confirmation-title {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #ef4444;
+}
+
+.reset-confirmation-heading {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+.reset-confirmation-copy {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 25px;
+    line-height: 1.6;
+}
+
+.reset-confirmation-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.reset-confirmation-btn {
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.reset-confirmation-btn--danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+.reset-confirmation-btn--danger:hover:not(:disabled) {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+}
+
+.reset-confirmation-btn--cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.reset-confirmation-btn--cancel:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.reset-confirmation-btn:disabled {
+    opacity: 0.6;
+    cursor: wait;
 }
 
 .modal-content {

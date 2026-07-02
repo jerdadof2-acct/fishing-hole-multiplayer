@@ -4427,99 +4427,79 @@ export class UI {
     }
     
     showResetConfirmation() {
-        // Create confirmation dialog
-        const confirmDialog = document.createElement('div');
-        confirmDialog.id = 'reset-confirmation-dialog';
-        confirmDialog.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%);
-            color: white;
-            padding: 30px 40px;
-            border-radius: 15px;
-            border: 3px solid #ef4444;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
-            z-index: 10003;
-            font-family: 'Arial', sans-serif;
-            text-align: center;
-            min-width: 320px;
-            max-width: 90vw;
-            animation: popupFadeIn 0.3s ease-out;
-        `;
-        
-        confirmDialog.innerHTML = `
-            <div style="font-size: 24px; margin-bottom: 20px; color: #ef4444;">⚠️ WARNING ⚠️</div>
-            <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">Reset All Progress?</div>
-            <div style="font-size: 14px; color: rgba(255, 255, 255, 0.8); margin-bottom: 25px; line-height: 1.6;">
-                This will permanently delete:<br>
-                • All your progress and levels<br>
-                • All caught fish and collection<br>
-                • All tackle purchases<br>
-                • All leaderboard entries<br><br>
-                <strong>This action CANNOT be undone!</strong>
-            </div>
-            <div style="display: flex; gap: 15px; justify-content: center;">
-                <button id="reset-confirm-btn" style="
-                    padding: 12px 30px;
-                    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-                    color: white;
-                    border: 2px solid rgba(255, 255, 255, 0.3);
-                    border-radius: 8px;
-                    font-size: 14px;
-                    font-weight: bold;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                " onmouseover="this.style.background='linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'" onmouseout="this.style.background='linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'">
-                    Yes, Reset Everything
-                </button>
-                <button id="reset-cancel-btn" style="
-                    padding: 12px 30px;
-                    background: rgba(255, 255, 255, 0.1);
-                    color: white;
-                    border: 2px solid rgba(255, 255, 255, 0.3);
-                    border-radius: 8px;
-                    font-size: 14px;
-                    font-weight: bold;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                " onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
-                    Cancel
-                </button>
+        document.getElementById('reset-confirmation-overlay')?.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'reset-confirmation-overlay';
+        overlay.className = 'reset-confirmation-overlay';
+        overlay.innerHTML = `
+            <div class="reset-confirmation-dialog" role="dialog" aria-modal="true" aria-labelledby="reset-confirmation-heading">
+                <div class="reset-confirmation-title">⚠️ WARNING ⚠️</div>
+                <div id="reset-confirmation-heading" class="reset-confirmation-heading">Reset All Progress?</div>
+                <div class="reset-confirmation-copy">
+                    This will permanently delete:<br>
+                    • All your progress and levels<br>
+                    • All caught fish and collection<br>
+                    • All tackle purchases<br>
+                    • All leaderboard entries<br><br>
+                    <strong>This action CANNOT be undone!</strong>
+                </div>
+                <div class="reset-confirmation-actions">
+                    <button type="button" id="reset-confirm-btn" class="reset-confirmation-btn reset-confirmation-btn--danger">
+                        Yes, Reset Everything
+                    </button>
+                    <button type="button" id="reset-cancel-btn" class="reset-confirmation-btn reset-confirmation-btn--cancel">
+                        Cancel
+                    </button>
+                </div>
             </div>
         `;
-        
-        document.body.appendChild(confirmDialog);
-        
-        // Confirm button handler
-        const confirmBtn = document.getElementById('reset-confirm-btn');
-        confirmBtn.addEventListener('click', () => {
-            this.resetAllProgress();
-            confirmDialog.style.animation = 'popupFadeOut 0.3s ease-out';
-            setTimeout(() => confirmDialog.remove(), 300);
+
+        document.body.appendChild(overlay);
+
+        const closeOverlay = () => {
+            overlay.style.animation = 'popupFadeOut 0.3s ease-out';
+            window.setTimeout(() => overlay.remove(), 300);
+        };
+
+        const confirmBtn = overlay.querySelector('#reset-confirm-btn');
+        const cancelBtn = overlay.querySelector('#reset-cancel-btn');
+
+        confirmBtn?.addEventListener('click', async () => {
+            confirmBtn.disabled = true;
+            if (cancelBtn) cancelBtn.disabled = true;
+            confirmBtn.textContent = 'Resetting…';
+
+            try {
+                await this.resetAllProgress();
+                closeOverlay();
+            } catch (error) {
+                console.error('[UI] Reset progress failed:', error);
+                confirmBtn.disabled = false;
+                if (cancelBtn) cancelBtn.disabled = false;
+                confirmBtn.textContent = 'Yes, Reset Everything';
+                this.showToast({
+                    type: 'error',
+                    title: 'Reset failed',
+                    body: error?.message || 'Could not reset progress. Try again.'
+                });
+            }
         });
-        
-        // Cancel button handler
-        const cancelBtn = document.getElementById('reset-cancel-btn');
-        cancelBtn.addEventListener('click', () => {
-            confirmDialog.style.animation = 'popupFadeOut 0.3s ease-out';
-            setTimeout(() => confirmDialog.remove(), 300);
-        });
-        
-        // Close when clicking outside
-        confirmDialog.addEventListener('click', (e) => {
-            if (e.target === confirmDialog) {
-                confirmDialog.style.animation = 'popupFadeOut 0.3s ease-out';
-                setTimeout(() => confirmDialog.remove(), 300);
+
+        cancelBtn?.addEventListener('click', closeOverlay);
+
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) {
+                closeOverlay();
             }
         });
     }
-    
-    resetAllProgress() {
+
+    async resetAllProgress() {
         const preservedName = this.player?.name && this.player.name.trim() !== '' ? this.player.name : 'Guest';
         const preservedFriendCode = this.player?.friendCode || null;
         const preservedUserId = this.player?.userId || null;
+        const preservedIsAdmin = this.player?.isAdmin === true;
 
         // Clear all localStorage data
         localStorage.removeItem('kittyCreekPlayer');
@@ -4598,13 +4578,16 @@ export class UI {
             if (preservedUserId) {
                 this.player.userId = preservedUserId;
             }
+            if (preservedIsAdmin) {
+                this.player.isAdmin = true;
+            }
             if (typeof this.player.normalizeTackleState === 'function') {
                 this.player.normalizeTackleState();
             }
             if (typeof this.player.syncStoryUnlocks === 'function') {
                 this.player.syncStoryUnlocks();
             }
-            this.player.save();
+            this.player.save({ skipSync: true });
         }
         
         if (this.inventory) {
@@ -4628,7 +4611,9 @@ export class UI {
         // Reset location to first location
         if (this.game?.locations) {
             this.game.locations.setCurrentLocation(0);
-            this.game.changeLocation(0);
+            if (this.game.platform && this.game.water) {
+                this.game.changeLocation(0);
+            }
         }
         
         // Update UI elements
@@ -4638,6 +4623,15 @@ export class UI {
             this.renderShop(this.currentShopTab);
         }
         this.renderInventory('collection'); // Reset to collection tab
+        this.closeModal('inventory-modal');
+
+        if (this.player?.api && this.player?.userId && this.player.syncEnabled) {
+            try {
+                await this.player.syncToServer();
+            } catch (syncError) {
+                console.warn('[UI] Cloud sync after reset failed (local reset succeeded):', syncError);
+            }
+        }
         
         // Show success message
         this.showBannerNotification('Progress reset! Starting fresh...', '#4ade80', 3000);
