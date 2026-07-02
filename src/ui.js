@@ -549,21 +549,29 @@ export class UI {
             return;
         }
 
-        document.getElementById('location-brief-popup')?.remove();
+        document.getElementById('location-brief-overlay')?.remove();
 
         const difficulty = location.difficulty || 'Unknown';
         const difficultyClass = difficulty.toLowerCase().replace(/\s+/g, '-');
         const travelCost = options.travelCost ?? location.cost ?? 0;
+        const showFare = travelCost > 0 && !hasPrivilegedAccess(this.player);
+        const requiresConfirm = options.confirmTravel === true;
         const description = location.description?.trim()
             || 'A new stretch of water awaits.';
         const theme = location.briefTheme
             || location.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
+        const overlay = document.createElement('div');
+        overlay.id = 'location-brief-overlay';
+        overlay.className = 'location-brief-overlay';
+
         const popup = document.createElement('div');
         popup.id = 'location-brief-popup';
         popup.className = `location-brief-popup location-brief-popup--${theme}`;
-        popup.setAttribute('role', 'status');
-        popup.setAttribute('aria-live', 'polite');
+        popup.setAttribute('role', requiresConfirm ? 'dialog' : 'status');
+        popup.setAttribute('aria-modal', requiresConfirm ? 'true' : 'false');
+        popup.setAttribute('aria-live', requiresConfirm ? 'off' : 'polite');
+        popup.setAttribute('aria-labelledby', 'location-brief-title');
 
         const closeBtn = document.createElement('button');
         closeBtn.type = 'button';
@@ -571,58 +579,156 @@ export class UI {
         closeBtn.setAttribute('aria-label', 'Dismiss');
         closeBtn.textContent = '×';
 
-        const header = document.createElement('div');
-        header.className = 'location-brief-header';
+        const content = document.createElement('div');
+        content.className = 'location-brief-content';
 
         const title = document.createElement('h3');
+        title.id = 'location-brief-title';
         title.className = 'location-brief-title';
         title.textContent = location.name;
+
+        const meta = document.createElement('div');
+        meta.className = 'location-brief-meta';
 
         const difficultyEl = document.createElement('span');
         difficultyEl.className = `location-brief-difficulty location-brief-difficulty--${difficultyClass}`;
         difficultyEl.textContent = difficulty;
+        meta.appendChild(difficultyEl);
 
-        const body = document.createElement('p');
-        body.className = 'location-brief-description';
-        body.textContent = description;
+        if (showFare) {
+            const cost = document.createElement('span');
+            cost.className = 'location-brief-cost';
+            cost.textContent = `Travel fare: $${travelCost}`;
+            meta.appendChild(cost);
+        }
 
-        header.append(title, difficultyEl);
+        content.appendChild(title);
 
         const tagline = location.tagline?.trim();
         if (tagline) {
             const taglineEl = document.createElement('p');
             taglineEl.className = 'location-brief-tagline';
             taglineEl.textContent = tagline;
-            popup.append(closeBtn, header, taglineEl, body);
-        } else {
-            popup.append(closeBtn, header, body);
+            content.appendChild(taglineEl);
         }
 
-        if (travelCost > 0 && !hasPrivilegedAccess(this.player)) {
-            const cost = document.createElement('p');
-            cost.className = 'location-brief-cost';
-            cost.textContent = `Travel fare: $${travelCost}`;
-            popup.appendChild(cost);
+        content.appendChild(meta);
+
+        const body = document.createElement('p');
+        body.className = 'location-brief-description';
+        body.textContent = description;
+        content.appendChild(body);
+
+        popup.append(closeBtn, content);
+
+        if (requiresConfirm) {
+            const actions = document.createElement('div');
+            actions.className = 'location-brief-actions';
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.type = 'button';
+            cancelBtn.className = 'location-brief-btn location-brief-btn--secondary';
+            cancelBtn.textContent = 'Cancel';
+
+            const confirmBtn = document.createElement('button');
+            confirmBtn.type = 'button';
+            confirmBtn.className = 'location-brief-btn location-brief-btn--primary';
+            confirmBtn.textContent = showFare
+                ? `Travel — $${travelCost}`
+                : `Go to ${location.name}`;
+
+            actions.append(cancelBtn, confirmBtn);
+            popup.appendChild(actions);
         }
 
-        document.body.appendChild(popup);
+        overlay.appendChild(popup);
+        document.body.appendChild(overlay);
 
-        const dismiss = () => {
-            popup.classList.remove('visible');
-            window.setTimeout(() => popup.remove(), 280);
+        const dismiss = (confirmed = false) => {
+            overlay.classList.remove('visible');
+            window.setTimeout(() => overlay.remove(), 280);
+            if (confirmed) {
+                options.onConfirm?.();
+            } else {
+                options.onCancel?.();
+            }
         };
 
         closeBtn.addEventListener('click', (event) => {
             event.stopPropagation();
-            dismiss();
+            dismiss(false);
         });
-        popup.addEventListener('click', dismiss);
+
+        popup.addEventListener('click', (event) => {
+            event.stopPropagation();
+        });
+
+        overlay.addEventListener('click', () => {
+            dismiss(false);
+        });
+
+        if (requiresConfirm) {
+            const cancelBtn = popup.querySelector('.location-brief-btn--secondary');
+            const confirmBtn = popup.querySelector('.location-brief-btn--primary');
+
+            cancelBtn?.addEventListener('click', (event) => {
+                event.stopPropagation();
+                dismiss(false);
+            });
+
+            confirmBtn?.addEventListener('click', (event) => {
+                event.stopPropagation();
+                dismiss(true);
+            });
+        } else {
+            popup.addEventListener('click', () => dismiss(false));
+            window.setTimeout(() => dismiss(false), 6000);
+        }
 
         window.requestAnimationFrame(() => {
-            popup.classList.add('visible');
+            overlay.classList.add('visible');
         });
+    }
 
-        window.setTimeout(dismiss, 6000);
+    executeLocationTravel(locationIndex) {
+        if (!this.game?.locations) {
+            return false;
+        }
+
+        const location = this.game.locations.getLocation(locationIndex);
+        if (!location) {
+            this.updateLocationSelector();
+            return false;
+        }
+
+        if (!hasPrivilegedAccess(this.player) && this.player.money < location.cost) {
+            this.showToast({
+                type: 'error',
+                title: 'Not enough money',
+                body: `You need $${location.cost} to travel.`
+            });
+            this.updateLocationSelector();
+            return false;
+        }
+
+        const switched = this.game.changeLocation(locationIndex);
+        if (!switched) {
+            this.updateLocationSelector();
+            return false;
+        }
+
+        if (!hasPrivilegedAccess(this.player) && location.cost > 0) {
+            this.player.spendMoney(location.cost);
+            this.updatePlayerInfo();
+        }
+
+        if (this.player) {
+            this.player.currentLocationIndex = locationIndex;
+            this.player.save({ skipSync: true });
+        }
+
+        this.updateLocationSelector();
+        return true;
     }
 
     _clearFirstCatchOfDayBonusNotice() {
@@ -2879,12 +2985,20 @@ export class UI {
         const location = this.game.locations.getLocation(locationIndex);
         if (!location) {
             console.warn('[UI] Invalid location index:', locationIndex);
+            this.updateLocationSelector();
+            return;
+        }
+
+        const currentIndex = this.game.locations.getCurrentLocationIndex();
+        if (locationIndex === currentIndex) {
+            this.updateLocationSelector();
             return;
         }
         
         // Check if location is unlocked
         if (!hasPrivilegedAccess(this.player) && !this.player.locationUnlocks.includes(locationIndex)) {
             console.warn('[UI] Location not unlocked:', location.name);
+            this.updateLocationSelector();
             return;
         }
 
@@ -2915,39 +3029,23 @@ export class UI {
                 title: 'Not enough money',
                 body: `You need $${location.cost} to travel.`
             });
-            return;
-        }
-        
-        console.log('[UI] Changing location to:', location.name);
-
-        const previousIndex = this.game.locations.getCurrentLocationIndex();
-        
-        // Switch location (this will update water type and platform automatically)
-        const switched = this.game.changeLocation(locationIndex);
-        if (!switched) {
             this.updateLocationSelector();
             return;
         }
-        
-        // Deduct cost if not free
-        let travelCost = 0;
-        if (!hasPrivilegedAccess(this.player) && location.cost > 0) {
-            travelCost = location.cost;
-            this.player.spendMoney(location.cost);
-            this.updatePlayerInfo();
-        }
-        
-        if (this.player) {
-            this.player.currentLocationIndex = locationIndex;
-            this.player.save({ skipSync: true });
-        }
-        
-        // Update location selector to show current selection
-        this.updateLocationSelector();
 
-        if (previousIndex !== locationIndex) {
-            this.showLocationBrief(location, { travelCost });
-        }
+        const travelCost = hasPrivilegedAccess(this.player) ? 0 : location.cost;
+
+        this.showLocationBrief(location, {
+            travelCost,
+            confirmTravel: true,
+            onConfirm: () => {
+                console.log('[UI] Traveling to:', location.name);
+                this.executeLocationTravel(locationIndex);
+            },
+            onCancel: () => {
+                this.updateLocationSelector();
+            }
+        });
     }
 
     handleCastOrSetHook() {

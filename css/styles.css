@@ -109,75 +109,122 @@ canvas {
 }
 
 /* Location travel brief — shown when switching fishing spots */
-.location-brief-popup {
+.location-brief-overlay {
     position: fixed;
-    top: calc(var(--ad-height) + env(safe-area-inset-top, 0) + 72px);
-    left: 50%;
-    transform: translateX(-50%) translateY(-12px);
-    z-index: 450;
-    width: min(92vw, 360px);
-    padding: 16px 18px 14px;
-    border-radius: 14px;
-    border: 2px solid rgba(74, 144, 226, 0.55);
-    background: rgba(12, 18, 40, 0.94);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
-    color: #f6fbff;
-    font-family: 'Poppins', 'Arial', sans-serif;
+    inset: 0;
+    z-index: 449;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: calc(var(--ad-height) + env(safe-area-inset-top, 0) + 72px) 16px 24px;
+    background: rgba(4, 8, 18, 0.58);
     opacity: 0;
     pointer-events: auto;
-    transition: opacity 0.28s ease, transform 0.28s ease;
-    cursor: pointer;
+    transition: opacity 0.28s ease;
 }
 
-.location-brief-popup.visible {
+.location-brief-overlay.visible {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+}
+
+.location-brief-popup {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: translateY(-12px);
+    z-index: 450;
+    width: min(94vw, 460px);
+    padding: 0;
+    border-radius: 16px;
+    border: 2px solid rgba(74, 144, 226, 0.55);
+    background: rgba(12, 18, 40, 0.94);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.48);
+    color: #f6fbff;
+    font-family: 'Poppins', 'Arial', sans-serif;
+    transition: transform 0.28s ease;
+    overflow: hidden;
+}
+
+.location-brief-overlay.visible .location-brief-popup {
+    transform: translateY(0);
+}
+
+.location-brief-popup::before {
+    content: '';
+    display: block;
+    height: 4px;
+    background: linear-gradient(90deg, var(--brief-accent, #93c5fd), transparent 85%);
+}
+
+.location-brief-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 18px 22px 20px;
+    padding-right: 48px;
 }
 
 .location-brief-close {
     position: absolute;
-    top: 8px;
-    right: 10px;
-    width: 28px;
-    height: 28px;
+    top: 14px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     background: rgba(255, 255, 255, 0.08);
     color: rgba(255, 255, 255, 0.75);
-    font-size: 1.2rem;
+    font-size: 1.25rem;
     line-height: 1;
     cursor: pointer;
+    z-index: 1;
 }
 
 .location-brief-close:hover {
     background: rgba(255, 255, 255, 0.16);
 }
 
-.location-brief-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 8px;
-    padding-right: 24px;
-}
-
 .location-brief-title {
-    margin: 0;
-    font-size: 1.05rem;
+    margin: 0 0 6px;
+    font-size: 1.25rem;
     font-weight: 700;
     color: #ffffff;
-    line-height: 1.25;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.location-brief-tagline {
+    margin: 0 0 12px;
+    font-size: 0.84rem;
+    font-weight: 500;
+    font-style: italic;
+    line-height: 1.45;
+    letter-spacing: 0.01em;
+    color: var(--brief-accent, #93c5fd);
+}
+
+.location-brief-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .location-brief-difficulty {
-    flex-shrink: 0;
-    padding: 3px 8px;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
     border-radius: 999px;
-    font-size: 0.68rem;
+    font-size: 0.72rem;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
+    white-space: nowrap;
 }
 
 .location-brief-difficulty--easy {
@@ -207,18 +254,10 @@ canvas {
 
 .location-brief-description {
     margin: 0;
-    font-size: 0.88rem;
-    line-height: 1.45;
-    color: rgba(255, 255, 255, 0.82);
-}
-
-.location-brief-tagline {
-    margin: -2px 0 8px;
-    font-size: 0.76rem;
-    font-weight: 600;
-    font-style: italic;
-    letter-spacing: 0.02em;
-    color: var(--brief-accent, #93c5fd);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.88);
+    text-wrap: pretty;
 }
 
 .location-brief-popup[class*="location-brief-popup--"] {
@@ -312,10 +351,68 @@ canvas {
 }
 
 .location-brief-cost {
-    margin: 10px 0 0;
+    margin: 0;
     font-size: 0.78rem;
     font-weight: 600;
     color: #fde68a;
+    white-space: nowrap;
+}
+
+.location-brief-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 4px;
+    padding: 16px 22px 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.location-brief-btn {
+    flex: 1 1 140px;
+    min-height: 42px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
+}
+
+.location-brief-btn:active {
+    transform: scale(0.98);
+}
+
+.location-brief-btn--secondary {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.location-brief-btn--secondary:hover {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.location-brief-btn--primary {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(37, 99, 235, 0.95));
+    border-color: rgba(147, 197, 253, 0.35);
+    color: #ffffff;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.28);
+}
+
+.location-brief-btn--primary:hover {
+    background: linear-gradient(135deg, rgba(96, 165, 250, 0.98), rgba(59, 130, 246, 0.98));
+}
+
+.location-brief-popup[class*="location-brief-popup--"] .location-brief-btn--primary {
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--brief-accent, #93c5fd) 72%, #2563eb),
+        rgba(37, 99, 235, 0.95)
+    );
+    border-color: color-mix(in srgb, var(--brief-accent, #93c5fd) 40%, transparent);
 }
 
 .control-button {
