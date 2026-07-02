@@ -212,6 +212,105 @@ canvas {
     color: rgba(255, 255, 255, 0.82);
 }
 
+.location-brief-tagline {
+    margin: -2px 0 8px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    font-style: italic;
+    letter-spacing: 0.02em;
+    color: var(--brief-accent, #93c5fd);
+}
+
+.location-brief-popup[class*="location-brief-popup--"] {
+    border-color: var(--brief-border, rgba(74, 144, 226, 0.55));
+    background: var(--brief-bg, rgba(12, 18, 40, 0.94));
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--brief-glow, transparent);
+}
+
+.location-brief-popup--crescent-pond {
+    --brief-accent: #a7f3d0;
+    --brief-border: rgba(110, 231, 183, 0.45);
+    --brief-bg: linear-gradient(155deg, rgba(18, 36, 28, 0.96), rgba(12, 20, 32, 0.94));
+    --brief-glow: rgba(110, 231, 183, 0.08);
+}
+
+.location-brief-popup--amazon-depths {
+    --brief-accent: #86efac;
+    --brief-border: rgba(34, 120, 68, 0.55);
+    --brief-bg: linear-gradient(155deg, rgba(10, 28, 18, 0.97), rgba(14, 18, 12, 0.94));
+    --brief-glow: rgba(52, 211, 153, 0.07);
+}
+
+.location-brief-popup--coral-kingdoms {
+    --brief-accent: #67e8f9;
+    --brief-border: rgba(34, 211, 238, 0.45);
+    --brief-bg: linear-gradient(155deg, rgba(8, 32, 48, 0.96), rgba(10, 22, 40, 0.94));
+    --brief-glow: rgba(34, 211, 238, 0.1);
+}
+
+.location-brief-popup--frozen-fjords {
+    --brief-accent: #bae6fd;
+    --brief-border: rgba(125, 211, 252, 0.4);
+    --brief-bg: linear-gradient(155deg, rgba(12, 24, 38, 0.97), rgba(8, 14, 24, 0.95));
+    --brief-glow: rgba(186, 230, 253, 0.06);
+}
+
+.location-brief-popup--craggy-coast {
+    --brief-accent: #cbd5e1;
+    --brief-border: rgba(148, 163, 184, 0.45);
+    --brief-bg: linear-gradient(155deg, rgba(22, 28, 38, 0.96), rgba(14, 18, 28, 0.94));
+    --brief-glow: rgba(148, 163, 184, 0.08);
+}
+
+.location-brief-popup--sandy-shoals {
+    --brief-accent: #fde68a;
+    --brief-border: rgba(251, 191, 36, 0.42);
+    --brief-bg: linear-gradient(155deg, rgba(36, 28, 14, 0.92), rgba(12, 28, 44, 0.94));
+    --brief-glow: rgba(251, 191, 36, 0.08);
+}
+
+.location-brief-popup--stormbreaker-bay {
+    --brief-accent: #93c5fd;
+    --brief-border: rgba(59, 130, 246, 0.5);
+    --brief-bg: linear-gradient(155deg, rgba(10, 20, 42, 0.97), rgba(8, 14, 28, 0.95));
+    --brief-glow: rgba(59, 130, 246, 0.1);
+}
+
+.location-brief-popup--forgotten-reefs {
+    --brief-accent: #5eead4;
+    --brief-border: rgba(45, 212, 191, 0.42);
+    --brief-bg: linear-gradient(155deg, rgba(8, 32, 36, 0.96), rgba(10, 18, 32, 0.94));
+    --brief-glow: rgba(45, 212, 191, 0.08);
+}
+
+.location-brief-popup--twilight-trench {
+    --brief-accent: #c4b5fd;
+    --brief-border: rgba(139, 92, 246, 0.42);
+    --brief-bg: linear-gradient(155deg, rgba(14, 8, 28, 0.97), rgba(6, 8, 18, 0.96));
+    --brief-glow: rgba(139, 92, 246, 0.1);
+}
+
+.location-brief-popup--celestial-depths {
+    --brief-accent: #fde68a;
+    --brief-border: rgba(250, 204, 21, 0.48);
+    --brief-bg: linear-gradient(155deg, rgba(18, 12, 36, 0.97), rgba(4, 6, 18, 0.96));
+    --brief-glow: rgba(250, 204, 21, 0.12);
+}
+
+.location-brief-popup--desert-lagoon {
+    --brief-accent: #fcd34d;
+    --brief-border: rgba(245, 158, 11, 0.45);
+    --brief-bg: linear-gradient(155deg, rgba(36, 24, 10, 0.94), rgba(16, 28, 20, 0.94));
+    --brief-glow: rgba(245, 158, 11, 0.08);
+}
+
+.location-brief-popup--cortez-backwaters {
+    --brief-accent: #bef264;
+    --brief-border: rgba(132, 204, 22, 0.42);
+    --brief-bg: linear-gradient(155deg, rgba(18, 28, 16, 0.95), rgba(20, 24, 14, 0.94));
+    --brief-glow: rgba(132, 204, 22, 0.08);
+}
+
 .location-brief-cost {
     margin: 10px 0 0;
     font-size: 0.78rem;
@@ -2274,6 +2373,18 @@ canvas {
     border: 1px solid rgba(255, 255, 255, 0.08);
     z-index: 6;
     pointer-events: none;
+}
+
+.prologue-load-hint.is-ready {
+    color: #86efac;
+    border-color: rgba(134, 239, 172, 0.35);
+    background: rgba(12, 40, 24, 0.72);
+    font-weight: 600;
+}
+
+.prologue-load-hint.is-error {
+    color: #fca5a5;
+    border-color: rgba(248, 113, 113, 0.35);
 }
 
 .settings-panel {

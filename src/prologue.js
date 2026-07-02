@@ -236,18 +236,19 @@ export async function playStoryPrologue(options = {}) {
         if (!loadHint) return;
         if (loadingProgress.isFailed?.()) {
             loadHint.textContent = loadingProgress.getFailMessage?.() || 'Loading failed — refresh and try again.';
-            loadHint.classList.remove('hidden');
+            loadHint.classList.remove('hidden', 'is-ready');
             loadHint.classList.add('is-error');
             return;
         }
         const pct = Math.round(options.onLoadProgress?.() ?? loadingProgress.getPercent());
-        if (pct > 0 && pct < 100) {
+        if (pct >= 100) {
+            loadHint.textContent = 'Ready to cast!';
+            loadHint.classList.remove('hidden', 'is-error');
+            loadHint.classList.add('is-ready');
+        } else if (pct > 0) {
             const stallHint = pct >= 55 && pct < 65 ? ' (building boat & loading Halley…)' : '';
             loadHint.textContent = `Loading game resources… ${pct}%${stallHint}`;
-            loadHint.classList.remove('hidden');
-        } else if (pct >= 100) {
-            loadHint.textContent = 'Ready to cast!';
-            loadHint.classList.remove('hidden');
+            loadHint.classList.remove('hidden', 'is-ready', 'is-error');
         }
     };
 
@@ -322,6 +323,7 @@ export async function playStoryPrologue(options = {}) {
             canEnter = false;
             creditsInner.style.transform = '';
             loadHint?.classList.add('hidden');
+            loadHint?.classList.remove('is-ready', 'is-error');
             startGate?.classList.add('hidden');
         };
 
@@ -391,6 +393,15 @@ export async function playStoryPrologue(options = {}) {
             interstitialPhase.setAttribute('aria-hidden', 'true');
             titlePhase.classList.remove('hidden');
             updateLoadHint();
+
+            if (options.waitForReady) {
+                Promise.resolve(options.waitForReady())
+                    .then(() => {
+                        loadingProgress.update(100, 'Ready to cast!');
+                        updateLoadHint();
+                    })
+                    .catch(() => updateLoadHint());
+            }
 
             enterTimer = window.setTimeout(enableEnter, PROLOGUE_ENTER_BUTTON_DELAY_SEC * 1000);
         };

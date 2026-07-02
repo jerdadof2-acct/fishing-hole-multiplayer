@@ -556,10 +556,12 @@ export class UI {
         const travelCost = options.travelCost ?? location.cost ?? 0;
         const description = location.description?.trim()
             || 'A new stretch of water awaits.';
+        const theme = location.briefTheme
+            || location.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
         const popup = document.createElement('div');
         popup.id = 'location-brief-popup';
-        popup.className = 'location-brief-popup';
+        popup.className = `location-brief-popup location-brief-popup--${theme}`;
         popup.setAttribute('role', 'status');
         popup.setAttribute('aria-live', 'polite');
 
@@ -585,7 +587,16 @@ export class UI {
         body.textContent = description;
 
         header.append(title, difficultyEl);
-        popup.append(closeBtn, header, body);
+
+        const tagline = location.tagline?.trim();
+        if (tagline) {
+            const taglineEl = document.createElement('p');
+            taglineEl.className = 'location-brief-tagline';
+            taglineEl.textContent = tagline;
+            popup.append(closeBtn, header, taglineEl, body);
+        } else {
+            popup.append(closeBtn, header, body);
+        }
 
         if (travelCost > 0 && !hasPrivilegedAccess(this.player)) {
             const cost = document.createElement('p');

@@ -724,6 +724,7 @@ export class Game {
             }
 
             if (this.deferReveal) {
+                loadingProgress.update(100, 'Ready to cast!');
                 return;
             }
 
