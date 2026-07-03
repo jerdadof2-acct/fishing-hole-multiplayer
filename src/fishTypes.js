@@ -44,16 +44,6 @@ export const FishTypes = [
     { id: 23, name: 'Dragon Carp', rarity: 'Legendary', minWeight: 80.0, maxWeight: 200.0, value: 1800, experience: 76, season: 'All' },
     { id: 24, name: 'Tournament King', rarity: 'Legendary', minWeight: 60.0, maxWeight: 120.0, value: 1200, experience: 72, season: 'All' },
     
-    // Trophy (25-32)
-    { id: 25, name: 'Trophy Bass', rarity: 'Trophy', minWeight: 20.0, maxWeight: 50.0, value: 500, experience: 84, season: 'All' },
-    { id: 26, name: 'Trophy Pike', rarity: 'Trophy', minWeight: 30.0, maxWeight: 70.0, value: 600, experience: 88, season: 'All' },
-    { id: 27, name: 'Trophy Salmon', rarity: 'Trophy', minWeight: 40.0, maxWeight: 80.0, value: 700, experience: 92, season: 'Fall' },
-    { id: 28, name: 'Trophy Marlin', rarity: 'Trophy', minWeight: 100.0, maxWeight: 300.0, value: 1000, experience: 98, season: 'All' },
-    { id: 29, name: 'Trophy Tuna', rarity: 'Trophy', minWeight: 80.0, maxWeight: 200.0, value: 800, experience: 94, season: 'All' },
-    { id: 30, name: 'Trophy Sturgeon', rarity: 'Trophy', minWeight: 150.0, maxWeight: 400.0, value: 1200, experience: 104, season: 'All' },
-    { id: 31, name: 'Trophy Catfish', rarity: 'Trophy', minWeight: 60.0, maxWeight: 150.0, value: 900, experience: 90, season: 'All' },
-    { id: 32, name: 'Trophy King', rarity: 'Trophy', minWeight: 200.0, maxWeight: 500.0, value: 1500, experience: 110, season: 'All' },
-    
     // Mythic (33)
     { id: 33, name: 'Starfish of Eternity', rarity: 'Mythic', minWeight: 120.0, maxWeight: 220.0, recordWeight: 250.0, value: 5000, experience: 240, season: 'All' },
 
@@ -70,7 +60,25 @@ export const FishTypes = [
     { id: 41, name: 'Sheepshead', rarity: 'Uncommon', minWeight: 2.0, maxWeight: 10.0, recordWeight: 21.0, value: 42, experience: 18, season: 'All' },
     { id: 42, name: 'Redfish', rarity: 'Rare', minWeight: 4.0, maxWeight: 18.0, recordWeight: 52.0, value: 85, experience: 30, season: 'All' },
     { id: 43, name: 'Snook', rarity: 'Trophy', minWeight: 6.0, maxWeight: 28.0, recordWeight: 44.0, value: 140, experience: 48, season: 'All' },
-    { id: 44, name: 'Tarpon', rarity: 'Legendary', minWeight: 40.0, maxWeight: 120.0, recordWeight: 286.0, value: 900, experience: 95, season: 'All' }
+    { id: 44, name: 'Tarpon', rarity: 'Legendary', minWeight: 40.0, maxWeight: 120.0, recordWeight: 286.0, value: 900, experience: 95, season: 'All' },
+
+    // Sandy Shoals / Stormbreaker Bay coastal species (45-47)
+    { id: 45, name: 'Spanish Mackerel', rarity: 'Uncommon', minWeight: 2.0, maxWeight: 8.0, recordWeight: 13.0, value: 38, experience: 17, season: 'Spring/Fall' },
+    { id: 46, name: 'King Mackerel', rarity: 'Rare', minWeight: 8.0, maxWeight: 35.0, recordWeight: 93.0, value: 95, experience: 32, season: 'All' },
+    { id: 47, name: 'Barracuda', rarity: 'Rare', minWeight: 10.0, maxWeight: 40.0, recordWeight: 87.0, value: 110, experience: 36, season: 'All' },
+
+    // Forgotten Reefs — deep reef & shipwreck species (48+)
+    { id: 48, name: 'Goliath Grouper', rarity: 'Legendary', minWeight: 100.0, maxWeight: 400.0, recordWeight: 680.0, value: 1800, experience: 92, season: 'All' },
+    { id: 49, name: 'Amberjack', rarity: 'Uncommon', minWeight: 15.0, maxWeight: 60.0, recordWeight: 140.0, value: 55, experience: 22, season: 'All' },
+    { id: 50, name: 'Hogfish', rarity: 'Uncommon', minWeight: 3.0, maxWeight: 20.0, recordWeight: 28.0, value: 48, experience: 20, season: 'All' },
+    { id: 51, name: 'Red Snapper', rarity: 'Rare', minWeight: 5.0, maxWeight: 30.0, recordWeight: 50.0, value: 90, experience: 30, season: 'All' },
+    { id: 52, name: 'Reef Shark', rarity: 'Epic', minWeight: 40.0, maxWeight: 150.0, recordWeight: 220.0, value: 420, experience: 52, season: 'All' },
+
+    // Amazon Depths — jungle river species (53-56)
+    { id: 53, name: 'Piranha', rarity: 'Common', minWeight: 0.5, maxWeight: 3.5, recordWeight: 7.5, value: 18, experience: 9, season: 'All' },
+    { id: 54, name: 'Peacock Bass', rarity: 'Uncommon', minWeight: 2.0, maxWeight: 15.0, recordWeight: 27.0, value: 45, experience: 18, season: 'All' },
+    { id: 55, name: 'Payara', rarity: 'Rare', minWeight: 8.0, maxWeight: 35.0, recordWeight: 40.0, value: 95, experience: 32, season: 'All' },
+    { id: 56, name: 'Arapaima', rarity: 'Legendary', minWeight: 50.0, maxWeight: 200.0, recordWeight: 440.0, value: 1200, experience: 78, season: 'All' }
 ];
 
 // Fish facts database
@@ -100,14 +108,6 @@ export const FishFacts = {
     'Phoenix Fish': { fact: 'Legendary creature that rises from the depths.', fun: 'Dying means a new fishing trip for it!', real: 'Mythical fish symbolizing rebirth and renewal.' },
     'Dragon Carp': { fact: 'Legend speaks of its fiery underwater presence.', fun: 'Breathes underwater fire... and smoke signals.', real: 'Ancient Asian legends speak of dragon fish.' },
     'Tournament King': { fact: 'Crown jewel of competitive fishing.', fun: 'Wins every beauty contest it enters!', real: 'Prized catch in professional fishing tournaments.' },
-    'Trophy Bass': { fact: 'Wall-hanger of epic proportions.', fun: 'Big enough to tell fishing lies about!', real: 'World record: 22 lbs 4 oz.' },
-    'Trophy Pike': { fact: 'Predator that makes other fish nervous.', fun: 'Has a resume of 10,000 minor offenses.', real: 'Can grow over 50 inches long.' },
-    'Trophy Salmon': { fact: 'Ocean warrior returned to freshwater.', fun: 'Swam an entire marathon just to spawn!', real: 'Can leap 10 feet in waterfalls.' },
-    'Trophy Marlin': { fact: 'Trophy that dreams are made of.', fun: 'Bill so long it doubles as a sword!', real: 'Can reach speeds over 68 mph.' },
-    'Trophy Tuna': { fact: 'Ocean giant worth its weight in sashimi.', fun: 'Sushi price tag included!', real: 'Can weigh over 1,000 pounds.' },
-    'Trophy Sturgeon': { fact: 'Ancient giant of the rivers.', fun: 'Older than your grandpa and twice as wise!', real: 'Some reach over 15 feet long.' },
-    'Trophy Catfish': { fact: 'Freshwater giant with suction cup mouth.', fun: 'Named "Trophy" because it won first place!', real: 'World record catfish was over 300 lbs.' },
-    'Trophy King': { fact: 'The ultimate catch - king of all fish!', fun: 'Rules the depths with an iron fin!', real: 'Crown jewel of any angler\'s collection.' },
     'Starfish of Eternity': { fact: 'Born the same night as Halleycat under the comet\'s glow.', fun: 'Remembers every wish whispered to the sea.', real: 'Glows with bioluminescent patterns that mirror constellations.' },
     'Clownfish': { fact: 'Lives among stinging sea anemones in a fearless partnership.', fun: 'Every reef has that one neighbor who never pays rent!', real: 'All clownfish hatch male; the dominant fish can become female to lead the colony.' },
     'Blue Tang': { fact: 'A surgeonfish with a razor-sharp spine tucked near its tail.', fun: 'Grazes algae all day — the reef\'s original lawn service!', real: 'Uses its caudal spine for defense and is a powerful algae grazer on coral reefs.' },
@@ -119,7 +119,19 @@ export const FishFacts = {
     'Sheepshead': { fact: 'Dock-pilings specialist with teeth that look unsettlingly human.', fun: 'Smiles like it already stole your bait — because it probably did!', real: 'Sheepshead crush barnacles and crabs with powerful jaws.' },
     'Redfish': { fact: 'Bronze bulldog of the flats with a signature spot near the tail.', fun: 'One black dot, zero doubts about who owns this flat!', real: 'Red drum tail on shallow flats when feeding — a classic sight-fishing target.' },
     'Snook': { fact: 'Linesider built for mangroves, docks, and sudden bursts of speed.', fun: 'Turns structure into a shortcut and your line into a stress test!', real: 'Snook are temperature-sensitive and famously hard fighters inshore.' },
-    'Tarpon': { fact: 'Silver-scaled giant that has haunted Gulf passes for generations.', fun: 'The Silver King of Cortez — bow to the jump!', real: 'Atlantic tarpon can exceed 200 pounds and are prized for their acrobatic fights.' }
+    'Tarpon': { fact: 'Silver-scaled giant that has haunted Gulf passes for generations.', fun: 'The Silver King of Cortez — bow to the jump!', real: 'Atlantic tarpon can exceed 200 pounds and are prized for their acrobatic fights.' },
+    'Spanish Mackerel': { fact: 'Lightning-fast nearshore hunter that tears through bait schools in a flash.', fun: 'Yellow spots, zero chill — blink and your lure is gone!', real: 'Coastal mackerel migrate along warm beaches and feed aggressively on small baitfish.' },
+    'King Mackerel': { fact: 'Larger cousin of the Spanish mackerel — razor teeth and blistering runs.', fun: 'Smokes the reel like it owes you money!', real: 'Also called kingfish; a prized nearshore and offshore game fish in the Gulf and Atlantic.' },
+    'Barracuda': { fact: 'Ambush predator with a mouth full of teeth and zero patience.', fun: 'Grins like it already knows it won the fight!', real: 'Great barracuda haunt reefs, passes, and choppy inshore water hunting by sight.' },
+    'Goliath Grouper': { fact: 'Massive reef guardian that can swallow a lobster whole and grow past 600 pounds.', fun: 'Looks like a spotted boulder until it inhales your bait!', real: 'Atlantic goliath grouper gather around wrecks and ledges and were once called jewfish.' },
+    'Amberjack': { fact: 'Powerful wreck and reef runner that never stops pulling once hooked.', fun: 'Yellow stripe, green mean — built like a torpedo with opinions!', real: 'Greater amberjack school around offshore structure and fight well above their weight.' },
+    'Hogfish': { fact: 'Reef oddity with a pig-like snout built for rooting out crabs and shrimp.', fun: 'Snout so weird it looks like it was designed on a dare!', real: 'Hogfish are protogynous hermaphrodites and often change sex as they grow.' },
+    'Red Snapper': { fact: 'Deep-reef favorite that stacks up on ledges and sunken hulls.', fun: 'Red enough to stop traffic on the sonar!', real: 'Northern red snapper gather on hard bottom and wrecks in the Gulf and Atlantic.' },
+    'Reef Shark': { fact: 'Sleek patrol predator that cruises wreck lines after dark.', fun: 'Fin up, teeth out — politely terrifying!', real: 'Caribbean reef sharks are common around offshore reefs and structure in warm Atlantic water.' },
+    'Piranha': { fact: 'Razor-toothed pack hunter of murky Amazon channels.', fun: 'Smiles like it already picked the fight!', real: 'Red-bellied piranha have one of the strongest bites for their size in the animal kingdom.' },
+    'Peacock Bass': { fact: 'Explosive jungle river ambusher with a tail spot like a bullseye.', fun: 'Green, gold, and gone with your lure!', real: 'Peacock bass were introduced worldwide but are native to the Amazon and Orinoco basins.' },
+    'Payara': { fact: 'Vampire fish — lower fangs slide into skull slots when the mouth closes.', fun: 'Two-inch teeth and zero patience!', real: 'Hydrolycus payara hunt fast water and slash at prey with saber-like teeth.' },
+    'Arapaima': { fact: 'Air-breathing river giant that surfaces like a log in the jungle backwaters.', fun: 'So big it looks like the river grew scales!', real: 'Arapaima gigas can exceed 400 pounds and gulp air with a primitive lung.' }
 };
 
 /**

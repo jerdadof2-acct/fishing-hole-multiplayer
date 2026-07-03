@@ -14,11 +14,17 @@ import {
     PROLOGUE_SPEED_STORAGE_KEY,
     PROLOGUE_STORY_PARAGRAPHS,
     PROLOGUE_VERSION_STORAGE_KEY,
+    PROLOGUE_AMBIENCE_DUCK_RATIO,
+    PROLOGUE_AMBIENCE_FADE_DELAY_AFTER_VO_SEC,
     PROLOGUE_AMBIENCE_FADE_DURATION_SEC,
     PROLOGUE_AMBIENCE_URL,
     PROLOGUE_AMBIENCE_VOLUME,
+    PROLOGUE_MUSIC_DUCK_RATIO,
     PROLOGUE_MUSIC_URL,
-    PROLOGUE_MUSIC_VOLUME
+    PROLOGUE_MUSIC_VOLUME,
+    PROLOGUE_VOICEOVER_DELAY_SEC,
+    PROLOGUE_VOICEOVER_URL,
+    PROLOGUE_VOICEOVER_VOLUME
 } from './config/prologue.js';
 import { PrologueAudioBed } from './audio/prologueAmbience.js';
 import { ensureProloguePack } from './assetPack.js';
@@ -110,6 +116,7 @@ export async function playStoryPrologue(options = {}) {
 
     const preloadedOcean = pack.ocean?.audio ?? null;
     const preloadedMusic = pack.music?.audio ?? null;
+    const preloadedVoiceover = pack.voiceover?.audio ?? null;
     const backgroundUrl = pack.background?.blobUrl ?? PROLOGUE_SCROLL_BACKGROUND;
     const splashUrl = pack.splash?.blobUrl ?? PROLOGUE_ENTRANCE_IMAGE;
 
@@ -164,7 +171,7 @@ export async function playStoryPrologue(options = {}) {
         ambienceFadeTimer = window.setTimeout(() => {
             ambienceFadeTimer = null;
             audioBed?.startFadeOut(PROLOGUE_AMBIENCE_FADE_DURATION_SEC);
-        }, 1000);
+        }, PROLOGUE_AMBIENCE_FADE_DELAY_AFTER_VO_SEC * 1000);
     };
 
     const haveLastWordsExited = () => {
@@ -190,18 +197,29 @@ export async function playStoryPrologue(options = {}) {
             tracks.ocean = {
                 audio: preloadedOcean ?? undefined,
                 url: preloadedOcean ? undefined : PROLOGUE_AMBIENCE_URL,
-                volume: PROLOGUE_AMBIENCE_VOLUME
+                volume: PROLOGUE_AMBIENCE_VOLUME,
+                duckRatio: PROLOGUE_AMBIENCE_DUCK_RATIO
             };
         }
         if (PROLOGUE_MUSIC_URL || preloadedMusic) {
             tracks.music = {
                 audio: preloadedMusic ?? undefined,
                 url: preloadedMusic ? undefined : PROLOGUE_MUSIC_URL,
-                volume: PROLOGUE_MUSIC_VOLUME
+                volume: PROLOGUE_MUSIC_VOLUME,
+                duckRatio: PROLOGUE_MUSIC_DUCK_RATIO
+            };
+        }
+        if (PROLOGUE_VOICEOVER_URL || preloadedVoiceover) {
+            tracks.voiceover = {
+                audio: preloadedVoiceover ?? undefined,
+                url: preloadedVoiceover ? undefined : PROLOGUE_VOICEOVER_URL,
+                volume: PROLOGUE_VOICEOVER_VOLUME,
+                delaySec: PROLOGUE_VOICEOVER_DELAY_SEC,
+                onEnded: () => scheduleAmbienceFade()
             };
         }
 
-        if (!tracks.ocean && !tracks.music) {
+        if (!tracks.ocean && !tracks.music && !tracks.voiceover) {
             return;
         }
 

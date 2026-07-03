@@ -7,7 +7,7 @@ import {
     PROLOGUE_SPLASH_PACK
 } from './config/prologue.js';
 
-const CACHE_NAME = 'halleys-big-catch-media-v9';
+const CACHE_NAME = 'halleys-big-catch-media-v15';
 const PROLOGUE_STORAGE_KEY = 'kittyCreekProloguePackVersion';
 const FULL_STORAGE_KEY = 'kittyCreekAssetPackVersion';
 const DOWNLOAD_CONCURRENCY = 6;
@@ -29,10 +29,12 @@ function toAbsoluteUrl(path) {
 }
 
 function packItems(full) {
-    return (full ? PROLOGUE_FULL_PACK : PROLOGUE_SPLASH_PACK).map((item) => ({
-        ...item,
-        url: toAbsoluteUrl(item.path)
-    }));
+    return (full ? PROLOGUE_FULL_PACK : PROLOGUE_SPLASH_PACK)
+        .filter((item) => item.path)
+        .map((item) => ({
+            ...item,
+            url: toAbsoluteUrl(item.path)
+        }));
 }
 
 async function loadManifest() {

@@ -5,7 +5,7 @@ import { Water2Lake } from './water2.js?v=20250625-anaconda-bark2';
 import { Grass } from './grass.js';
 import { Dock } from './dock.js';
 import { Platform } from './platform.js';
-import { Locations, AMAZON_DEPTHS_NAME, FROZEN_FJORDS_NAME, CORAL_KINGDOMS_NAME, CORTEZ_BACKWATERS_NAME, CRAGGY_COAST_NAME, STORMBREAKER_BAY_NAME, FORGOTTEN_REEFS_NAME, TWILIGHT_TRENCH_NAME, DESERT_LAGOON_NAME } from './locations.js';
+import { Locations, AMAZON_DEPTHS_NAME, FROZEN_FJORDS_NAME, CORAL_KINGDOMS_NAME, CORTEZ_BACKWATERS_NAME, CRAGGY_COAST_NAME, STORMBREAKER_BAY_NAME, FORGOTTEN_REEFS_NAME, TWILIGHT_TRENCH_NAME, DESERT_LAGOON_NAME, SANDY_SHOALS_NAME } from './locations.js';
 import { applyDevOceanUnlocks, isDevMode } from './dev/devMode.js';
 import {
     initDevFaceCameraFromUrl,
@@ -30,8 +30,9 @@ import {
     CrescentPondAmbience,
     CortezBackwatersAmbience,
     CraggyCoastAmbience,
+    SandyShoalsAmbience,
     StormbreakerBayAmbience
-} from './audio/locationMusic.js?v=20260624-location-ambience';
+} from './audio/locationMusic.js?v=20260702-sandy-ambience';
 import { VOICEOVER_TAP_COOLDOWN_MS, VOICEOVER_ANACONDA_COOLDOWN_MS } from './config/voiceover.js';
 
 /** How close the snake must pass Halley's look point (world XZ) to trigger a bark. */
@@ -117,6 +118,7 @@ export class Game {
         this.amazonAmbience = new AmazonDepthsAmbience();
         this.crescentPondAmbience = new CrescentPondAmbience();
         this.cortezAmbience = new CortezBackwatersAmbience();
+        this.sandyShoalsAmbience = new SandyShoalsAmbience();
         this.craggyCoastAmbience = new CraggyCoastAmbience();
         this.stormbreakerBayAmbience = new StormbreakerBayAmbience();
         
@@ -771,6 +773,7 @@ export class Game {
         this.amazonAmbience?.resumeAfterGesture?.();
         this.crescentPondAmbience?.resumeAfterGesture?.();
         this.cortezAmbience?.resumeAfterGesture?.();
+        this.sandyShoalsAmbience?.resumeAfterGesture?.();
         this.craggyCoastAmbience?.resumeAfterGesture?.();
         this.stormbreakerBayAmbience?.resumeAfterGesture?.();
         if (isDevFaceCameraEnabled()) {
@@ -1648,6 +1651,7 @@ export class Game {
         const playAmazon = location?.name === AMAZON_DEPTHS_NAME;
         const playCrescentPond = location?.name === CRESCENT_POND_NAME;
         const playCortez = location?.name === CORTEZ_BACKWATERS_NAME;
+        const playSandyShoals = location?.name === SANDY_SHOALS_NAME;
         const playCraggy = location?.name === CRAGGY_COAST_NAME;
         const playStormbreaker = location?.name === STORMBREAKER_BAY_NAME;
 
@@ -1655,6 +1659,7 @@ export class Game {
             this.amazonAmbience?.stop();
             this.crescentPondAmbience?.stop();
             this.cortezAmbience?.stop();
+            this.sandyShoalsAmbience?.stop();
             this.craggyCoastAmbience?.stop();
             this.stormbreakerBayAmbience?.stop();
             this.celestialMusic?.start();
@@ -1665,6 +1670,7 @@ export class Game {
             this.celestialMusic?.stop();
             this.crescentPondAmbience?.stop();
             this.cortezAmbience?.stop();
+            this.sandyShoalsAmbience?.stop();
             this.craggyCoastAmbience?.stop();
             this.stormbreakerBayAmbience?.stop();
             this.amazonAmbience?.start();
@@ -1675,9 +1681,21 @@ export class Game {
             this.celestialMusic?.stop();
             this.amazonAmbience?.stop();
             this.crescentPondAmbience?.stop();
+            this.sandyShoalsAmbience?.stop();
             this.craggyCoastAmbience?.stop();
             this.stormbreakerBayAmbience?.stop();
             this.cortezAmbience?.start();
+            return;
+        }
+
+        if (playSandyShoals) {
+            this.celestialMusic?.stop();
+            this.amazonAmbience?.stop();
+            this.crescentPondAmbience?.stop();
+            this.cortezAmbience?.stop();
+            this.craggyCoastAmbience?.stop();
+            this.stormbreakerBayAmbience?.stop();
+            this.sandyShoalsAmbience?.start();
             return;
         }
 
@@ -1686,6 +1704,7 @@ export class Game {
             this.amazonAmbience?.stop();
             this.crescentPondAmbience?.stop();
             this.cortezAmbience?.stop();
+            this.sandyShoalsAmbience?.stop();
             this.stormbreakerBayAmbience?.stop();
             this.craggyCoastAmbience?.start();
             return;
@@ -1696,6 +1715,7 @@ export class Game {
             this.amazonAmbience?.stop();
             this.crescentPondAmbience?.stop();
             this.cortezAmbience?.stop();
+            this.sandyShoalsAmbience?.stop();
             this.craggyCoastAmbience?.stop();
             this.stormbreakerBayAmbience?.start();
             return;
@@ -1705,6 +1725,7 @@ export class Game {
             this.celestialMusic?.stop();
             this.amazonAmbience?.stop();
             this.cortezAmbience?.stop();
+            this.sandyShoalsAmbience?.stop();
             this.craggyCoastAmbience?.stop();
             this.stormbreakerBayAmbience?.stop();
             this.crescentPondAmbience?.start();
@@ -1715,6 +1736,7 @@ export class Game {
         this.amazonAmbience?.stop();
         this.crescentPondAmbience?.stop();
         this.cortezAmbience?.stop();
+        this.sandyShoalsAmbience?.stop();
         this.craggyCoastAmbience?.stop();
         this.stormbreakerBayAmbience?.stop();
     }

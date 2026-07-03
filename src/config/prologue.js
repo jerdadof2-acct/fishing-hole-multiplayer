@@ -10,7 +10,7 @@ export const PROLOGUE_VERSION_STORAGE_KEY = 'kittyCreekPrologueVersion';
  * Bump this when shipping an update that should replay the entrance prologue.
  * Tied to deploys — change alongside package.json version when you release.
  */
-export const PROLOGUE_GAME_VERSION = '20250702-1';
+export const PROLOGUE_GAME_VERSION = '20250702-2';
 
 /** Persisted scroll speed multiplier between sessions. */
 export const PROLOGUE_SPEED_STORAGE_KEY = 'kittyCreekPrologueScrollSpeed';
@@ -29,8 +29,8 @@ export const PROLOGUE_SCROLL_SPEED_STEP = 0.05;
 /** @deprecated Use PROLOGUE_SCROLL_SPEED_DEFAULT */
 export const PROLOGUE_SCROLL_SPEED = PROLOGUE_SCROLL_SPEED_DEFAULT;
 
-/** Intro narration — disabled until new VO is recorded. */
-export const PROLOGUE_VOICEOVER_URL = null;
+/** Intro narration — Halley's Big Catch prologue (Born Under the Comet). */
+export const PROLOGUE_VOICEOVER_URL = '/assets/audio/halleys-big-catch-intro.mp3';
 
 /** Ocean + seagulls loop under the voiceover. */
 export const PROLOGUE_AMBIENCE_URL = '/assets/audio/prologue-ocean-seagulls.mp3';
@@ -85,6 +85,7 @@ export const PROLOGUE_SCROLL_BACKGROUND = 'images/prologue-background.png';
 export const PROLOGUE_FULL_PACK = [
     { key: 'background', type: 'image', path: PROLOGUE_SCROLL_BACKGROUND, label: 'story background' },
     { key: 'splash', type: 'image', path: PROLOGUE_ENTRANCE_IMAGE, label: 'title art' },
+    { key: 'voiceover', type: 'audio', path: PROLOGUE_VOICEOVER_URL, label: 'narration', loop: false },
     { key: 'ocean', type: 'audio', path: PROLOGUE_AMBIENCE_URL, label: 'ocean sounds', loop: true },
     { key: 'music', type: 'audio', path: PROLOGUE_MUSIC_URL, label: 'music', loop: true }
 ];

@@ -24,8 +24,12 @@ export const CRESCENT_POND_AMBIENCE_VOLUME = 0.34;
 
 export const CORTEZ_BACKWATERS_AMBIENCE_URL =
     '/src/audio/jonathanslattermusic-sea-gently-lapping-waves-far-away-seagulls-486892.mp3';
-/** Below prologue ocean ambience (0.3). */
+/** Dock-side mangroves — waves and gulls up close. */
 export const CORTEZ_BACKWATERS_AMBIENCE_VOLUME = 0.22;
+
+export const SANDY_SHOALS_AMBIENCE_URL = CORTEZ_BACKWATERS_AMBIENCE_URL;
+/** Offshore on The Shooting Star — same shore sounds, quieter and farther away. */
+export const SANDY_SHOALS_AMBIENCE_VOLUME = 0.15;
 
 export const CRAGGY_COAST_AMBIENCE_URL =
     '/src/audio/soundreality-wind-blowing-457954.mp3';
@@ -236,6 +240,15 @@ export class CortezBackwatersAmbience extends LoopingLocationAmbience {
         super({
             resolveSource: () => CORTEZ_BACKWATERS_AMBIENCE_URL,
             peakVolume: CORTEZ_BACKWATERS_AMBIENCE_VOLUME
+        });
+    }
+}
+
+export class SandyShoalsAmbience extends LoopingLocationAmbience {
+    constructor() {
+        super({
+            resolveSource: () => SANDY_SHOALS_AMBIENCE_URL,
+            peakVolume: SANDY_SHOALS_AMBIENCE_VOLUME
         });
     }
 }

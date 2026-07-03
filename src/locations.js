@@ -11,7 +11,24 @@ export const CRAGGY_COAST_NAME = 'Craggy Coast';
 export const STORMBREAKER_BAY_NAME = 'Stormbreaker Bay';
 export const FORGOTTEN_REEFS_NAME = 'Forgotten Reefs';
 export const TWILIGHT_TRENCH_NAME = 'Twilight Trench';
+export const SANDY_SHOALS_NAME = 'Sandy Shoals';
 export const DESERT_LAGOON_NAME = 'Desert Lagoon';
+
+/** Collection / progression order — matches unlock path through the game world. */
+export const COLLECTION_LOCATION_PROGRESSION = [
+    'Crescent Pond',
+    AMAZON_DEPTHS_NAME,
+    CORAL_KINGDOMS_NAME,
+    SANDY_SHOALS_NAME,
+    DESERT_LAGOON_NAME,
+    FROZEN_FJORDS_NAME,
+    STORMBREAKER_BAY_NAME,
+    CRAGGY_COAST_NAME,
+    TWILIGHT_TRENCH_NAME,
+    FORGOTTEN_REEFS_NAME,
+    'Celestial Depths',
+    CORTEZ_BACKWATERS_NAME
+];
 
 export class Locations {
     constructor() {
@@ -19,7 +36,7 @@ export class Locations {
             {
                 name: 'Crescent Pond',
                 difficulty: 'Easy',
-                fish: [0, 1, 2],
+                fish: [0, 1, 2, 3],
                 cost: 0,
                 unlockLevel: 1,
                 description: "Halley's home pond — where the smallest ripples began",
@@ -31,14 +48,20 @@ export class Locations {
             {
                 name: AMAZON_DEPTHS_NAME,
                 difficulty: 'Easy',
-                fish: [0, 1, 2, 3],
+                fish: [53, 54, 55, 56],
                 cost: 0,
                 unlockLevel: 2,
                 description: 'A dangerous jungle river — tangled banks, murky channels, and surprises around every bend. Stay sharp; this water never plays the same day twice.',
                 briefTheme: 'amazon-depths',
                 tagline: 'Jungle river — expect anything',
                 waterBodyType: 'RIVER',
-                platformType: 'DOCK'
+                platformType: 'DOCK',
+                fishSpawnWeights: {
+                    53: 38,
+                    54: 32,
+                    55: 22,
+                    56: 8
+                }
             },
             {
                 name: 'Coral Kingdoms',
@@ -67,7 +90,7 @@ export class Locations {
             {
                 name: 'Craggy Coast',
                 difficulty: 'Expert',
-                fish: [6, 7, 8, 9],
+                fish: [6, 7, 8, 9, 10, 12],
                 cost: 300,
                 unlockLevel: 12,
                 description: 'Great Lakes country: cold wind, rocky shore, and heavy water hammering the ledges. Rough fishing, but the rewards along this craggy coast can be huge.',
@@ -79,19 +102,24 @@ export class Locations {
             {
                 name: 'Sandy Shoals',
                 difficulty: 'Medium',
-                fish: [10, 11, 12],
+                fish: [45, 46, 11],
                 cost: 100,
                 unlockLevel: 6,
                 description: 'The Shooting Star anchored in warm, shallow water just offshore — the beach is close enough to hear the break. Steady bites and sunny conditions make this an easy favorite along the coast.',
                 briefTheme: 'sandy-shoals',
                 tagline: 'The Shooting Star, close to the beach',
                 waterBodyType: 'OCEAN',
-                platformType: 'LARGE_BOAT'
+                platformType: 'LARGE_BOAT',
+                fishSpawnWeights: {
+                    11: 28,
+                    45: 44,
+                    46: 28
+                }
             },
             {
                 name: 'Stormbreaker Bay',
                 difficulty: 'Hard',
-                fish: [12, 13, 14],
+                fish: [13, 14, 47],
                 cost: 250,
                 unlockLevel: 10,
                 description: 'Rough bay water where chop and tide collide. Hold on to the rail — the fish that thrive in these waves fight hard and run deep.',
@@ -103,14 +131,21 @@ export class Locations {
             {
                 name: 'Forgotten Reefs',
                 difficulty: 'Expert',
-                fish: [25, 26, 27, 28, 29, 30, 31, 32],
+                fish: [49, 50, 51, 52, 48],
                 cost: 500,
                 unlockLevel: 15,
                 description: 'Remote coral reefs far off the main routes — overgrown gardens and pockets of clear water few boats ever reach. Expert water worth the long run.',
                 briefTheme: 'forgotten-reefs',
                 tagline: 'Reefs most charts never show',
                 waterBodyType: 'OCEAN',
-                platformType: 'LARGE_BOAT'
+                platformType: 'LARGE_BOAT',
+                fishSpawnWeights: {
+                    49: 30,
+                    50: 24,
+                    51: 22,
+                    52: 14,
+                    48: 10
+                }
             },
             {
                 name: 'Twilight Trench',
@@ -240,15 +275,19 @@ export function getLocationAssignedFishIdSet(locations = new Locations().locatio
  * @returns {number[]}
  */
 export function getFishCollectionOrder(locations = new Locations().locations) {
-    const indexed = locations.map((loc, index) => ({ loc, index }));
-    indexed.sort((a, b) => {
-        const levelDiff = (a.loc.unlockLevel ?? 0) - (b.loc.unlockLevel ?? 0);
-        return levelDiff !== 0 ? levelDiff : a.index - b.index;
+    const progressionIndex = new Map(
+        COLLECTION_LOCATION_PROGRESSION.map((name, index) => [name, index])
+    );
+
+    const sorted = [...locations].sort((a, b) => {
+        const ai = progressionIndex.get(a.name) ?? 999;
+        const bi = progressionIndex.get(b.name) ?? 999;
+        return ai - bi;
     });
 
     const seen = new Set();
     const orderedIds = [];
-    for (const { loc } of indexed) {
+    for (const loc of sorted) {
         for (const fishId of loc.fish || []) {
             if (!seen.has(fishId)) {
                 seen.add(fishId);
