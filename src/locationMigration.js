@@ -3,6 +3,7 @@
  * v1 = layout before Amazon premium move (Jul 2026).
  * v2 = Coral second, Amazon premium (Jul 2026).
  * v3 = Louisiana Bayou, Congo River, CrazyCatch Cove (Jul 2026).
+ * v4 = Story unlock order — Sandy Shoals before Coral Kingdoms, relic indices 0–9 sequential (Jul 2026).
  */
 
 import {
@@ -21,7 +22,7 @@ import {
     CRAZYCATCH_COVE_NAME
 } from './locations.js';
 
-export const LOCATION_LAYOUT_VERSION = 3;
+export const LOCATION_LAYOUT_VERSION = 4;
 
 /** Location names in array order before v2 reorder. */
 const V1_INDEX_TO_NAME = [
@@ -53,6 +54,25 @@ const V2_INDEX_TO_NAME = [
     FORGOTTEN_REEFS_NAME,
     'Celestial Depths',
     CORTEZ_BACKWATERS_NAME
+];
+
+/** v3 layout — before story-order reorder (Jul 2026). */
+const V3_INDEX_TO_NAME = [
+    'Crescent Pond',
+    CORAL_KINGDOMS_NAME,
+    SANDY_SHOALS_NAME,
+    DESERT_LAGOON_NAME,
+    FROZEN_FJORDS_NAME,
+    AMAZON_DEPTHS_NAME,
+    STORMBREAKER_BAY_NAME,
+    CRAGGY_COAST_NAME,
+    TWILIGHT_TRENCH_NAME,
+    FORGOTTEN_REEFS_NAME,
+    'Celestial Depths',
+    CORTEZ_BACKWATERS_NAME,
+    LOUISIANA_BAYOU_NAME,
+    CONGO_RIVER_NAME,
+    CRAZYCATCH_COVE_NAME
 ];
 
 /**
@@ -105,6 +125,17 @@ export function migrateLocationSaveData(playerData, locations) {
 
     if ((playerData.locationLayoutVersion ?? 2) < 3) {
         const remap = (idx) => remapByNameTable(idx, V2_INDEX_TO_NAME, locations);
+        if (Array.isArray(playerData.locationUnlocks)) {
+            playerData.locationUnlocks = [...new Set(playerData.locationUnlocks.map(remap))];
+        }
+        if (typeof playerData.currentLocationIndex === 'number') {
+            playerData.currentLocationIndex = remap(playerData.currentLocationIndex);
+        }
+        playerData.locationLayoutVersion = 3;
+    }
+
+    if ((playerData.locationLayoutVersion ?? 3) < 4) {
+        const remap = (idx) => remapByNameTable(idx, V3_INDEX_TO_NAME, locations);
         if (Array.isArray(playerData.locationUnlocks)) {
             playerData.locationUnlocks = [...new Set(playerData.locationUnlocks.map(remap))];
         }

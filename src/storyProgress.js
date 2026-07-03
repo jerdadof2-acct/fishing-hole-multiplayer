@@ -7,7 +7,7 @@ import {
     MEDALLION_CLUES,
     STORY_RELIC_SEQUENCE
 } from './config/relicProgression.js';
-import { getChapterForRelicCompletion } from './config/storyChapters.js';
+import { getChapterForRelicCompletion, POST_STARFISH_CHAPTERS } from './config/storyChapters.js';
 import { CORTEZ_BACKWATERS_LOCATION_INDEX } from './config/cortezBackwaters.js';
 import {
     LOUISIANA_BAYOU_LOCATION_INDEX,
@@ -139,7 +139,7 @@ function evaluateSpecialCondition(player, progress, step, context) {
 
     switch (step.specialCondition) {
         case 'dock_catch':
-            progress.flags.specialConditionMet = progress.successfulCatches >= 1;
+            progress.flags.specialConditionMet = progress.successfulCatches >= 3;
             break;
         case 'amazon_anaconda':
             progress.flags.specialConditionMet = Boolean(
@@ -258,6 +258,125 @@ export function markChapterComplete(player, chapterId) {
 
 export function hasCompletedChapter(player, chapterId) {
     return Boolean(player?.storyChaptersCompleted?.includes?.(chapterId));
+}
+
+/** Chapters that play the first time Halley arrives at a story location. */
+const ARRIVAL_CHAPTER_BY_LOCATION = {
+    [CELESTIAL_DEPTHS_LOCATION_INDEX]: POST_STARFISH_CHAPTERS.chapter_8_celestial,
+    [CORTEZ_BACKWATERS_LOCATION_INDEX]: POST_STARFISH_CHAPTERS.chapter_10_cortez,
+    [LOUISIANA_BAYOU_LOCATION_INDEX]: POST_STARFISH_CHAPTERS.chapter_12_bayou,
+    [CONGO_RIVER_LOCATION_INDEX]: POST_STARFISH_CHAPTERS.chapter_13_congo,
+    [CRAZYCATCH_COVE_LOCATION_INDEX]: POST_STARFISH_CHAPTERS.chapter_14_crazycatch
+};
+
+/**
+ * Story chapter modal to show after traveling to a location (first visit only).
+ * @returns {import('./config/storyChapters.js').StoryChapter|null}
+ */
+export function getPendingArrivalChapter(player, locationIndex) {
+    if (!player || locationIndex == null) {
+        return null;
+    }
+
+    const chapter = ARRIVAL_CHAPTER_BY_LOCATION[locationIndex];
+    if (!chapter || hasCompletedChapter(player, chapter.id)) {
+        return null;
+    }
+
+    if (locationIndex === CELESTIAL_DEPTHS_LOCATION_INDEX) {
+        return player.canAccessCelestialDepths?.() ? chapter : null;
+    }
+
+    if (locationIndex === CORTEZ_BACKWATERS_LOCATION_INDEX) {
+        return player.isFishUnlocked?.(STARFISH_ID) ? chapter : null;
+    }
+
+    if (locationIndex === LOUISIANA_BAYOU_LOCATION_INDEX) {
+        return player.fatherJournalReceived ? chapter : null;
+    }
+
+    if (locationIndex === CONGO_RIVER_LOCATION_INDEX) {
+        return player.louisianaBayouComplete ? chapter : null;
+    }
+
+    if (locationIndex === CRAZYCATCH_COVE_LOCATION_INDEX) {
+        return player.congoRiverComplete ? chapter : null;
+    }
+
+    return null;
+}
+
+/** Next map index offered by relic chapter "Travel to New Location". */
+export function getChapterTravelLocationIndex(chapter) {
+    if (!chapter || typeof chapter.unlocksLocationIndex !== 'number') {
+        return null;
+    }
+    return chapter.unlocksLocationIndex;
+}
+
+/**
+ * Whether the player can open the map and travel to this index right now.
+ * @param {import('./player.js').Player} player
+ * @param {number} locationIndex
+ * @param {Array<{ unlockLevel?: number, name?: string }>} locations
+ */
+export function canPlayerTravelToLocationIndex(player, locationIndex) {
+    if (!player || locationIndex == null) {
+        return false;
+    }
+    return Array.isArray(player.locationUnlocks) && player.locationUnlocks.includes(locationIndex);
+}
+
+/**
+ * Offer chapter travel only when the destination is actually on the map.
+ * @returns {{
+ *   travelLocationIndex: number|null,
+ *   travelLockedNote: string|null,
+ *   pendingTravelLocationIndex: number|null
+ * }}
+ */
+export function resolveChapterTravelOffer(player, chapter, locations) {
+    const travelLocationIndex = getChapterTravelLocationIndex(chapter);
+    if (travelLocationIndex == null || !locations?.[travelLocationIndex]) {
+        return { travelLocationIndex: null, travelLockedNote: null, pendingTravelLocationIndex: null };
+    }
+
+    const location = locations[travelLocationIndex];
+    const requiredLevel = location.unlockLevel ?? 1;
+
+    if (canPlayerTravelToLocationIndex(player, travelLocationIndex)) {
+        return { travelLocationIndex, travelLockedNote: null, pendingTravelLocationIndex: null };
+    }
+
+    if (player.level < requiredLevel) {
+        return {
+            travelLocationIndex: null,
+            travelLockedNote: `${location.name} opens at Level ${requiredLevel}. Keep fishing here to level up first.`,
+            pendingTravelLocationIndex: travelLocationIndex
+        };
+    }
+
+    return {
+        travelLocationIndex: null,
+        travelLockedNote: `${location.name} is on the horizon — finish exploring here, then check the map.`,
+        pendingTravelLocationIndex: travelLocationIndex
+    };
+}
+
+export function notifyPendingStoryTravelUnlock(player, locations) {
+    if (player?.pendingStoryTravelIndex == null || !locations) {
+        return null;
+    }
+
+    const index = player.pendingStoryTravelIndex;
+    if (!canPlayerTravelToLocationIndex(player, index)) {
+        return null;
+    }
+
+    const name = locations[index]?.name || 'A new location';
+    player.pendingStoryTravelIndex = null;
+    player.save({ skipSync: true });
+    return name;
 }
 
 /** Reconcile level + story gates into locationUnlocks. */

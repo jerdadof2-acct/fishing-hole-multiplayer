@@ -2,14 +2,23 @@
  * Story chapters — father/comet narrative gates tied to relic progress.
  */
 
+import { CELESTIAL_DEPTHS_LOCATION_INDEX } from './hiddenRelics.js';
+import { CORTEZ_BACKWATERS_LOCATION_INDEX } from './cortezBackwaters.js';
+import {
+    LOUISIANA_BAYOU_LOCATION_INDEX,
+    CONGO_RIVER_LOCATION_INDEX,
+    CRAZYCATCH_COVE_LOCATION_INDEX
+} from './storyLocations.js';
+
 /** @typedef {{
  *   id: string,
  *   title: string,
- *   requiredRelics: string[],
+ *   requiredRelics?: string[],
  *   narration: string[],
  *   halleyLine?: string,
  *   fatherLine?: string,
- *   unlocksLocationMessage?: string
+ *   unlocksLocationMessage?: string,
+ *   unlocksLocationIndex?: number
  * }} StoryChapter */
 
 /** @type {StoryChapter[]} */
@@ -27,7 +36,8 @@ export const STORY_CHAPTERS = [
             'Whatever was calling from beneath the water knew where Halley\'s story began.'
         ],
         halleyLine: 'Dad always said the water remembers more than we do.',
-        unlocksLocationMessage: 'Sandy Shoals stirs on the horizon.'
+        unlocksLocationMessage: 'Sandy Shoals stirs on the horizon.',
+        unlocksLocationIndex: 1
     },
     {
         id: 'chapter_2',
@@ -40,7 +50,8 @@ export const STORY_CHAPTERS = [
             'Halley began to wonder whether the relics were leading him somewhere, or reminding him of something he had forgotten.'
         ],
         halleyLine: 'It\'s like I can hear Dad in every message.',
-        unlocksLocationMessage: 'Amazon Depths awaits on the map.'
+        unlocksLocationMessage: 'Amazon Depths awaits on the map.',
+        unlocksLocationIndex: 3
     },
     {
         id: 'chapter_3',
@@ -54,7 +65,8 @@ export const STORY_CHAPTERS = [
             'He began wondering why it wanted to be found.'
         ],
         halleyLine: 'Maybe this was never supposed to be a hunt.',
-        unlocksLocationMessage: 'Frozen Fjords opens to the north.'
+        unlocksLocationMessage: 'Frozen Fjords opens to the north.',
+        unlocksLocationIndex: 5
     },
     {
         id: 'chapter_4',
@@ -67,7 +79,8 @@ export const STORY_CHAPTERS = [
             'Perhaps the best moments simply sank deeper, waiting for something to bring them back to the surface.'
         ],
         halleyLine: 'We thought we were passing the time. I think we were building something.',
-        unlocksLocationMessage: 'Desert Lagoon shimmers beyond the dunes.'
+        unlocksLocationMessage: 'Desert Lagoon shimmers beyond the dunes.',
+        unlocksLocationIndex: 6
     },
     {
         id: 'chapter_5',
@@ -80,7 +93,8 @@ export const STORY_CHAPTERS = [
             'Perhaps the stone had needed time to learn who Halley was — and who his father had helped him become.'
         ],
         halleyLine: 'This medallion has been with me through everything. Maybe it remembers Dad too.',
-        unlocksLocationMessage: 'Stormbreaker Bay roars into view.'
+        unlocksLocationMessage: 'Stormbreaker Bay roars into view.',
+        unlocksLocationIndex: 7
     },
     {
         id: 'chapter_6',
@@ -94,7 +108,8 @@ export const STORY_CHAPTERS = [
             'It was speaking through the person Halley trusted most.'
         ],
         halleyLine: 'It isn\'t copying Dad\'s words. It\'s finding them inside me.',
-        unlocksLocationMessage: 'Twilight Trench waits in the deep.'
+        unlocksLocationMessage: 'Twilight Trench waits in the deep.',
+        unlocksLocationIndex: 9
     },
     {
         id: 'chapter_7',
@@ -108,9 +123,36 @@ export const STORY_CHAPTERS = [
             'But every skill Halley needed to follow it had come from somewhere much closer to home.'
         ],
         halleyLine: 'You gave me the medallion, Dad. But that wasn\'t the only thing you gave me.',
-        unlocksLocationMessage: 'The Celestial Depths are opening.'
+        unlocksLocationMessage: 'The Celestial Depths are opening.',
+        unlocksLocationIndex: CELESTIAL_DEPTHS_LOCATION_INDEX
     }
 ];
+
+/** Short beats when a journal destination is "finished" (first catch). Replace copy in DOCS/story-narration-placeholders.md */
+export const JOURNEY_COMPLETE_BEATS = {
+    louisiana_bayou: {
+        halleyLine: 'We made it to the bayou, Dad. Just like we always said we would.',
+        banner: 'Louisiana Bayou — promise kept.'
+    },
+    congo_river: {
+        halleyLine: 'Your journal never did this river justice. It\'s even bigger than I imagined.',
+        banner: 'Congo River — dream carried home.'
+    },
+    crazycatch_cove: {
+        halleyLine: 'You invented this place to make me laugh. I\'m still laughing.',
+        banner: 'CrazyCatch Cove — story made real.'
+    }
+};
+
+/** First cast at Celestial Depths (after Chapter 8). Replace in DOCS/story-narration-placeholders.md */
+export const CELESTIAL_FIRST_CAST_NARRATION = {
+    lines: [
+        'Halley tied on the Starlight Lure — the only bait the depths would answer.',
+        'The sea below mirrored the sky. For a moment, every star seemed within reach.'
+    ],
+    halleyLine: 'Show me what you remember.',
+    voiceover: 'I\'ve spent my life chasing wonders… and all along, one of them was chasing me.'
+};
 
 /** Post-Starfish chapters (location-based, not relic-gated). */
 export const POST_STARFISH_CHAPTERS = {
@@ -163,7 +205,9 @@ export const POST_STARFISH_CHAPTERS = {
             'The Starfish had listened to the memories within the medallion.',
             'Now it was opening the waters Halley and his father had once dreamed of exploring together.'
         ],
-        fatherLine: 'Looks like our old fishing stories still have a few chapters left.'
+        fatherLine: 'Looks like our old fishing stories still have a few chapters left.',
+        unlocksLocationMessage: 'Louisiana Bayou opens in the journal.',
+        unlocksLocationIndex: LOUISIANA_BAYOU_LOCATION_INDEX
     },
     chapter_12_bayou: {
         id: 'chapter_12_bayou',

@@ -3,7 +3,7 @@ import { ACHIEVEMENTS, evaluateAchievements as evaluateAchievementDefs, getAchie
 import { replayStoryPrologue } from './prologue.js';
 import { STARLIGHT_LURE_IMAGE, isStarlightLureBait } from './config/hiddenRelics.js';
 import { isCelestialStarfishHook, STARFISH_FIRST_CATCH_BANNER, STARFISH_FIRST_CATCH_NARRATION, STARFISH_FIRST_CATCH_QUOTE, STARFISH_GUIDE_COMING_SOON, STARFISH_GUIDE_DESTINATIONS_HEADLINE, STARFISH_GUIDE_DESTINATIONS_BODY, STARFISH_GUIDE_DESTINATIONS_OPEN } from './config/starfishEncounter.js';
-import { canAccessCortezBackwaters } from './config/cortezBackwaters.js';
+import { canAccessCortezBackwaters, CORTEZ_BACKWATERS_LOCATION_INDEX } from './config/cortezBackwaters.js';
 import {
     CONGO_RIVER_NAME,
     CORTEZ_BACKWATERS_NAME,
@@ -18,9 +18,13 @@ import {
 } from './config/storyLocations.js';
 import {
     isStoryLocationAvailable,
-    getNextStoryRelicId
+    getNextStoryRelicId,
+    getPendingArrivalChapter,
+    getChapterTravelLocationIndex,
+    resolveChapterTravelOffer,
+    notifyPendingStoryTravelUnlock
 } from './storyProgress.js';
-import { POST_STARFISH_CHAPTERS } from './config/storyChapters.js';
+import { POST_STARFISH_CHAPTERS, JOURNEY_COMPLETE_BEATS, CELESTIAL_FIRST_CAST_NARRATION } from './config/storyChapters.js';
 import { getFishImagePaths, getRelicImagePaths } from './utils/imageAssets.js';
 import { getCollectionSpeciesTotal, getUnlockedVisibleFishCount } from './fishTypes.js';
 import { switchToDifferentAccount } from './savePinSetup.js';
@@ -705,7 +709,7 @@ export class UI {
         });
     }
 
-    executeLocationTravel(locationIndex) {
+    executeLocationTravel(locationIndex, options = {}) {
         if (!this.game?.locations) {
             return false;
         }
@@ -743,7 +747,77 @@ export class UI {
         }
 
         this.updateLocationSelector();
+
+        if (!options.skipArrivalChapter) {
+            this.scheduleArrivalChapterIfNeeded(locationIndex);
+        }
+
         return true;
+    }
+
+    scheduleArrivalChapterIfNeeded(locationIndex) {
+        if (!this.player) {
+            return;
+        }
+
+        const chapter = getPendingArrivalChapter(this.player, locationIndex);
+        if (!chapter) {
+            return;
+        }
+
+        window.setTimeout(() => {
+            const stillPending = getPendingArrivalChapter(this.player, locationIndex);
+            if (!stillPending || stillPending.id !== chapter.id) {
+                return;
+            }
+
+            const isFinale = chapter.id === POST_STARFISH_CHAPTERS.chapter_14_crazycatch.id;
+            this.showStoryChapterModal(chapter, {
+                primaryLabel: 'Continue',
+                onComplete: isFinale
+                    ? () => {
+                        window.setTimeout(() => {
+                            this.showStoryChapterModal(POST_STARFISH_CHAPTERS.epilogue);
+                        }, 600);
+                    }
+                    : undefined
+            });
+        }, 900);
+    }
+
+    maybeShowCelestialFirstCastNarration() {
+        const location = this.game?.locations?.getCurrentLocation?.();
+        if (location?.waterBodyType !== 'CELESTIAL' || !this.player?.canAccessCelestialDepths?.()) {
+            return;
+        }
+
+        if (!this.player.storyChaptersCompleted?.includes?.('chapter_8_celestial')) {
+            return;
+        }
+
+        if (this.player.celestialFirstCastNarrationSeen) {
+            return;
+        }
+
+        this.player.celestialFirstCastNarrationSeen = true;
+        this.player.save({ skipSync: true });
+
+        const beat = CELESTIAL_FIRST_CAST_NARRATION;
+        window.setTimeout(() => {
+            for (const line of beat.lines || []) {
+                this.showBannerNotification(line, '#c4b5fd', 3400);
+            }
+            if (beat.halleyLine) {
+                window.setTimeout(() => {
+                    this.game?.showCatBark?.(beat.halleyLine, 2800);
+                }, 1200);
+            }
+            if (beat.voiceover) {
+                window.setTimeout(() => {
+                    this.showBannerNotification(`"${beat.voiceover}"`, '#fde68a', 4800);
+                }, 2600);
+            }
+        }, 1400);
     }
 
     _clearFirstCatchOfDayBonusNotice() {
@@ -3035,6 +3109,8 @@ export class UI {
         list.className = 'location-picker-list';
         list.setAttribute('role', 'listbox');
 
+        this.refreshLocationUnlocks();
+
         locations.forEach((location, index) => {
             const isUnlocked = this.player.locationUnlocks.includes(index);
             if (!isUnlocked && !hasPrivilegedAccess(this.player)) {
@@ -3110,11 +3186,20 @@ export class UI {
         this.dismissMobileKeyboard();
     }
 
+    refreshLocationUnlocks() {
+        if (!this.player?.syncStoryUnlocks) {
+            return;
+        }
+        this.player.syncStoryUnlocks();
+    }
+
     updateLocationSelector() {
         const locationSelect = document.getElementById('location-select');
         if (!locationSelect || !this.game?.locations || !this.player) {
             return;
         }
+
+        this.refreshLocationUnlocks();
 
         locationSelect.innerHTML = '';
 
@@ -3397,6 +3482,7 @@ export class UI {
         }
         
         // Random 2–5 s bite delay starts immediately on cast (bobber lands ~1 s in).
+        this.maybeShowCelestialFirstCastNarration();
         this.startBiteDetection();
     }
 
@@ -3740,12 +3826,40 @@ export class UI {
 
         if (pendingChapter) {
             window.setTimeout(() => {
-                this.showStoryChapterModal(pendingChapter, {
-                    showKeepFishing: Boolean(pendingChapter.unlocksLocationMessage),
-                    primaryLabel: pendingChapter.unlocksLocationMessage ? 'Travel to New Location' : 'Continue'
-                });
+                this.showStoryChapterWithTravelOffer(pendingChapter);
             }, 600);
         }
+    }
+
+    showStoryChapterWithTravelOffer(chapter, extraOptions = {}) {
+        if (!chapter) {
+            return;
+        }
+
+        this.player?.syncStoryUnlocks?.();
+        const locations = this.game?.locations?.locations || [];
+        const travelOffer = resolveChapterTravelOffer(this.player, chapter, locations);
+
+        if (travelOffer.pendingTravelLocationIndex != null) {
+            this.player.pendingStoryTravelIndex = travelOffer.pendingTravelLocationIndex;
+            this.player.save({ skipSync: true });
+        }
+
+        const unlockNote = [
+            chapter.unlocksLocationMessage,
+            travelOffer.travelLockedNote
+        ].filter(Boolean).join(' ');
+
+        this.showStoryChapterModal(chapter, {
+            ...extraOptions,
+            showKeepFishing: travelOffer.travelLocationIndex != null,
+            travelLocationIndex: travelOffer.travelLocationIndex,
+            unlockNoteOverride: unlockNote || null,
+            primaryLabel: travelOffer.travelLocationIndex != null
+                ? (extraOptions.primaryLabel || 'Travel to New Location')
+                : 'Continue',
+            onComplete: extraOptions.onComplete
+        });
     }
 
     showStoryChapterModal(chapter, options = {}) {
@@ -3771,8 +3885,12 @@ export class UI {
         const fatherLine = chapter.fatherLine
             ? `<p class="story-chapter-father">Father: "${chapter.fatherLine}"</p>`
             : '';
-        const unlockNote = chapter.unlocksLocationMessage
-            ? `<p class="story-chapter-unlock">${chapter.unlocksLocationMessage}</p>`
+        const unlockNote = options.unlockNoteOverride
+            ?? (chapter.unlocksLocationMessage
+                ? `${chapter.unlocksLocationMessage}${options.travelLockedNote ? ` ${options.travelLockedNote}` : ''}`
+                : options.travelLockedNote || '');
+        const unlockNoteHtml = unlockNote
+            ? `<p class="story-chapter-unlock">${unlockNote}</p>`
             : '';
 
         card.innerHTML = `
@@ -3781,7 +3899,7 @@ export class UI {
             <div class="story-chapter-body">${narration}</div>
             ${halleyLine}
             ${fatherLine}
-            ${unlockNote}
+            ${unlockNoteHtml}
             <div class="story-chapter-actions">
                 ${options.showKeepFishing ? '<button type="button" class="story-chapter-btn story-chapter-btn--secondary" data-action="stay">Keep Fishing Here</button>' : ''}
                 <button type="button" class="story-chapter-btn story-chapter-btn--primary" data-action="close">${options.primaryLabel || 'Continue'}</button>
@@ -3791,7 +3909,7 @@ export class UI {
         overlay.appendChild(card);
         document.body.appendChild(overlay);
 
-        const finish = () => {
+        const finish = (shouldTravel = false) => {
             overlay.remove();
             card.remove();
             if (chapter.id && this.player) {
@@ -3800,13 +3918,20 @@ export class UI {
                 });
             }
             options.onComplete?.();
+            if (shouldTravel && typeof options.travelLocationIndex === 'number') {
+                window.setTimeout(() => {
+                    this.executeLocationTravel(options.travelLocationIndex, { skipArrivalChapter: false });
+                }, 400);
+            }
         };
 
-        card.querySelector('[data-action="close"]')?.addEventListener('click', finish);
-        card.querySelector('[data-action="stay"]')?.addEventListener('click', finish);
+        card.querySelector('[data-action="close"]')?.addEventListener('click', () => {
+            finish(typeof options.travelLocationIndex === 'number');
+        });
+        card.querySelector('[data-action="stay"]')?.addEventListener('click', () => finish(false));
         overlay.addEventListener('click', (event) => {
             if (event.target === overlay) {
-                finish();
+                finish(false);
             }
         });
 
@@ -4192,7 +4317,9 @@ export class UI {
                 this.player.fatherJournalReceived = true;
                 this.player.syncStoryUnlocks();
                 window.setTimeout(() => {
-                    this.showStoryChapterModal(POST_STARFISH_CHAPTERS.chapter_11_journal);
+                    this.showStoryChapterWithTravelOffer(POST_STARFISH_CHAPTERS.chapter_11_journal, {
+                        primaryLabel: 'Travel to Louisiana Bayou'
+                    });
                 }, 5200);
             } else if (
                 locationIndex === LOUISIANA_BAYOU_LOCATION_INDEX
@@ -4200,8 +4327,10 @@ export class UI {
             ) {
                 this.player.louisianaBayouComplete = true;
                 this.player.syncStoryUnlocks();
+                const beat = JOURNEY_COMPLETE_BEATS.louisiana_bayou;
                 window.setTimeout(() => {
-                    this.showStoryChapterModal(POST_STARFISH_CHAPTERS.chapter_12_bayou);
+                    this.showBannerNotification(beat.banner, '#86efac', 3600);
+                    this.game?.showCatBark?.(beat.halleyLine, 3000);
                 }, 4200);
             } else if (
                 locationIndex === CONGO_RIVER_LOCATION_INDEX
@@ -4209,8 +4338,10 @@ export class UI {
             ) {
                 this.player.congoRiverComplete = true;
                 this.player.syncStoryUnlocks();
+                const beat = JOURNEY_COMPLETE_BEATS.congo_river;
                 window.setTimeout(() => {
-                    this.showStoryChapterModal(POST_STARFISH_CHAPTERS.chapter_13_congo);
+                    this.showBannerNotification(beat.banner, '#86efac', 3600);
+                    this.game?.showCatBark?.(beat.halleyLine, 3000);
                 }, 4200);
             } else if (
                 locationIndex === CRAZYCATCH_COVE_LOCATION_INDEX
@@ -4218,14 +4349,10 @@ export class UI {
             ) {
                 this.player.crazyCatchCoveComplete = true;
                 this.player.syncStoryUnlocks();
+                const beat = JOURNEY_COMPLETE_BEATS.crazycatch_cove;
                 window.setTimeout(() => {
-                    this.showStoryChapterModal(POST_STARFISH_CHAPTERS.chapter_14_crazycatch, {
-                        onComplete: () => {
-                            window.setTimeout(() => {
-                                this.showStoryChapterModal(POST_STARFISH_CHAPTERS.epilogue);
-                            }, 800);
-                        }
-                    });
+                    this.showBannerNotification(beat.banner, '#fcd34d', 3600);
+                    this.game?.showCatBark?.(beat.halleyLine, 3000);
                 }, 4200);
             }
             
@@ -4582,7 +4709,9 @@ export class UI {
                     }
                     if (isFirstStarfishCatch) {
                         window.setTimeout(() => {
-                            this.showStoryChapterModal(POST_STARFISH_CHAPTERS.chapter_9_starfish);
+                            this.showStoryChapterWithTravelOffer(POST_STARFISH_CHAPTERS.chapter_9_starfish, {
+                                primaryLabel: 'Return to Cortez Backwaters'
+                            });
                         }, 500);
                     }
                 }, 300);
@@ -4603,6 +4732,23 @@ export class UI {
         // Show level up popup near top of screen
         this.showLevelUpPopup(unlockDetails || newUnlock);
         this.updatePlayerInfo();
+
+        if (isLevelPayload) {
+            this.player.syncStoryUnlocks?.();
+            this.updateLocationSelector();
+            const locations = this.game?.locations?.locations || [];
+            const unlockedName = notifyPendingStoryTravelUnlock(this.player, locations);
+            if (unlockedName) {
+                window.setTimeout(() => {
+                    this.showToast({
+                        type: 'success',
+                        title: 'New waters open',
+                        body: `${unlockedName} is on the map — open Locations to travel.`,
+                        duration: 5200
+                    });
+                }, 2200);
+            }
+        }
         
         // Check for achievement unlocks after level up
         this.evaluateAchievements('levelup');

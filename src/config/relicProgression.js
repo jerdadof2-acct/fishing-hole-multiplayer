@@ -6,10 +6,10 @@
 
 /** @type {Record<RelicTier, { minimumCatches: number, minimumSpecies: number, guaranteedCatch: number, startingChance: number }>} */
 export const RELIC_TIER_CONFIG = {
-    tier1: { minimumCatches: 9, minimumSpecies: 2, guaranteedCatch: 23, startingChance: 0.02 },
-    tier2: { minimumCatches: 10, minimumSpecies: 3, guaranteedCatch: 21, startingChance: 0.02 },
-    tier3: { minimumCatches: 12, minimumSpecies: 3, guaranteedCatch: 24, startingChance: 0.02 },
-    tier4: { minimumCatches: 15, minimumSpecies: 4, guaranteedCatch: 28, startingChance: 0.02 }
+    tier1: { minimumCatches: 15, minimumSpecies: 2, guaranteedCatch: 32, startingChance: 0.012 },
+    tier2: { minimumCatches: 12, minimumSpecies: 3, guaranteedCatch: 26, startingChance: 0.015 },
+    tier3: { minimumCatches: 14, minimumSpecies: 3, guaranteedCatch: 28, startingChance: 0.015 },
+    tier4: { minimumCatches: 18, minimumSpecies: 4, guaranteedCatch: 34, startingChance: 0.012 }
 };
 
 /**
@@ -23,41 +23,41 @@ export const RELIC_TIER_CONFIG = {
  */
 export const STORY_RELIC_SEQUENCE = [
     { relicId: 'weathered_bobber', locationIndex: 0, tier: 'tier1', specialCondition: 'dock_catch' },
-    { relicId: 'driftwood_compass', locationIndex: 2, tier: 'tier1', specialCondition: 'species_variety' },
-    { relicId: 'sunken_treasure', locationIndex: 1, tier: 'tier1', specialCondition: 'species_variety' },
-    { relicId: 'message_in_bottle', locationIndex: 5, tier: 'tier2', specialCondition: 'amazon_anaconda' },
-    { relicId: 'broken_harpoon', locationIndex: 7, tier: 'tier2', specialCondition: 'species_variety' },
-    { relicId: 'frozen_pocket_watch', locationIndex: 4, tier: 'tier2', specialCondition: 'species_variety' },
-    { relicId: 'buried_telescope', locationIndex: 3, tier: 'tier3', specialCondition: 'species_variety' },
-    { relicId: 'map_fragment', locationIndex: 6, tier: 'tier3', specialCondition: 'species_variety' },
-    { relicId: 'coral_pendant', locationIndex: 9, tier: 'tier3', specialCondition: 'species_variety' },
-    { relicId: 'luminescent_shell', locationIndex: 8, tier: 'tier4', specialCondition: 'species_variety' }
+    { relicId: 'driftwood_compass', locationIndex: 1, tier: 'tier1', specialCondition: 'species_variety' },
+    { relicId: 'sunken_treasure', locationIndex: 2, tier: 'tier1', specialCondition: 'species_variety' },
+    { relicId: 'message_in_bottle', locationIndex: 3, tier: 'tier2', specialCondition: 'amazon_anaconda' },
+    { relicId: 'broken_harpoon', locationIndex: 4, tier: 'tier2', specialCondition: 'species_variety' },
+    { relicId: 'frozen_pocket_watch', locationIndex: 5, tier: 'tier2', specialCondition: 'species_variety' },
+    { relicId: 'buried_telescope', locationIndex: 6, tier: 'tier3', specialCondition: 'species_variety' },
+    { relicId: 'map_fragment', locationIndex: 7, tier: 'tier3', specialCondition: 'species_variety' },
+    { relicId: 'coral_pendant', locationIndex: 8, tier: 'tier3', specialCondition: 'species_variety' },
+    { relicId: 'luminescent_shell', locationIndex: 9, tier: 'tier4', specialCondition: 'species_variety' }
 ];
 
 /** Medallion clue thresholds (successful catches at current relic location). */
 export const MEDALLION_CLUES = [
     {
         id: 'clue_first_pulse',
-        atCatches: 5,
+        atCatches: 8,
         halleyLine: 'Something here is reacting to the medallion.',
         banner: 'The medallion gives off a faint pulse…'
     },
     {
         id: 'clue_brightens',
-        atCatches: 8,
+        atCatches: 13,
         minSpecies: 2,
         halleyLine: "It's stronger near this water. The relic must be somewhere close.",
         banner: 'The medallion glows brighter when the line touches the water.'
     },
     {
         id: 'clue_flash',
-        atCatches: 13,
+        atCatches: 20,
         halleyLine: 'I saw it that time. Something is definitely down there.',
         banner: 'A soft flash moves beneath the surface, then fades.'
     },
     {
         id: 'clue_close',
-        atCatches: 18,
+        atCatches: 26,
         halleyLine: "I'm close. I can feel it.",
         banner: 'The medallion pulses with every cast.'
     }

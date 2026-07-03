@@ -145,6 +145,9 @@ export class Player {
         this.louisianaBayouComplete = false;
         this.congoRiverComplete = false;
         this.crazyCatchCoveComplete = false;
+        this.celestialFirstCastNarrationSeen = false;
+        /** Location index from a story chapter when level blocked travel */
+        this.pendingStoryTravelIndex = null;
         /** @type {Record<string, number>} legacy pity tracker */
         this.relicCastAttempts = {};
 
@@ -503,6 +506,8 @@ export class Player {
                 louisianaBayouComplete: this.louisianaBayouComplete,
                 congoRiverComplete: this.congoRiverComplete,
                 crazyCatchCoveComplete: this.crazyCatchCoveComplete,
+                celestialFirstCastNarrationSeen: this.celestialFirstCastNarrationSeen,
+                pendingStoryTravelIndex: this.pendingStoryTravelIndex,
                 relicCastAttempts: this.relicCastAttempts,
                 hasSeenGameplayOnboarding: this.hasSeenGameplayOnboarding === true,
                 energy: this.energy,
@@ -628,6 +633,7 @@ export class Player {
         }
 
         this.recalculateStats(stats && typeof stats === 'object' ? stats : null);
+        this.syncStoryUnlocks();
         this.save({ skipSync: true });
     }
 
@@ -689,7 +695,7 @@ export class Player {
                 
                 // Merge saved data with defaults
                 this.name = playerData.name || this.name;
-                this.level = playerData.level || this.level;
+                this.level = Number(playerData.level) || this.level;
                 this.money = playerData.money !== undefined ? playerData.money : this.money;
                 this.experience = playerData.experience || this.experience;
                 this.stats = { ...this.stats, ...(playerData.stats || {}) };
@@ -732,6 +738,10 @@ export class Player {
                 this.louisianaBayouComplete = playerData.louisianaBayouComplete === true;
                 this.congoRiverComplete = playerData.congoRiverComplete === true;
                 this.crazyCatchCoveComplete = playerData.crazyCatchCoveComplete === true;
+                this.celestialFirstCastNarrationSeen = playerData.celestialFirstCastNarrationSeen === true;
+                this.pendingStoryTravelIndex = Number.isInteger(playerData.pendingStoryTravelIndex)
+                    ? playerData.pendingStoryTravelIndex
+                    : null;
                 this.relicCastAttempts = playerData.relicCastAttempts && typeof playerData.relicCastAttempts === 'object'
                     ? playerData.relicCastAttempts
                     : {};
@@ -851,7 +861,9 @@ export class Player {
     /** Gate Celestial, Cortez, post-Starfish, and sequential story locations. */
     syncStoryUnlocks() {
         const locations = new Locations().locations;
+        const previous = Array.isArray(this.locationUnlocks) ? [...this.locationUnlocks].sort().join(',') : '';
         this.locationUnlocks = reconcileStoryLocationUnlocks(this, locations);
+        const next = [...this.locationUnlocks].sort().join(',');
 
         const celestialIdx = CELESTIAL_DEPTHS_LOCATION_INDEX;
         const storyComplete = this.canAccessCelestialDepths();
@@ -875,6 +887,10 @@ export class Player {
         const cortezIdx = CORTEZ_BACKWATERS_LOCATION_INDEX;
         if (this.currentLocationIndex === cortezIdx && !this.isFishUnlocked(STARFISH_ID)) {
             this.currentLocationIndex = this.locationUnlocks[0] ?? 0;
+        }
+
+        if (previous !== next) {
+            this.save({ skipSync: true });
         }
     }
 

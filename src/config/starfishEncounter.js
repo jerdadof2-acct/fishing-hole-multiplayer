@@ -23,15 +23,10 @@ export const STARFISH_FIRST_CATCH_QUOTE =
     "The comet may have started this journey.\n\nBut you're the reason I was ready for it.";
 
 export const STARFISH_FIRST_CATCH_NARRATION = [
-    'The Starfish showed Halley the night his father made the medallion.',
-    'The stone had fallen from the sky, but his father had turned it into a gift.',
-    'Over the years it had carried every lesson, every laugh, and every quiet moment shared beside the water.',
-    'The medallion had shown Halley where to go.',
-    'His father had taught him how to get there.',
+    'The line pulsed once — a heartbeat shared between Halley and something ancient beneath the stars.',
+    'Golden currents spread across the water, pointing toward shores he knew and shores he had only dreamed about.',
     '',
-    'Four golden currents spread across the water.',
-    'One flows toward Cortez Backwaters — home.',
-    'Three more toward adventures he and his father once dreamed about together.'
+    'The reunion is only beginning. What comes next belongs in his heart.'
 ].join('\n');
 
 export const STARFISH_FIRST_CATCH_BANNER =

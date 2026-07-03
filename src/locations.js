@@ -17,18 +17,18 @@ export const TWILIGHT_TRENCH_NAME = 'Twilight Trench';
 export const SANDY_SHOALS_NAME = 'Sandy Shoals';
 export const DESERT_LAGOON_NAME = 'Desert Lagoon';
 
-/** Collection / progression order — matches unlock path through the game world. */
+/** Collection / progression order — matches story unlock path (same as `locations` array order). */
 export const COLLECTION_LOCATION_PROGRESSION = [
     'Crescent Pond',
-    CORAL_KINGDOMS_NAME,
     SANDY_SHOALS_NAME,
-    DESERT_LAGOON_NAME,
-    FROZEN_FJORDS_NAME,
+    CORAL_KINGDOMS_NAME,
     AMAZON_DEPTHS_NAME,
-    STORMBREAKER_BAY_NAME,
     CRAGGY_COAST_NAME,
-    TWILIGHT_TRENCH_NAME,
+    FROZEN_FJORDS_NAME,
+    DESERT_LAGOON_NAME,
+    STORMBREAKER_BAY_NAME,
     FORGOTTEN_REEFS_NAME,
+    TWILIGHT_TRENCH_NAME,
     'Celestial Depths',
     CORTEZ_BACKWATERS_NAME,
     LOUISIANA_BAYOU_NAME,
@@ -52,23 +52,11 @@ export class Locations {
                 platformType: 'DOCK'
             },
             {
-                name: CORAL_KINGDOMS_NAME,
-                difficulty: 'Medium',
-                fish: [34, 35, 36, 37, 38],
-                cost: 50,
-                unlockLevel: 2,
-                description: 'A shallow inland bay with stunning clear blue water over lively reefs. Color and life are everywhere below — an easy place to fall in love with fishing.',
-                briefTheme: 'coral-kingdoms',
-                tagline: 'Clear blue water, living reefs',
-                waterBodyType: 'LAKE',
-                platformType: 'SMALL_BOAT'
-            },
-            {
                 name: SANDY_SHOALS_NAME,
                 difficulty: 'Medium',
                 fish: [45, 46, 11],
                 cost: 100,
-                unlockLevel: 6,
+                unlockLevel: 2,
                 description: 'The Shooting Star anchored in warm, shallow water just offshore — the beach is close enough to hear the break. Steady bites and sunny conditions make this an easy favorite along the coast.',
                 briefTheme: 'sandy-shoals',
                 tagline: 'The Shooting Star, close to the beach',
@@ -81,27 +69,15 @@ export class Locations {
                 }
             },
             {
-                name: DESERT_LAGOON_NAME,
-                difficulty: 'Hard',
-                fish: [4, 5, 6, 7],
-                cost: 150,
-                unlockLevel: 8,
-                description: 'A small tropical oasis lake — palms, still warm water, and quiet green against the desert. Easy to reach, harder to leave.',
-                briefTheme: 'desert-lagoon',
-                tagline: 'Palm-shaded desert oasis',
-                waterBodyType: 'POND',
-                platformType: 'DOCK'
-            },
-            {
-                name: FROZEN_FJORDS_NAME,
-                difficulty: 'Hard',
-                fish: [15, 16, 17, 18],
-                cost: 200,
-                unlockLevel: 9,
-                description: 'Dark, deep, and brutally cold — a walled-in fjord where the water runs deep and the air bites. Only the toughest anglers — and fish — belong here.',
-                briefTheme: 'frozen-fjords',
-                tagline: 'Ice-walled and unforgiving',
-                waterBodyType: 'FJORD',
+                name: CORAL_KINGDOMS_NAME,
+                difficulty: 'Medium',
+                fish: [34, 35, 36, 37, 38],
+                cost: 50,
+                unlockLevel: 3,
+                description: 'A shallow inland bay with stunning clear blue water over lively reefs. Color and life are everywhere below — an easy place to fall in love with fishing.',
+                briefTheme: 'coral-kingdoms',
+                tagline: 'Clear blue water, living reefs',
+                waterBodyType: 'LAKE',
                 platformType: 'SMALL_BOAT'
             },
             {
@@ -124,18 +100,6 @@ export class Locations {
                 }
             },
             {
-                name: STORMBREAKER_BAY_NAME,
-                difficulty: 'Hard',
-                fish: [13, 14, 47],
-                cost: 250,
-                unlockLevel: 10,
-                description: 'Rough bay water where chop and tide collide. Hold on to the rail — the fish that thrive in these waves fight hard and run deep.',
-                briefTheme: 'stormbreaker-bay',
-                tagline: 'Choppy bay, hard-fighting fish',
-                waterBodyType: 'OCEAN',
-                platformType: 'LARGE_BOAT'
-            },
-            {
                 name: CRAGGY_COAST_NAME,
                 difficulty: 'Expert',
                 fish: [6, 7, 8, 9, 10, 12],
@@ -148,14 +112,38 @@ export class Locations {
                 platformType: 'SMALL_BOAT'
             },
             {
-                name: TWILIGHT_TRENCH_NAME,
-                difficulty: 'Expert',
-                fish: [19, 20, 21, 22, 23],
-                cost: 400,
-                unlockLevel: 14,
-                description: 'A very dark, very deep stretch of open ocean. Strange creatures rise from the trench when the light gives out — not for the faint of heart.',
-                briefTheme: 'twilight-trench',
-                tagline: 'Deep water, strange company',
+                name: FROZEN_FJORDS_NAME,
+                difficulty: 'Hard',
+                fish: [15, 16, 17, 18],
+                cost: 200,
+                unlockLevel: 9,
+                description: 'Dark, deep, and brutally cold — a walled-in fjord where the water runs deep and the air bites. Only the toughest anglers — and fish — belong here.',
+                briefTheme: 'frozen-fjords',
+                tagline: 'Ice-walled and unforgiving',
+                waterBodyType: 'FJORD',
+                platformType: 'SMALL_BOAT'
+            },
+            {
+                name: DESERT_LAGOON_NAME,
+                difficulty: 'Hard',
+                fish: [4, 5, 6, 7],
+                cost: 150,
+                unlockLevel: 8,
+                description: 'A small tropical oasis lake — palms, still warm water, and quiet green against the desert. Easy to reach, harder to leave.',
+                briefTheme: 'desert-lagoon',
+                tagline: 'Palm-shaded desert oasis',
+                waterBodyType: 'POND',
+                platformType: 'DOCK'
+            },
+            {
+                name: STORMBREAKER_BAY_NAME,
+                difficulty: 'Hard',
+                fish: [13, 14, 47],
+                cost: 250,
+                unlockLevel: 10,
+                description: 'Rough bay water where chop and tide collide. Hold on to the rail — the fish that thrive in these waves fight hard and run deep.',
+                briefTheme: 'stormbreaker-bay',
+                tagline: 'Choppy bay, hard-fighting fish',
                 waterBodyType: 'OCEAN',
                 platformType: 'LARGE_BOAT'
             },
@@ -177,6 +165,18 @@ export class Locations {
                     52: 14,
                     48: 10
                 }
+            },
+            {
+                name: TWILIGHT_TRENCH_NAME,
+                difficulty: 'Expert',
+                fish: [19, 20, 21, 22, 23],
+                cost: 400,
+                unlockLevel: 14,
+                description: 'A very dark, very deep stretch of open ocean. Strange creatures rise from the trench when the light gives out — not for the faint of heart.',
+                briefTheme: 'twilight-trench',
+                tagline: 'Deep water, strange company',
+                waterBodyType: 'OCEAN',
+                platformType: 'LARGE_BOAT'
             },
             {
                 name: 'Celestial Depths',

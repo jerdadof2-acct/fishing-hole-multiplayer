@@ -2,9 +2,15 @@
 
 **Central truth:** The comet gave Halley a mystery; his father gave that mystery meaning. The Starfish reunion is the midpoint — not the end. After it, Halley returns to his father and completes three unfinished journal adventures: **Louisiana Bayou**, **Congo River**, and **CrazyCatch Cove**.
 
-**Runtime implementation:** `src/config/storyChapters.js`, `src/config/relicProgression.js`, `src/storyProgress.js`
+**Runtime implementation:** `src/config/storyChapters.js`, `src/config/relicProgression.js`, `src/storyProgress.js`, `src/ui.js`
 
-**Relic progression:** Sequential — one relic at a time, minimum successful catches before discovery (never on first cast), rising odds, guaranteed by catch ~21–28 depending on tier. Misses do not count.
+**Narration placeholders:** `DOCS/story-narration-placeholders.md` — lists every beat, config key, and what final copy should cover.
+
+**Story flow (2026):** Prologue → Chapters 1–7 (sequential relics) → Celestial Depths (Ch.8 on arrival) → Starfish reunion (Ch.9) → Cortez homecoming (Ch.10) → Tarpon/journal (Ch.11) → Louisiana Bayou (Ch.12) → Congo (Ch.13) → CrazyCatch Cove (Ch.14) → Epilogue. Journal destinations unlock on first catch; arrival chapters play when you travel there.
+
+**Relic progression:** Sequential — one relic at a time, minimum ~15 successful catches before discovery (never on first cast), rising odds, guaranteed by catch ~32 depending on tier. Medallion clues at catches 8 / 13 / 20 / 26. Misses do not count.
+
+**Early location unlocks:** Story order matches the location list — Crescent Pond → Sandy Shoals (Lv 2) → Coral Kingdoms (Lv 3) → … → Celestial Depths → post-Starfish journal locations. Chapter travel buttons only appear when the destination is on the map.
 
 ### Title Card
 
