@@ -17,11 +17,11 @@ export const DESERT_LAGOON_NAME = 'Desert Lagoon';
 /** Collection / progression order — matches unlock path through the game world. */
 export const COLLECTION_LOCATION_PROGRESSION = [
     'Crescent Pond',
-    AMAZON_DEPTHS_NAME,
     CORAL_KINGDOMS_NAME,
     SANDY_SHOALS_NAME,
     DESERT_LAGOON_NAME,
     FROZEN_FJORDS_NAME,
+    AMAZON_DEPTHS_NAME,
     STORMBREAKER_BAY_NAME,
     CRAGGY_COAST_NAME,
     TWILIGHT_TRENCH_NAME,
@@ -46,29 +46,11 @@ export class Locations {
                 platformType: 'DOCK'
             },
             {
-                name: AMAZON_DEPTHS_NAME,
-                difficulty: 'Easy',
-                fish: [53, 54, 55, 56],
-                cost: 0,
-                unlockLevel: 2,
-                description: 'A dangerous jungle river — tangled banks, murky channels, and surprises around every bend. Stay sharp; this water never plays the same day twice.',
-                briefTheme: 'amazon-depths',
-                tagline: 'Jungle river — expect anything',
-                waterBodyType: 'RIVER',
-                platformType: 'DOCK',
-                fishSpawnWeights: {
-                    53: 38,
-                    54: 32,
-                    55: 22,
-                    56: 8
-                }
-            },
-            {
-                name: 'Coral Kingdoms',
+                name: CORAL_KINGDOMS_NAME,
                 difficulty: 'Medium',
                 fish: [34, 35, 36, 37, 38],
                 cost: 50,
-                unlockLevel: 3,
+                unlockLevel: 2,
                 description: 'A shallow inland bay with stunning clear blue water over lively reefs. Color and life are everywhere below — an easy place to fall in love with fishing.',
                 briefTheme: 'coral-kingdoms',
                 tagline: 'Clear blue water, living reefs',
@@ -76,31 +58,7 @@ export class Locations {
                 platformType: 'SMALL_BOAT'
             },
             {
-                name: 'Frozen Fjords',
-                difficulty: 'Hard',
-                fish: [15, 16, 17, 18],
-                cost: 200,
-                unlockLevel: 9,
-                description: 'Dark, deep, and brutally cold — a walled-in fjord where the water runs deep and the air bites. Only the toughest anglers — and fish — belong here.',
-                briefTheme: 'frozen-fjords',
-                tagline: 'Ice-walled and unforgiving',
-                waterBodyType: 'FJORD',
-                platformType: 'SMALL_BOAT'
-            },
-            {
-                name: 'Craggy Coast',
-                difficulty: 'Expert',
-                fish: [6, 7, 8, 9, 10, 12],
-                cost: 300,
-                unlockLevel: 12,
-                description: 'Great Lakes country: cold wind, rocky shore, and heavy water hammering the ledges. Rough fishing, but the rewards along this craggy coast can be huge.',
-                briefTheme: 'craggy-coast',
-                tagline: 'Wind, rock, and big-lake water',
-                waterBodyType: 'LAKE',
-                platformType: 'SMALL_BOAT'
-            },
-            {
-                name: 'Sandy Shoals',
+                name: SANDY_SHOALS_NAME,
                 difficulty: 'Medium',
                 fish: [45, 46, 11],
                 cost: 100,
@@ -117,7 +75,50 @@ export class Locations {
                 }
             },
             {
-                name: 'Stormbreaker Bay',
+                name: DESERT_LAGOON_NAME,
+                difficulty: 'Hard',
+                fish: [4, 5, 6, 7],
+                cost: 150,
+                unlockLevel: 8,
+                description: 'A small tropical oasis lake — palms, still warm water, and quiet green against the desert. Easy to reach, harder to leave.',
+                briefTheme: 'desert-lagoon',
+                tagline: 'Palm-shaded desert oasis',
+                waterBodyType: 'POND',
+                platformType: 'DOCK'
+            },
+            {
+                name: FROZEN_FJORDS_NAME,
+                difficulty: 'Hard',
+                fish: [15, 16, 17, 18],
+                cost: 200,
+                unlockLevel: 9,
+                description: 'Dark, deep, and brutally cold — a walled-in fjord where the water runs deep and the air bites. Only the toughest anglers — and fish — belong here.',
+                briefTheme: 'frozen-fjords',
+                tagline: 'Ice-walled and unforgiving',
+                waterBodyType: 'FJORD',
+                platformType: 'SMALL_BOAT'
+            },
+            {
+                name: AMAZON_DEPTHS_NAME,
+                difficulty: 'Hard',
+                fish: [53, 54, 55, 56],
+                cost: 200,
+                unlockLevel: 7,
+                description: 'A remote jungle river charter — tangled banks, murky channels, and predators that do not forgive a careless cast. Premium water for anglers ready to earn every bite.',
+                briefTheme: 'amazon-depths',
+                tagline: 'Premium jungle river charter',
+                waterBodyType: 'RIVER',
+                platformType: 'DOCK',
+                premium: true,
+                fishSpawnWeights: {
+                    53: 38,
+                    54: 32,
+                    55: 22,
+                    56: 8
+                }
+            },
+            {
+                name: STORMBREAKER_BAY_NAME,
                 difficulty: 'Hard',
                 fish: [13, 14, 47],
                 cost: 250,
@@ -129,7 +130,31 @@ export class Locations {
                 platformType: 'LARGE_BOAT'
             },
             {
-                name: 'Forgotten Reefs',
+                name: CRAGGY_COAST_NAME,
+                difficulty: 'Expert',
+                fish: [6, 7, 8, 9, 10, 12],
+                cost: 300,
+                unlockLevel: 12,
+                description: 'Great Lakes country: cold wind, rocky shore, and heavy water hammering the ledges. Rough fishing, but the rewards along this craggy coast can be huge.',
+                briefTheme: 'craggy-coast',
+                tagline: 'Wind, rock, and big-lake water',
+                waterBodyType: 'LAKE',
+                platformType: 'SMALL_BOAT'
+            },
+            {
+                name: TWILIGHT_TRENCH_NAME,
+                difficulty: 'Expert',
+                fish: [19, 20, 21, 22, 23],
+                cost: 400,
+                unlockLevel: 14,
+                description: 'A very dark, very deep stretch of open ocean. Strange creatures rise from the trench when the light gives out — not for the faint of heart.',
+                briefTheme: 'twilight-trench',
+                tagline: 'Deep water, strange company',
+                waterBodyType: 'OCEAN',
+                platformType: 'LARGE_BOAT'
+            },
+            {
+                name: FORGOTTEN_REEFS_NAME,
                 difficulty: 'Expert',
                 fish: [49, 50, 51, 52, 48],
                 cost: 500,
@@ -148,18 +173,6 @@ export class Locations {
                 }
             },
             {
-                name: 'Twilight Trench',
-                difficulty: 'Expert',
-                fish: [19, 20, 21, 22, 23],
-                cost: 400,
-                unlockLevel: 14,
-                description: 'A very dark, very deep stretch of open ocean. Strange creatures rise from the trench when the light gives out — not for the faint of heart.',
-                briefTheme: 'twilight-trench',
-                tagline: 'Deep water, strange company',
-                waterBodyType: 'OCEAN',
-                platformType: 'LARGE_BOAT'
-            },
-            {
                 name: 'Celestial Depths',
                 difficulty: 'Legendary',
                 fish: [33],
@@ -171,18 +184,6 @@ export class Locations {
                 waterBodyType: 'CELESTIAL',
                 platformType: 'LARGE_BOAT',
                 requiresStarlightLure: true
-            },
-            {
-                name: 'Desert Lagoon',
-                difficulty: 'Hard',
-                fish: [4, 5, 6, 7],
-                cost: 150,
-                unlockLevel: 8,
-                description: 'A small tropical oasis lake — palms, still warm water, and quiet green against the desert. Easy to reach, harder to leave.',
-                briefTheme: 'desert-lagoon',
-                tagline: 'Palm-shaded desert oasis',
-                waterBodyType: 'POND',
-                platformType: 'DOCK'
             },
             {
                 name: CORTEZ_BACKWATERS_NAME,

@@ -14,6 +14,8 @@ import {
 } from './config/hiddenRelics.js';
 import { CORTEZ_BACKWATERS_LOCATION_INDEX } from './config/cortezBackwaters.js';
 import { STARFISH_ID } from './config/starfishEncounter.js';
+import { LOCATION_LAYOUT_VERSION, migrateLocationSaveData } from './locationMigration.js';
+import { Locations } from './locations.js';
 
 /**
  * Player State Management System
@@ -94,7 +96,7 @@ export class Player {
         this.biggestCatch = 0;
         
         // Unlocks
-        this.locationUnlocks = [0, 1]; // Starter pond and river
+        this.locationUnlocks = [0, 1]; // Crescent Pond + Coral Kingdoms
         this.tackleUnlocks = {
             rods: [0],      // Basic Rod
             reels: [0],     // Basic Reel
@@ -484,6 +486,7 @@ export class Player {
                 caughtFishCollection: this.caughtFishCollection,
                 achievements: this.achievements,
                 currentLocationIndex: this.currentLocationIndex,
+                locationLayoutVersion: LOCATION_LAYOUT_VERSION,
                 hiddenRelicsCollected: this.hiddenRelicsCollected,
                 starlightLureCrafted: this.starlightLureCrafted,
                 relicCastAttempts: this.relicCastAttempts,
@@ -665,7 +668,10 @@ export class Player {
             const savedData = localStorage.getItem('kittyCreekPlayer');
             
             if (savedData) {
-                const playerData = JSON.parse(savedData);
+                const playerData = migrateLocationSaveData(
+                    JSON.parse(savedData),
+                    new Locations().getLocations()
+                );
                 
                 // Merge saved data with defaults
                 this.name = playerData.name || this.name;
@@ -737,7 +743,10 @@ export class Player {
             try {
                 const backupData = localStorage.getItem('kittyCreekPlayer_backup');
                 if (backupData) {
-                    const playerData = JSON.parse(backupData);
+                    const playerData = migrateLocationSaveData(
+                        JSON.parse(backupData),
+                        new Locations().getLocations()
+                    );
                     Object.assign(this, playerData);
                     this.normalizeTackleState();
                     this.syncStoryUnlocks();

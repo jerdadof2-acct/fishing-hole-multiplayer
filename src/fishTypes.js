@@ -74,11 +74,11 @@ export const FishTypes = [
     { id: 51, name: 'Red Snapper', rarity: 'Rare', minWeight: 5.0, maxWeight: 30.0, recordWeight: 50.0, value: 90, experience: 30, season: 'All' },
     { id: 52, name: 'Reef Shark', rarity: 'Epic', minWeight: 40.0, maxWeight: 150.0, recordWeight: 220.0, value: 420, experience: 52, season: 'All' },
 
-    // Amazon Depths — jungle river species (53-56)
-    { id: 53, name: 'Piranha', rarity: 'Common', minWeight: 0.5, maxWeight: 3.5, recordWeight: 7.5, value: 18, experience: 9, season: 'All' },
-    { id: 54, name: 'Peacock Bass', rarity: 'Uncommon', minWeight: 2.0, maxWeight: 15.0, recordWeight: 27.0, value: 45, experience: 18, season: 'All' },
-    { id: 55, name: 'Payara', rarity: 'Rare', minWeight: 8.0, maxWeight: 35.0, recordWeight: 40.0, value: 95, experience: 32, season: 'All' },
-    { id: 56, name: 'Arapaima', rarity: 'Legendary', minWeight: 50.0, maxWeight: 200.0, recordWeight: 440.0, value: 1200, experience: 78, season: 'All' }
+    // Amazon Depths — premium jungle river species (53-56)
+    { id: 53, name: 'Piranha', rarity: 'Common', minWeight: 0.5, maxWeight: 3.5, recordWeight: 7.5, value: 28, experience: 14, season: 'All' },
+    { id: 54, name: 'Peacock Bass', rarity: 'Uncommon', minWeight: 2.0, maxWeight: 15.0, recordWeight: 27.0, value: 68, experience: 24, season: 'All' },
+    { id: 55, name: 'Payara', rarity: 'Rare', minWeight: 8.0, maxWeight: 35.0, recordWeight: 40.0, value: 140, experience: 42, season: 'All' },
+    { id: 56, name: 'Arapaima', rarity: 'Legendary', minWeight: 50.0, maxWeight: 200.0, recordWeight: 440.0, value: 1800, experience: 95, season: 'All' }
 ];
 
 // Fish facts database

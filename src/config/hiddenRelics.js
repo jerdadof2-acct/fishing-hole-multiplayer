@@ -5,7 +5,7 @@
 
 export const STARLIGHT_LURE_BAIT_ID = 6;
 export const STARLIGHT_LURE_BAIT_NAME = 'Starlight Lure';
-export const CELESTIAL_DEPTHS_LOCATION_INDEX = 9;
+export const CELESTIAL_DEPTHS_LOCATION_INDEX = 10;
 
 /** True when the item/id/name is the relic-forged Starlight Lure bait. */
 export function isStarlightLureBait(itemOrId) {

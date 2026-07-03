@@ -2,7 +2,7 @@ import { TackleShop } from './tackleShop.js';
 import { ACHIEVEMENTS, evaluateAchievements as evaluateAchievementDefs, getAchievementStatuses } from './achievements.js';
 import { replayStoryPrologue } from './prologue.js';
 import { STARLIGHT_LURE_IMAGE, isStarlightLureBait } from './config/hiddenRelics.js';
-import { isCelestialStarfishHook } from './config/starfishEncounter.js';
+import { isCelestialStarfishHook, STARFISH_FIRST_CATCH_BANNER, STARFISH_FIRST_CATCH_NARRATION, STARFISH_FIRST_CATCH_QUOTE, STARFISH_GUIDE_COMING_SOON, STARFISH_GUIDE_DESTINATIONS_HEADLINE, STARFISH_GUIDE_DESTINATIONS_BODY, STARFISH_GUIDE_DESTINATIONS_OPEN } from './config/starfishEncounter.js';
 import { canAccessCortezBackwaters } from './config/cortezBackwaters.js';
 import { CORTEZ_BACKWATERS_NAME } from './locations.js';
 import { getFishImagePaths, getRelicImagePaths } from './utils/imageAssets.js';
@@ -99,7 +99,6 @@ export class UI {
             "You've already caught the Starfish of Eternity. Remember: not every sparkle is a target—some are just to enjoy.",
             "You've already caught the Starfish of Eternity. The universe is impressed; now go feed your crew."
         ];
-        this.starfishFirstCatchLine = "You've spent your life chasing wonders.\n\nBut the light you sought was always within you.";
         this._catchPresentationBound = false;
         this._catchPresentationTimer = null;
         this._catchCoinRaf = null;
@@ -600,6 +599,13 @@ export class UI {
             cost.className = 'location-brief-cost';
             cost.textContent = `Travel fare: $${travelCost}`;
             meta.appendChild(cost);
+        }
+
+        if (location.premium) {
+            const premiumEl = document.createElement('span');
+            premiumEl.className = 'location-brief-premium';
+            premiumEl.textContent = 'Premium charter';
+            meta.appendChild(premiumEl);
         }
 
         content.appendChild(title);
@@ -3964,7 +3970,7 @@ export class UI {
                 this.updateLocationSelector?.();
                 setTimeout(() => {
                     this.showBannerNotification?.(
-                        `${CORTEZ_BACKWATERS_NAME} unlocked — Halley can return to the Gulf.`,
+                        STARFISH_FIRST_CATCH_BANNER,
                         '#fcd34d',
                         5200
                     );
@@ -4047,18 +4053,30 @@ export class UI {
             const { primary: imagePath, fallback: imageFallback } = getFishImagePaths(fishName);
             const isFirstStarfishCatch = !!isFirstCatch;
             const advice = !isFirstStarfishCatch ? this.getNextStarfishAdvice() : null;
-            const quoteText = this.starfishFirstCatchLine || "You've spent your life chasing wonders.\n\nBut the light you sought was always within you.";
-            const narrationText = [
-                'The sea grows still. The air feels weightless.',
-                'For a moment, Halley isn’t holding a catch — he’s holding a reflection.',
-                'The glow from the Starfish mirrors the same spark in his own eyes,',
-                'and the waves whisper with the voice of every journey he’s taken.',
-                '',
-                'He realizes this was never about the biggest fish,',
-                'or the rarest treasure.',
-                'It was about coming home —',
-                'to the light that’s been with him since the beginning.'
-            ].join('\n');
+            const quoteText = STARFISH_FIRST_CATCH_QUOTE;
+            const narrationText = STARFISH_FIRST_CATCH_NARRATION;
+            const guideDestinationsHtml = STARFISH_GUIDE_DESTINATIONS_OPEN.map((dest) => (
+                `<li style="margin-bottom: 10px;">
+                    <strong style="color: #fef3c7;">${dest.name}</strong>
+                    <span style="color: #86efac; font-size: 0.92em;"> — ${dest.label}</span>
+                </li>`
+            )).join('');
+            const guideSectionHtml = `
+                <div style="margin-top: 28px; padding: 20px 22px; border-radius: 16px; background: rgba(8, 20, 48, 0.55); border: 1px solid rgba(140, 210, 255, 0.22); text-align: left;">
+                    <div style="font-size: 19px; font-weight: 700; color: #bfdbfe; margin-bottom: 12px;">
+                        ${STARFISH_GUIDE_DESTINATIONS_HEADLINE}
+                    </div>
+                    <div style="font-size: 16px; line-height: 1.65; color: #dbeafe; margin-bottom: 16px;">
+                        ${STARFISH_GUIDE_DESTINATIONS_BODY}
+                    </div>
+                    <ul style="list-style: none; padding: 0; margin: 0 0 12px; font-size: 16px; line-height: 1.5;">
+                        ${guideDestinationsHtml}
+                    </ul>
+                    <div style="font-size: 15px; color: rgba(191, 219, 254, 0.78); font-style: italic;">
+                        ${STARFISH_GUIDE_COMING_SOON}
+                    </div>
+                </div>
+            `;
             const isSmallScreen = window.innerWidth <= 600;
             const popupPadding = isSmallScreen ? '24px 20px' : '40px 52px';
             const popupMaxWidth = isSmallScreen ? '90vw' : '600px';
@@ -4121,9 +4139,11 @@ export class UI {
                     <div style="font-size: 22px; font-weight: 600; color: #fef3c7; margin-bottom: 20px; text-shadow: 0 0 18px rgba(253, 224, 171, 0.85); white-space: pre-line;">
                         &ldquo;${quoteText.replace(/\n/g, '\n')}&rdquo;
                     </div>
-                    <div style="font-size: 18px; line-height: 1.7; color: #dbeafe; white-space: pre-line; margin-bottom: 36px;">
+                    <div style="font-size: 18px; line-height: 1.7; color: #dbeafe; white-space: pre-line; margin-bottom: 8px;">
                         ${narrationText}
                     </div>
+                    ${guideSectionHtml}
+                    <div style="margin-top: 28px;">
                     <button id="starfish-close-btn" style="
                         padding: ${buttonPaddingPrimary};
                         background: linear-gradient(135deg, #6cc6ff, #b693ff);
@@ -4141,6 +4161,7 @@ export class UI {
                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 12px 28px rgba(110,180,255,0.45)';">
                         &rarr; Let Go and Watch It Return to the Deep
                     </button>
+                    </div>
                 `;
             } else {
                 contentHtml = `
