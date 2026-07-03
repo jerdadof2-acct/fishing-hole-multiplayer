@@ -18,8 +18,8 @@ export const PROLOGUE_SPEED_STORAGE_KEY = 'kittyCreekPrologueScrollSpeed';
 /** Base upward scroll speed in pixels per second at multiplier 1.0. */
 export const PROLOGUE_BASE_SCROLL_PX_PER_SEC = 42;
 
-/** Default scroll multiplier — tune with on-screen controls while VO is in progress. */
-export const PROLOGUE_SCROLL_SPEED_DEFAULT = 0.80;
+/** Default scroll multiplier — fixed for voiceover sync (0.70× on mobile-friendly pacing). */
+export const PROLOGUE_SCROLL_SPEED_DEFAULT = 0.70;
 
 export const PROLOGUE_SCROLL_SPEED_MIN = 0.35;
 export const PROLOGUE_SCROLL_SPEED_MAX = 3.5;
@@ -39,19 +39,19 @@ export const PROLOGUE_AMBIENCE_URL = '/assets/audio/prologue-ocean-seagulls.mp3'
 export const PROLOGUE_MUSIC_URL = '/assets/audio/prologue-music.mp3';
 
 /** Peak ocean SFX volume (0–1) — well below voiceover. */
-export const PROLOGUE_AMBIENCE_VOLUME = 0.10;
+export const PROLOGUE_AMBIENCE_VOLUME = 0.06;
 
 /** Ocean level while voiceover plays (ratio of peak). */
-export const PROLOGUE_AMBIENCE_DUCK_RATIO = 0.28;
+export const PROLOGUE_AMBIENCE_DUCK_RATIO = 0.22;
 
 /** Peak music volume (0–1) — below voiceover and ocean SFX. */
-export const PROLOGUE_MUSIC_VOLUME = 0.28;
+export const PROLOGUE_MUSIC_VOLUME = 0.20;
 
 /** Same track looped at Celestial Depths while fishing the Starfish. */
 export const CELESTIAL_DEPTHS_MUSIC_VOLUME = 0.34;
 
 /** Music level while voiceover plays (ratio of peak). */
-export const PROLOGUE_MUSIC_DUCK_RATIO = 0.32;
+export const PROLOGUE_MUSIC_DUCK_RATIO = 0.24;
 
 /** Seconds after voiceover ends before ocean ambience begins fading. */
 export const PROLOGUE_AMBIENCE_FADE_DELAY_AFTER_VO_SEC = 1;
@@ -60,7 +60,7 @@ export const PROLOGUE_AMBIENCE_FADE_DELAY_AFTER_VO_SEC = 1;
 export const PROLOGUE_AMBIENCE_FADE_DURATION_SEC = 3;
 
 /** Voiceover playback volume (0–1+, gain node allows slight boost). */
-export const PROLOGUE_VOICEOVER_VOLUME = 1.30;
+export const PROLOGUE_VOICEOVER_VOLUME = 1.45;
 
 /** Seconds of scroll before voiceover starts (scroll begins immediately). */
 export const PROLOGUE_VOICEOVER_DELAY_SEC = 5;
