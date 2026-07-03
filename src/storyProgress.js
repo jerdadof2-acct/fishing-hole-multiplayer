@@ -1,4 +1,4 @@
-import { HIDDEN_RELICS } from './config/hiddenRelics.js';
+import { HIDDEN_RELICS, CELESTIAL_DEPTHS_LOCATION_INDEX } from './config/hiddenRelics.js';
 import {
     getRelicDiscoveryChance,
     getRelicProgressionStep,
@@ -10,7 +10,6 @@ import {
 import { getChapterForRelicCompletion } from './config/storyChapters.js';
 import { CORTEZ_BACKWATERS_LOCATION_INDEX } from './config/cortezBackwaters.js';
 import {
-    CELESTIAL_DEPTHS_LOCATION_INDEX,
     LOUISIANA_BAYOU_LOCATION_INDEX,
     CONGO_RIVER_LOCATION_INDEX,
     CRAZYCATCH_COVE_LOCATION_INDEX
