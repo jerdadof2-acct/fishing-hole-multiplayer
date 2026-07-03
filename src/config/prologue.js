@@ -19,7 +19,7 @@ export const PROLOGUE_SPEED_STORAGE_KEY = 'kittyCreekPrologueScrollSpeed';
 export const PROLOGUE_BASE_SCROLL_PX_PER_SEC = 42;
 
 /** Default scroll multiplier — tune with on-screen controls while VO is in progress. */
-export const PROLOGUE_SCROLL_SPEED_DEFAULT = 0.65;
+export const PROLOGUE_SCROLL_SPEED_DEFAULT = 0.80;
 
 export const PROLOGUE_SCROLL_SPEED_MIN = 0.35;
 export const PROLOGUE_SCROLL_SPEED_MAX = 3.5;
@@ -38,11 +38,11 @@ export const PROLOGUE_AMBIENCE_URL = '/assets/audio/prologue-ocean-seagulls.mp3'
 /** Universfield dark mysterious atmosphere — background music bed. */
 export const PROLOGUE_MUSIC_URL = '/assets/audio/prologue-music.mp3';
 
-/** Peak ocean SFX volume (0–1) — below voiceover. */
-export const PROLOGUE_AMBIENCE_VOLUME = 0.3;
+/** Peak ocean SFX volume (0–1) — well below voiceover. */
+export const PROLOGUE_AMBIENCE_VOLUME = 0.10;
 
 /** Ocean level while voiceover plays (ratio of peak). */
-export const PROLOGUE_AMBIENCE_DUCK_RATIO = 0.36;
+export const PROLOGUE_AMBIENCE_DUCK_RATIO = 0.28;
 
 /** Peak music volume (0–1) — below voiceover and ocean SFX. */
 export const PROLOGUE_MUSIC_VOLUME = 0.28;
@@ -60,10 +60,10 @@ export const PROLOGUE_AMBIENCE_FADE_DELAY_AFTER_VO_SEC = 1;
 export const PROLOGUE_AMBIENCE_FADE_DURATION_SEC = 3;
 
 /** Voiceover playback volume (0–1). */
-export const PROLOGUE_VOICEOVER_VOLUME = 1;
+export const PROLOGUE_VOICEOVER_VOLUME = 1.15;
 
 /** Seconds of scroll before voiceover starts (scroll begins immediately). */
-export const PROLOGUE_VOICEOVER_DELAY_SEC = 2;
+export const PROLOGUE_VOICEOVER_DELAY_SEC = 4;
 
 /** Seconds on splash screen before tap-to-enter is enabled. */
 export const PROLOGUE_ENTER_BUTTON_DELAY_SEC = 3.5;
