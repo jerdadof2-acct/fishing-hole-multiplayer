@@ -40,9 +40,10 @@ async function toWebp(input, output, maxWidth, quality) {
 
 async function shrinkPng(input, maxWidth) {
     const tmp = `${input}.compress.tmp`;
+    const meta = await sharp(input).metadata();
     await sharp(input)
         .resize(maxWidth, maxWidth, { fit: 'inside', withoutEnlargement: true })
-        .png({ compressionLevel: 9, palette: true })
+        .png({ compressionLevel: 9, palette: !meta.hasAlpha })
         .toFile(tmp);
     const before = fs.statSync(input).size;
     fs.renameSync(tmp, input);
