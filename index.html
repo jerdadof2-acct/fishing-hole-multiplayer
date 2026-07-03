@@ -78,9 +78,21 @@
         <!-- Game Area -->
         <div id="game-area" class="hidden">
             <div id="ui-controls">
-                <select id="location-select" class="location-select">
-                    <!-- Populated dynamically with unlocked locations -->
-                </select>
+                <div id="location-picker-wrap" class="location-picker-wrap">
+                    <select id="location-select" class="location-select" aria-label="Fishing location">
+                        <!-- Populated dynamically with unlocked locations -->
+                    </select>
+                    <button
+                        type="button"
+                        id="location-picker-btn"
+                        class="location-select location-picker-btn hidden"
+                        aria-haspopup="dialog"
+                        aria-expanded="false"
+                        aria-controls="location-picker-overlay"
+                    >
+                        <span id="location-picker-label">Loading…</span>
+                    </button>
+                </div>
                 <button id="cast-button" class="control-button">CAST</button>
             </div>
         </div>

@@ -110,7 +110,6 @@ export class UI {
 
     init() {
         const castButton = document.getElementById('cast-button');
-        const locationSelect = document.getElementById('location-select');
         
         // Cast button (handles both cast and set hook)
         castButton.addEventListener('click', () => {
@@ -123,25 +122,8 @@ export class UI {
             this.handleCastOrSetHook();
         });
         
-        // Location selector - switch between unlocked locations
-        if (locationSelect && this.game?.locations && this.player) {
-            this.updateLocationSelector();
-            locationSelect.addEventListener('change', (e) => {
-                const locationIndex = parseInt(e.target.value);
-                if (!isNaN(locationIndex)) {
-                    this.handleLocationChange(locationIndex);
-                }
-            });
-        } else if (locationSelect) {
-            // Set up event listener even if locations/player not ready yet
-            // Will be populated once game systems are initialized
-            locationSelect.addEventListener('change', (e) => {
-                const locationIndex = parseInt(e.target.value);
-                if (!isNaN(locationIndex) && this.game?.locations && this.player) {
-                    this.handleLocationChange(locationIndex);
-                }
-            });
-        }
+        // Location selector — touch devices use a button sheet (avoids mobile keyboard on native select)
+        this.initLocationPicker();
         
         // Set up fishing callbacks
         this.fishing.onFishCaught = () => {
@@ -556,6 +538,8 @@ export class UI {
             return;
         }
 
+        this.dismissMobileKeyboard();
+
         document.getElementById('location-brief-overlay')?.remove();
 
         const difficulty = location.difficulty || 'Unknown';
@@ -711,7 +695,7 @@ export class UI {
 
         const location = this.game.locations.getLocation(locationIndex);
         if (!location) {
-            this.updateLocationSelector();
+            this.syncLocationSelectorValue();
             return false;
         }
 
@@ -721,13 +705,13 @@ export class UI {
                 title: 'Not enough money',
                 body: `You need $${location.cost} to travel.`
             });
-            this.updateLocationSelector();
+            this.syncLocationSelectorValue();
             return false;
         }
 
         const switched = this.game.changeLocation(locationIndex);
         if (!switched) {
-            this.updateLocationSelector();
+            this.syncLocationSelectorValue();
             return false;
         }
 
@@ -2953,6 +2937,162 @@ export class UI {
         }
     }
     
+    dismissMobileKeyboard() {
+        const active = document.activeElement;
+        if (!active || active === document.body) {
+            return;
+        }
+        const tag = active.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || active.isContentEditable) {
+            active.blur();
+        }
+    }
+
+    initLocationPicker() {
+        const locationSelect = document.getElementById('location-select');
+        const pickerBtn = document.getElementById('location-picker-btn');
+        if (!locationSelect) {
+            return;
+        }
+
+        this._useTouchLocationPicker = (
+            typeof window !== 'undefined'
+            && window.matchMedia('(hover: none) and (pointer: coarse)').matches
+        );
+
+        const onLocationChange = (locationIndex) => {
+            if (!isNaN(locationIndex) && this.game?.locations && this.player) {
+                this.handleLocationChange(locationIndex);
+            }
+        };
+
+        if (this._useTouchLocationPicker && pickerBtn) {
+            locationSelect.classList.add('location-select--touch-hidden');
+            locationSelect.tabIndex = -1;
+            pickerBtn.classList.remove('hidden');
+
+            pickerBtn.addEventListener('click', () => {
+                this.dismissMobileKeyboard();
+                this.showLocationPickerMenu();
+            });
+        } else {
+            locationSelect.addEventListener('mousedown', () => this.dismissMobileKeyboard());
+            locationSelect.addEventListener('touchstart', () => this.dismissMobileKeyboard(), { passive: true });
+            locationSelect.addEventListener('change', (e) => {
+                const locationIndex = parseInt(e.target.value, 10);
+                onLocationChange(locationIndex);
+            });
+        }
+
+        if (this.game?.locations && this.player) {
+            this.updateLocationSelector();
+        }
+    }
+
+    showLocationPickerMenu() {
+        if (!this.game?.locations || !this.player) {
+            return;
+        }
+
+        document.getElementById('location-picker-overlay')?.remove();
+
+        const locations = this.game.locations.locations;
+        const currentIndex = this.game.locations.getCurrentLocationIndex();
+        const pickerBtn = document.getElementById('location-picker-btn');
+
+        const overlay = document.createElement('div');
+        overlay.id = 'location-picker-overlay';
+        overlay.className = 'location-picker-overlay';
+
+        const sheet = document.createElement('div');
+        sheet.className = 'location-picker-sheet';
+        sheet.setAttribute('role', 'dialog');
+        sheet.setAttribute('aria-label', 'Choose location');
+
+        const title = document.createElement('h3');
+        title.className = 'location-picker-title';
+        title.textContent = 'Choose location';
+        sheet.appendChild(title);
+
+        const list = document.createElement('div');
+        list.className = 'location-picker-list';
+        list.setAttribute('role', 'listbox');
+
+        locations.forEach((location, index) => {
+            const isUnlocked = this.player.locationUnlocks.includes(index);
+            if (!isUnlocked && !hasPrivilegedAccess(this.player)) {
+                return;
+            }
+
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'location-picker-item';
+            if (index === currentIndex) {
+                item.classList.add('location-picker-item--active');
+            }
+            item.setAttribute('role', 'option');
+            item.setAttribute('aria-selected', index === currentIndex ? 'true' : 'false');
+            item.textContent = location.name;
+            item.addEventListener('click', () => {
+                overlay.remove();
+                pickerBtn?.setAttribute('aria-expanded', 'false');
+                if (index !== currentIndex) {
+                    this.handleLocationChange(index);
+                }
+            });
+            list.appendChild(item);
+        });
+
+        sheet.appendChild(list);
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'location-picker-cancel';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.addEventListener('click', () => {
+            overlay.remove();
+            pickerBtn?.setAttribute('aria-expanded', 'false');
+        });
+        sheet.appendChild(cancelBtn);
+
+        overlay.appendChild(sheet);
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) {
+                overlay.remove();
+                pickerBtn?.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        document.body.appendChild(overlay);
+        pickerBtn?.setAttribute('aria-expanded', 'true');
+        this.dismissMobileKeyboard();
+
+        window.requestAnimationFrame(() => {
+            overlay.classList.add('visible');
+        });
+    }
+
+    updateLocationPickerLabel() {
+        const label = document.getElementById('location-picker-label');
+        const current = this.game?.locations?.getCurrentLocation?.();
+        if (label && current) {
+            label.textContent = current.name;
+        }
+    }
+
+    syncLocationSelectorValue() {
+        const locationSelect = document.getElementById('location-select');
+        if (!locationSelect || !this.game?.locations) {
+            return;
+        }
+
+        const currentLocationIndex = this.game.locations.getCurrentLocationIndex();
+        locationSelect.value = String(currentLocationIndex);
+        this.updateLocationPickerLabel();
+        locationSelect.blur();
+        this.dismissMobileKeyboard();
+    }
+    
     updateLocationSelector() {
         const locationSelect = document.getElementById('location-select');
         if (!locationSelect || !this.game?.locations || !this.player) {
@@ -2988,9 +3128,24 @@ export class UI {
             option.selected = true;
             locationSelect.appendChild(option);
         }
+        
+        // If no locations unlocked, add at least the first one
+        if (locationSelect.options.length === 0 && locations.length > 0) {
+            const option = document.createElement('option');
+            option.value = 0;
+            option.textContent = locations[0].name;
+            option.selected = true;
+            locationSelect.appendChild(option);
+        }
+
+        this.updateLocationPickerLabel();
+        locationSelect.blur();
+        this.dismissMobileKeyboard();
     }
     
     handleLocationChange(locationIndex) {
+        this.dismissMobileKeyboard();
+
         if (!this.game?.locations) {
             console.warn('[UI] Locations system not available');
             return;
@@ -2999,20 +3154,20 @@ export class UI {
         const location = this.game.locations.getLocation(locationIndex);
         if (!location) {
             console.warn('[UI] Invalid location index:', locationIndex);
-            this.updateLocationSelector();
+            this.syncLocationSelectorValue();
             return;
         }
 
         const currentIndex = this.game.locations.getCurrentLocationIndex();
         if (locationIndex === currentIndex) {
-            this.updateLocationSelector();
+            this.syncLocationSelectorValue();
             return;
         }
         
         // Check if location is unlocked
         if (!hasPrivilegedAccess(this.player) && !this.player.locationUnlocks.includes(locationIndex)) {
             console.warn('[UI] Location not unlocked:', location.name);
-            this.updateLocationSelector();
+            this.syncLocationSelectorValue();
             return;
         }
 
@@ -3022,7 +3177,7 @@ export class UI {
                 title: 'Celestial Depths locked',
                 body: 'Collect all ten sea relics and forge the Starlight Lure first.'
             });
-            this.updateLocationSelector();
+            this.syncLocationSelectorValue();
             return;
         }
 
@@ -3032,7 +3187,7 @@ export class UI {
                 title: 'Cortez Backwaters locked',
                 body: 'Catch the Starfish of Eternity at the Celestial Depths to unlock this hidden destination.'
             });
-            this.updateLocationSelector();
+            this.syncLocationSelectorValue();
             return;
         }
         
@@ -3043,7 +3198,7 @@ export class UI {
                 title: 'Not enough money',
                 body: `You need $${location.cost} to travel.`
             });
-            this.updateLocationSelector();
+            this.syncLocationSelectorValue();
             return;
         }
 
@@ -3057,7 +3212,7 @@ export class UI {
                 this.executeLocationTravel(locationIndex);
             },
             onCancel: () => {
-                this.updateLocationSelector();
+                this.syncLocationSelectorValue();
             }
         });
     }

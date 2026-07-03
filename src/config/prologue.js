@@ -18,8 +18,8 @@ export const PROLOGUE_SPEED_STORAGE_KEY = 'kittyCreekPrologueScrollSpeed';
 /** Base upward scroll speed in pixels per second at multiplier 1.0. */
 export const PROLOGUE_BASE_SCROLL_PX_PER_SEC = 42;
 
-/** Default scroll multiplier — fixed for voiceover sync (0.70× on mobile-friendly pacing). */
-export const PROLOGUE_SCROLL_SPEED_DEFAULT = 0.70;
+/** Default scroll multiplier — fixed for voiceover sync (0.75× on mobile-friendly pacing). */
+export const PROLOGUE_SCROLL_SPEED_DEFAULT = 0.75;
 
 export const PROLOGUE_SCROLL_SPEED_MIN = 0.35;
 export const PROLOGUE_SCROLL_SPEED_MAX = 3.5;
