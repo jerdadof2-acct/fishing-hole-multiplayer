@@ -693,6 +693,12 @@ canvas {
     padding: calc(var(--ad-vertical-padding) / 2) 8px;
 }
 
+.ad-banner-content ins.adsbygoogle {
+    display: inline-block;
+    min-width: 320px;
+    min-height: 50px;
+}
+
 .ad-rotator {
     width: min(var(--ad-slot-width), 100%);
     height: var(--ad-slot-height);

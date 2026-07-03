@@ -142,13 +142,41 @@ const ADS = [
 
 const ROTATION_MS = 8000;
 const DEFAULT_ADS_ENABLED = true;
+const BANNER_MOUNT_DELAY_MS = 320;
+const MAX_BANNER_MOUNT_ATTEMPTS = 80;
 
 let currentIndex = 0;
 let rotationTimer = null;
 let bannerContentMounted = false;
+let bannerMountAttempts = 0;
 
-function isBannerVisible(banner) {
-    return Boolean(banner && !banner.classList.contains('hidden'));
+function isBannerReady(banner) {
+    if (!banner || banner.classList.contains('hidden')) {
+        return false;
+    }
+
+    const gameContainer = document.getElementById('game-container');
+    if (gameContainer?.classList.contains('pre-entry')) {
+        return false;
+    }
+
+    const loading = document.getElementById('loading');
+    if (loading && !loading.classList.contains('hidden')) {
+        return false;
+    }
+
+    return true;
+}
+
+function resolveBannerAdWidth(banner, bannerContent) {
+    const measured = Math.max(
+        banner?.getBoundingClientRect?.().width ?? 0,
+        bannerContent?.getBoundingClientRect?.().width ?? 0,
+        document.documentElement?.clientWidth ?? 0,
+        window.innerWidth ?? 0
+    );
+
+    return Math.min(728, Math.max(320, Math.floor(measured) || 320));
 }
 
 function mountFictionalAdRotator(bannerContent) {
@@ -178,13 +206,45 @@ function mountBannerContent() {
     const banner = document.getElementById('ad-banner');
     const bannerContent = banner?.querySelector('.ad-banner-content');
 
-    if (!banner || !bannerContent || !isBannerVisible(banner)) {
+    if (!banner || !bannerContent) {
         return;
     }
 
-    const width = bannerContent.getBoundingClientRect().width;
-    if (width <= 0) {
-        requestAnimationFrame(mountBannerContent);
+    if (!isBannerReady(banner)) {
+        if (bannerMountAttempts < MAX_BANNER_MOUNT_ATTEMPTS) {
+            bannerMountAttempts += 1;
+            requestAnimationFrame(mountBannerContent);
+        } else {
+            mountBannerContentForced(banner, bannerContent, 320);
+        }
+        return;
+    }
+
+    const adWidth = resolveBannerAdWidth(banner, bannerContent);
+    if (adWidth <= 0) {
+        if (bannerMountAttempts < MAX_BANNER_MOUNT_ATTEMPTS) {
+            bannerMountAttempts += 1;
+            requestAnimationFrame(mountBannerContent);
+        } else {
+            mountBannerContentForced(banner, bannerContent, 320);
+        }
+        return;
+    }
+
+    bannerMountAttempts = 0;
+    mountBannerContentWithWidth(bannerContent, adWidth);
+}
+
+function mountBannerContentForced(banner, bannerContent, adWidth) {
+    if (bannerContentMounted) {
+        return;
+    }
+    bannerMountAttempts = 0;
+    mountBannerContentWithWidth(bannerContent, adWidth);
+}
+
+function mountBannerContentWithWidth(bannerContent, adWidth) {
+    if (bannerContentMounted || !bannerContent) {
         return;
     }
 
@@ -199,7 +259,11 @@ function mountBannerContent() {
         return;
     }
 
-    if (hasConfiguredBannerAd() && mountAdsenseUnit(bannerContent, ADSENSE_BANNER_SLOT)) {
+    if (hasConfiguredBannerAd() && mountAdsenseUnit(bannerContent, ADSENSE_BANNER_SLOT, {
+        width: adWidth,
+        height: 50,
+        fullWidthResponsive: false
+    })) {
         bannerContentMounted = true;
         return;
     }
@@ -227,7 +291,7 @@ function getAdsEnabled() {
  * Mount one manual AdSense unit inside a container we own (never page-wide Auto ads).
  * @param {HTMLElement} container
  * @param {string} slotId
- * @param {{ format?: string, fullWidthResponsive?: boolean }} [options]
+ * @param {{ format?: string, fullWidthResponsive?: boolean, width?: number, height?: number }} [options]
  */
 export function mountAdsenseUnit(container, slotId, options = {}) {
     if (!ADSENSE_CLIENT || !slotId || !container) {
@@ -236,20 +300,42 @@ export function mountAdsenseUnit(container, slotId, options = {}) {
 
     const {
         format = 'auto',
-        fullWidthResponsive = true
+        fullWidthResponsive = true,
+        width = null,
+        height = null
     } = options;
 
     container.innerHTML = '';
+    container.style.width = '100%';
+    if (height) {
+        container.style.minHeight = `${height}px`;
+    }
+
     const ins = document.createElement('ins');
     ins.className = 'adsbygoogle';
-    ins.style.display = 'block';
     ins.setAttribute('data-ad-client', ADSENSE_CLIENT);
     ins.setAttribute('data-ad-slot', slotId);
-    ins.setAttribute('data-ad-format', format);
-    if (fullWidthResponsive) {
-        ins.setAttribute('data-full-width-responsive', 'true');
+
+    if (width && height) {
+        ins.style.display = 'inline-block';
+        ins.style.width = `${width}px`;
+        ins.style.height = `${height}px`;
+        if (format && format !== 'auto') {
+            ins.setAttribute('data-ad-format', format);
+        }
+    } else {
+        ins.style.display = 'block';
+        ins.style.width = '100%';
+        ins.style.minWidth = '320px';
+        ins.style.minHeight = `${height || 50}px`;
+        ins.setAttribute('data-ad-format', format);
+        if (fullWidthResponsive) {
+            ins.setAttribute('data-full-width-responsive', 'true');
+        }
     }
+
     container.appendChild(ins);
+    void ins.offsetWidth;
 
     try {
         (window.adsbygoogle = window.adsbygoogle || []).push({});
@@ -350,8 +436,12 @@ export function showAdBanner() {
     }
 
     banner.classList.remove('hidden');
+    bannerMountAttempts = 0;
 
-    requestAnimationFrame(() => {
-        requestAnimationFrame(mountBannerContent);
-    });
+    // Wait for loading overlay to hide and layout to settle before AdSense measures the slot.
+    window.setTimeout(() => {
+        requestAnimationFrame(() => {
+            requestAnimationFrame(mountBannerContent);
+        });
+    }, BANNER_MOUNT_DELAY_MS);
 }
