@@ -3623,6 +3623,24 @@ body.gameplay-onboarding-active .location-select {
     font-style: italic;
 }
 
+.pwa-install-ios-hint {
+    margin: -8px 0 20px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.pwa-install-ios-hint.hidden {
+    display: none;
+}
+
+.pwa-install-share-icon {
+    display: inline-block;
+    margin: 0 2px;
+    font-size: 1.1rem;
+    vertical-align: middle;
+}
+
 .energy-modal-actions {
     display: flex;
     flex-direction: column;

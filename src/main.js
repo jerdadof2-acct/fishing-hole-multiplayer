@@ -11,6 +11,7 @@ import {
     initDevFaceCameraFromUrl,
     isDevFaceCameraEnabled
 } from './dev/devFaceCamera.js';
+import { scheduleInstallPromptWhenIdle } from './pwaInstall.js';
 import { canAccessCortezBackwaters } from './config/cortezBackwaters.js';
 import { hasPrivilegedAccess } from './admin/adminAuth.js';
 import { debugLog } from './config/debug.js';
@@ -173,6 +174,8 @@ export class Game {
         if (this.ui && typeof this.ui.maybeStartGameplayOnboarding === 'function') {
             this.ui.maybeStartGameplayOnboarding();
         }
+
+        scheduleInstallPromptWhenIdle();
 
         if (isDevFaceCameraEnabled()) {
             this.syncDevFaceCamera();

@@ -15,6 +15,14 @@
     <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
     <link rel="stylesheet" href="css/styles.css">
 
+    <script>
+        window.__deferredPwaInstallPrompt = null;
+        window.addEventListener('beforeinstallprompt', (event) => {
+            event.preventDefault();
+            window.__deferredPwaInstallPrompt = event;
+        });
+    </script>
+
     <!-- Google AdSense — manual units only; turn OFF Auto ads in AdSense dashboard (see DOCS/adsense-manual-placement.md) -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8602130362499092"
         crossorigin="anonymous"></script>
@@ -148,6 +156,24 @@
                     <li>+100 Coins</li>
                 </ul>
                 <button type="button" id="daily-bonus-claim-btn" class="control-button energy-modal-btn">Claim</button>
+            </div>
+        </div>
+
+        <!-- PWA install -->
+        <div id="pwa-install-modal" class="modal energy-modal hidden" aria-hidden="true">
+            <div class="modal-content energy-modal-content pwa-install-content">
+                <h2 class="energy-modal-title">📲 Install Halley's Big Catch</h2>
+                <p id="pwa-install-message" class="energy-modal-message">
+                    Install on your device for the full game pack, faster loading, and offline play.
+                </p>
+                <p id="pwa-install-ios-hint" class="pwa-install-ios-hint hidden">
+                    Tap <strong>Share</strong> <span class="pwa-install-share-icon" aria-hidden="true">⎋</span>
+                    then <strong>Add to Home Screen</strong>.
+                </p>
+                <div class="energy-modal-actions">
+                    <button type="button" id="pwa-install-btn" class="control-button energy-modal-btn">Install App</button>
+                    <button type="button" id="pwa-install-later-btn" class="energy-modal-btn secondary">Not Now</button>
+                </div>
             </div>
         </div>
         

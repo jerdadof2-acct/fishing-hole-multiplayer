@@ -366,7 +366,7 @@ export class UI {
         }
     }
 
-    trySpendCastEnergy() {
+    ensureCanAffordCast() {
         if (!this.player) return true;
 
         if (!canAffordCast(this.player)) {
@@ -374,15 +374,23 @@ export class UI {
             return false;
         }
 
+        return true;
+    }
+
+    spendCatchEnergy() {
+        if (!this.player) return;
+
         spendCastEnergy(this.player);
         this.player.save();
         this.updatePlayerInfo();
 
         if (this.player.energy <= 0) {
-            this.showOutOfEnergyModal();
+            window.setTimeout(() => {
+                if (this.player?.energy <= 0) {
+                    this.showOutOfEnergyModal();
+                }
+            }, 2500);
         }
-
-        return true;
     }
 
     maybeStartGameplayOnboarding() {
@@ -3154,7 +3162,7 @@ export class UI {
             return;
         }
 
-        if (!this.trySpendCastEnergy()) {
+        if (!this.ensureCanAffordCast()) {
             return;
         }
         
@@ -3841,6 +3849,8 @@ export class UI {
             console.warn('[UI] No fish data for catch handling');
             return;
         }
+
+        this.spendCatchEnergy();
         
         // Record catch in gameplay systems
         if (this.player && this.inventory && this.leaderboard && this.fishCollection) {
