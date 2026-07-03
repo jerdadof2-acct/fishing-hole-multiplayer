@@ -58,6 +58,7 @@ export class PrologueAudioBed {
         this.running = false;
         this._fadingOut = false;
         this._stopTimer = null;
+        this._voStartTimer = null;
     }
 
     async start() {
@@ -132,7 +133,7 @@ export class PrologueAudioBed {
             );
         }
 
-        const playTargets = [this.oceanLayer, this.musicLayer, this.voiceoverLayer].filter(Boolean);
+        const playTargets = [this.oceanLayer, this.musicLayer].filter(Boolean);
         const playPromises = playTargets.map((layer) => layer.audio.play());
 
         const now = this.ctx.currentTime;
@@ -143,14 +144,31 @@ export class PrologueAudioBed {
         if (this.voiceoverLayer) {
             const delaySec = this.voiceoverConfig?.delaySec ?? 2;
             const peak = this.voiceoverLayer.peakVolume;
-            this.voiceoverLayer.gain.gain.setValueAtTime(0, now);
-            this.voiceoverLayer.gain.gain.linearRampToValueAtTime(peak, now + delaySec + 0.35);
-            this._duckLayer(this.oceanLayer);
-            this._duckLayer(this.musicLayer);
+            const vo = this.voiceoverLayer;
+
+            vo.gain.gain.setValueAtTime(0, now);
+            vo.audio.currentTime = 0;
 
             if (this.voiceoverConfig?.onEnded) {
-                this.voiceoverLayer.audio.addEventListener('ended', this.voiceoverConfig.onEnded);
+                vo.audio.addEventListener('ended', this.voiceoverConfig.onEnded);
             }
+
+            this._voStartTimer = window.setTimeout(() => {
+                this._voStartTimer = null;
+                if (!this.running || !this.voiceoverLayer) {
+                    return;
+                }
+
+                const t = this.ctx.currentTime;
+                vo.gain.gain.cancelScheduledValues(t);
+                vo.gain.gain.setValueAtTime(peak, t);
+                this._duckLayer(this.oceanLayer);
+                this._duckLayer(this.musicLayer);
+
+                vo.audio.play().catch((error) => {
+                    console.warn('[PROLOGUE] Voiceover play failed:', error);
+                });
+            }, delaySec * 1000);
         }
 
         this.running = true;
@@ -218,6 +236,11 @@ export class PrologueAudioBed {
         if (this._stopTimer) {
             clearTimeout(this._stopTimer);
             this._stopTimer = null;
+        }
+
+        if (this._voStartTimer) {
+            clearTimeout(this._voStartTimer);
+            this._voStartTimer = null;
         }
 
         if (this.ctx && this.masterGain && !this._fadingOut) {

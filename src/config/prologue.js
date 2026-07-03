@@ -59,11 +59,11 @@ export const PROLOGUE_AMBIENCE_FADE_DELAY_AFTER_VO_SEC = 1;
 /** Duration of the ocean fade-out (seconds). */
 export const PROLOGUE_AMBIENCE_FADE_DURATION_SEC = 3;
 
-/** Voiceover playback volume (0–1). */
-export const PROLOGUE_VOICEOVER_VOLUME = 1.15;
+/** Voiceover playback volume (0–1+, gain node allows slight boost). */
+export const PROLOGUE_VOICEOVER_VOLUME = 1.30;
 
 /** Seconds of scroll before voiceover starts (scroll begins immediately). */
-export const PROLOGUE_VOICEOVER_DELAY_SEC = 4;
+export const PROLOGUE_VOICEOVER_DELAY_SEC = 5;
 
 /** Seconds on splash screen before tap-to-enter is enabled. */
 export const PROLOGUE_ENTER_BUTTON_DELAY_SEC = 3.5;
