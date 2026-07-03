@@ -1,6 +1,5 @@
 import Game from './main.js?v=20260624-location-ambience';
 import { api } from './api.js';
-import { initAdRotator } from './ads.js';
 import { ensureProloguePack, prefetchProloguePack, startDeferredPackDownload } from './assetPack.js';
 import { loadingProgress } from './loadingProgress.js';
 import {
@@ -604,7 +603,6 @@ async function bootstrapGame() {
 }
 
 async function bootstrapGameInner() {
-    initAdRotator();
     loadingProgress.show('Connecting to Halley\'s Big Catch...');
     loadingProgress.update(2, 'Connecting to server...');
 

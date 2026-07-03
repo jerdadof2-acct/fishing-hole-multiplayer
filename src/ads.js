@@ -145,6 +145,68 @@ const DEFAULT_ADS_ENABLED = true;
 
 let currentIndex = 0;
 let rotationTimer = null;
+let bannerContentMounted = false;
+
+function isBannerVisible(banner) {
+    return Boolean(banner && !banner.classList.contains('hidden'));
+}
+
+function mountFictionalAdRotator(bannerContent) {
+    if (ADS.length === 0) {
+        bannerContent.appendChild(createPlaceholder());
+        return;
+    }
+
+    const rotator = document.createElement('div');
+    rotator.className = 'ad-rotator';
+    bannerContent.appendChild(rotator);
+
+    currentIndex = 0;
+    renderAd(rotator, ADS[currentIndex]);
+    startRotation(rotator);
+
+    rotator.addEventListener('mouseenter', () => stopRotation());
+    rotator.addEventListener('mouseleave', () => startRotation(rotator));
+    rotator.setAttribute('tabindex', '0');
+}
+
+function mountBannerContent() {
+    if (bannerContentMounted) {
+        return;
+    }
+
+    const banner = document.getElementById('ad-banner');
+    const bannerContent = banner?.querySelector('.ad-banner-content');
+
+    if (!banner || !bannerContent || !isBannerVisible(banner)) {
+        return;
+    }
+
+    const width = bannerContent.getBoundingClientRect().width;
+    if (width <= 0) {
+        requestAnimationFrame(mountBannerContent);
+        return;
+    }
+
+    bannerContent.innerHTML = '';
+    stopRotation();
+
+    const adsEnabled = getAdsEnabled();
+
+    if (!adsEnabled) {
+        bannerContent.appendChild(createPlaceholder());
+        bannerContentMounted = true;
+        return;
+    }
+
+    if (hasConfiguredBannerAd() && mountAdsenseUnit(bannerContent, ADSENSE_BANNER_SLOT)) {
+        bannerContentMounted = true;
+        return;
+    }
+
+    mountFictionalAdRotator(bannerContent);
+    bannerContentMounted = true;
+}
 
 export function hasConfiguredBannerAd() {
     return Boolean(ADSENSE_CLIENT && ADSENSE_BANNER_SLOT);
@@ -278,50 +340,18 @@ function stopRotation() {
 }
 
 export function initAdRotator() {
-    const banner = document.getElementById('ad-banner');
-    const bannerContent = banner?.querySelector('.ad-banner-content');
-
-    if (!banner || !bannerContent) {
-        return;
-    }
-
-    bannerContent.innerHTML = '';
-    stopRotation();
-
-    const adsEnabled = getAdsEnabled();
-
-    if (!adsEnabled) {
-        bannerContent.appendChild(createPlaceholder());
-        return;
-    }
-
-    if (mountAdsenseUnit(bannerContent, ADSENSE_BANNER_SLOT)) {
-        return;
-    }
-
-    if (ADS.length === 0) {
-        bannerContent.appendChild(createPlaceholder());
-        return;
-    }
-
-    let rotator = bannerContent.querySelector('.ad-rotator');
-    if (!rotator) {
-        rotator = document.createElement('div');
-        rotator.className = 'ad-rotator';
-        bannerContent.innerHTML = '';
-        bannerContent.appendChild(rotator);
-    }
-
-    currentIndex = 0;
-    renderAd(rotator, ADS[currentIndex]);
-    startRotation(rotator);
-
-    rotator.addEventListener('mouseenter', () => stopRotation());
-    rotator.addEventListener('mouseleave', () => startRotation(rotator));
-
-    rotator.setAttribute('tabindex', '0');
+    // Banner mounts in showAdBanner() once #ad-banner is visible (AdSense needs width > 0).
 }
 
 export function showAdBanner() {
-    document.getElementById('ad-banner')?.classList.remove('hidden');
+    const banner = document.getElementById('ad-banner');
+    if (!banner) {
+        return;
+    }
+
+    banner.classList.remove('hidden');
+
+    requestAnimationFrame(() => {
+        requestAnimationFrame(mountBannerContent);
+    });
 }
