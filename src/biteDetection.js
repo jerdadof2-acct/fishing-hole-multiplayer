@@ -53,36 +53,11 @@ export function calculateCatchChance(player, location, tackleShop) {
 }
 
 /**
- * Calculate bite timing based on player level
- * @param {number} playerLevel - Player level
+ * Random wait from cast click until the fish bites.
  * @returns {Object} {min: number, max: number} in milliseconds
  */
-export function calculateBiteTiming(playerLevel) {
-    // Progressive bite timing based on level
-    // Levels 1-5: Quick paced (0.5 to 2 seconds)
-    // Levels 6+: Progressively slower (2 to 6+ seconds)
-    let minBiteTime = 500; // 0.5 seconds
-    let maxBiteTime = 2000; // 2 seconds
-    
-    if (playerLevel >= 6) {
-        // Levels 6-10: 2 to 4 seconds
-        minBiteTime = 2000;
-        maxBiteTime = 4000;
-        
-        if (playerLevel >= 11) {
-            // Levels 11-15: 3 to 5.5 seconds
-            minBiteTime = 3000;
-            maxBiteTime = 5500;
-            
-            if (playerLevel >= 16) {
-                // Levels 16+: 4 to 7 seconds
-                minBiteTime = 4000;
-                maxBiteTime = 7000;
-            }
-        }
-    }
-    
-    return { min: minBiteTime, max: maxBiteTime };
+export function calculateBiteTiming() {
+    return { min: 2000, max: 5000 };
 }
 
 /**

@@ -149,6 +149,7 @@ export class UI {
         // Bite detection state
         this.waitingForBite = false;
         this.biteStrikeTime = null;
+        this.biteDelayTimer = null;
         this.hookSetSuccess = false;
         this.relicDiscoveryActive = false;
         
@@ -3373,6 +3374,7 @@ export class UI {
         
         // Reset bite detection state
         this.resetWaitingSpamTracking();
+        this.clearBiteDelayTimer();
         this.waitingForBite = false;
         this.biteStrikeTime = null;
         this.relicDiscoveryActive = false;
@@ -3394,25 +3396,15 @@ export class UI {
             return;
         }
         
-        // Wait for bobber to land and settle in water before starting bite detection
-        // Cast animation takes ~1.1 seconds, bobber lands and settles, then wait for bite
-        // According to reference: bobber needs to be floating in water before bite detection starts
-        setTimeout(() => {
-            if (this.fishing && this.fishing.bobber && this.fishing.bobber.visible) {
-                // Wait for bobber to fully settle in water (floating state established)
-                // This ensures the bobber is floating before we start the bite timer
-                setTimeout(() => {
-                    if (this.fishing && this.fishing.bobber && this.fishing.bobber.visible && this.fishing.bobber.userData.floating) {
-                        console.log('[UI] Bobber settled in water, starting bite detection timer');
-                        // Now start the bite detection timer (which will wait 0.5-7 seconds based on level)
-                        // Button already shows "WAITING..." so we just start the timer
-                        this.startBiteDetection();
-                } else {
-                        console.warn('[UI] Bobber not ready for bite detection');
-                    }
-                }, 2000); // Wait 2 seconds for bobber to fully settle after landing
-            }
-        }, 3000); // Wait 3 seconds for cast to complete and bobber to land
+        // Random 2–5 s bite delay starts immediately on cast (bobber lands ~1 s in).
+        this.startBiteDetection();
+    }
+
+    clearBiteDelayTimer() {
+        if (this.biteDelayTimer) {
+            clearTimeout(this.biteDelayTimer);
+            this.biteDelayTimer = null;
+        }
     }
     
     startBiteDetection() {
@@ -3431,18 +3423,18 @@ export class UI {
         
         // Import bite detection
         import('./biteDetection.js').then(({ calculateBiteTiming, getReactionTimeWindow }) => {
-            // Calculate bite timing based on player level
-            const { min, max } = calculateBiteTiming(this.player.level);
+            this.clearBiteDelayTimer();
+            const { min, max } = calculateBiteTiming();
             const biteTime = min + Math.random() * (max - min);
             
-            console.log(`[UI] Waiting for bite: ${(biteTime / 1000).toFixed(1)}s`);
+            console.log(`[UI] Fish will bite in ${(biteTime / 1000).toFixed(1)}s`);
             
             this.waitingForBite = true;
             castButton.disabled = false;
             castButton.setAttribute('aria-disabled', 'true');
             
-            // Wait for bite
-            setTimeout(async () => {
+            this.biteDelayTimer = setTimeout(async () => {
+                this.biteDelayTimer = null;
                 if (!this.waitingForBite) return;
 
                 const currentLocation = this.game.locations.getCurrentLocation();
@@ -3494,6 +3486,7 @@ export class UI {
         if (!relic || !this.player) return;
 
         const castButton = document.getElementById('cast-button');
+        this.clearBiteDelayTimer();
         this.waitingForBite = false;
         this.relicDiscoveryActive = true;
         this.biteStrikeTime = null;
@@ -4036,6 +4029,7 @@ export class UI {
         const castButton = document.getElementById('cast-button');
         
         this.resetWaitingSpamTracking();
+        this.clearBiteDelayTimer();
         this.waitingForBite = false;
         this.biteStrikeTime = null;
         this.hookSetSuccess = false;
@@ -4119,6 +4113,7 @@ export class UI {
         const castButton = document.getElementById('cast-button');
         
         // Reset bite detection state
+        this.clearBiteDelayTimer();
         this.waitingForBite = false;
         this.biteStrikeTime = null;
         this.hookSetSuccess = false;
