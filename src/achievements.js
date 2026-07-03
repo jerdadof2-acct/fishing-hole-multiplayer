@@ -73,7 +73,7 @@ export const ACHIEVEMENTS = [
         getValue: (player) => player.totalCaught,
         unit: 'fish',
         tiers: [
-            { target: 1, reward: { experience: 25, money: 50 } }
+            { target: 1, reward: { experience: 12, money: 50 } }
         ]
     },
     {
@@ -201,8 +201,8 @@ export const ACHIEVEMENTS = [
         getValue: (player, context) => player.locationUnlocks?.length || 0,
         unit: 'locations',
         tiers: [
-            { target: 3, reward: { experience: 120, money: 150 } },
-            { target: 5, reward: { experience: 160, money: 220 } },
+            { target: 3, reward: { experience: 35, money: 150 } },
+            { target: 5, reward: { experience: 55, money: 220 } },
             { target: 8, reward: { experience: 210, money: 310 } },
             { target: 10, reward: { experience: 260, money: 400 } },
             { target: 12, reward: { experience: 320, money: 520 } },
@@ -216,8 +216,8 @@ export const ACHIEVEMENTS = [
         getValue: (player, context) => getUnlockedFishCount(player),
         unit: 'fish',
         tiers: [
-            { target: 5, reward: { experience: 70, money: 100 } },
-            { target: 10, reward: { experience: 110, money: 170 } },
+            { target: 5, reward: { experience: 25, money: 100 } },
+            { target: 10, reward: { experience: 45, money: 170 } },
             { target: 17, reward: { experience: 160, money: 240 } },
             { target: 25, reward: { experience: 210, money: 340 } },
             { target: 30, reward: { experience: 270, money: 450 } },

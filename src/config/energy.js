@@ -1,15 +1,15 @@
 /** Halley's Big Catch — Energy System v1.0 */
 
 export const MAX_ENERGY = 100;
-export const CAST_ENERGY_COST = 4;
+export const CAST_ENERGY_COST = 5;
 export const REGEN_INTERVAL_MS = 5 * 60 * 1000;
 export const REGEN_AMOUNT = 1;
-export const DAILY_BONUS_ENERGY = 25;
+export const DAILY_BONUS_ENERGY = 12;
 export const DAILY_BONUS_COINS = 100;
 export const FIRST_CATCH_BONUS_COINS = 50;
-export const FIRST_CATCH_BONUS_ENERGY = 10;
-export const LEVEL_UP_ENERGY_BONUS = 25;
-export const AD_ENERGY_REWARD = 20;
+export const FIRST_CATCH_BONUS_ENERGY = 5;
+export const LEVEL_UP_ENERGY_BONUS = 8;
+export const AD_ENERGY_REWARD = 22;
 
 /** Halley-flavored lines when out of energy (random pick). */
 export const OUT_OF_ENERGY_LINES = [

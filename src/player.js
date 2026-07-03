@@ -183,9 +183,9 @@ export class Player {
      */
     calculateExpForLevel(level) {
         // Progressive curve: smooth ramp through mid game, steeper late game
-        // Base cost: 120 * level^1.6 plus linear tail weight for higher levels
-        const base = 120 * Math.pow(level, 1.6);
-        const linear = 40 * level;
+        // Raised base exponent so big catches and achievement bursts don't skip whole levels
+        const base = 175 * Math.pow(level, 1.68);
+        const linear = 50 * level;
         const lateGameBoost = level >= 15 ? 200 * Math.pow(level - 14, 1.35) : 0;
         return Math.floor(base + linear + lateGameBoost);
     }

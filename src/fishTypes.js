@@ -264,8 +264,21 @@ export function getRandomFishForLocation(fishIds, options = {}) {
     weight = Math.min(Math.max(weight, fishType.minWeight), hardCap);
     
     const roundedWeight = parseFloat(weight.toFixed(2));
-    const weightBonus = Math.max(0, (roundedWeight - fishType.minWeight) * 0.8);
-    const experience = Math.round(fishType.experience + weightBonus);
+    const RARITY_WEIGHT_XP_CAP = {
+        Common: 3,
+        Uncommon: 5,
+        Rare: 6,
+        Epic: 8,
+        Legendary: 10,
+        Mythic: 15
+    };
+    const weightBonusRaw = Math.max(0, (roundedWeight - fishType.minWeight) * 0.3);
+    const weightBonusCap = RARITY_WEIGHT_XP_CAP[fishType.rarity] ?? 5;
+    const weightBonus = Math.min(weightBonusRaw, weightBonusCap);
+    const levelDampen = playerLevel <= 8
+        ? 0.55 + (playerLevel - 1) * 0.05
+        : 1.0;
+    const experience = Math.max(1, Math.round((fishType.experience * 0.75 + weightBonus) * levelDampen));
 
     return {
         ...fishType,
