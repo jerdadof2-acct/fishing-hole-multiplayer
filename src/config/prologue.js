@@ -1,6 +1,6 @@
 /**
  * Story prologue — first-time entrance sequence (see DOCS/halleys-big-catch-story.md).
- * Adjust scroll speed via on-screen controls or keyboard +/- while credits roll.
+ * Scroll speed is fixed at PROLOGUE_SCROLL_SPEED_DEFAULT for voiceover sync.
  */
 
 export const PROLOGUE_SEEN_STORAGE_KEY = 'kittyCreekPrologueSeen';

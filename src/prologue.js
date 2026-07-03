@@ -8,10 +8,6 @@ import {
     PROLOGUE_PHASE_FADE_MS,
     PROLOGUE_SCROLL_BACKGROUND,
     PROLOGUE_SCROLL_SPEED_DEFAULT,
-    PROLOGUE_SCROLL_SPEED_MAX,
-    PROLOGUE_SCROLL_SPEED_MIN,
-    PROLOGUE_SCROLL_SPEED_STEP,
-    PROLOGUE_SPEED_STORAGE_KEY,
     PROLOGUE_STORY_PARAGRAPHS,
     PROLOGUE_VERSION_STORAGE_KEY,
     PROLOGUE_AMBIENCE_DUCK_RATIO,
@@ -32,30 +28,6 @@ import { loadingProgress } from './loadingProgress.js';
 
 /** Ends any in-flight prologue before starting a new one (e.g. settings replay). */
 let activePrologueSession = null;
-
-function clamp(value, min, max) {
-    return Math.min(max, Math.max(min, value));
-}
-
-function loadSavedScrollMultiplier() {
-    try {
-        const raw = localStorage.getItem(PROLOGUE_SPEED_STORAGE_KEY);
-        const parsed = raw ? parseFloat(raw) : PROLOGUE_SCROLL_SPEED_DEFAULT;
-        return Number.isFinite(parsed)
-            ? clamp(parsed, PROLOGUE_SCROLL_SPEED_MIN, PROLOGUE_SCROLL_SPEED_MAX)
-            : PROLOGUE_SCROLL_SPEED_DEFAULT;
-    } catch {
-        return PROLOGUE_SCROLL_SPEED_DEFAULT;
-    }
-}
-
-function saveScrollMultiplier(multiplier) {
-    try {
-        localStorage.setItem(PROLOGUE_SPEED_STORAGE_KEY, String(multiplier));
-    } catch {
-        /* ignore */
-    }
-}
 
 /** True when this build's prologue has not been shown yet (replay on each PROLOGUE_GAME_VERSION bump). */
 export function shouldPlayStoryPrologue() {
@@ -126,10 +98,6 @@ export async function playStoryPrologue(options = {}) {
     const titlePhase = document.getElementById('prologue-title-phase');
     const creditsInner = document.getElementById('prologue-credits-inner');
     const interstitialText = interstitialPhase?.querySelector('.prologue-interstitial-text');
-    const speedLabel = document.getElementById('prologue-speed-label');
-    const speedControls = overlay?.querySelector('.prologue-speed-controls');
-    const slowerBtn = document.getElementById('prologue-slower');
-    const fasterBtn = document.getElementById('prologue-faster');
     const tapHint = document.getElementById('prologue-tap-hint');
     const loadHint = document.getElementById('prologue-load-hint');
     const startGate = document.getElementById('prologue-start-gate');
@@ -144,7 +112,7 @@ export async function playStoryPrologue(options = {}) {
         gameContainer?.classList.add('pre-entry');
     }
 
-    let scrollMultiplier = options.scrollSpeedMultiplier ?? loadSavedScrollMultiplier();
+    let scrollMultiplier = options.scrollSpeedMultiplier ?? PROLOGUE_SCROLL_SPEED_DEFAULT;
     let rafId = null;
     let enterTimer = null;
     let loadPollId = null;
@@ -251,7 +219,7 @@ export async function playStoryPrologue(options = {}) {
     }
 
     const updateLoadHint = () => {
-        if (!loadHint) return;
+        if (!loadHint || replay) return;
         if (loadingProgress.isFailed?.()) {
             loadHint.textContent = loadingProgress.getFailMessage?.() || 'Loading failed — refresh and try again.';
             loadHint.classList.remove('hidden', 'is-ready');
@@ -271,25 +239,6 @@ export async function playStoryPrologue(options = {}) {
     };
 
     return new Promise((resolve) => {
-        const updateSpeedLabel = () => {
-            if (speedLabel) {
-                speedLabel.textContent = `${scrollMultiplier.toFixed(2)}×`;
-            }
-        };
-
-        const setScrollMultiplier = (next) => {
-            scrollMultiplier = clamp(next, PROLOGUE_SCROLL_SPEED_MIN, PROLOGUE_SCROLL_SPEED_MAX);
-            saveScrollMultiplier(scrollMultiplier);
-            updateSpeedLabel();
-        };
-
-        const onSlower = () => setScrollMultiplier(scrollMultiplier - PROLOGUE_SCROLL_SPEED_STEP);
-        const onFaster = () => setScrollMultiplier(scrollMultiplier + PROLOGUE_SCROLL_SPEED_STEP);
-
-        const setSpeedControlsVisible = (visible) => {
-            speedControls?.classList.toggle('hidden', !visible);
-        };
-
         const cleanup = () => {
             if (activePrologueSession?.cleanup === cleanup) {
                 activePrologueSession = null;
@@ -298,6 +247,7 @@ export async function playStoryPrologue(options = {}) {
             startGateAbort = null;
             if (replay) {
                 gameContainer?.classList.remove('pre-entry');
+                document.getElementById('loading')?.classList.add('hidden');
             }
             if (ambienceFadeTimer) {
                 clearTimeout(ambienceFadeTimer);
@@ -322,14 +272,11 @@ export async function playStoryPrologue(options = {}) {
             }
             document.removeEventListener('keydown', onKeyDown);
             overlay.removeEventListener('click', onOverlayTap);
-            slowerBtn?.removeEventListener('click', onSlower);
-            fasterBtn?.removeEventListener('click', onFaster);
             overlay.classList.remove('can-enter', 'is-splash-only', 'is-interstitial-phase', 'is-fading-interstitial');
             overlay.removeAttribute('role');
             overlay.removeAttribute('tabindex');
             overlay.classList.add('hidden');
             overlay.classList.remove('is-title-phase', 'is-fading', 'is-fading-credits', 'is-credits-phase');
-            setSpeedControlsVisible(false);
             creditsPhase.classList.remove('hidden');
             interstitialPhase.classList.add('hidden');
             interstitialPhase.setAttribute('aria-hidden', 'true');
@@ -394,13 +341,11 @@ export async function playStoryPrologue(options = {}) {
 
         const onOverlayTap = (event) => {
             if (phase !== 'title' || !canEnter) return;
-            if (event.target.closest('.prologue-speed-controls')) return;
             onEnter();
         };
 
         const startTitlePhase = () => {
             phase = 'title';
-            setSpeedControlsVisible(false);
             overlay.classList.remove('is-fading', 'is-fading-credits', 'is-fading-interstitial', 'is-interstitial-phase', 'is-credits-phase');
             overlay.classList.add('is-title-phase');
             if (skipCredits) {
@@ -410,15 +355,19 @@ export async function playStoryPrologue(options = {}) {
             interstitialPhase.classList.add('hidden');
             interstitialPhase.setAttribute('aria-hidden', 'true');
             titlePhase.classList.remove('hidden');
-            updateLoadHint();
 
-            if (options.waitForReady) {
-                Promise.resolve(options.waitForReady())
-                    .then(() => {
-                        loadingProgress.update(100, 'Ready to cast!');
-                        updateLoadHint();
-                    })
-                    .catch(() => updateLoadHint());
+            if (replay) {
+                loadHint?.classList.add('hidden');
+            } else {
+                updateLoadHint();
+                if (options.waitForReady) {
+                    Promise.resolve(options.waitForReady())
+                        .then(() => {
+                            loadingProgress.update(100, 'Ready to cast!');
+                            updateLoadHint();
+                        })
+                        .catch(() => updateLoadHint());
+                }
             }
 
             enterTimer = window.setTimeout(enableEnter, PROLOGUE_ENTER_BUTTON_DELAY_SEC * 1000);
@@ -452,7 +401,6 @@ export async function playStoryPrologue(options = {}) {
                 rafId = null;
             }
 
-            setSpeedControlsVisible(false);
             overlay.classList.remove('is-credits-phase');
             phase = 'interstitial';
             overlay.classList.add('is-fading-credits');
@@ -507,22 +455,15 @@ export async function playStoryPrologue(options = {}) {
                 }
                 return;
             }
-            if (event.key === '-' || event.key === '_') {
-                setScrollMultiplier(scrollMultiplier - PROLOGUE_SCROLL_SPEED_STEP);
-            } else if (event.key === '=' || event.key === '+') {
-                setScrollMultiplier(scrollMultiplier + PROLOGUE_SCROLL_SPEED_STEP);
-            }
         };
 
         overlay.addEventListener('click', onOverlayTap);
-        slowerBtn?.addEventListener('click', onSlower);
-        fasterBtn?.addEventListener('click', onFaster);
         document.addEventListener('keydown', onKeyDown);
 
-        updateSpeedLabel();
-
-        updateLoadHint();
-        loadPollId = window.setInterval(updateLoadHint, 350);
+        if (!replay) {
+            updateLoadHint();
+            loadPollId = window.setInterval(updateLoadHint, 350);
+        }
 
         const beginCreditsSequence = () => {
             startGateAbort?.abort();
@@ -535,7 +476,6 @@ export async function playStoryPrologue(options = {}) {
             titlePhase.classList.add('hidden');
             overlay.classList.remove('is-title-phase', 'is-splash-only', 'is-interstitial-phase', 'is-fading', 'is-fading-credits', 'is-fading-interstitial');
             overlay.classList.add('is-credits-phase');
-            setSpeedControlsVisible(true);
             refreshLastCreditLine();
             startAudioBed();
             lastTs = 0;
@@ -576,7 +516,6 @@ export async function playStoryPrologue(options = {}) {
         });
 
         if (skipCredits) {
-            setSpeedControlsVisible(false);
             overlay.classList.remove('hidden', 'is-title-phase', 'is-fading', 'is-fading-credits', 'is-fading-interstitial', 'is-interstitial-phase', 'can-enter', 'is-credits-phase');
             creditsPhase.classList.add('hidden');
             interstitialPhase.classList.add('hidden');
@@ -593,7 +532,6 @@ export async function playStoryPrologue(options = {}) {
 
         phase = 'credits';
         creditsFinished = false;
-        setSpeedControlsVisible(false);
         overlay.classList.remove('hidden', 'is-title-phase', 'is-splash-only', 'is-fading', 'is-fading-credits', 'is-fading-interstitial', 'is-interstitial-phase', 'can-enter', 'is-credits-phase');
         creditsPhase.classList.remove('hidden');
         interstitialPhase.classList.add('hidden');
@@ -618,18 +556,10 @@ export async function playStoryPrologue(options = {}) {
  * Game may already be loaded; tap anywhere returns to gameplay.
  */
 export async function replayStoryPrologue() {
-    const game = typeof window !== 'undefined' ? window.game : null;
-    const waitForReady = game?.ready
-        ? () => game.ready
-        : () => Promise.resolve();
-
     const pack = await ensureProloguePack({ full: true });
 
     await playStoryPrologue({
         preloadedPack: pack,
-        replay: true,
-        skipCredits: false,
-        waitForReady,
-        onLoadProgress: () => loadingProgress.getPercent()
+        replay: true
     });
 }
