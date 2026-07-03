@@ -21,13 +21,11 @@ export function isStarlightLureBait(itemOrId) {
 /** Art for the forged Starlight Lure (shop, forge popup, relics logbook). */
 export const STARLIGHT_LURE_IMAGE = 'images/hiddenitems/starlightlure.png';
 
-/** Chance per cast that an undiscovered relic surfaces instead of a normal bite. */
+/** @deprecated Relic discovery uses storyProgress.js (successful catches + tier curve). */
 export const RELIC_DISCOVERY_CHANCE = 0.11;
-
-/** After this many casts at a location without finding its relic, the next cast guarantees it. */
+/** @deprecated */
 export const RELIC_DISCOVERY_PITY_CASTS = 18;
-
-/** Bonus added to relic chance per failed cast (stacks toward pity). */
+/** @deprecated */
 export const RELIC_DISCOVERY_PITY_STEP = 0.028;
 
 export function isStoryGatedLocation(location) {
@@ -41,7 +39,7 @@ export const HIDDEN_RELICS = [
         location: 'Crescent Pond',
         image: 'images/hiddenitems/weatheredbobber.png',
         message: 'The smallest ripples remember where they began.',
-        meaning: "Halley's nostalgic connection to his childhood; the spark that began his love for fishing."
+        meaning: "Halley's first fishing lessons with his father — where the smallest ripples began."
     },
     {
         id: 'driftwood_compass',
@@ -49,7 +47,7 @@ export const HIDDEN_RELICS = [
         location: 'Sandy Shoals',
         image: 'images/hiddenitems/driftwoodcompass.png',
         message: 'The sea never forgets its course — only those who stop listening.',
-        meaning: 'Unseen forces guide Halley toward his destiny.'
+        meaning: 'A lesson his father taught: listen before you command the water.'
     },
     {
         id: 'sunken_treasure',
@@ -57,63 +55,63 @@ export const HIDDEN_RELICS = [
         location: 'Coral Kingdoms',
         image: 'images/hiddenitems/sunkentreasure.png',
         message: 'Not all that glitters is gold. Some treasures remember your name.',
-        meaning: 'The true treasure, the Starfish, is alive and aware.'
+        meaning: 'His father taught that the value of a trip is never measured by what you bring home.'
     },
     {
         id: 'message_in_bottle',
         name: 'Message in a Bottle',
         location: 'Amazon Depths',
         image: 'images/hiddenitems/messageinthebottle.png',
-        message: 'The stars once fell, and the sea still whispers their names.',
-        meaning: 'A direct reference to the comet that birthed both Halley and the Starfish.'
+        message: 'The stars once fell, and the waters carried their voices.',
+        meaning: 'The comet scattered its light — Halley\'s medallion is answering something far below.'
     },
     {
         id: 'broken_harpoon',
         name: 'Broken Harpoon',
         location: 'Craggy Coast',
         image: 'images/hiddenitems/brokenharpoon.png',
-        message: 'The hunter becomes the seeker when he lowers his spear.',
-        meaning: 'Halley shifts from chasing trophies to seeking meaning.'
+        message: 'The seeker finds what the hunter cannot.',
+        meaning: 'Halley remembers his father releasing the greatest fish they ever hooked — and finally understands why.'
     },
     {
         id: 'frozen_pocket_watch',
         name: 'Frozen Pocket Watch',
         location: 'Frozen Fjords',
         image: 'images/hiddenitems/pocketwatch.png',
-        message: 'Even time can sleep beneath the ice… but not forever.',
-        meaning: 'Time stands still for what lies waiting in the depths.'
+        message: 'Some moments wait beneath the surface until their time returns.',
+        meaning: 'Ordinary fishing days with his father were building a bond Halley only now sees clearly.'
     },
     {
         id: 'buried_telescope',
         name: 'Half-Buried Telescope',
         location: 'Desert Lagoon',
         image: 'images/hiddenitems/buriedtelescope.png',
-        message: 'Look to the stars — the same light that guides the waves guides you.',
-        meaning: "The comet's light still leads the way."
+        message: 'One light crossed the sky. Another waits below.',
+        meaning: 'A second comet fragment fell into the sea the night Halley was born.'
     },
     {
         id: 'map_fragment',
         name: 'Torn Map Fragment',
         location: 'Stormbreaker Bay',
         image: 'images/hiddenitems/mapfragment.png',
-        message: "The path forward isn't drawn in ink — it's carried in the current.",
-        meaning: "The ocean's rhythm is Halley's only map."
+        message: 'No map can mark a place that moves with the stars and tide.',
+        meaning: 'The path forward is carried in memory as much as in water.'
     },
     {
         id: 'coral_pendant',
         name: 'Coral Pendant',
         location: 'Forgotten Reefs',
         image: 'images/hiddenitems/coralpendant.png',
-        message: 'Two lights were born as one — one of the sky, one of the sea.',
-        meaning: 'Confirms the bond between Halley and the Starfish of Eternity.'
+        message: 'Two fragments still answer the same light.',
+        meaning: 'The medallion carries comet-light and the memories formed around it — including his father\'s voice.'
     },
     {
         id: 'luminescent_shell',
         name: 'Luminescent Shell',
         location: 'Twilight Trench',
         image: 'images/hiddenitems/luminescentshell.png',
-        message: 'The ocean remembers every spark. Follow its glow — it remembers you.',
-        meaning: 'The final message; the Starfish remembers Halley and awaits the reunion.'
+        message: 'Return every echo to the light, and the hidden depths will open.',
+        meaning: 'Ten echoes form the path; Halley ties the Starlight Lure with the knot his father taught him.'
     }
 ];
 

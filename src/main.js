@@ -236,6 +236,10 @@ export class Game {
         }
         this._lastAnacondaBarkAt = now;
 
+        import('./hiddenRelics.js').then(({ markAmazonAnacondaSighted }) => {
+            markAmazonAnacondaSighted(this.player, AMAZON_DEPTHS_NAME);
+        });
+
         this.voiceover?.playRandom('anaconda', {
             onSpeak: (text) => this.showCatBark(text, 2800)
         });

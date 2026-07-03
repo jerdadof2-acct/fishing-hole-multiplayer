@@ -7,6 +7,9 @@ export const AMAZON_DEPTHS_NAME = 'Amazon Depths';
 export const FROZEN_FJORDS_NAME = 'Frozen Fjords';
 export const CORAL_KINGDOMS_NAME = 'Coral Kingdoms';
 export const CORTEZ_BACKWATERS_NAME = 'Cortez Backwaters';
+export const LOUISIANA_BAYOU_NAME = 'Louisiana Bayou';
+export const CONGO_RIVER_NAME = 'Congo River';
+export const CRAZYCATCH_COVE_NAME = 'CrazyCatch Cove';
 export const CRAGGY_COAST_NAME = 'Craggy Coast';
 export const STORMBREAKER_BAY_NAME = 'Stormbreaker Bay';
 export const FORGOTTEN_REEFS_NAME = 'Forgotten Reefs';
@@ -27,7 +30,10 @@ export const COLLECTION_LOCATION_PROGRESSION = [
     TWILIGHT_TRENCH_NAME,
     FORGOTTEN_REEFS_NAME,
     'Celestial Depths',
-    CORTEZ_BACKWATERS_NAME
+    CORTEZ_BACKWATERS_NAME,
+    LOUISIANA_BAYOU_NAME,
+    CONGO_RIVER_NAME,
+    CRAZYCATCH_COVE_NAME
 ];
 
 export class Locations {
@@ -204,6 +210,64 @@ export class Locations {
                     42: 12,
                     43: 8,
                     44: 3
+                }
+            },
+            {
+                name: LOUISIANA_BAYOU_NAME,
+                difficulty: 'Hard',
+                fish: [53, 54, 11, 45],
+                cost: 0,
+                unlockLevel: 99,
+                description: 'Cypress trees, hidden channels, and muddy banks — the bayou trip Halley and his father always promised they would take someday.',
+                briefTheme: 'louisiana-bayou',
+                tagline: 'An old promise, finally kept',
+                waterBodyType: 'RIVER',
+                platformType: 'SMALL_BOAT',
+                requiresPostStarfishGuide: true,
+                fishSpawnWeights: {
+                    53: 30,
+                    54: 28,
+                    11: 22,
+                    45: 20
+                }
+            },
+            {
+                name: CONGO_RIVER_NAME,
+                difficulty: 'Expert',
+                fish: [56, 55, 53, 54],
+                cost: 0,
+                unlockLevel: 99,
+                description: 'The greatest destination in his father\'s old journal — a vast river of green shoreline, powerful currents, and creatures the sketches never captured.',
+                briefTheme: 'congo-river',
+                tagline: 'Carrying a dream the rest of the way',
+                waterBodyType: 'RIVER',
+                platformType: 'LARGE_BOAT',
+                requiresPostStarfishGuide: true,
+                fishSpawnWeights: {
+                    56: 12,
+                    55: 28,
+                    53: 30,
+                    54: 30
+                }
+            },
+            {
+                name: CRAZYCATCH_COVE_NAME,
+                difficulty: 'Legendary',
+                fish: [34, 35, 36, 48, 52],
+                cost: 0,
+                unlockLevel: 99,
+                description: 'A hidden cove his father invented in stories when Halley was a kitten — impossible fish, ridiculous names, and laughter when nothing was biting. The Starfish remembered.',
+                briefTheme: 'crazycatch-cove',
+                tagline: 'Where imagination became real',
+                waterBodyType: 'OCEAN',
+                platformType: 'LARGE_BOAT',
+                requiresPostStarfishGuide: true,
+                fishSpawnWeights: {
+                    34: 22,
+                    35: 22,
+                    36: 22,
+                    48: 18,
+                    52: 16
                 }
             }
         ];

@@ -1,39 +1,23 @@
 import {
     CELESTIAL_DEPTHS_LOCATION_INDEX,
-    getRelicForGameLocation,
     HIDDEN_RELICS,
-    RELIC_DISCOVERY_CHANCE,
-    RELIC_DISCOVERY_PITY_CASTS,
-    RELIC_DISCOVERY_PITY_STEP,
     STARLIGHT_LURE_BAIT_ID
 } from './config/hiddenRelics.js';
+import { reconcileStoryLocationUnlocks } from './storyProgress.js';
 
 export { HIDDEN_RELICS, getRelicById, getRelicForGameLocation } from './config/hiddenRelics.js';
-
-/**
- * Roll whether a relic surfaces on this cast (only if one remains at this location).
- * @param {import('./player.js').Player} player
- * @param {{ id: string }} relic
- * @returns {boolean}
- */
-export function rollRelicDiscovery(player, relic) {
-    if (!player || !relic || player.hasHiddenRelic(relic.id)) {
-        return false;
-    }
-
-    const attempts = player.getRelicCastAttempts(relic.id);
-    if (attempts >= RELIC_DISCOVERY_PITY_CASTS) {
-        player.recordRelicCastAttempt(relic.id, true);
-        return true;
-    }
-
-    const luckBonus = ((player.stats?.luck ?? 50) - 50) * 0.001;
-    const pityBonus = attempts * RELIC_DISCOVERY_PITY_STEP;
-    const chance = Math.min(0.55, RELIC_DISCOVERY_CHANCE + luckBonus + pityBonus);
-    const found = Math.random() < chance;
-    player.recordRelicCastAttempt(relic.id, found);
-    return found;
-}
+export {
+    getNextStoryRelicId,
+    getRelicForActiveRelic,
+    isRelicEligible,
+    rollStoryRelicDiscovery,
+    recordSuccessfulCatchForRelicProgress,
+    markAmazonAnacondaSighted,
+    getPendingChapterForRelic,
+    markChapterComplete,
+    canTravelToStoryLocation,
+    isStoryLocationAvailable
+} from './storyProgress.js';
 
 /**
  * @param {import('./player.js').Player} player
@@ -66,3 +50,5 @@ export function getRelicCollectionProgress(player) {
     const collected = player?.hiddenRelicsCollected?.length ?? 0;
     return { collected, total: HIDDEN_RELICS.length };
 }
+
+export { CELESTIAL_DEPTHS_LOCATION_INDEX, STARLIGHT_LURE_BAIT_ID };

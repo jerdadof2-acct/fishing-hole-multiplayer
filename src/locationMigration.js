@@ -1,6 +1,8 @@
 /**
  * Remap saved location indices when the world map order changes.
  * v1 = layout before Amazon premium move (Jul 2026).
+ * v2 = Coral second, Amazon premium (Jul 2026).
+ * v3 = Louisiana Bayou, Congo River, CrazyCatch Cove (Jul 2026).
  */
 
 import {
@@ -13,10 +15,13 @@ import {
     FROZEN_FJORDS_NAME,
     SANDY_SHOALS_NAME,
     STORMBREAKER_BAY_NAME,
-    TWILIGHT_TRENCH_NAME
+    TWILIGHT_TRENCH_NAME,
+    LOUISIANA_BAYOU_NAME,
+    CONGO_RIVER_NAME,
+    CRAZYCATCH_COVE_NAME
 } from './locations.js';
 
-export const LOCATION_LAYOUT_VERSION = 2;
+export const LOCATION_LAYOUT_VERSION = 3;
 
 /** Location names in array order before v2 reorder. */
 const V1_INDEX_TO_NAME = [
@@ -34,17 +39,42 @@ const V1_INDEX_TO_NAME = [
     CORTEZ_BACKWATERS_NAME
 ];
 
+/** v2 layout — before post-Starfish expansion. */
+const V2_INDEX_TO_NAME = [
+    'Crescent Pond',
+    CORAL_KINGDOMS_NAME,
+    SANDY_SHOALS_NAME,
+    DESERT_LAGOON_NAME,
+    FROZEN_FJORDS_NAME,
+    AMAZON_DEPTHS_NAME,
+    STORMBREAKER_BAY_NAME,
+    CRAGGY_COAST_NAME,
+    TWILIGHT_TRENCH_NAME,
+    FORGOTTEN_REEFS_NAME,
+    'Celestial Depths',
+    CORTEZ_BACKWATERS_NAME
+];
+
 /**
  * @param {number} oldIndex
+ * @param {string[]} indexToName
  * @param {Array<{ name: string }>} locations
  */
-export function remapLegacyLocationIndex(oldIndex, locations) {
-    const name = V1_INDEX_TO_NAME[oldIndex];
+function remapByNameTable(oldIndex, indexToName, locations) {
+    const name = indexToName[oldIndex];
     if (!name) {
         return oldIndex;
     }
     const next = locations.findIndex((loc) => loc.name === name);
     return next >= 0 ? next : oldIndex;
+}
+
+/**
+ * @param {number} oldIndex
+ * @param {Array<{ name: string }>} locations
+ */
+export function remapLegacyLocationIndex(oldIndex, locations) {
+    return remapByNameTable(oldIndex, V1_INDEX_TO_NAME, locations);
 }
 
 /**
@@ -56,18 +86,39 @@ export function remapLegacyLocationIndex(oldIndex, locations) {
  * @param {Array<{ name: string }>} locations
  */
 export function migrateLocationSaveData(playerData, locations) {
-    if (!playerData || (playerData.locationLayoutVersion ?? 1) >= LOCATION_LAYOUT_VERSION) {
+    if (!playerData) {
         return playerData;
     }
 
-    const remap = (idx) => remapLegacyLocationIndex(idx, locations);
+    const version = playerData.locationLayoutVersion ?? 1;
 
-    if (Array.isArray(playerData.locationUnlocks)) {
-        playerData.locationUnlocks = [...new Set(playerData.locationUnlocks.map(remap))];
+    if (version < 2) {
+        const remap = (idx) => remapByNameTable(idx, V1_INDEX_TO_NAME, locations);
+        if (Array.isArray(playerData.locationUnlocks)) {
+            playerData.locationUnlocks = [...new Set(playerData.locationUnlocks.map(remap))];
+        }
+        if (typeof playerData.currentLocationIndex === 'number') {
+            playerData.currentLocationIndex = remap(playerData.currentLocationIndex);
+        }
+        playerData.locationLayoutVersion = 2;
     }
-    if (typeof playerData.currentLocationIndex === 'number') {
-        playerData.currentLocationIndex = remap(playerData.currentLocationIndex);
+
+    if ((playerData.locationLayoutVersion ?? 2) < 3) {
+        const remap = (idx) => remapByNameTable(idx, V2_INDEX_TO_NAME, locations);
+        if (Array.isArray(playerData.locationUnlocks)) {
+            playerData.locationUnlocks = [...new Set(playerData.locationUnlocks.map(remap))];
+        }
+        if (typeof playerData.currentLocationIndex === 'number') {
+            playerData.currentLocationIndex = remap(playerData.currentLocationIndex);
+        }
+        playerData.locationLayoutVersion = LOCATION_LAYOUT_VERSION;
     }
-    playerData.locationLayoutVersion = LOCATION_LAYOUT_VERSION;
+
     return playerData;
 }
+
+export {
+    LOUISIANA_BAYOU_NAME,
+    CONGO_RIVER_NAME,
+    CRAZYCATCH_COVE_NAME
+};

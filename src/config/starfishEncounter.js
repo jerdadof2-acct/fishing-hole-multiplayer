@@ -3,38 +3,39 @@
 export const STARFISH_ID = 33;
 export const STARLIGHT_LURE_BAIT_NAME = 'Starlight Lure';
 
-/** First reunion — the Starfish opens guide destinations, not a trophy wall. */
-export const STARFISH_FIRST_CATCH_QUOTE =
-    "You've spent your life chasing wonders.\n\nBut the light you sought was always within you.";
-
-export const STARFISH_FIRST_CATCH_NARRATION = [
-    'The sea grows still. The air feels weightless.',
-    'For a moment, Halley isn\'t holding a catch — he\'s holding a reflection.',
-    'The glow from the Starfish mirrors the same spark in his own eyes,',
-    'and the waves whisper with the voice of every journey he\'s taken.',
-    '',
-    'He realizes this was never about the biggest fish,',
-    'or the rarest treasure.',
-    'It was about coming home —',
-    'to the light that\'s been with him since the beginning.'
-].join('\n');
-
 export const STARFISH_GUIDE_DESTINATIONS_HEADLINE =
-    'The Starfish has been your guide — not your trophy.';
+    'The Starfish opened the path — your father gave it meaning.';
 
 export const STARFISH_GUIDE_DESTINATIONS_BODY =
-    'In the hush after the reunion, new waters stir on the horizon. The Starfish has whispered of exciting places now open to you — waters that were always out there, waiting for the right light to find them.';
+    'Four golden currents spread from the Celestial Depths. One leads home to Cortez Backwaters. Three more toward the unfinished adventures in your father\'s journal.';
 
-/** Post-Starfish destinations the Starfish reveals (more coming later). */
+/** Post-Starfish destinations the Starfish reveals after the reunion. */
 export const STARFISH_GUIDE_DESTINATIONS_OPEN = [
-    { name: 'Cortez Backwaters', label: 'Now open to visit' }
+    { name: 'Cortez Backwaters', label: 'Return home — tell your father' },
+    { name: 'Louisiana Bayou', label: 'An unfinished page in his journal' },
+    { name: 'Congo River', label: 'His greatest fishing dream' },
+    { name: 'CrazyCatch Cove', label: 'A story that became real' }
 ];
 
-export const STARFISH_GUIDE_COMING_SOON =
-    'Three more waters await — coming soon.';
+export const STARFISH_GUIDE_COMING_SOON = '';
+
+export const STARFISH_FIRST_CATCH_QUOTE =
+    "The comet may have started this journey.\n\nBut you're the reason I was ready for it.";
+
+export const STARFISH_FIRST_CATCH_NARRATION = [
+    'The Starfish showed Halley the night his father made the medallion.',
+    'The stone had fallen from the sky, but his father had turned it into a gift.',
+    'Over the years it had carried every lesson, every laugh, and every quiet moment shared beside the water.',
+    'The medallion had shown Halley where to go.',
+    'His father had taught him how to get there.',
+    '',
+    'Four golden currents spread across the water.',
+    'One flows toward Cortez Backwaters — home.',
+    'Three more toward adventures he and his father once dreamed about together.'
+].join('\n');
 
 export const STARFISH_FIRST_CATCH_BANNER =
-    'The Starfish has shown you the way — Cortez Backwaters is open to visit.';
+    'Cortez Backwaters awaits — and three unfinished journeys stir on the horizon.';
 
 /** Starfish only at Celestial Depths once the full relic quest is complete. */
 export function canSpawnStarfish(location, player) {

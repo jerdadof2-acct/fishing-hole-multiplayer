@@ -16,6 +16,7 @@ import { CORTEZ_BACKWATERS_LOCATION_INDEX } from './config/cortezBackwaters.js';
 import { STARFISH_ID } from './config/starfishEncounter.js';
 import { LOCATION_LAYOUT_VERSION, migrateLocationSaveData } from './locationMigration.js';
 import { Locations } from './locations.js';
+import { reconcileStoryLocationUnlocks } from './storyProgress.js';
 
 /**
  * Player State Management System
@@ -96,7 +97,7 @@ export class Player {
         this.biggestCatch = 0;
         
         // Unlocks
-        this.locationUnlocks = [0, 1]; // Crescent Pond + Coral Kingdoms
+        this.locationUnlocks = [0]; // Crescent Pond — story unlocks expand from relic progress
         this.tackleUnlocks = {
             rods: [0],      // Basic Rod
             reels: [0],     // Basic Reel
@@ -138,7 +139,13 @@ export class Player {
         // Story relics (hidden items from each region)
         this.hiddenRelicsCollected = [];
         this.starlightLureCrafted = false;
-        /** @type {Record<string, number>} casts without finding each relic (pity tracker) */
+        this.relicLocationProgress = {};
+        this.storyChaptersCompleted = [];
+        this.fatherJournalReceived = false;
+        this.louisianaBayouComplete = false;
+        this.congoRiverComplete = false;
+        this.crazyCatchCoveComplete = false;
+        /** @type {Record<string, number>} legacy pity tracker */
         this.relicCastAttempts = {};
 
         /** @type {boolean} Server-verified Halley admin account */
@@ -284,27 +291,28 @@ export class Player {
      * @returns {Object|null} Single unlock object or null if no unlocks
      */
     checkUnlocks(locations = null, tackleShop = null) {
+        const beforeUnlocks = new Set(this.locationUnlocks);
         this.syncStoryUnlocks();
 
-        // Priority 1: Check for location unlocks first
         if (locations && locations.locations) {
-            for (const [index, location] of locations.locations.entries()) {
-                if (location.requiresStarlightLure || location.requiresStarfishCatch || location.waterBodyType === 'CELESTIAL') {
+            for (const index of this.locationUnlocks) {
+                if (beforeUnlocks.has(index)) {
                     continue;
                 }
-                if (!this.locationUnlocks.includes(index) && this.level >= location.unlockLevel) {
-                    this.locationUnlocks.push(index);
-                    debugLog(`[PLAYER] Location unlocked: ${location.name} (Level ${location.unlockLevel})`);
-                    this.save();
-                    return {
-                        type: 'location',
-                        location: {
-                            index,
-                            name: location.name,
-                            unlockLevel: location.unlockLevel
-                        }
-                    };
+                const location = locations.locations[index];
+                if (!location) {
+                    continue;
                 }
+                debugLog(`[PLAYER] Location unlocked: ${location.name}`);
+                this.save();
+                return {
+                    type: 'location',
+                    location: {
+                        index,
+                        name: location.name,
+                        unlockLevel: location.unlockLevel
+                    }
+                };
             }
         }
         
@@ -489,6 +497,12 @@ export class Player {
                 locationLayoutVersion: LOCATION_LAYOUT_VERSION,
                 hiddenRelicsCollected: this.hiddenRelicsCollected,
                 starlightLureCrafted: this.starlightLureCrafted,
+                relicLocationProgress: this.relicLocationProgress,
+                storyChaptersCompleted: this.storyChaptersCompleted,
+                fatherJournalReceived: this.fatherJournalReceived,
+                louisianaBayouComplete: this.louisianaBayouComplete,
+                congoRiverComplete: this.congoRiverComplete,
+                crazyCatchCoveComplete: this.crazyCatchCoveComplete,
                 relicCastAttempts: this.relicCastAttempts,
                 hasSeenGameplayOnboarding: this.hasSeenGameplayOnboarding === true,
                 energy: this.energy,
@@ -708,6 +722,16 @@ export class Player {
                     ? playerData.hiddenRelicsCollected
                     : [];
                 this.starlightLureCrafted = playerData.starlightLureCrafted === true;
+                this.relicLocationProgress = playerData.relicLocationProgress && typeof playerData.relicLocationProgress === 'object'
+                    ? playerData.relicLocationProgress
+                    : {};
+                this.storyChaptersCompleted = Array.isArray(playerData.storyChaptersCompleted)
+                    ? playerData.storyChaptersCompleted
+                    : [];
+                this.fatherJournalReceived = playerData.fatherJournalReceived === true;
+                this.louisianaBayouComplete = playerData.louisianaBayouComplete === true;
+                this.congoRiverComplete = playerData.congoRiverComplete === true;
+                this.crazyCatchCoveComplete = playerData.crazyCatchCoveComplete === true;
                 this.relicCastAttempts = playerData.relicCastAttempts && typeof playerData.relicCastAttempts === 'object'
                     ? playerData.relicCastAttempts
                     : {};
@@ -824,18 +848,17 @@ export class Player {
         }
     }
 
-    /** Gate Celestial Depths and Starlight Lure behind all relics + forged lure. */
+    /** Gate Celestial, Cortez, post-Starfish, and sequential story locations. */
     syncStoryUnlocks() {
+        const locations = new Locations().locations;
+        this.locationUnlocks = reconcileStoryLocationUnlocks(this, locations);
+
         const celestialIdx = CELESTIAL_DEPTHS_LOCATION_INDEX;
         const storyComplete = this.canAccessCelestialDepths();
 
         if (storyComplete) {
-            if (!this.locationUnlocks.includes(celestialIdx)) {
-                this.locationUnlocks.push(celestialIdx);
-            }
             this.unlockStarlightLure();
         } else {
-            this.locationUnlocks = this.locationUnlocks.filter((index) => index !== celestialIdx);
             if (this.currentLocationIndex === celestialIdx) {
                 this.currentLocationIndex = this.locationUnlocks[0] ?? 0;
             }
@@ -850,15 +873,8 @@ export class Player {
         }
 
         const cortezIdx = CORTEZ_BACKWATERS_LOCATION_INDEX;
-        if (this.isFishUnlocked(STARFISH_ID)) {
-            if (!this.locationUnlocks.includes(cortezIdx)) {
-                this.locationUnlocks.push(cortezIdx);
-            }
-        } else {
-            this.locationUnlocks = this.locationUnlocks.filter((index) => index !== cortezIdx);
-            if (this.currentLocationIndex === cortezIdx) {
-                this.currentLocationIndex = this.locationUnlocks[0] ?? 0;
-            }
+        if (this.currentLocationIndex === cortezIdx && !this.isFishUnlocked(STARFISH_ID)) {
+            this.currentLocationIndex = this.locationUnlocks[0] ?? 0;
         }
     }
 
