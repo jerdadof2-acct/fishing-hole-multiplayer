@@ -8,8 +8,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const input = path.join(__dirname, '../assets/audio/halleys-big-catch-intro.wav');
-const output = path.join(__dirname, '../assets/audio/halleys-big-catch-intro.mp3');
+const input = path.join(__dirname, '../assets/audio/halleys-big-catch-prologue.wav');
+const output = path.join(__dirname, '../assets/audio/halleys-big-catch-prologue.mp3');
 
 if (!fs.existsSync(input)) {
     console.error('Missing source WAV:', input);
