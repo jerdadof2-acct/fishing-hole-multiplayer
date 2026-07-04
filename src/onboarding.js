@@ -162,6 +162,9 @@ export function startGameplayOnboarding(options = {}) {
             card.style.left = `${left}px`;
         };
 
+        const backdrop = overlay.querySelector('.gameplay-onboarding-backdrop');
+        const isTouchMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+
         const reposition = () => {
             const step = GAMEPLAY_ONBOARDING_STEPS[stepIndex];
             if (!step) {
@@ -178,6 +181,11 @@ export function startGameplayOnboarding(options = {}) {
                 } else {
                     spotlight.classList.add('hidden');
                 }
+            }
+            if (backdrop) {
+                // Avoid full-screen dim + box-shadow on phones — it can stick over WebGL.
+                const showBackdrop = Boolean(step.center && !isTouchMobile);
+                backdrop.classList.toggle('hidden', !showBackdrop);
             }
             requestAnimationFrame(() => positionCard(step, targetRect));
         };

@@ -40,13 +40,26 @@ body {
     position: absolute;
     top: 0;
     left: 0;
-    z-index: 0;
+    z-index: 1;
     display: block;
     width: 100%;
     height: 100%;
     margin: 0;
     padding: 0;
     border: 0;
+}
+
+/* After gameplay starts, tear down stale layers that cover WebGL (not active modals/tours). */
+body.game-ready #loading,
+body.game-ready .gameplay-onboarding-backdrop,
+body.game-ready .gameplay-onboarding-spotlight {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+body.game-ready #story-prologue.hidden {
+    display: none !important;
 }
 
 /* Game Area */
@@ -686,6 +699,16 @@ body {
     max-height: calc(var(--ad-height) + env(safe-area-inset-top, 0px));
     overflow: hidden;
     background: rgba(18, 22, 40, 0.94);
+    contain: layout paint size;
+}
+
+#ad-banner iframe {
+    max-height: var(--ad-slot-height) !important;
+}
+
+.ad-banner-content ins.adsbygoogle,
+.ad-banner-content iframe {
+    max-height: var(--ad-slot-height) !important;
 }
 
 #ad-banner.hidden {
@@ -2331,16 +2354,6 @@ body {
         overflow: hidden;
     }
 
-    /* Pin WebGL to the visible viewport — Android Chrome can mis-size % height inside fixed shells. */
-    #game-container > canvas {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 0;
-    }
-
     .loading-screen.hidden {
         display: none !important;
         visibility: hidden !important;
@@ -3591,11 +3604,16 @@ body.modal-open #halley-admin-panel:not(.hidden) {
     pointer-events: auto;
 }
 
+.gameplay-onboarding-backdrop.hidden {
+    display: none !important;
+}
+
 .gameplay-onboarding-spotlight {
     position: fixed;
     border-radius: 14px;
-    box-shadow: 0 0 0 9999px rgba(4, 8, 22, 0.72);
     border: 2px solid rgba(125, 211, 252, 0.85);
+    background: transparent;
+    box-shadow: none;
     pointer-events: none;
     transition: top 0.2s ease, left 0.2s ease, width 0.2s ease, height 0.2s ease;
     z-index: 1;

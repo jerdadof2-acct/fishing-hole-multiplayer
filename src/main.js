@@ -45,6 +45,7 @@ import { Inventory } from './inventory.js';
 import { Leaderboard } from './leaderboard.js';
 import { FishCollection } from './fishCollection.js';
 import { loadingProgress, removeLoadingOverlay } from './loadingProgress.js';
+import { dismissAllGameplayObscurers, warnAboutUnmanagedAdsenseUnits } from './gameplayObscurers.js';
 import { collectGalleryImageUrls, warmImageCache } from './utils/imageAssets.js';
 import { showAdBanner } from './ads.js';
 import { bindViewportSync, getGameViewportSize, syncViewportShell, runMobileLayoutBurst } from './viewport.js';
@@ -157,13 +158,15 @@ export class Game {
 
         loadingProgress.suppress(false);
         loadingProgress.hide();
-        removeLoadingOverlay();
+        dismissAllGameplayObscurers();
         document.getElementById('game-container')?.classList.remove('pre-entry');
         document.getElementById('player-info')?.classList.remove('hidden');
         document.getElementById('game-area')?.classList.remove('hidden');
         document.getElementById('tab-bar')?.classList.remove('hidden');
         document.getElementById('site-legal-footer')?.classList.remove('hidden');
         showAdBanner();
+
+        window.setTimeout(() => warnAboutUnmanagedAdsenseUnits(), 1200);
 
         syncViewportShell();
         requestAnimationFrame(() => {
