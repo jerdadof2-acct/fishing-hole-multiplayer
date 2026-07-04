@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CameraSpring } from './camera/cameraSpring.js';
+import { getGameViewportSize } from './viewport.js';
 import {
     GAMEPLAY_CAMERA_OFFSET,
     PORTRAIT_CAMERA_OFFSET,
@@ -157,10 +158,10 @@ export class Camera {
 
     updateCamera() {
         if (!this.cat.getModel()) return;
-        
-        const container = document.getElementById('game-container');
-        const aspect = container.clientWidth / container.clientHeight;
-        
+
+        const { width, height } = getGameViewportSize();
+        const aspect = width / height;
+
         // Update aspect ratio (spring will handle position)
         this.camera.aspect = aspect;
         this.camera.updateProjectionMatrix();

@@ -12,22 +12,30 @@
     --ad-height: calc(var(--ad-slot-height) + var(--ad-vertical-padding));
 }
 
+html {
+    height: 100%;
+    overflow: hidden;
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     background: #1a1a2e;
     color: #e0e0e0;
-    height: 100vh;
-    height: 100dvh;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     overflow: hidden;
     touch-action: none;
 }
 
 /* Game Container */
 #game-container {
-    width: 100vw;
-    height: 100vh;
-    height: 100dvh;
-    position: relative;
+    position: fixed;
+    top: var(--app-offset-top, 0px);
+    left: 0;
+    width: var(--app-width, 100vw);
+    height: var(--app-height, 100svh);
     overflow: hidden;
 }
 
@@ -679,6 +687,8 @@ body {
     right: 0;
     width: 100%;
     z-index: 160;
+    max-height: calc(var(--ad-height) + env(safe-area-inset-top, 0px));
+    overflow: hidden;
     background: rgba(18, 22, 40, 0.94);
 }
 
@@ -2323,6 +2333,12 @@ body {
 @media (max-width: 768px) {
     #game-container {
         overflow: hidden;
+    }
+
+    .loading-screen.hidden {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
     }
 }
 

@@ -8,12 +8,36 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Halley's Big Catch">
     <meta name="theme-color" content="#4a90e2">
+
+    <script>
+        (function syncAppViewportEarly() {
+            function apply() {
+                var vv = window.visualViewport;
+                var height = Math.max(Math.round((vv && vv.height) || window.innerHeight || 1), 1);
+                var width = Math.max(Math.round((vv && vv.width) || window.innerWidth || 1), 1);
+                var top = Math.round((vv && vv.offsetTop) || 0);
+                document.documentElement.style.setProperty('--app-height', height + 'px');
+                document.documentElement.style.setProperty('--app-width', width + 'px');
+                document.documentElement.style.setProperty('--app-offset-top', top + 'px');
+                if (window.scrollY !== 0) {
+                    window.scrollTo(0, 0);
+                }
+            }
+            apply();
+            window.addEventListener('resize', apply);
+            window.addEventListener('orientationchange', function () { window.setTimeout(apply, 100); });
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', apply);
+                window.visualViewport.addEventListener('scroll', apply);
+            }
+        })();
+    </script>
     
     <title>Halley's Big Catch</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
     <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
-    <link rel="stylesheet" href="css/styles.css?v=20260703-no-blur-canvas">
+    <link rel="stylesheet" href="css/styles.css?v=20260703-android-viewport">
 
     <script>
         window.__deferredPwaInstallPrompt = null;

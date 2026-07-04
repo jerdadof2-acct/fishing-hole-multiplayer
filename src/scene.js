@@ -3,20 +3,7 @@ import {
     SUN_DIRECTIONAL_POSITION,
     SUN_DIRECTIONAL_TARGET
 } from './scene/sunShadowDirection.js';
-
-function getGameViewportSize() {
-    const container = document.getElementById('game-container');
-    const visualViewport = window.visualViewport;
-    const width = Math.max(
-        container?.clientWidth || visualViewport?.width || window.innerWidth || 1,
-        1
-    );
-    const height = Math.max(
-        container?.clientHeight || visualViewport?.height || window.innerHeight || 1,
-        1
-    );
-    return { width, height };
-}
+import { bindViewportSync, getGameViewportSize, syncViewportShell } from './viewport.js';
 
 function applyCanvasLayout(canvasEl) {
     canvasEl.style.position = 'absolute';
@@ -113,6 +100,8 @@ export class Scene {
         // Apply default environment to ensure lights/fog sync with overrides
         this.setEnvironment();
 
+        syncViewportShell();
+
         // Create camera (will be configured by Camera class)
         const { width, height } = getGameViewportSize();
         const aspect = width / height;
@@ -153,12 +142,7 @@ export class Scene {
         container.appendChild(this.renderer.domElement);
         applyCanvasLayout(this.renderer.domElement);
 
-        this.onWindowResize = this.onWindowResize.bind(this);
-        window.addEventListener('resize', this.onWindowResize);
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', this.onWindowResize);
-            window.visualViewport.addEventListener('scroll', this.onWindowResize);
-        }
+        bindViewportSync(() => this.onWindowResize());
     }
 
     onWindowResize() {

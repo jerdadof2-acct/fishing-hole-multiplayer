@@ -18,10 +18,12 @@ import {
 } from './savePinSetup.js';
 import { readIsAdmin } from './admin/adminAuth.js';
 import { initPwaInstallPrompt, scheduleInstallPromptWhenIdle } from './pwaInstall.js';
+import { syncViewportShell } from './viewport.js';
 
 const AUTH_STORAGE_KEY = 'kittyCreekAuth';
 
 initPwaInstallPrompt();
+syncViewportShell();
 
 function registerServiceWorker() {
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {

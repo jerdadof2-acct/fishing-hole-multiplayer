@@ -47,6 +47,7 @@ import { FishCollection } from './fishCollection.js';
 import { loadingProgress } from './loadingProgress.js';
 import { collectGalleryImageUrls, warmImageCache } from './utils/imageAssets.js';
 import { showAdBanner } from './ads.js';
+import { syncViewportShell } from './viewport.js';
 import {
     IDLE_PORTRAIT_DELAY_SEC,
     PORTRAIT_BOBBER_TRACKING_CUTOFF,
@@ -163,11 +164,17 @@ export class Game {
         document.getElementById('site-legal-footer')?.classList.remove('hidden');
         showAdBanner();
 
+        syncViewportShell();
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
+                syncViewportShell();
                 this.scene?.onWindowResize?.();
             });
         });
+        window.setTimeout(() => {
+            syncViewportShell();
+            this.scene?.onWindowResize?.();
+        }, 350);
 
         this.startGalleryImageWarmup();
         this.setupActivityTracking();
