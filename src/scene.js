@@ -123,6 +123,7 @@ export class Scene {
         try {
             renderer = new THREE.WebGLRenderer({
                 antialias: !isMobile,
+                alpha: false,
                 powerPreference: isMobile ? 'default' : 'high-performance',
                 failIfMajorPerformanceCaveat: false
             });
@@ -131,6 +132,7 @@ export class Scene {
             throw new Error('This device does not support WebGL. Try updating your browser.');
         }
         this.renderer = renderer;
+        this.renderer.setClearColor(0x87ceeb, 1);
         this.renderer.setSize(width, height, false);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2));
         this.renderer.shadowMap.enabled = true;

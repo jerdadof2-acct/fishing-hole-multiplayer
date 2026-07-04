@@ -44,10 +44,10 @@ import { Player } from './player.js';
 import { Inventory } from './inventory.js';
 import { Leaderboard } from './leaderboard.js';
 import { FishCollection } from './fishCollection.js';
-import { loadingProgress } from './loadingProgress.js';
+import { loadingProgress, removeLoadingOverlay } from './loadingProgress.js';
 import { collectGalleryImageUrls, warmImageCache } from './utils/imageAssets.js';
 import { showAdBanner } from './ads.js';
-import { syncViewportShell } from './viewport.js';
+import { bindViewportSync, getGameViewportSize, syncViewportShell, runMobileLayoutBurst } from './viewport.js';
 import {
     IDLE_PORTRAIT_DELAY_SEC,
     PORTRAIT_BOBBER_TRACKING_CUTOFF,
@@ -157,6 +157,7 @@ export class Game {
 
         loadingProgress.suppress(false);
         loadingProgress.hide();
+        removeLoadingOverlay();
         document.getElementById('game-container')?.classList.remove('pre-entry');
         document.getElementById('player-info')?.classList.remove('hidden');
         document.getElementById('game-area')?.classList.remove('hidden');
@@ -179,6 +180,8 @@ export class Game {
             syncViewportShell();
             this.scene?.onWindowResize?.();
         }, 900);
+
+        runMobileLayoutBurst(() => this.scene?.onWindowResize?.());
 
         this.startGalleryImageWarmup();
         this.setupActivityTracking();

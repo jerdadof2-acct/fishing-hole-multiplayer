@@ -198,6 +198,7 @@ export async function playStoryPrologue(options = {}) {
     const loading = document.getElementById('loading');
     if (loading) {
         loading.classList.add('hidden');
+        loading.remove();
     }
 
     creditsInner.innerHTML = PROLOGUE_STORY_PARAGRAPHS
@@ -247,7 +248,7 @@ export async function playStoryPrologue(options = {}) {
             startGateAbort = null;
             if (replay) {
                 gameContainer?.classList.remove('pre-entry');
-                document.getElementById('loading')?.classList.add('hidden');
+                document.getElementById('loading')?.remove();
             }
             if (ambienceFadeTimer) {
                 clearTimeout(ambienceFadeTimer);

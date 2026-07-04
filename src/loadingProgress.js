@@ -10,6 +10,7 @@ class LoadingProgress {
         this.percent = 0;
         this._bound = false;
         this._suppressed = false;
+        this._dismissed = false;
         this.failed = false;
         this.failMessage = '';
     }
@@ -40,6 +41,8 @@ class LoadingProgress {
     }
 
     show(message = 'Loading...') {
+        if (this._dismissed) return;
+
         this.bind();
         if (!this.root || this._suppressed) return;
 
@@ -53,13 +56,15 @@ class LoadingProgress {
     update(percent, message) {
         this.bind();
         const next = Math.max(this.percent, Math.min(100, percent));
-        if (this._suppressed) {
-            this.percent = next;
+        this.percent = next;
+
+        if (this._dismissed || this._suppressed || !this.root) {
             return;
         }
 
-        if (!this.root || this.root.classList.contains('hidden')) {
-            this.show(message || 'Loading...');
+        if (this.root.classList.contains('hidden')) {
+            // Hidden on purpose (e.g. during prologue) — never resurrect the overlay.
+            return;
         }
 
         this._render(next, message);
@@ -67,18 +72,23 @@ class LoadingProgress {
 
     hide() {
         this.bind();
-        if (!this.root) return;
+        this._dismissed = true;
+        this.percent = 100;
 
-        this._render(100, 'Ready!');
-        if (this._suppressed) {
-            this.percent = 100;
+        const root = this.root || document.getElementById('loading');
+        if (!root) {
             return;
         }
 
-        this.root.classList.add('hidden');
-        window.setTimeout(() => {
-            this.root?.remove();
-        }, 300);
+        this._render(100, 'Ready!');
+        root.classList.add('hidden');
+        root.remove();
+
+        this.root = null;
+        this.messageEl = null;
+        this.fillEl = null;
+        this.percentEl = null;
+        this._bound = false;
     }
 
     isFailed() {
@@ -90,6 +100,7 @@ class LoadingProgress {
     }
 
     fail(message = 'Loading failed. Please refresh.') {
+        this._dismissed = false;
         this.bind();
         this.failed = true;
         this.failMessage = message;
@@ -126,3 +137,8 @@ class LoadingProgress {
 }
 
 export const loadingProgress = new LoadingProgress();
+
+/** Remove the loading overlay from the DOM so it cannot cover WebGL on mobile. */
+export function removeLoadingOverlay() {
+    document.getElementById('loading')?.remove();
+}
