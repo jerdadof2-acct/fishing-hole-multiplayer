@@ -4,6 +4,28 @@ import {
     SUN_DIRECTIONAL_TARGET
 } from './scene/sunShadowDirection.js';
 
+function getGameViewportSize() {
+    const container = document.getElementById('game-container');
+    const visualViewport = window.visualViewport;
+    const width = Math.max(
+        container?.clientWidth || visualViewport?.width || window.innerWidth || 1,
+        1
+    );
+    const height = Math.max(
+        container?.clientHeight || visualViewport?.height || window.innerHeight || 1,
+        1
+    );
+    return { width, height };
+}
+
+function applyCanvasLayout(canvasEl) {
+    canvasEl.style.position = 'absolute';
+    canvasEl.style.inset = '0';
+    canvasEl.style.width = '100%';
+    canvasEl.style.height = '100%';
+    canvasEl.style.display = 'block';
+}
+
 export class Scene {
     constructor() {
         this.scene = null;
@@ -92,9 +114,7 @@ export class Scene {
         this.setEnvironment();
 
         // Create camera (will be configured by Camera class)
-        const container = document.getElementById('game-container');
-        const width = Math.max(container?.clientWidth || window.innerWidth || 1, 1);
-        const height = Math.max(container?.clientHeight || window.innerHeight || 1, 1);
+        const { width, height } = getGameViewportSize();
         const aspect = width / height;
         this.camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
 
@@ -118,7 +138,7 @@ export class Scene {
             throw new Error('This device does not support WebGL. Try updating your browser.');
         }
         this.renderer = renderer;
-        this.renderer.setSize(width, height);
+        this.renderer.setSize(width, height, false);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2));
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -126,19 +146,26 @@ export class Scene {
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 1.1;
         
+        const container = document.getElementById('game-container');
+        if (!container) {
+            throw new Error('Game container not found');
+        }
         container.appendChild(this.renderer.domElement);
+        applyCanvasLayout(this.renderer.domElement);
 
-        // Handle window resize
-        window.addEventListener('resize', () => this.onWindowResize());
+        this.onWindowResize = this.onWindowResize.bind(this);
+        window.addEventListener('resize', this.onWindowResize);
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', this.onWindowResize);
+            window.visualViewport.addEventListener('scroll', this.onWindowResize);
+        }
     }
 
     onWindowResize() {
-        const container = document.getElementById('game-container');
-        const width = Math.max(container?.clientWidth || window.innerWidth || 1, 1);
-        const height = Math.max(container?.clientHeight || window.innerHeight || 1, 1);
+        const { width, height } = getGameViewportSize();
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
-        this.renderer.setSize(width, height);
+        this.renderer.setSize(width, height, false);
     }
 
     render() {

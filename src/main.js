@@ -163,6 +163,12 @@ export class Game {
         document.getElementById('site-legal-footer')?.classList.remove('hidden');
         showAdBanner();
 
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                this.scene?.onWindowResize?.();
+            });
+        });
+
         this.startGalleryImageWarmup();
         this.setupActivityTracking();
         this.setupCatTap();
