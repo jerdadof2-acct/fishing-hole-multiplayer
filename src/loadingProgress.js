@@ -75,9 +75,10 @@ class LoadingProgress {
             return;
         }
 
+        this.root.classList.add('hidden');
         window.setTimeout(() => {
-            this.root.classList.add('hidden');
-        }, 250);
+            this.root?.remove();
+        }, 300);
     }
 
     isFailed() {

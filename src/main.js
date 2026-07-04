@@ -175,6 +175,10 @@ export class Game {
             syncViewportShell();
             this.scene?.onWindowResize?.();
         }, 350);
+        window.setTimeout(() => {
+            syncViewportShell();
+            this.scene?.onWindowResize?.();
+        }, 900);
 
         this.startGalleryImageWarmup();
         this.setupActivityTracking();

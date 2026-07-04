@@ -7,10 +7,14 @@ import { bindViewportSync, getGameViewportSize, syncViewportShell } from './view
 
 function applyCanvasLayout(canvasEl) {
     canvasEl.style.position = 'absolute';
-    canvasEl.style.inset = '0';
+    canvasEl.style.top = '0';
+    canvasEl.style.left = '0';
     canvasEl.style.width = '100%';
     canvasEl.style.height = '100%';
     canvasEl.style.display = 'block';
+    canvasEl.style.margin = '0';
+    canvasEl.style.padding = '0';
+    canvasEl.style.border = '0';
 }
 
 export class Scene {
@@ -139,7 +143,7 @@ export class Scene {
         if (!container) {
             throw new Error('Game container not found');
         }
-        container.appendChild(this.renderer.domElement);
+        container.prepend(this.renderer.domElement);
         applyCanvasLayout(this.renderer.domElement);
 
         bindViewportSync(() => this.onWindowResize());
