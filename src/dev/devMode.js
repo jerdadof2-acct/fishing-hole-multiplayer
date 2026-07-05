@@ -2,7 +2,7 @@
 export const DEV_OCEAN_BOAT_LOCATION_INDICES = [5, 6, 7, 8, 9];
 
 /** Post-story hidden locations for local preview. */
-export const DEV_HIDDEN_LOCATION_INDICES = [11];
+export const DEV_HIDDEN_LOCATION_INDICES = [11, 12, 13, 14];
 
 /**
  * True on localhost, 127.0.0.1, or when ?dev=1 / ?storytest=1 is in the URL.

@@ -398,6 +398,86 @@ export function applyTwilightTrenchWater(material) {
     }
 }
 
+/**
+ * Louisiana Bayou — still, murky dark-green backwater (LAKE body only).
+ */
+export const LOUISIANA_BAYOU_WATER_HEX = 0x1a3324;
+
+export const LOUISIANA_BAYOU_WATER = {
+    deepColor: new THREE.Color(LOUISIANA_BAYOU_WATER_HEX),
+    shallowColor: new THREE.Color(0x243a2e),
+    fogColor: new THREE.Color(0x1f3629),
+    fogDepth: 9.0,
+    fogIntensity: 0.6,
+    turbidity: 0.76,
+    absorption: 0.92,
+    opacity: 0.98,
+    opaqueDeepWater: true,
+    flatWaterColor: false,
+    sparkleStrength: 0.02,
+    envIntensity: 0.11,
+    fresnelScale: 0.78,
+    waveScale: 0.3,
+    waveSpeed: 0.18,
+    waveAmplitude: 0.0035,
+    rippleAmp: 0.01,
+    windScroll1: new THREE.Vector2(0.003, 0.0015),
+    windScroll2: new THREE.Vector2(-0.002, 0.0015)
+};
+
+/** Re-apply Louisiana Bayou still dark-green water to live shader uniforms. */
+export function applyLouisianaBayouWater(material) {
+    if (!material?.uniforms) {
+        return;
+    }
+    const w = LOUISIANA_BAYOU_WATER;
+    const u = material.uniforms;
+    u.uColorDeep.value.copy(w.deepColor);
+    u.uColorShallow.value.copy(w.shallowColor);
+    u.uFogColor.value.copy(w.fogColor);
+    u.uAbsorption.value = w.absorption;
+    u.uTurbidity.value = w.turbidity;
+    u.uOpacity.value = w.opacity;
+    u.uFogIntensity.value = w.fogIntensity;
+    u.uFogDepth.value = w.fogDepth;
+    if (u.uSparkleStrength) {
+        u.uSparkleStrength.value = w.sparkleStrength;
+    }
+    if (u.uFlatWater) {
+        u.uFlatWater.value = 0.0;
+    }
+    if (u.uOpaqueDeep) {
+        u.uOpaqueDeep.value = 1.0;
+    }
+    if (u.uHasLakeBed) {
+        u.uHasLakeBed.value = 0.0;
+    }
+    if (u.uEnvIntensity) {
+        u.uEnvIntensity.value = w.envIntensity;
+    }
+    if (u.uFresnelScale) {
+        u.uFresnelScale.value = w.fresnelScale;
+    }
+    if (u.waveScale) {
+        u.waveScale.value = w.waveScale;
+    }
+    if (u.waveSpeed) {
+        u.waveSpeed.value = w.waveSpeed;
+    }
+    if (u.waveAmplitude) {
+        u.waveAmplitude.value = w.waveAmplitude;
+    }
+    if (u.rippleAmp) {
+        u.rippleAmp.value = w.rippleAmp;
+    }
+    if (u.uScroll1) {
+        u.uScroll1.value.copy(w.windScroll1);
+    }
+    if (u.uScroll2) {
+        u.uScroll2.value.copy(w.windScroll2);
+    }
+}
+
 /** Re-apply Cortez Backwaters shallow bay water to live shader uniforms. */
 export function applyCortezBackwatersWaterColors(material) {
     applyShallowBayWaterColors(

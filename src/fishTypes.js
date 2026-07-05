@@ -78,7 +78,14 @@ export const FishTypes = [
     { id: 53, name: 'Piranha', rarity: 'Common', minWeight: 0.5, maxWeight: 3.5, recordWeight: 7.5, value: 28, experience: 14, season: 'All' },
     { id: 54, name: 'Peacock Bass', rarity: 'Uncommon', minWeight: 2.0, maxWeight: 15.0, recordWeight: 27.0, value: 68, experience: 24, season: 'All' },
     { id: 55, name: 'Payara', rarity: 'Rare', minWeight: 8.0, maxWeight: 35.0, recordWeight: 40.0, value: 140, experience: 42, season: 'All' },
-    { id: 56, name: 'Arapaima', rarity: 'Legendary', minWeight: 50.0, maxWeight: 200.0, recordWeight: 440.0, value: 1800, experience: 95, season: 'All' }
+    { id: 56, name: 'Arapaima', rarity: 'Legendary', minWeight: 50.0, maxWeight: 200.0, recordWeight: 440.0, value: 1800, experience: 95, season: 'All' },
+
+    // Louisiana Bayou
+    { id: 57, name: 'Buffalo Carp', rarity: 'Common', minWeight: 3.0, maxWeight: 25.0, recordWeight: 80.0, value: 18, experience: 10, season: 'All' },
+    { id: 58, name: 'Gaspergou', rarity: 'Common', minWeight: 2.0, maxWeight: 18.0, recordWeight: 55.0, value: 16, experience: 9, season: 'All' },
+    { id: 59, name: 'Bowfin', rarity: 'Uncommon', minWeight: 2.0, maxWeight: 12.0, recordWeight: 18.0, value: 38, experience: 16, season: 'All' },
+    { id: 60, name: 'Spotted Gar', rarity: 'Rare', minWeight: 3.0, maxWeight: 15.0, recordWeight: 22.0, value: 75, experience: 28, season: 'All' },
+    { id: 61, name: 'Paddlefish', rarity: 'Legendary', minWeight: 15.0, maxWeight: 80.0, recordWeight: 145.0, value: 950, experience: 92, season: 'All' }
 ];
 
 // Fish facts database
@@ -131,7 +138,12 @@ export const FishFacts = {
     'Piranha': { fact: 'Razor-toothed pack hunter of murky Amazon channels.', fun: 'Smiles like it already picked the fight!', real: 'Red-bellied piranha have one of the strongest bites for their size in the animal kingdom.' },
     'Peacock Bass': { fact: 'Explosive jungle river ambusher with a tail spot like a bullseye.', fun: 'Green, gold, and gone with your lure!', real: 'Peacock bass were introduced worldwide but are native to the Amazon and Orinoco basins.' },
     'Payara': { fact: 'Vampire fish — lower fangs slide into skull slots when the mouth closes.', fun: 'Two-inch teeth and zero patience!', real: 'Hydrolycus payara hunt fast water and slash at prey with saber-like teeth.' },
-    'Arapaima': { fact: 'Air-breathing river giant that surfaces like a log in the jungle backwaters.', fun: 'So big it looks like the river grew scales!', real: 'Arapaima gigas can exceed 400 pounds and gulp air with a primitive lung.' }
+    'Arapaima': { fact: 'Air-breathing river giant that surfaces like a log in the jungle backwaters.', fun: 'So big it looks like the river grew scales!', real: 'Arapaima gigas can exceed 400 pounds and gulp air with a primitive lung.' },
+    'Buffalo Carp': { fact: 'Big-shouldered sucker that roots through bayou mud for algae and detritus.', fun: 'Looks like a carp, acts like a vacuum — sucks up everything!', real: 'Buffalo fish are native to Gulf Coast rivers and can exceed 80 pounds.' },
+    'Gaspergou': { fact: 'Louisiana nickname for the freshwater drum — drumming muscles in its swim bladder make a croaking sound underwater.', fun: 'Named for the noise it makes; sounds grumpy before you even hook it!', real: 'Freshwater drum are the only freshwater member of the croaker family in North America.' },
+    'Bowfin': { fact: 'Living fossil with a long dorsal fin and lungs that let it gulp air in stagnant backwaters.', fun: 'Swam with dinosaurs and still looks offended when you catch it!', real: 'Bowfin survive low oxygen in bayous and can breathe air at the surface.' },
+    'Spotted Gar': { fact: 'Long-snouted ambusher armored in ganoid scales — a true bayou survivor.', fun: 'More spots than a leopard and twice as toothy!', real: 'Spotted gar haunt shallow, vegetation-choked Louisiana sloughs and bayous.' },
+    'Paddlefish': { fact: 'Prehistoric filter-feeder with a paddle-shaped rostrum that sweeps plankton from murky water.', fun: 'Snout so long it looks like it forgot to stop growing!', real: 'American paddlefish are ancient river giants prized in Gulf Coast and Mississippi basin waters.' }
 };
 
 /**

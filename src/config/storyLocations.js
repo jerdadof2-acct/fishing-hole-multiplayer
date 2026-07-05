@@ -1,5 +1,7 @@
 /** Story location indices — match `locations.js` array order (unlock progression). */
 
+import { STARFISH_ID } from './starfishEncounter.js';
+
 export const CRESCENT_POND_LOCATION_INDEX = 0;
 export const SANDY_SHOALS_LOCATION_INDEX = 1;
 export const CORAL_KINGDOMS_LOCATION_INDEX = 2;
@@ -20,3 +22,16 @@ export const CONGO_RIVER_NAME = 'Congo River';
 export const CRAZYCATCH_COVE_NAME = 'CrazyCatch Cove';
 
 export const TARPON_FISH_ID = 44;
+
+export function hasCaughtStarfish(player) {
+    return player?.isFishUnlocked?.(STARFISH_ID) === true;
+}
+
+export function isComingSoonLocationIndex(locationIndex) {
+    return locationIndex === CONGO_RIVER_LOCATION_INDEX
+        || locationIndex === CRAZYCATCH_COVE_LOCATION_INDEX;
+}
+
+export function isComingSoonLocation(location) {
+    return location?.comingSoon === true;
+}

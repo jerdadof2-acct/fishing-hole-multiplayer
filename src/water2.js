@@ -12,7 +12,8 @@ import {
     applyStormbreakerBayWater,
     applyForgottenReefsWater,
     applyTwilightTrenchWater,
-    applyLakeDefaultWaves
+    applyLakeDefaultWaves,
+    applyLouisianaBayouWater
 } from './water/waterBodyTypes.js?v=20250625-amazon-river-soft';
 import { createRiverFlowTexture } from './water/riverFlowTexture.js';
 import {
@@ -112,6 +113,7 @@ export class Water2Lake {
         this.reefFishShadows = null;
         this._coralReefLocationEnabled = false;
         this._cortezBackwatersEnabled = false;
+        this._louisianaBayouEnabled = false;
         this._craggyCoastEnabled = false;
         this._stormbreakerBayEnabled = false;
         this._forgottenReefsEnabled = false;
@@ -807,7 +809,8 @@ export class Water2Lake {
 
     _syncLakeBedDecorVisibility(type) {
         const waterType = type || this.waterBodyType;
-        const hidePebbles = waterType === 'FJORD' || waterType === 'CELESTIAL';
+        const hidePebbles = waterType === 'FJORD' || waterType === 'CELESTIAL'
+            || (this._louisianaBayouEnabled && waterType === 'LAKE');
         if (this.lakeBedGround) {
             this.lakeBedGround.visible = !hidePebbles;
         }
@@ -898,6 +901,8 @@ export class Water2Lake {
             applyCoralKingdomsWaterColors(material);
         } else if (this._cortezBackwatersEnabled && this.waterBodyType === 'LAKE') {
             applyCortezBackwatersWaterColors(material);
+        } else if (this._louisianaBayouEnabled && this.waterBodyType === 'LAKE') {
+            applyLouisianaBayouWater(material);
         } else if (this._craggyCoastEnabled && this.waterBodyType === 'LAKE') {
             applyCraggyCoastWaterWaves(material);
         } else if (this._stormbreakerBayEnabled && this.waterBodyType === 'OCEAN') {
@@ -963,6 +968,16 @@ export class Water2Lake {
         if (!enabled && this.mesh?.material?.uniforms?.uShallowBedMix) {
             this.mesh.material.uniforms.uShallowBedMix.value = 0;
         }
+        this._applyLocationWaterOverrides();
+    }
+
+    /**
+     * Louisiana Bayou only — still, murky dark-green backwater.
+     * @param {boolean} enabled
+     */
+    setLouisianaBayouEnabled(enabled) {
+        this._louisianaBayouEnabled = enabled === true;
+        this._syncLakeBedDecorVisibility();
         this._applyLocationWaterOverrides();
     }
 
@@ -1104,6 +1119,8 @@ export class Water2Lake {
                 applyForgottenReefsWater(waterMat);
             } else if (this._twilightTrenchEnabled && this.waterBodyType === 'OCEAN') {
                 applyTwilightTrenchWater(waterMat);
+            } else if (this._louisianaBayouEnabled && this.waterBodyType === 'LAKE') {
+                applyLouisianaBayouWater(waterMat);
             } else if (this.waterBodyType === 'LAKE') {
                 applyLakeWaterColors(waterMat, this.waterBodyConfig);
                 applyLakeDefaultWaves(waterMat, this.waterBodyConfig);
@@ -1157,6 +1174,8 @@ export class Water2Lake {
                 applyCoralKingdomsWaterColors(material);
             } else if (type === 'LAKE' && this._cortezBackwatersEnabled) {
                 applyCortezBackwatersWaterColors(material);
+            } else if (type === 'LAKE' && this._louisianaBayouEnabled) {
+                applyLouisianaBayouWater(material);
             }
             this._syncLakeBedDecorVisibility(type);
             this._syncCoralKingdomsBed();

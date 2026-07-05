@@ -215,6 +215,7 @@ export const POST_STARFISH_CHAPTERS = {
         narration: [
             'Halley and his father had talked about fishing here for years.',
             'They had always said they would come someday.',
+            'Halley\'s friend Henry grew up on these bayous — cypress shadows, muddy banks, and fish that look prehistoric.',
             'As Halley opened the journal beneath the hanging moss, he smiled.',
             'Someday had finally arrived.'
         ],

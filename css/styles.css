@@ -223,6 +223,11 @@ body.game-ready #story-prologue.hidden {
     background: rgba(52, 152, 219, 0.9);
 }
 
+.location-picker-item--coming-soon {
+    opacity: 0.72;
+    cursor: not-allowed;
+}
+
 .location-picker-cancel {
     width: 100%;
     padding: 12px 16px;

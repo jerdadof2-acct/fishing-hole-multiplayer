@@ -1,5 +1,6 @@
 import { CELESTIAL_DEPTHS_LOCATION_INDEX, HIDDEN_RELICS } from '../config/hiddenRelics.js';
 import { CORTEZ_BACKWATERS_LOCATION_INDEX } from '../config/cortezBackwaters.js';
+import { LOUISIANA_BAYOU_LOCATION_INDEX } from '../config/storyLocations.js';
 import { STARFISH_ID } from '../config/starfishEncounter.js';
 import { collectHiddenRelic } from '../hiddenRelics.js';
 import { AMAZON_DEPTHS_NAME } from '../locations.js';
@@ -86,6 +87,7 @@ export function initStoryTestPanel(game) {
         <button type="button" data-action="forge">Show forge popup</button>
         <button type="button" data-action="celestial">Go to Celestial Depths</button>
         <button type="button" data-action="cortez">Go to Cortez Backwaters</button>
+        <button type="button" data-action="bayou">Go to Louisiana Bayou</button>
         <button type="button" data-action="reset-starfish">Reset Starfish (first catch)</button>
         <div class="story-test-panel-section">Amazon Depths</div>
         <button type="button" data-action="spawn-anaconda">Spawn anaconda shadow</button>
@@ -148,6 +150,15 @@ export function initStoryTestPanel(game) {
             grantStarfishCaught(player, game.fishCollection);
             jumpToLocation(game, CORTEZ_BACKWATERS_LOCATION_INDEX);
             ui.showBannerNotification?.('Cortez Backwaters — fish the old Gulf flats from the dock.', '#86efac', 4200);
+            return;
+        }
+
+        if (action === 'bayou') {
+            grantStarfishCaught(player, game.fishCollection);
+            player.fatherJournalReceived = true;
+            player.save({ skipSync: true });
+            jumpToLocation(game, LOUISIANA_BAYOU_LOCATION_INDEX);
+            ui.showBannerNotification?.('Louisiana Bayou — still dark-green backwater preview.', '#86efac', 4200);
             return;
         }
 

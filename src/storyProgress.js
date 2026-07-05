@@ -12,7 +12,9 @@ import { CORTEZ_BACKWATERS_LOCATION_INDEX } from './config/cortezBackwaters.js';
 import {
     LOUISIANA_BAYOU_LOCATION_INDEX,
     CONGO_RIVER_LOCATION_INDEX,
-    CRAZYCATCH_COVE_LOCATION_INDEX
+    CRAZYCATCH_COVE_LOCATION_INDEX,
+    hasCaughtStarfish,
+    isComingSoonLocationIndex
 } from './config/storyLocations.js';
 import { STARFISH_ID } from './config/starfishEncounter.js';
 
@@ -292,15 +294,11 @@ export function getPendingArrivalChapter(player, locationIndex) {
     }
 
     if (locationIndex === LOUISIANA_BAYOU_LOCATION_INDEX) {
-        return player.fatherJournalReceived ? chapter : null;
+        return hasCaughtStarfish(player) ? chapter : null;
     }
 
-    if (locationIndex === CONGO_RIVER_LOCATION_INDEX) {
-        return player.louisianaBayouComplete ? chapter : null;
-    }
-
-    if (locationIndex === CRAZYCATCH_COVE_LOCATION_INDEX) {
-        return player.congoRiverComplete ? chapter : null;
+    if (isComingSoonLocationIndex(locationIndex)) {
+        return null;
     }
 
     return null;
@@ -409,20 +407,9 @@ export function reconcileStoryLocationUnlocks(player, locations) {
         unlocked.add(CELESTIAL_DEPTHS_LOCATION_INDEX);
     }
 
-    if (player.isFishUnlocked?.(STARFISH_ID)) {
+    if (hasCaughtStarfish(player)) {
         unlocked.add(CORTEZ_BACKWATERS_LOCATION_INDEX);
-    }
-
-    if (player.fatherJournalReceived) {
         unlocked.add(LOUISIANA_BAYOU_LOCATION_INDEX);
-    }
-
-    if (player.louisianaBayouComplete) {
-        unlocked.add(CONGO_RIVER_LOCATION_INDEX);
-    }
-
-    if (player.congoRiverComplete) {
-        unlocked.add(CRAZYCATCH_COVE_LOCATION_INDEX);
     }
 
     return [...unlocked].sort((a, b) => a - b);
@@ -438,18 +425,12 @@ export function canTravelToStoryLocation(player, locationIndex, locations) {
         return player.canAccessCelestialDepths?.() === true;
     }
 
-    if (location.requiresStarfishCatch && locationIndex === CORTEZ_BACKWATERS_LOCATION_INDEX) {
-        return player.isFishUnlocked?.(STARFISH_ID) === true;
+    if (isComingSoonLocationIndex(locationIndex) || location.comingSoon) {
+        return false;
     }
 
-    if (locationIndex === LOUISIANA_BAYOU_LOCATION_INDEX) {
-        return Boolean(player.fatherJournalReceived);
-    }
-    if (locationIndex === CONGO_RIVER_LOCATION_INDEX) {
-        return Boolean(player.louisianaBayouComplete);
-    }
-    if (locationIndex === CRAZYCATCH_COVE_LOCATION_INDEX) {
-        return Boolean(player.congoRiverComplete);
+    if (location.requiresStarfishCatch) {
+        return hasCaughtStarfish(player);
     }
 
     if (!isStoryLocationAvailable(player, locationIndex)) {

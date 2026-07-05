@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import {
     SUN_DIRECTIONAL_POSITION,
-    SUN_DIRECTIONAL_TARGET
+    SUN_DIRECTIONAL_TARGET,
+    applySunShadowCameraBounds,
+    SUN_SHADOW_ORTHO_DEFAULT
 } from './scene/sunShadowDirection.js';
 import { bindViewportSync, getGameViewportSize, syncViewportShell } from './viewport.js';
 
@@ -27,6 +29,7 @@ export class Scene {
         this.directionalLight = null;
         this.rimLight = null;
         this.ambientLight = null;
+        this.sceneryFillLight = null;
         this.defaultEnvironment = {
             background: 0x87ceeb,
             fogColor: 0x87ceeb,
@@ -40,7 +43,9 @@ export class Scene {
             rimColor: 0x9fdcff,
             rimIntensity: 0.32,
             ambientColor: 0xffffff,
-            ambientIntensity: 0.35
+            ambientIntensity: 0.35,
+            sceneryFillColor: 0xffe8c0,
+            sceneryFillIntensity: 0
         };
         this.currentEnvironment = null;
     }
@@ -74,10 +79,7 @@ export class Scene {
         directionalLight.shadow.mapSize.height = 2048;
         directionalLight.shadow.camera.near = 0.5;
         directionalLight.shadow.camera.far = 100;
-        directionalLight.shadow.camera.left = -20;
-        directionalLight.shadow.camera.right = 20;
-        directionalLight.shadow.camera.top = 20;
-        directionalLight.shadow.camera.bottom = -20;
+        applySunShadowCameraBounds(directionalLight, SUN_SHADOW_ORTHO_DEFAULT);
         // Darker shadows for better visibility on water
         // Minimal bias to reduce gap between object and shadow (shadow acne vs shadow gap trade-off)
         directionalLight.shadow.bias = 0.0; // Zero bias for tight shadows (may see slight acne but shadows are closer)
@@ -100,6 +102,14 @@ export class Scene {
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.35); // Increased from 0.25 to 0.35 to brighten cat
         this.scene.add(ambientLight);
         this.ambientLight = ambientLight;
+
+        const sceneryFillLight = new THREE.DirectionalLight(0xffe8c0, 0);
+        sceneryFillLight.position.set(4, 22, -6);
+        sceneryFillLight.target.position.set(0, 0, 2);
+        this.scene.add(sceneryFillLight.target);
+        sceneryFillLight.castShadow = false;
+        this.scene.add(sceneryFillLight);
+        this.sceneryFillLight = sceneryFillLight;
 
         // Apply default environment to ensure lights/fog sync with overrides
         this.setEnvironment();
@@ -218,7 +228,17 @@ export class Scene {
             this.ambientLight.intensity = env.ambientIntensity;
         }
 
+        if (this.sceneryFillLight) {
+            this.sceneryFillLight.color.set(env.sceneryFillColor);
+            this.sceneryFillLight.intensity = env.sceneryFillIntensity ?? 0;
+        }
+
         this.currentEnvironment = env;
+    }
+
+    /** Widen or restore the key-light shadow frustum (e.g. bayou cypress span). */
+    setSunShadowOrthoExtent(halfExtent = SUN_SHADOW_ORTHO_DEFAULT) {
+        applySunShadowCameraBounds(this.directionalLight, halfExtent);
     }
 }
 

@@ -267,6 +267,7 @@ export class Cat {
         this.rodTipNode = null;
         this._rodTipVertexIndex = undefined;
         this.catAnchor = null;
+        this.hatPerchAnchor = null;
         this.feetYOffset = 0;
         this._medallionFx = null;
         this._medallionGlowTime = 0;
@@ -327,6 +328,7 @@ export class Cat {
                     const dockSurfacePos = this.dock.getSurfacePosition();
                     this.positionOnSurface(dockSurfacePos);
                     this.playIdle();
+                    this.setupHatPerchAnchor();
                     
                     // Enable shadows and lighten materials
                     this.model.traverse((child) => {
@@ -1100,6 +1102,65 @@ export class Cat {
         if (boneNames.length > 0) {
             debugLog('[CAT] Bone names:', boneNames.join(', '));
         }
+    }
+
+    /** Empty anchor on Halley's hat crown for bayou dragonfly perch. */
+    setupHatPerchAnchor() {
+        if (!this.model) {
+            return;
+        }
+
+        const headBone =
+            this.headBone ||
+            this.model.getObjectByName('mixamorig:Head') ||
+            this.model.getObjectByName('mixamorigHead') ||
+            this.model.getObjectByName('Head');
+
+        if (!headBone) {
+            console.warn('[CAT] Hat perch: head bone not found');
+            return;
+        }
+
+        let hatMesh = null;
+        this.model.traverse((child) => {
+            if (child.isMesh && child.name === 'Hat') {
+                hatMesh = child;
+            }
+        });
+
+        if (this.hatPerchAnchor?.parent) {
+            this.hatPerchAnchor.parent.remove(this.hatPerchAnchor);
+        }
+
+        this.hatPerchAnchor = new THREE.Object3D();
+        this.hatPerchAnchor.name = 'hatDragonflyPerch';
+        headBone.add(this.hatPerchAnchor);
+
+        if (hatMesh) {
+            if (this.mixer) {
+                this.mixer.update(0);
+            }
+            this.model.updateMatrixWorld(true);
+            this.updateSkeleton();
+
+            const hatBounds = new THREE.Box3().setFromObject(hatMesh);
+            const hatTopWorld = new THREE.Vector3(
+                (hatBounds.min.x + hatBounds.max.x) * 0.5,
+                hatBounds.max.y + 0.025,
+                (hatBounds.min.z + hatBounds.max.z) * 0.5
+            );
+
+            headBone.updateWorldMatrix(true, false);
+            const headInverse = new THREE.Matrix4().copy(headBone.matrixWorld).invert();
+            this.hatPerchAnchor.position.copy(hatTopWorld.applyMatrix4(headInverse));
+        } else {
+            this.hatPerchAnchor.position.set(0, 0.22, 0.08);
+            console.warn('[CAT] Hat mesh not found; using fallback perch offset');
+        }
+    }
+
+    getHatPerchAnchor() {
+        return this.hatPerchAnchor || null;
     }
     
     /**

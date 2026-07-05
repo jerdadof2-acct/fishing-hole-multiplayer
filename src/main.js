@@ -5,7 +5,11 @@ import { Water2Lake } from './water2.js?v=20250625-anaconda-bark2';
 import { Grass } from './grass.js';
 import { Dock } from './dock.js';
 import { Platform } from './platform.js';
-import { Locations, AMAZON_DEPTHS_NAME, FROZEN_FJORDS_NAME, CORAL_KINGDOMS_NAME, CORTEZ_BACKWATERS_NAME, CRAGGY_COAST_NAME, STORMBREAKER_BAY_NAME, FORGOTTEN_REEFS_NAME, TWILIGHT_TRENCH_NAME, DESERT_LAGOON_NAME, SANDY_SHOALS_NAME } from './locations.js';
+import { Locations, AMAZON_DEPTHS_NAME, FROZEN_FJORDS_NAME, CORAL_KINGDOMS_NAME, CORTEZ_BACKWATERS_NAME, LOUISIANA_BAYOU_NAME, CRAGGY_COAST_NAME, STORMBREAKER_BAY_NAME, FORGOTTEN_REEFS_NAME, TWILIGHT_TRENCH_NAME, DESERT_LAGOON_NAME, SANDY_SHOALS_NAME } from './locations.js';
+import {
+    SUN_SHADOW_ORTHO_BAYOU,
+    SUN_SHADOW_ORTHO_DEFAULT
+} from './scene/sunShadowDirection.js';
 import { applyDevOceanUnlocks, isDevMode } from './dev/devMode.js';
 import {
     initDevFaceCameraFromUrl,
@@ -31,6 +35,7 @@ import {
     CrescentPondAmbience,
     CortezBackwatersAmbience,
     CraggyCoastAmbience,
+    LouisianaBayouAmbience,
     SandyShoalsAmbience,
     StormbreakerBayAmbience
 } from './audio/locationMusic.js?v=20260702-sandy-ambience';
@@ -86,6 +91,23 @@ import {
     updateMangroveCameraObstruction
 } from './effects/mangroves.js';
 import {
+    createBayouCypress,
+    syncBayouCypressVisibility,
+    updateBayouCypressCameraObstruction
+} from './effects/bayouCypress.js';
+import {
+    createBayouExtras,
+    updateBayouExtras,
+    syncBayouExtrasVisibility,
+    getBayouDragonflyTapTargets,
+    dismissPerchedBayouDragonfly
+} from './effects/bayouExtras.js';
+import {
+    createBayouWaterShadows,
+    syncBayouWaterShadowsVisibility,
+    updateBayouWaterShadows
+} from './effects/bayouWaterShadows.js';
+import {
     createDesertLagoonPalms,
     syncDesertLagoonPalmsVisibility,
     updatePalmBaseRipples
@@ -124,6 +146,7 @@ export class Game {
         this.sandyShoalsAmbience = new SandyShoalsAmbience();
         this.craggyCoastAmbience = new CraggyCoastAmbience();
         this.stormbreakerBayAmbience = new StormbreakerBayAmbience();
+        this.louisianaBayouAmbience = new LouisianaBayouAmbience();
         
         // Gameplay systems
         this.player = null;
@@ -145,6 +168,9 @@ export class Game {
         this.crescentPondSky = null;
         this.crescentPondVegetation = null;
         this.cortezMangroves = null;
+        this.bayouCypress = null;
+        this.bayouExtras = null;
+        this.bayouWaterShadows = null;
         this.desertLagoonPalms = null;
         if (this.deferReveal) {
             document.getElementById('game-container')?.classList.add('pre-entry');
@@ -367,12 +393,36 @@ export class Game {
             pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
             pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
+            raycaster.setFromCamera(pointer, this.scene.camera);
+
+            const isBayou =
+                this.locations?.getCurrentLocation()?.name === LOUISIANA_BAYOU_NAME;
+            if (isBayou && this.bayouExtras) {
+                const dragonflyTargets = getBayouDragonflyTapTargets(this.bayouExtras);
+                if (dragonflyTargets.length) {
+                    const dragonflyHits = raycaster.intersectObjects(
+                        dragonflyTargets,
+                        false
+                    );
+                    if (
+                        dragonflyHits.length &&
+                        dismissPerchedBayouDragonfly(
+                            this.bayouExtras,
+                            dragonflyHits[0].object
+                        )
+                    ) {
+                        lastTapMs = now;
+                        this.markActivity();
+                        return;
+                    }
+                }
+            }
+
             const targets = this.cat.getTapTargets?.() || [];
             if (!targets.length) {
                 return;
             }
 
-            raycaster.setFromCamera(pointer, this.scene.camera);
             const hits = raycaster.intersectObjects(targets, false);
             if (!hits.length) {
                 return;
@@ -499,6 +549,7 @@ export class Game {
             // Coral / fjord flags before water type so LAKE+coral tuning applies correctly
             this.water.setCoralReefEnabled(this.locations.getCurrentLocation()?.name === CORAL_KINGDOMS_NAME);
             this.water.setCortezBackwatersEnabled(this.locations.getCurrentLocation()?.name === CORTEZ_BACKWATERS_NAME);
+            this.water.setLouisianaBayouEnabled(this.locations.getCurrentLocation()?.name === LOUISIANA_BAYOU_NAME);
             this.water.setCraggyCoastEnabled(this.locations.getCurrentLocation()?.name === CRAGGY_COAST_NAME);
             this.water.setStormbreakerBayEnabled(this.locations.getCurrentLocation()?.name === STORMBREAKER_BAY_NAME);
             this.water.setForgottenReefsEnabled(this.locations.getCurrentLocation()?.name === FORGOTTEN_REEFS_NAME);
@@ -539,6 +590,32 @@ export class Game {
             syncCortezMangrovesVisibility(
                 this.cortezMangroves,
                 currentLocation.name === CORTEZ_BACKWATERS_NAME
+            );
+            this.bayouCypress = createBayouCypress(
+                this.scene.scene,
+                this.water?.waterY ?? 0,
+                this.lakeMask
+            );
+            syncBayouCypressVisibility(
+                this.bayouCypress,
+                currentLocation.name === LOUISIANA_BAYOU_NAME
+            );
+            this.bayouExtras = createBayouExtras(this.scene.scene, {
+                waterLevel: this.water?.waterY ?? 0,
+                lakeMask: this.lakeMask,
+                cypressGroup: this.bayouCypress
+            });
+            syncBayouExtrasVisibility(
+                this.bayouExtras,
+                currentLocation.name === LOUISIANA_BAYOU_NAME
+            );
+            this.bayouWaterShadows = createBayouWaterShadows(this.scene.scene, {
+                waterLevel: this.water?.waterY ?? 0,
+                groundSize: this.water?.groundSize ?? undefined
+            });
+            syncBayouWaterShadowsVisibility(
+                this.bayouWaterShadows,
+                currentLocation.name === LOUISIANA_BAYOU_NAME
             );
 
             this.desertLagoonPalms = createDesertLagoonPalms(
@@ -806,6 +883,7 @@ export class Game {
         this.sandyShoalsAmbience?.resumeAfterGesture?.();
         this.craggyCoastAmbience?.resumeAfterGesture?.();
         this.stormbreakerBayAmbience?.resumeAfterGesture?.();
+        this.louisianaBayouAmbience?.resumeAfterGesture?.();
         if (isDevFaceCameraEnabled()) {
             return;
         }
@@ -1000,6 +1078,8 @@ export class Game {
 
         const isCortez =
             this.locations?.getCurrentLocation()?.name === CORTEZ_BACKWATERS_NAME;
+        const isBayou =
+            this.locations?.getCurrentLocation()?.name === LOUISIANA_BAYOU_NAME;
 
         if (this.cortezMangroves) {
             if (isCortez && this.scene?.camera && this.cat) {
@@ -1024,6 +1104,43 @@ export class Game {
                 );
             }
         }
+
+        if (this.bayouCypress) {
+            if (isBayou && this.scene?.camera && this.cat) {
+                const halleyPosition =
+                    this.cat.getHeadWorldPosition?.() ??
+                    this.cat.getSavedPosition?.();
+
+                if (halleyPosition) {
+                    updateBayouCypressCameraObstruction(
+                        this.bayouCypress,
+                        this.scene.camera,
+                        halleyPosition,
+                        true
+                    );
+                }
+            } else {
+                updateBayouCypressCameraObstruction(
+                    this.bayouCypress,
+                    null,
+                    null,
+                    false
+                );
+            }
+        }
+
+        if (this.bayouExtras && this.scene?.clock) {
+            updateBayouExtras(
+                this.bayouExtras,
+                this.scene.clock.getElapsedTime(),
+                isBayou,
+                {
+                    cat: this.cat
+                }
+            );
+        }
+
+        updateBayouWaterShadows(this.bayouWaterShadows, isBayou);
 
         // Lake-facing reset before animation (portrait/scold keeps turned pose); feet aligned after update
         if (this.cat && this.platform) {
@@ -1428,6 +1545,17 @@ export class Game {
         }
     }
 
+    /** Steeper key light so sun shafts reach the boat deck and logs under the canopy. */
+    applyBayouSceneryLighting() {
+        const sun = this.scene?.directionalLight;
+        if (!sun) {
+            return;
+        }
+        sun.position.set(-5, 28, 7);
+        sun.target.position.set(0, 0, 2);
+        sun.target.updateMatrixWorld();
+    }
+
     applyLocationEnvironment(location) {
         if (!location) {
             return;
@@ -1519,6 +1647,29 @@ export class Game {
                     color: 0xd8f5e8
                 }
             },
+            BAYOU: {
+                scene: {
+                    fogColor: 0x5a6e58,
+                    fogNear: 24,
+                    fogFar: 172,
+                    hemisphereSkyColor: 0xdce8cc,
+                    hemisphereGroundColor: 0x1a2e1c,
+                    hemisphereIntensity: 0.68,
+                    directionalColor: 0xfff0c8,
+                    directionalIntensity: 0.74,
+                    ambientColor: 0x789a6a,
+                    ambientIntensity: 0.44,
+                    rimColor: 0xc8e8b8,
+                    rimIntensity: 0.1,
+                    sceneryFillColor: 0xffecc8,
+                    sceneryFillIntensity: 0.28
+                },
+                waterParticles: {
+                    ...defaultParticleSettings,
+                    opacity: 0.16,
+                    color: 0x8aa888
+                }
+            },
             DEEP_REEF: {
                 scene: {
                     fogColor: 0x2a6cb0,
@@ -1590,7 +1741,9 @@ export class Game {
             ? 'CORAL'
             : location.name === CORTEZ_BACKWATERS_NAME
                 ? 'CORTEZ'
-                : location.name === STORMBREAKER_BAY_NAME
+                : location.name === LOUISIANA_BAYOU_NAME
+                    ? 'BAYOU'
+                    : location.name === STORMBREAKER_BAY_NAME
                     ? 'STORM'
                     : location.name === FORGOTTEN_REEFS_NAME
                         ? 'DEEP_REEF'
@@ -1607,6 +1760,9 @@ export class Game {
 
         if (isMoonlightLocation) {
             this.applyMoonlightSunLighting();
+        } else if (location.name === LOUISIANA_BAYOU_NAME) {
+            this.restoreDefaultSunLighting();
+            this.applyBayouSceneryLighting();
         } else {
             this.restoreDefaultSunLighting();
         }
@@ -1632,6 +1788,12 @@ export class Game {
         } else if (this.waterParticleDefaults) {
             this.applyWaterParticleSettings(this.waterParticleDefaults);
         }
+
+        this.scene?.setSunShadowOrthoExtent?.(
+            location.name === LOUISIANA_BAYOU_NAME
+                ? SUN_SHADOW_ORTHO_BAYOU
+                : SUN_SHADOW_ORTHO_DEFAULT
+        );
     }
 
     ensureStarlightLureUnlocked() {
@@ -1684,6 +1846,7 @@ export class Game {
         const playSandyShoals = location?.name === SANDY_SHOALS_NAME;
         const playCraggy = location?.name === CRAGGY_COAST_NAME;
         const playStormbreaker = location?.name === STORMBREAKER_BAY_NAME;
+        const playLouisianaBayou = location?.name === LOUISIANA_BAYOU_NAME;
 
         if (playCelestial) {
             this.amazonAmbience?.stop();
@@ -1692,6 +1855,7 @@ export class Game {
             this.sandyShoalsAmbience?.stop();
             this.craggyCoastAmbience?.stop();
             this.stormbreakerBayAmbience?.stop();
+            this.louisianaBayouAmbience?.stop();
             this.celestialMusic?.start();
             return;
         }
@@ -1703,6 +1867,7 @@ export class Game {
             this.sandyShoalsAmbience?.stop();
             this.craggyCoastAmbience?.stop();
             this.stormbreakerBayAmbience?.stop();
+            this.louisianaBayouAmbience?.stop();
             this.amazonAmbience?.start();
             return;
         }
@@ -1714,6 +1879,7 @@ export class Game {
             this.sandyShoalsAmbience?.stop();
             this.craggyCoastAmbience?.stop();
             this.stormbreakerBayAmbience?.stop();
+            this.louisianaBayouAmbience?.stop();
             this.cortezAmbience?.start();
             return;
         }
@@ -1725,6 +1891,7 @@ export class Game {
             this.cortezAmbience?.stop();
             this.craggyCoastAmbience?.stop();
             this.stormbreakerBayAmbience?.stop();
+            this.louisianaBayouAmbience?.stop();
             this.sandyShoalsAmbience?.start();
             return;
         }
@@ -1736,6 +1903,7 @@ export class Game {
             this.cortezAmbience?.stop();
             this.sandyShoalsAmbience?.stop();
             this.stormbreakerBayAmbience?.stop();
+            this.louisianaBayouAmbience?.stop();
             this.craggyCoastAmbience?.start();
             return;
         }
@@ -1747,7 +1915,20 @@ export class Game {
             this.cortezAmbience?.stop();
             this.sandyShoalsAmbience?.stop();
             this.craggyCoastAmbience?.stop();
+            this.louisianaBayouAmbience?.stop();
             this.stormbreakerBayAmbience?.start();
+            return;
+        }
+
+        if (playLouisianaBayou) {
+            this.celestialMusic?.stop();
+            this.amazonAmbience?.stop();
+            this.crescentPondAmbience?.stop();
+            this.cortezAmbience?.stop();
+            this.sandyShoalsAmbience?.stop();
+            this.craggyCoastAmbience?.stop();
+            this.stormbreakerBayAmbience?.stop();
+            this.louisianaBayouAmbience?.start();
             return;
         }
 
@@ -1758,6 +1939,7 @@ export class Game {
             this.sandyShoalsAmbience?.stop();
             this.craggyCoastAmbience?.stop();
             this.stormbreakerBayAmbience?.stop();
+            this.louisianaBayouAmbience?.stop();
             this.crescentPondAmbience?.start();
             return;
         }
@@ -1769,6 +1951,7 @@ export class Game {
         this.sandyShoalsAmbience?.stop();
         this.craggyCoastAmbience?.stop();
         this.stormbreakerBayAmbience?.stop();
+        this.louisianaBayouAmbience?.stop();
     }
     
     /**
@@ -1791,8 +1974,13 @@ export class Game {
             return false;
         }
 
+        if (location.comingSoon && !hasPrivilegedAccess(this.player)) {
+            console.warn('[LOCATION SWITCH] Location not available yet:', location.name);
+            return false;
+        }
+
         if (location.requiresStarfishCatch && !hasPrivilegedAccess(this.player) && !canAccessCortezBackwaters(this.player)) {
-            console.warn('[LOCATION SWITCH] Cortez Backwaters locked — catch the Starfish of Eternity first');
+            console.warn('[LOCATION SWITCH] Post-Starfish location locked — catch the Starfish of Eternity first');
             return false;
         }
         
@@ -1804,6 +1992,7 @@ export class Game {
         // Reef / ice flags before water type so location-specific tuning sticks on return
         this.water.setCoralReefEnabled(location.name === CORAL_KINGDOMS_NAME);
         this.water.setCortezBackwatersEnabled(location.name === CORTEZ_BACKWATERS_NAME);
+        this.water.setLouisianaBayouEnabled(location.name === LOUISIANA_BAYOU_NAME);
         this.water.setCraggyCoastEnabled(location.name === CRAGGY_COAST_NAME);
         this.water.setStormbreakerBayEnabled(location.name === STORMBREAKER_BAY_NAME);
         this.water.setForgottenReefsEnabled(location.name === FORGOTTEN_REEFS_NAME);
@@ -1832,6 +2021,18 @@ export class Game {
         syncCortezMangrovesVisibility(
             this.cortezMangroves,
             location.name === CORTEZ_BACKWATERS_NAME
+        );
+        syncBayouCypressVisibility(
+            this.bayouCypress,
+            location.name === LOUISIANA_BAYOU_NAME
+        );
+        syncBayouExtrasVisibility(
+            this.bayouExtras,
+            location.name === LOUISIANA_BAYOU_NAME
+        );
+        syncBayouWaterShadowsVisibility(
+            this.bayouWaterShadows,
+            location.name === LOUISIANA_BAYOU_NAME
         );
         syncDesertLagoonPalmsVisibility(
             this.desertLagoonPalms,

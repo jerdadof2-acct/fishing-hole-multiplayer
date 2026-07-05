@@ -7,17 +7,18 @@ export const STARFISH_GUIDE_DESTINATIONS_HEADLINE =
     'The Starfish opened the path — your father gave it meaning.';
 
 export const STARFISH_GUIDE_DESTINATIONS_BODY =
-    'Four golden currents spread from the Celestial Depths. One leads home to Cortez Backwaters. Three more toward the unfinished adventures in your father\'s journal.';
+    'Two golden currents are open now — Cortez Backwaters and Louisiana Bayou. Two more adventures from your father\'s journal are still on the horizon.';
 
 /** Post-Starfish destinations the Starfish reveals after the reunion. */
 export const STARFISH_GUIDE_DESTINATIONS_OPEN = [
     { name: 'Cortez Backwaters', label: 'Return home — tell your father' },
     { name: 'Louisiana Bayou', label: 'An unfinished page in his journal' },
-    { name: 'Congo River', label: 'His greatest fishing dream' },
-    { name: 'CrazyCatch Cove', label: 'A story that became real' }
+    { name: 'Congo River', label: 'Coming soon — his greatest fishing dream' },
+    { name: 'CrazyCatch Cove', label: 'Coming soon — a story that became real' }
 ];
 
-export const STARFISH_GUIDE_COMING_SOON = '';
+export const STARFISH_GUIDE_COMING_SOON =
+    'Congo River and CrazyCatch Cove are coming in a future update.';
 
 export const STARFISH_FIRST_CATCH_QUOTE =
     "The comet may have started this journey.\n\nBut you're the reason I was ready for it.";
@@ -30,7 +31,7 @@ export const STARFISH_FIRST_CATCH_NARRATION = [
 ].join('\n');
 
 export const STARFISH_FIRST_CATCH_BANNER =
-    'Cortez Backwaters awaits — and three unfinished journeys stir on the horizon.';
+    'Cortez Backwaters and Louisiana Bayou await — more journal journeys are coming soon.';
 
 /** Starfish only at Celestial Depths once the full relic quest is complete. */
 export function canSpawnStarfish(location, player) {

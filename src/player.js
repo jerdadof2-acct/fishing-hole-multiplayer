@@ -13,6 +13,10 @@ import {
     isStarlightLureBait
 } from './config/hiddenRelics.js';
 import { CORTEZ_BACKWATERS_LOCATION_INDEX } from './config/cortezBackwaters.js';
+import {
+    LOUISIANA_BAYOU_LOCATION_INDEX,
+    isComingSoonLocationIndex
+} from './config/storyLocations.js';
 import { STARFISH_ID } from './config/starfishEncounter.js';
 import { LOCATION_LAYOUT_VERSION, migrateLocationSaveData } from './locationMigration.js';
 import { Locations } from './locations.js';
@@ -885,7 +889,15 @@ export class Player {
         }
 
         const cortezIdx = CORTEZ_BACKWATERS_LOCATION_INDEX;
-        if (this.currentLocationIndex === cortezIdx && !this.isFishUnlocked(STARFISH_ID)) {
+        if (
+            (this.currentLocationIndex === cortezIdx
+                || this.currentLocationIndex === LOUISIANA_BAYOU_LOCATION_INDEX)
+            && !this.isFishUnlocked(STARFISH_ID)
+        ) {
+            this.currentLocationIndex = this.locationUnlocks[0] ?? 0;
+        }
+
+        if (isComingSoonLocationIndex(this.currentLocationIndex)) {
             this.currentLocationIndex = this.locationUnlocks[0] ?? 0;
         }
 

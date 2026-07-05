@@ -14,7 +14,8 @@ import {
     TARPON_FISH_ID,
     LOUISIANA_BAYOU_LOCATION_INDEX,
     CONGO_RIVER_LOCATION_INDEX,
-    CRAZYCATCH_COVE_LOCATION_INDEX
+    CRAZYCATCH_COVE_LOCATION_INDEX,
+    isComingSoonLocation
 } from './config/storyLocations.js';
 import {
     isStoryLocationAvailable,
@@ -3112,8 +3113,9 @@ export class UI {
         this.refreshLocationUnlocks();
 
         locations.forEach((location, index) => {
+            const isComingSoon = isComingSoonLocation(location);
             const isUnlocked = this.player.locationUnlocks.includes(index);
-            if (!isUnlocked && !hasPrivilegedAccess(this.player)) {
+            if (!isUnlocked && !isComingSoon && !hasPrivilegedAccess(this.player)) {
                 return;
             }
 
@@ -3123,10 +3125,24 @@ export class UI {
             if (index === currentIndex) {
                 item.classList.add('location-picker-item--active');
             }
+            if (isComingSoon && !hasPrivilegedAccess(this.player)) {
+                item.classList.add('location-picker-item--coming-soon');
+                item.disabled = true;
+            }
             item.setAttribute('role', 'option');
             item.setAttribute('aria-selected', index === currentIndex ? 'true' : 'false');
-            item.textContent = location.name;
+            item.textContent = isComingSoon && !hasPrivilegedAccess(this.player)
+                ? `${location.name} — Coming Soon`
+                : location.name;
             item.addEventListener('click', () => {
+                if (isComingSoon && !hasPrivilegedAccess(this.player)) {
+                    this.showToast({
+                        type: 'info',
+                        title: 'Coming Soon',
+                        body: `${location.name} is on the way. Check back after the next update.`
+                    });
+                    return;
+                }
                 overlay.remove();
                 pickerBtn?.setAttribute('aria-expanded', 'false');
                 if (index !== currentIndex) {
@@ -3207,14 +3223,20 @@ export class UI {
         const currentLocationIndex = this.game.locations.getCurrentLocationIndex();
 
         locations.forEach((location, index) => {
+            const isComingSoon = isComingSoonLocation(location);
             const isUnlocked = this.player.locationUnlocks.includes(index);
-            if (!isUnlocked && !hasPrivilegedAccess(this.player)) {
+            if (!isUnlocked && !isComingSoon && !hasPrivilegedAccess(this.player)) {
                 return;
             }
 
             const option = document.createElement('option');
             option.value = index;
-            option.textContent = location.name;
+            option.textContent = isComingSoon && !hasPrivilegedAccess(this.player)
+                ? `${location.name} — Coming Soon`
+                : location.name;
+            if (isComingSoon && !hasPrivilegedAccess(this.player)) {
+                option.disabled = true;
+            }
             if (index === currentLocationIndex) {
                 option.selected = true;
             }
@@ -3287,41 +3309,21 @@ export class UI {
             return;
         }
 
+        if (isComingSoonLocation(location) && !hasPrivilegedAccess(this.player)) {
+            this.showToast({
+                type: 'info',
+                title: 'Coming Soon',
+                body: `${location.name} is on the way. Check back after the next update.`
+            });
+            this.syncLocationSelectorValue();
+            return;
+        }
+
         if (location.requiresStarfishCatch && !hasPrivilegedAccess(this.player) && !canAccessCortezBackwaters(this.player)) {
             this.showToast({
                 type: 'error',
-                title: 'Cortez Backwaters locked',
-                body: 'Catch the Starfish of Eternity at the Celestial Depths to unlock this hidden destination.'
-            });
-            this.syncLocationSelectorValue();
-            return;
-        }
-
-        if (locationIndex === LOUISIANA_BAYOU_LOCATION_INDEX && !hasPrivilegedAccess(this.player) && !this.player.fatherJournalReceived) {
-            this.showToast({
-                type: 'error',
-                title: 'Louisiana Bayou locked',
-                body: 'Land the Silver King at Cortez Backwaters and receive your father\'s journal first.'
-            });
-            this.syncLocationSelectorValue();
-            return;
-        }
-
-        if (locationIndex === CONGO_RIVER_LOCATION_INDEX && !hasPrivilegedAccess(this.player) && !this.player.louisianaBayouComplete) {
-            this.showToast({
-                type: 'error',
-                title: 'Congo River locked',
-                body: 'Complete the Louisiana Bayou journey from your father\'s journal first.'
-            });
-            this.syncLocationSelectorValue();
-            return;
-        }
-
-        if (locationIndex === CRAZYCATCH_COVE_LOCATION_INDEX && !hasPrivilegedAccess(this.player) && !this.player.congoRiverComplete) {
-            this.showToast({
-                type: 'error',
-                title: 'CrazyCatch Cove locked',
-                body: 'Complete the Congo River journey before the final page of the journal opens.'
+                title: 'Location locked',
+                body: 'Catch the Starfish of Eternity at the Celestial Depths to unlock Cortez Backwaters and Louisiana Bayou.'
             });
             this.syncLocationSelectorValue();
             return;

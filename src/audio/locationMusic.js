@@ -35,6 +35,10 @@ export const CRAGGY_COAST_AMBIENCE_URL =
     '/src/audio/soundreality-wind-blowing-457954.mp3';
 export const CRAGGY_COAST_AMBIENCE_VOLUME = 0.32;
 
+export const LOUISIANA_BAYOU_AMBIENCE_URL =
+    '/src/audio/dbsound-mosquito-and-fly-buzz-over-swamp-252287.mp3';
+export const LOUISIANA_BAYOU_AMBIENCE_VOLUME = 0.24;
+
 export class LoopingLocationAmbience {
     /**
      * @param {{ resolveSource: () => string, peakVolume: number }} options
@@ -258,6 +262,15 @@ export class CraggyCoastAmbience extends LoopingLocationAmbience {
         super({
             resolveSource: () => CRAGGY_COAST_AMBIENCE_URL,
             peakVolume: CRAGGY_COAST_AMBIENCE_VOLUME
+        });
+    }
+}
+
+export class LouisianaBayouAmbience extends LoopingLocationAmbience {
+    constructor() {
+        super({
+            resolveSource: () => LOUISIANA_BAYOU_AMBIENCE_URL,
+            peakVolume: LOUISIANA_BAYOU_AMBIENCE_VOLUME
         });
     }
 }

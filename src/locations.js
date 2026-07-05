@@ -215,20 +215,21 @@ export class Locations {
             {
                 name: LOUISIANA_BAYOU_NAME,
                 difficulty: 'Hard',
-                fish: [53, 54, 11, 45],
+                fish: [57, 58, 59, 60, 61],
                 cost: 0,
                 unlockLevel: 99,
-                description: 'Cypress trees, hidden channels, and muddy banks — the bayou trip Halley and his father always promised they would take someday.',
+                description: 'Cypress trees, hidden channels, and muddy banks — the bayou trip Halley and his father always promised they would take someday. This location was inspired by Halley\'s friend Henry, who grew up fishing these backwaters.',
                 briefTheme: 'louisiana-bayou',
                 tagline: 'An old promise, finally kept',
-                waterBodyType: 'RIVER',
+                waterBodyType: 'LAKE',
                 platformType: 'SMALL_BOAT',
-                requiresPostStarfishGuide: true,
+                requiresStarfishCatch: true,
                 fishSpawnWeights: {
-                    53: 30,
-                    54: 28,
-                    11: 22,
-                    45: 20
+                    57: 30,
+                    58: 28,
+                    59: 22,
+                    60: 12,
+                    61: 3
                 }
             },
             {
@@ -243,6 +244,7 @@ export class Locations {
                 waterBodyType: 'RIVER',
                 platformType: 'LARGE_BOAT',
                 requiresPostStarfishGuide: true,
+                comingSoon: true,
                 fishSpawnWeights: {
                     56: 12,
                     55: 28,
@@ -262,6 +264,7 @@ export class Locations {
                 waterBodyType: 'OCEAN',
                 platformType: 'LARGE_BOAT',
                 requiresPostStarfishGuide: true,
+                comingSoon: true,
                 fishSpawnWeights: {
                     34: 22,
                     35: 22,
