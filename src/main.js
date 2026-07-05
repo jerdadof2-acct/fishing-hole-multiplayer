@@ -91,23 +91,6 @@ import {
     updateMangroveCameraObstruction
 } from './effects/mangroves.js';
 import {
-    createBayouCypress,
-    syncBayouCypressVisibility,
-    updateBayouCypressCameraObstruction
-} from './effects/bayouCypress.js';
-import {
-    createBayouExtras,
-    updateBayouExtras,
-    syncBayouExtrasVisibility,
-    getBayouDragonflyTapTargets,
-    dismissPerchedBayouDragonfly
-} from './effects/bayouExtras.js';
-import {
-    createBayouWaterShadows,
-    syncBayouWaterShadowsVisibility,
-    updateBayouWaterShadows
-} from './effects/bayouWaterShadows.js';
-import {
     createDesertLagoonPalms,
     syncDesertLagoonPalmsVisibility,
     updatePalmBaseRipples
@@ -171,6 +154,9 @@ export class Game {
         this.bayouCypress = null;
         this.bayouExtras = null;
         this.bayouWaterShadows = null;
+        this._bayouModules = null;
+        this._bayouSceneryReady = false;
+        this._bayouSceneryLoading = null;
         this.desertLagoonPalms = null;
         if (this.deferReveal) {
             document.getElementById('game-container')?.classList.add('pre-entry');
@@ -397,8 +383,11 @@ export class Game {
 
             const isBayou =
                 this.locations?.getCurrentLocation()?.name === LOUISIANA_BAYOU_NAME;
-            if (isBayou && this.bayouExtras) {
-                const dragonflyTargets = getBayouDragonflyTapTargets(this.bayouExtras);
+            if (isBayou && this.bayouExtras && this._bayouModules) {
+                const dragonflyTargets =
+                    this._bayouModules.getBayouDragonflyTapTargets(
+                        this.bayouExtras
+                    );
                 if (dragonflyTargets.length) {
                     const dragonflyHits = raycaster.intersectObjects(
                         dragonflyTargets,
@@ -406,7 +395,7 @@ export class Game {
                     );
                     if (
                         dragonflyHits.length &&
-                        dismissPerchedBayouDragonfly(
+                        this._bayouModules.dismissPerchedBayouDragonfly(
                             this.bayouExtras,
                             dragonflyHits[0].object
                         )
@@ -591,32 +580,24 @@ export class Game {
                 this.cortezMangroves,
                 currentLocation.name === CORTEZ_BACKWATERS_NAME
             );
-            this.bayouCypress = createBayouCypress(
-                this.scene.scene,
-                this.water?.waterY ?? 0,
-                this.lakeMask
-            );
-            syncBayouCypressVisibility(
-                this.bayouCypress,
-                currentLocation.name === LOUISIANA_BAYOU_NAME
-            );
-            this.bayouExtras = createBayouExtras(this.scene.scene, {
-                waterLevel: this.water?.waterY ?? 0,
-                lakeMask: this.lakeMask,
-                cypressGroup: this.bayouCypress
-            });
-            syncBayouExtrasVisibility(
-                this.bayouExtras,
-                currentLocation.name === LOUISIANA_BAYOU_NAME
-            );
-            this.bayouWaterShadows = createBayouWaterShadows(this.scene.scene, {
-                waterLevel: this.water?.waterY ?? 0,
-                groundSize: this.water?.groundSize ?? undefined
-            });
-            syncBayouWaterShadowsVisibility(
-                this.bayouWaterShadows,
-                currentLocation.name === LOUISIANA_BAYOU_NAME
-            );
+            if (currentLocation.name === LOUISIANA_BAYOU_NAME) {
+                await this.ensureBayouScenery(true);
+            } else {
+                const isMobile =
+                    typeof navigator !== 'undefined' &&
+                    /Android|iPhone|iPad|iPod|Mobile/i.test(
+                        navigator.userAgent
+                    );
+
+                if (!isMobile) {
+                    void this.ensureBayouScenery(false).catch((error) => {
+                        console.warn(
+                            '[BAYOU] Background scenery preload failed:',
+                            error
+                        );
+                    });
+                }
+            }
 
             this.desertLagoonPalms = createDesertLagoonPalms(
                 this.scene.scene,
@@ -1105,14 +1086,14 @@ export class Game {
             }
         }
 
-        if (this.bayouCypress) {
+        if (this.bayouCypress && this._bayouModules) {
             if (isBayou && this.scene?.camera && this.cat) {
                 const halleyPosition =
                     this.cat.getHeadWorldPosition?.() ??
                     this.cat.getSavedPosition?.();
 
                 if (halleyPosition) {
-                    updateBayouCypressCameraObstruction(
+                    this._bayouModules.updateBayouCypressCameraObstruction(
                         this.bayouCypress,
                         this.scene.camera,
                         halleyPosition,
@@ -1120,7 +1101,7 @@ export class Game {
                     );
                 }
             } else {
-                updateBayouCypressCameraObstruction(
+                this._bayouModules.updateBayouCypressCameraObstruction(
                     this.bayouCypress,
                     null,
                     null,
@@ -1129,8 +1110,8 @@ export class Game {
             }
         }
 
-        if (this.bayouExtras && this.scene?.clock) {
-            updateBayouExtras(
+        if (this.bayouExtras && this._bayouModules && this.scene?.clock) {
+            this._bayouModules.updateBayouExtras(
                 this.bayouExtras,
                 this.scene.clock.getElapsedTime(),
                 isBayou,
@@ -1140,7 +1121,10 @@ export class Game {
             );
         }
 
-        updateBayouWaterShadows(this.bayouWaterShadows, isBayou);
+        this._bayouModules?.updateBayouWaterShadows(
+            this.bayouWaterShadows,
+            isBayou
+        );
 
         // Lake-facing reset before animation (portrait/scold keeps turned pose); feet aligned after update
         if (this.cat && this.platform) {
@@ -1556,6 +1540,77 @@ export class Game {
         sun.target.updateMatrixWorld();
     }
 
+    syncBayouVisibility(isVisible) {
+        const mod = this._bayouModules;
+        if (!mod) {
+            return;
+        }
+
+        mod.syncBayouCypressVisibility(this.bayouCypress, isVisible);
+        mod.syncBayouExtrasVisibility(this.bayouExtras, isVisible);
+        mod.syncBayouWaterShadowsVisibility(this.bayouWaterShadows, isVisible);
+    }
+
+    async ensureBayouScenery(showProgress = false) {
+        if (this._bayouSceneryReady) {
+            return;
+        }
+
+        if (this._bayouSceneryLoading) {
+            return this._bayouSceneryLoading;
+        }
+
+        this._bayouSceneryLoading = (async () => {
+            if (showProgress) {
+                loadingProgress.update(57, 'Building Louisiana Bayou scenery...');
+            }
+
+            const [cypressMod, extrasMod, shadowsMod] = await Promise.all([
+                import('./effects/bayouCypress.js'),
+                import('./effects/bayouExtras.js'),
+                import('./effects/bayouWaterShadows.js')
+            ]);
+
+            this._bayouModules = {
+                ...cypressMod,
+                ...extrasMod,
+                ...shadowsMod
+            };
+
+            const waterLevel = this.water?.waterY ?? 0;
+            this.bayouCypress = cypressMod.createBayouCypress(
+                this.scene.scene,
+                waterLevel,
+                this.lakeMask
+            );
+            this.bayouExtras = extrasMod.createBayouExtras(this.scene.scene, {
+                waterLevel,
+                lakeMask: this.lakeMask,
+                cypressGroup: this.bayouCypress
+            });
+            this.bayouWaterShadows = shadowsMod.createBayouWaterShadows(
+                this.scene.scene,
+                {
+                    waterLevel,
+                    groundSize: this.water?.groundSize ?? undefined
+                }
+            );
+
+            this._bayouSceneryReady = true;
+
+            const isBayou =
+                this.locations?.getCurrentLocation()?.name ===
+                LOUISIANA_BAYOU_NAME;
+            this.syncBayouVisibility(isBayou);
+        })().catch((error) => {
+            this._bayouSceneryLoading = null;
+            console.error('[BAYOU] Scenery failed to load:', error);
+            throw error;
+        });
+
+        return this._bayouSceneryLoading;
+    }
+
     applyLocationEnvironment(location) {
         if (!location) {
             return;
@@ -1791,7 +1846,12 @@ export class Game {
 
         this.scene?.setSunShadowOrthoExtent?.(
             location.name === LOUISIANA_BAYOU_NAME
-                ? SUN_SHADOW_ORTHO_BAYOU
+                ? (
+                    typeof navigator !== 'undefined' &&
+                    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+                        ? 48
+                        : SUN_SHADOW_ORTHO_BAYOU
+                )
                 : SUN_SHADOW_ORTHO_DEFAULT
         );
     }
@@ -2022,18 +2082,19 @@ export class Game {
             this.cortezMangroves,
             location.name === CORTEZ_BACKWATERS_NAME
         );
-        syncBayouCypressVisibility(
-            this.bayouCypress,
-            location.name === LOUISIANA_BAYOU_NAME
-        );
-        syncBayouExtrasVisibility(
-            this.bayouExtras,
-            location.name === LOUISIANA_BAYOU_NAME
-        );
-        syncBayouWaterShadowsVisibility(
-            this.bayouWaterShadows,
-            location.name === LOUISIANA_BAYOU_NAME
-        );
+        if (
+            location.name === LOUISIANA_BAYOU_NAME &&
+            !this._bayouSceneryReady
+        ) {
+            void this.ensureBayouScenery(true).catch((error) => {
+                console.error(
+                    '[LOCATION SWITCH] Bayou scenery failed to load:',
+                    error
+                );
+            });
+        }
+
+        this.syncBayouVisibility(location.name === LOUISIANA_BAYOU_NAME);
         syncDesertLagoonPalmsVisibility(
             this.desertLagoonPalms,
             location.name === DESERT_LAGOON_NAME

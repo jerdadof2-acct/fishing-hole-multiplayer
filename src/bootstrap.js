@@ -1,4 +1,4 @@
-import Game from './main.js?v=20260624-location-ambience';
+import Game from './main.js?v=20260705-bayou-mobile';
 import { api } from './api.js';
 import { ensureProloguePack, prefetchProloguePack, startDeferredPackDownload } from './assetPack.js';
 import { loadingProgress } from './loadingProgress.js';
@@ -713,9 +713,25 @@ async function bootstrapGameInner() {
 }
 
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bootstrapGame);
+    document.addEventListener('DOMContentLoaded', () => {
+        bootstrapGame().catch((error) => {
+            console.error('[BOOTSTRAP] Unhandled bootstrap rejection:', error);
+            loadingProgress.suppress(false);
+            loadingProgress.fail(
+                error?.message ||
+                    'Loading failed. Refresh the page or try again on Wi‑Fi.'
+            );
+        });
+    });
 } else {
-    bootstrapGame();
+    bootstrapGame().catch((error) => {
+        console.error('[BOOTSTRAP] Unhandled bootstrap rejection:', error);
+        loadingProgress.suppress(false);
+        loadingProgress.fail(
+            error?.message ||
+                'Loading failed. Refresh the page or try again on Wi‑Fi.'
+        );
+    });
 }
 
 

@@ -11,7 +11,18 @@ const CAST_CLEAR_CENTER_Z = 2.5;
 const CAST_CLEAR_RADIUS_X = 11;
 const CAST_CLEAR_RADIUS_Z = 30;
 
-const TARGET_TREES = 52;
+const TARGET_TREES_DESKTOP = 52;
+const TARGET_TREES_MOBILE = 26;
+
+function getBayouTreeTargetCount() {
+    if (typeof navigator === 'undefined') {
+        return TARGET_TREES_DESKTOP;
+    }
+
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+        ? TARGET_TREES_MOBILE
+        : TARGET_TREES_DESKTOP;
+}
 const MIN_TREE_SPACING = 5.2;
 
 const TRUNK_MATERIAL = new THREE.MeshStandardMaterial({
@@ -664,7 +675,7 @@ export function buildBayouCypressScenery({
     const placed = [];
     const trees = [];
 
-    for (let i = 0; i < TARGET_TREES; i++) {
+    for (let i = 0; i < getBayouTreeTargetCount(); i++) {
         const point = sampleCypressPoint(rand, lakeMask, groundSize, placed);
         if (!point) {
             continue;

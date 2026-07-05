@@ -495,7 +495,16 @@
             }
             window.addEventListener('error', function (event) {
                 console.error('[BOOT] Uncaught error:', event.error || event.message);
-                showLoadError('Loading failed. Try a hard refresh or clear site data.');
+                const detail =
+                    event.message ||
+                    (event.error && event.error.message) ||
+                    'Unknown error';
+                const source = event.filename
+                    ? ' (' + String(event.filename).split('/').pop() + ':' + (event.lineno || '?') + ')'
+                    : '';
+                showLoadError(
+                    'Loading failed: ' + detail + source + '. Try a hard refresh or clear site data.'
+                );
             });
             window.addEventListener('unhandledrejection', function (event) {
                 console.error('[BOOT] Unhandled rejection:', event.reason);
@@ -503,7 +512,7 @@
             });
         })();
     </script>
-    <script type="module" src="src/bootstrap.js?v=20260624-location-ambience"></script>
+    <script type="module" src="src/bootstrap.js?v=20260705-bayou-mobile"></script>
 </body>
 </html>
 
