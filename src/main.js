@@ -38,7 +38,7 @@ import {
     LouisianaBayouAmbience,
     SandyShoalsAmbience,
     StormbreakerBayAmbience
-} from './audio/locationMusic.js?v=20260702-sandy-ambience';
+} from './audio/locationMusic.js?v=20260705-bayou-ambience';
 import { VOICEOVER_TAP_COOLDOWN_MS, VOICEOVER_ANACONDA_COOLDOWN_MS } from './config/voiceover.js';
 
 /** How close the snake must pass Halley's look point (world XZ) to trigger a bark. */
