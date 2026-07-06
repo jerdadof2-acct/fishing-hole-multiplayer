@@ -5,7 +5,7 @@ import { Water2Lake } from './water2.js?v=20250625-anaconda-bark2';
 import { Grass } from './grass.js';
 import { Dock } from './dock.js';
 import { Platform } from './platform.js';
-import { Locations, AMAZON_DEPTHS_NAME, FROZEN_FJORDS_NAME, CORAL_KINGDOMS_NAME, CORTEZ_BACKWATERS_NAME, LOUISIANA_BAYOU_NAME, CRAGGY_COAST_NAME, STORMBREAKER_BAY_NAME, FORGOTTEN_REEFS_NAME, TWILIGHT_TRENCH_NAME, DESERT_LAGOON_NAME, SANDY_SHOALS_NAME } from './locations.js';
+import { Locations, AMAZON_DEPTHS_NAME, FROZEN_FJORDS_NAME, CORAL_KINGDOMS_NAME, CORTEZ_BACKWATERS_NAME, LOUISIANA_BAYOU_NAME, CONGO_RIVER_NAME, CRAGGY_COAST_NAME, STORMBREAKER_BAY_NAME, FORGOTTEN_REEFS_NAME, TWILIGHT_TRENCH_NAME, DESERT_LAGOON_NAME, SANDY_SHOALS_NAME } from './locations.js';
 import {
     SUN_SHADOW_ORTHO_BAYOU,
     SUN_SHADOW_ORTHO_DEFAULT
@@ -57,7 +57,8 @@ import { bindViewportSync, getGameViewportSize, syncViewportShell, runMobileLayo
 import {
     IDLE_PORTRAIT_DELAY_SEC,
     PORTRAIT_BOBBER_TRACKING_CUTOFF,
-    PORTRAIT_CAMERA_OFFSET_CORTEZ
+    PORTRAIT_CAMERA_OFFSET_CORTEZ,
+    PORTRAIT_CAMERA_OFFSET_CONGO
 } from './config/idlePortrait.js';
 import { preloadDockWoodTexture } from './scene/dockTextures.js';
 import { preloadFarShoreGroundTextures } from './scene/farShoreGroundTextures.js';
@@ -143,6 +144,7 @@ export class Game {
         this.idlePortraitDelaySec = IDLE_PORTRAIT_DELAY_SEC;
         this.lastActivityTime = performance.now();
         this._portraitIdleActive = false;
+        this._devCongoPortraitPreview = false;
         this._savedRimIntensity = null;
         this.deferReveal = options.deferReveal === true;
         this._revealed = false;
@@ -157,6 +159,12 @@ export class Game {
         this._bayouModules = null;
         this._bayouSceneryReady = false;
         this._bayouSceneryLoading = null;
+        this.congoRiverBanks = null;
+        this.congoRiverBackdrop = null;
+        this._congoBanksModule = null;
+        this._congoBackdropModule = null;
+        this._congoSceneryReady = false;
+        this._congoSceneryLoading = null;
         this.desertLagoonPalms = null;
         if (this.deferReveal) {
             document.getElementById('game-container')?.classList.add('pre-entry');
@@ -539,6 +547,7 @@ export class Game {
             this.water.setCoralReefEnabled(this.locations.getCurrentLocation()?.name === CORAL_KINGDOMS_NAME);
             this.water.setCortezBackwatersEnabled(this.locations.getCurrentLocation()?.name === CORTEZ_BACKWATERS_NAME);
             this.water.setLouisianaBayouEnabled(this.locations.getCurrentLocation()?.name === LOUISIANA_BAYOU_NAME);
+            this.water.setCongoRiverEnabled(this.locations.getCurrentLocation()?.name === CONGO_RIVER_NAME);
             this.water.setCraggyCoastEnabled(this.locations.getCurrentLocation()?.name === CRAGGY_COAST_NAME);
             this.water.setStormbreakerBayEnabled(this.locations.getCurrentLocation()?.name === STORMBREAKER_BAY_NAME);
             this.water.setForgottenReefsEnabled(this.locations.getCurrentLocation()?.name === FORGOTTEN_REEFS_NAME);
@@ -582,6 +591,8 @@ export class Game {
             );
             if (currentLocation.name === LOUISIANA_BAYOU_NAME) {
                 await this.ensureBayouScenery(true);
+            } else if (currentLocation.name === CONGO_RIVER_NAME) {
+                await this.ensureCongoScenery(true);
             } else {
                 const isMobile =
                     typeof navigator !== 'undefined' &&
@@ -621,6 +632,7 @@ export class Game {
             this.platform = new Platform(this.scene, this.water);
             this.platform.createPlatform(currentLocation.platformType);
             this.applyPlatformBoatRocking(currentLocation);
+            this.water?.setBoatWakePlatform?.(this.platform);
             debugLog('[PLATFORM] Created platform:', currentLocation.platformType);
 
             // Keep dock reference for backward compatibility with Camera class
@@ -713,10 +725,12 @@ export class Game {
             // Set up camera (after everything is loaded) - delayed to ensure models are ready
             this.camera = new Camera(this.scene, this.cat, this.dock, this.water);
             this.camera.resolvePortraitOffset = () => {
-                const isCortez =
-                    this.locations?.getCurrentLocation()?.name === CORTEZ_BACKWATERS_NAME;
-                if (isCortez) {
+                const locationName = this.locations?.getCurrentLocation()?.name;
+                if (locationName === CORTEZ_BACKWATERS_NAME) {
                     return PORTRAIT_CAMERA_OFFSET_CORTEZ.clone();
+                }
+                if (locationName === CONGO_RIVER_NAME) {
+                    return PORTRAIT_CAMERA_OFFSET_CONGO.clone();
                 }
                 return this.camera.portraitOffset;
             };
@@ -865,7 +879,7 @@ export class Game {
         this.craggyCoastAmbience?.resumeAfterGesture?.();
         this.stormbreakerBayAmbience?.resumeAfterGesture?.();
         this.louisianaBayouAmbience?.resumeAfterGesture?.();
-        if (isDevFaceCameraEnabled()) {
+        if (isDevFaceCameraEnabled() || this._devCongoPortraitPreview) {
             return;
         }
         if (this._portraitIdleActive && this.camera) {
@@ -931,6 +945,36 @@ export class Game {
         this.resetCatToDock();
     }
 
+    /** Dev — toggle idle-style portrait pan on Congo (large boat). Returns true when active. */
+    toggleDevCongoPortraitPreview() {
+        if (!isDevMode() || !this.camera) {
+            return false;
+        }
+
+        if (this._devCongoPortraitPreview) {
+            this.clearDevCongoPortraitPreview();
+            return false;
+        }
+
+        this._devCongoPortraitPreview = true;
+        this._portraitIdleActive = true;
+        this.cat?.enterPortraitIdle?.();
+        this.camera.setPortraitMode(true);
+        return true;
+    }
+
+    clearDevCongoPortraitPreview() {
+        this._devCongoPortraitPreview = false;
+        if (this._portraitIdleActive && !isDevFaceCameraEnabled()) {
+            this._portraitIdleActive = false;
+            this.camera?.setPortraitMode(false);
+        }
+    }
+
+    isDevCongoPortraitPreviewActive() {
+        return this._devCongoPortraitPreview === true;
+    }
+
     /** Snap Halley back onto the platform (dev face-cam reset). */
     resetCatToDock() {
         this.cat?.setDevDragOverride?.(false);
@@ -976,6 +1020,19 @@ export class Game {
     updateIdlePortrait() {
         if (!this.camera) return;
 
+        if (this._devCongoPortraitPreview) {
+            if (this.locations?.getCurrentLocation()?.name !== CONGO_RIVER_NAME) {
+                this.clearDevCongoPortraitPreview();
+                return;
+            }
+            if (!this._portraitIdleActive) {
+                this._portraitIdleActive = true;
+                this.cat?.enterPortraitIdle?.();
+                this.camera.setPortraitMode(true);
+            }
+            return;
+        }
+
         if (isDevFaceCameraEnabled()) {
             if (this.isDevFaceCameraEligible()) {
                 this.syncDevFaceCamera();
@@ -1009,6 +1066,7 @@ export class Game {
         
         // Update water system (includes river particle flow)
         if (this.water && this.water.update) {
+            this.water.setBoatWakePlatform?.(this.platform);
             this.water.update(delta);
         }
 
@@ -1047,6 +1105,7 @@ export class Game {
         const catFacingBlend = Math.max(portraitBlend, scoldBlend);
         const preserveCatFacing = this._portraitIdleActive === true
             || isDevFaceCameraEnabled()
+            || this._devCongoPortraitPreview
             || scoldBlend > 0.001;
 
         updateCrescentPondFarShore(
@@ -1061,6 +1120,8 @@ export class Game {
             this.locations?.getCurrentLocation()?.name === CORTEZ_BACKWATERS_NAME;
         const isBayou =
             this.locations?.getCurrentLocation()?.name === LOUISIANA_BAYOU_NAME;
+        const isCongo =
+            this.locations?.getCurrentLocation()?.name === CONGO_RIVER_NAME;
 
         if (this.cortezMangroves) {
             if (isCortez && this.scene?.camera && this.cat) {
@@ -1125,6 +1186,13 @@ export class Game {
             this.bayouWaterShadows,
             isBayou
         );
+
+        if (this.congoRiverBanks && isCongo) {
+            this._congoBanksModule?.updateCongoRiverBanks(
+                this.congoRiverBanks,
+                delta
+            );
+        }
 
         // Lake-facing reset before animation (portrait/scold keeps turned pose); feet aligned after update
         if (this.cat && this.platform) {
@@ -1474,11 +1542,16 @@ export class Game {
         }
     }
 
-    /** Coral Kingdoms: calm the small boat. Stormbreaker uses normal deck rocking — swell is in the water shader. */
+    /** Coral Kingdoms: calm the small boat. Congo River: steady large boat on a river cruise. Stormbreaker uses normal deck rocking — swell is in the water shader. */
     applyPlatformBoatRocking(location) {
         if (!this.platform) return;
-        const calmReef = location?.name === CORAL_KINGDOMS_NAME;
-        this.platform.setBoatRockingScale(calmReef ? 0.04 : 1);
+        const name = location?.name;
+        const scale = name === CONGO_RIVER_NAME
+            ? 0
+            : name === CORAL_KINGDOMS_NAME
+                ? 0.04
+                : 1;
+        this.platform.setBoatRockingScale(scale);
     }
 
     shouldEnablePondSubmergedGrass(location) {
@@ -1611,6 +1684,67 @@ export class Game {
         return this._bayouSceneryLoading;
     }
 
+    syncCongoVisibility(isVisible) {
+        if (!this._congoSceneryReady && isVisible) {
+            void this.ensureCongoScenery(true).catch((error) => {
+                console.error('[CONGO] Scenery failed to load:', error);
+            });
+            return;
+        }
+        this._congoBanksModule?.syncCongoRiverBanksVisibility(
+            this.congoRiverBanks,
+            isVisible
+        );
+        this._congoBackdropModule?.syncCongoRiverBackdropVisibility(
+            this.congoRiverBackdrop,
+            isVisible
+        );
+    }
+
+    async ensureCongoScenery(showProgress = false) {
+        if (this._congoSceneryReady) {
+            return;
+        }
+
+        if (this._congoSceneryLoading) {
+            return this._congoSceneryLoading;
+        }
+
+        this._congoSceneryLoading = (async () => {
+            if (showProgress) {
+                loadingProgress.update(57, 'Building Congo River banks...');
+            }
+
+            const [banksMod, backdropMod] = await Promise.all([
+                import('./effects/congoRiverBanks.js'),
+                import('./effects/congoRiverBackdrop.js')
+            ]);
+            this._congoBanksModule = banksMod;
+            this._congoBackdropModule = backdropMod;
+            const waterLevel = this.water?.waterY ?? 0;
+            this.congoRiverBanks = banksMod.createCongoRiverBanks(
+                this.scene.scene,
+                { waterLevel }
+            );
+            this.congoRiverBackdrop = backdropMod.createCongoRiverBackdrop(
+                this.scene.scene,
+                { waterLevel }
+            );
+            this._congoSceneryReady = true;
+
+            const isCongo =
+                this.locations?.getCurrentLocation()?.name === CONGO_RIVER_NAME;
+            banksMod.syncCongoRiverBanksVisibility(this.congoRiverBanks, isCongo);
+            backdropMod.syncCongoRiverBackdropVisibility(this.congoRiverBackdrop, isCongo);
+        })().catch((error) => {
+            this._congoSceneryLoading = null;
+            console.error('[CONGO] Bank scenery failed to load:', error);
+            throw error;
+        });
+
+        return this._congoSceneryLoading;
+    }
+
     applyLocationEnvironment(location) {
         if (!location) {
             return;
@@ -1725,6 +1859,28 @@ export class Game {
                     color: 0x8aa888
                 }
             },
+            CONGO: {
+                scene: {
+                    background: 0x6a7a58,
+                    fogColor: 0x6a7a58,
+                    fogNear: 28,
+                    fogFar: 200,
+                    hemisphereSkyColor: 0xd8e8c8,
+                    hemisphereGroundColor: 0x243820,
+                    hemisphereIntensity: 0.72,
+                    directionalColor: 0xfff4d0,
+                    directionalIntensity: 0.76,
+                    ambientColor: 0x8aa878,
+                    ambientIntensity: 0.42,
+                    rimColor: 0xd0e8b0,
+                    rimIntensity: 0.08
+                },
+                waterParticles: {
+                    ...defaultParticleSettings,
+                    opacity: 0.22,
+                    color: 0x9ab088
+                }
+            },
             DEEP_REEF: {
                 scene: {
                     fogColor: 0x2a6cb0,
@@ -1798,6 +1954,8 @@ export class Game {
                 ? 'CORTEZ'
                 : location.name === LOUISIANA_BAYOU_NAME
                     ? 'BAYOU'
+                    : location.name === CONGO_RIVER_NAME
+                        ? 'CONGO'
                     : location.name === STORMBREAKER_BAY_NAME
                     ? 'STORM'
                     : location.name === FORGOTTEN_REEFS_NAME
@@ -2045,6 +2203,13 @@ export class Game {
         }
         
         debugLog('[LOCATION SWITCH] Switching to:', location.name, 'Water type:', location.waterBodyType, 'Platform:', location.platformType);
+
+        if (
+            location.name !== CONGO_RIVER_NAME &&
+            this._devCongoPortraitPreview
+        ) {
+            this.clearDevCongoPortraitPreview();
+        }
         
         // Update current location
         this.locations.setCurrentLocation(locationIndex);
@@ -2053,6 +2218,7 @@ export class Game {
         this.water.setCoralReefEnabled(location.name === CORAL_KINGDOMS_NAME);
         this.water.setCortezBackwatersEnabled(location.name === CORTEZ_BACKWATERS_NAME);
         this.water.setLouisianaBayouEnabled(location.name === LOUISIANA_BAYOU_NAME);
+        this.water.setCongoRiverEnabled(location.name === CONGO_RIVER_NAME);
         this.water.setCraggyCoastEnabled(location.name === CRAGGY_COAST_NAME);
         this.water.setStormbreakerBayEnabled(location.name === STORMBREAKER_BAY_NAME);
         this.water.setForgottenReefsEnabled(location.name === FORGOTTEN_REEFS_NAME);
@@ -2093,8 +2259,20 @@ export class Game {
                 );
             });
         }
+        if (
+            location.name === CONGO_RIVER_NAME &&
+            !this._congoSceneryReady
+        ) {
+            void this.ensureCongoScenery(true).catch((error) => {
+                console.error(
+                    '[LOCATION SWITCH] Congo scenery failed to load:',
+                    error
+                );
+            });
+        }
 
         this.syncBayouVisibility(location.name === LOUISIANA_BAYOU_NAME);
+        this.syncCongoVisibility(location.name === CONGO_RIVER_NAME);
         syncDesertLagoonPalmsVisibility(
             this.desertLagoonPalms,
             location.name === DESERT_LAGOON_NAME
@@ -2110,6 +2288,7 @@ export class Game {
         // Switch platform
         this.platform.switchPlatform(location.platformType);
         this.applyPlatformBoatRocking(location);
+        this.water?.setBoatWakePlatform?.(this.platform);
         
         // Reposition cat on new platform
         const newPlatformPos = this.platform.getSurfacePosition();

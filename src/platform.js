@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { buildStylizedDock } from './scene/stylizedDock.js';
+import { addShootingStarDeckLogo } from './scene/shootingStarDeckLogo.js';
 import { debugLog } from './config/debug.js';
 
 function makeBox(w, h, d, mat, x, y, z, name = '') {
@@ -1028,6 +1029,13 @@ export class Platform {
         frontRail.name = 'largeBoat-frontRail';
         const frontRailZ = sideRailEndZ + railThick * 0.5; // At front (positive Z)
         frontRail.position.set(0, railY, frontRailZ);
+
+        const sternWakeAnchor = new THREE.Object3D();
+        sternWakeAnchor.name = 'largeBoat-sternWakeAnchor';
+        sternWakeAnchor.position.set(0, -0.28, frontRailZ + 0.55);
+        boatGroup.add(sternWakeAnchor);
+        boatGroup.userData.sternWakeAnchor = sternWakeAnchor;
+        boatGroup.userData.sternHalfWidth = railCenterX * 0.82;
         // Disable shadow casting to prevent shadow seam on deck under cat
         frontRail.castShadow = false;
         frontRail.receiveShadow = true;
@@ -1124,6 +1132,13 @@ export class Platform {
             const z = boatLength * 0.10 + i * 0.28;
             boatGroup.add(makeBox(deckWidth * 0.70, 0.018, 0.12, teak, 0, deckSurfaceY + 0.018, z, 'sportfish-teak-cockpit-slat'));
         }
+
+        addShootingStarDeckLogo(boatGroup, {
+            deckSurfaceY,
+            deckWidth,
+            boatLength,
+            catStandZ: boatLength * 0.36
+        });
 
         boatGroup.add(makeBox(deckWidth * 0.72, 0.32, 0.10, sportWhite, 0, deckSurfaceY + 0.18, frontRailZ - 0.18, 'sportfish-transom-pad'));
 

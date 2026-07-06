@@ -19,6 +19,18 @@ NEW_FISH = [
     'Peacock Bass',
     'Payara',
     'Arapaima',
+    # Louisiana Bayou
+    'Buffalo Carp',
+    'Gaspergou',
+    'Bowfin',
+    'Spotted Gar',
+    'Paddlefish',
+    # Congo River
+    'Tigerfish',
+    'Nile Perch',
+    'African Lungfish',
+    'Goliath Tigerfish',
+    'Electric Catfish',
 ]
 
 ROOT = Path(__file__).resolve().parent.parent

@@ -13,8 +13,11 @@ import {
     applyForgottenReefsWater,
     applyTwilightTrenchWater,
     applyLakeDefaultWaves,
-    applyLouisianaBayouWater
-} from './water/waterBodyTypes.js?v=20250625-amazon-river-soft';
+    applyLouisianaBayouWater,
+    applyCongoRiverWater,
+    CONGO_RIVER_FLOW_DIRECTION,
+    CONGO_RIVER_WATER
+} from './water/waterBodyTypes.js?v=20260705-congo-motion';
 import { createRiverFlowTexture } from './water/riverFlowTexture.js';
 import {
     createRiverDockPostWake,
@@ -24,6 +27,16 @@ import {
     spawnRiverPostBubble,
     updateRiverPostBubbleMotion
 } from './effects/riverDockPostWake.js';
+import {
+    createBoatSternWake,
+    updateBoatSternWake,
+    syncBoatSternWakeVisibility,
+    disposeBoatSternWake
+} from './effects/boatSternWake.js';
+import {
+    updateCongoRiverLakeBed,
+    resetCongoRiverLakeBedScroll
+} from './effects/congoRiverBanks.js';
 import {
     createAmbientSplashRings,
     createCausticsLayer,
@@ -114,6 +127,9 @@ export class Water2Lake {
         this._coralReefLocationEnabled = false;
         this._cortezBackwatersEnabled = false;
         this._louisianaBayouEnabled = false;
+        this._congoRiverEnabled = false;
+        this.boatSternWake = null;
+        this._boatWakePlatform = null;
         this._craggyCoastEnabled = false;
         this._stormbreakerBayEnabled = false;
         this._forgottenReefsEnabled = false;
@@ -331,10 +347,44 @@ export class Water2Lake {
     }
     
     /**
-     * Visible downstream axis for Amazon river (matches water streaks, bobber drift).
+     * Active flow axis for rivers (Congo overrides default RIVER config).
+     */
+    _riverFlowDirection() {
+        if (this._congoRiverEnabled && this.waterBodyType === 'RIVER') {
+            return CONGO_RIVER_FLOW_DIRECTION;
+        }
+        return this.waterBodyConfig?.flowDirection || new THREE.Vector2(1, 0);
+    }
+
+    /**
+     * Visible downstream axis for river (matches water streaks, bobber drift).
      */
     _riverDriftDir() {
-        return getRiverDownstreamDir(this.waterBodyConfig?.flowDirection || new THREE.Vector2(1, 0));
+        return getRiverDownstreamDir(this._riverFlowDirection());
+    }
+
+    /** River flow axis for gameplay (bobber drift, wakes) — Congo overrides default RIVER config. */
+    getEffectiveRiverFlowDirection() {
+        return this._riverFlowDirection();
+    }
+
+    getEffectiveRiverFlowSpeed() {
+        if (this._congoRiverEnabled && this.waterBodyType === 'RIVER') {
+            return CONGO_RIVER_WATER.flowSpeed;
+        }
+        return this.waterBodyConfig?.flowSpeed ?? 0.62;
+    }
+
+    _refreshRiverParticleVelocities() {
+        if (!this.riverParticles?.userData?.velocities || !this.waterBodyConfig?.hasFlow) {
+            return;
+        }
+        const velocities = this.riverParticles.userData.velocities;
+        const speedMin = this._congoRiverEnabled ? 0.32 : 0.22;
+        const speedRange = this._congoRiverEnabled ? 0.34 : 0.28;
+        for (let i = 0; i < velocities.length; i += 3) {
+            this._setRiverParticleVelocity(velocities, i, speedMin + Math.random() * speedRange);
+        }
     }
 
     _setRiverParticleVelocity(velocities, i3, speed) {
@@ -527,7 +577,7 @@ export class Water2Lake {
 
         if (this.waterBodyConfig?.riverMode) {
             const posts = getRiverWakePosts(this.waterBodyType);
-            const flow = this.waterBodyConfig.flowDirection || new THREE.Vector2(1, 0);
+            const flow = this._riverFlowDirection();
             const wakeGroup = createRiverDockPostWake({
                 waterY: this.waterY,
                 flowDirection: flow,
@@ -606,7 +656,7 @@ export class Water2Lake {
         const spawnTimes = new Float32Array(totalParticles);
         const lifetimes = new Float32Array(totalParticles);
 
-        const flowDir = this.waterBodyConfig?.flowDirection || new THREE.Vector2(1, 0);
+        const flowDir = this._riverFlowDirection();
         const useRiverBubbles = this.waterBodyConfig?.riverMode === true;
 
         for (let particleIndex = 0; particleIndex < totalParticles; particleIndex++) {
@@ -678,7 +728,7 @@ export class Water2Lake {
         }
 
         const { positions, velocities, postPositions } = this.dockPostParticles.userData;
-        const flowDir = this.waterBodyConfig?.flowDirection || new THREE.Vector2(1, 0);
+        const flowDir = this._riverFlowDirection();
         const count = positions.length / 3;
 
         for (let i = 0; i < count; i++) {
@@ -903,6 +953,8 @@ export class Water2Lake {
             applyCortezBackwatersWaterColors(material);
         } else if (this._louisianaBayouEnabled && this.waterBodyType === 'LAKE') {
             applyLouisianaBayouWater(material);
+        } else if (this._congoRiverEnabled && this.waterBodyType === 'RIVER') {
+            applyCongoRiverWater(material);
         } else if (this._craggyCoastEnabled && this.waterBodyType === 'LAKE') {
             applyCraggyCoastWaterWaves(material);
         } else if (this._stormbreakerBayEnabled && this.waterBodyType === 'OCEAN') {
@@ -979,6 +1031,98 @@ export class Water2Lake {
         this._louisianaBayouEnabled = enabled === true;
         this._syncLakeBedDecorVisibility();
         this._applyLocationWaterOverrides();
+    }
+
+    _applyCongoRiverParticleStyle() {
+        if (!this.riverParticles?.material) {
+            return;
+        }
+        this.riverParticles.material.color.setHex(0xb0c898);
+        this.riverParticles.material.opacity = 0.58;
+        this.riverParticles.material.size = 1.2;
+        this.riverParticles.material.needsUpdate = true;
+    }
+
+    _syncCongoRiverMotion() {
+        if (!this._congoRiverEnabled || this.waterBodyType !== 'RIVER') {
+            return;
+        }
+        this._refreshRiverParticleVelocities();
+        this._applyCongoRiverParticleStyle();
+        if (this.dockPostSplashes?.userData?.isRiverWake) {
+            this.createDockPostSplashes();
+        }
+    }
+
+    /**
+     * Congo River only — green/brown tropical river flowing downstream (+Z).
+     * @param {boolean} enabled
+     */
+    setCongoRiverEnabled(enabled) {
+        this._congoRiverEnabled = enabled === true;
+        this._applyLocationWaterOverrides();
+        if (enabled) {
+            this._syncCongoRiverMotion();
+            this._ensureBoatSternWake();
+        } else {
+            this._refreshRiverParticleVelocities();
+            this._applyRiverParticleMaterialStyle();
+            this._disposeBoatSternWake();
+            resetCongoRiverLakeBedScroll(this.lakeBedGround);
+            if (this.dockPostSplashes?.userData?.isRiverWake && this.waterBodyType === 'RIVER') {
+                this.createDockPostSplashes();
+            }
+        }
+        this._syncBoatSternWakeState();
+    }
+
+    /** Large-boat platform ref — updated each frame from Game.animate. */
+    setBoatWakePlatform(platform) {
+        this._boatWakePlatform = platform ?? null;
+        this._syncBoatSternWakeState();
+    }
+
+    _ensureBoatSternWake() {
+        if (!this.boatSternWake) {
+            this.boatSternWake = createBoatSternWake(this.sceneRef.scene, {
+                waterY: this.waterY
+            });
+        }
+    }
+
+    _disposeBoatSternWake() {
+        if (this.boatSternWake) {
+            disposeBoatSternWake(this.boatSternWake, this.sceneRef.scene);
+            this.boatSternWake = null;
+        }
+    }
+
+    _syncBoatSternWakeState() {
+        const show =
+            this._congoRiverEnabled &&
+            this._boatWakePlatform?.currentPlatformType === 'LARGE_BOAT';
+        syncBoatSternWakeVisibility(this.boatSternWake, show, this.waterY);
+        if (this.dockPostSplashes?.userData?.isRiverWake && this._congoRiverEnabled) {
+            this.dockPostSplashes.visible = false;
+        }
+    }
+
+    _updateBoatSternWake(delta) {
+        if (!this._congoRiverEnabled || !this.boatSternWake) {
+            return;
+        }
+        this._syncBoatSternWakeState();
+        if (!this.boatSternWake.visible) {
+            return;
+        }
+        updateBoatSternWake(this.boatSternWake, delta, this.time || 0, {
+            platform: this._boatWakePlatform,
+            flowDirection: this._riverFlowDirection(),
+            splashAt: this.mesh?.splashAt?.bind(this.mesh),
+            scene: this.sceneRef.scene,
+            // Congo cruise — the boat never stops at this location.
+            boatSpeed: 1
+        });
     }
 
     /**
@@ -1212,6 +1356,7 @@ export class Water2Lake {
 
             // Location-specific water must be applied last (after wave/scroll defaults).
             this._applyLocationWaterOverrides();
+            this._syncCongoRiverMotion();
 
             const prevRiver = prevType === 'RIVER';
             const nextRiver = type === 'RIVER';
@@ -1258,12 +1403,13 @@ export class Water2Lake {
                 // Rebuild surface fleck velocities when entering/leaving river
                 if (this.riverParticles) {
                     if (this.waterBodyConfig.hasFlow && this.riverParticles.userData?.velocities) {
-                        const velocities = this.riverParticles.userData.velocities;
-                        for (let i = 0; i < velocities.length; i += 3) {
-                            this._setRiverParticleVelocity(velocities, i, 0.22 + Math.random() * 0.28);
-                        }
+                        this._refreshRiverParticleVelocities();
                     }
-                    this._applyRiverParticleMaterialStyle();
+                    if (this._congoRiverEnabled) {
+                        this._applyCongoRiverParticleStyle();
+                    } else {
+                        this._applyRiverParticleMaterialStyle();
+                    }
                 }
             }
             
@@ -1839,6 +1985,10 @@ export class Water2Lake {
             this._syncWavyLakeBed();
         }
 
+        if (this._congoRiverEnabled && this.waterBodyType === 'RIVER') {
+            updateCongoRiverLakeBed(this.lakeBedGround, delta);
+        }
+
         if (this.water && this.water.material && this.water.material.uniforms) {
             // Update time uniform for wave animation
             if (this.water.material.uniforms.uTime) {
@@ -1904,14 +2054,16 @@ export class Water2Lake {
         // Update dock post splash effects (animated wakes) - only for POND
         // CRITICAL: Always check visibility based on current water type, not just creation time
         if (this.dockPostSplashes) {
-            const shouldBeVisible = this.waterBodyType === 'POND' || this.waterBodyType === 'RIVER';
+            const shouldBeVisible =
+                (this.waterBodyType === 'POND' || this.waterBodyType === 'RIVER') &&
+                !(this._congoRiverEnabled && this.dockPostSplashes.userData?.isRiverWake);
             if (this.dockPostSplashes.visible !== shouldBeVisible) {
                 this.dockPostSplashes.visible = shouldBeVisible;
             }
 
             if (this.dockPostSplashes.visible) {
                 if (this.dockPostSplashes.userData?.isRiverWake) {
-                    const flow = this.waterBodyConfig?.flowDirection || new THREE.Vector2(1, 0);
+                    const flow = this._riverFlowDirection();
                     updateRiverDockPostWake(this.dockPostSplashes, this.time || 0, flow);
                 } else {
                     const time = this.time || 0;
@@ -1946,6 +2098,8 @@ export class Water2Lake {
                 }
             }
         }
+
+        this._updateBoatSternWake(delta);
         
         // Update dock post particle stream - always update when visible (river particles should never stop)
         // CRITICAL: This must always run when particles exist - ensures continuous flow

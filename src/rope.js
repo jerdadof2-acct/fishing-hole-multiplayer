@@ -783,8 +783,10 @@ export class FishingRope {
                 && !ud.relicStrike
                 && (ud.freeze ?? 0) <= 0;
             if (waitingOnRiver) {
-                const downstream = getRiverDownstreamDir(this.water.waterBodyConfig.flowDirection);
-                const flowSpeed = this.water.waterBodyConfig.flowSpeed ?? 0.62;
+                const downstream = getRiverDownstreamDir(
+                    this.water.getEffectiveRiverFlowDirection()
+                );
+                const flowSpeed = this.water.getEffectiveRiverFlowSpeed();
                 const speed = flowSpeed * 0.2;
                 this._riverDriftPerSec = {
                     x: downstream.x * speed,

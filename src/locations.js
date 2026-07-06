@@ -235,7 +235,7 @@ export class Locations {
             {
                 name: CONGO_RIVER_NAME,
                 difficulty: 'Expert',
-                fish: [56, 55, 53, 54],
+                fish: [62, 63, 64, 65, 66],
                 cost: 0,
                 unlockLevel: 99,
                 description: 'The greatest destination in his father\'s old journal — a vast river of green shoreline, powerful currents, and creatures the sketches never captured.',
@@ -244,12 +244,12 @@ export class Locations {
                 waterBodyType: 'RIVER',
                 platformType: 'LARGE_BOAT',
                 requiresPostStarfishGuide: true,
-                comingSoon: true,
                 fishSpawnWeights: {
-                    56: 12,
-                    55: 28,
-                    53: 30,
-                    54: 30
+                    62: 30,
+                    66: 28,
+                    63: 22,
+                    64: 12,
+                    65: 4
                 }
             },
             {

@@ -28,8 +28,7 @@ export function hasCaughtStarfish(player) {
 }
 
 export function isComingSoonLocationIndex(locationIndex) {
-    return locationIndex === CONGO_RIVER_LOCATION_INDEX
-        || locationIndex === CRAZYCATCH_COVE_LOCATION_INDEX;
+    return locationIndex === CRAZYCATCH_COVE_LOCATION_INDEX;
 }
 
 export function isComingSoonLocation(location) {

@@ -21,7 +21,17 @@ const NEW_FISH = [
     'Piranha',
     'Peacock Bass',
     'Payara',
-    'Arapaima'
+    'Arapaima',
+    'Buffalo Carp',
+    'Gaspergou',
+    'Bowfin',
+    'Spotted Gar',
+    'Paddlefish',
+    'Tigerfish',
+    'Nile Perch',
+    'African Lungfish',
+    'Goliath Tigerfish',
+    'Electric Catfish'
 ];
 
 const MAX_W = 512;

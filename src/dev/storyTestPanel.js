@@ -1,6 +1,7 @@
 import { CELESTIAL_DEPTHS_LOCATION_INDEX, HIDDEN_RELICS } from '../config/hiddenRelics.js';
 import { CORTEZ_BACKWATERS_LOCATION_INDEX } from '../config/cortezBackwaters.js';
-import { LOUISIANA_BAYOU_LOCATION_INDEX } from '../config/storyLocations.js';
+import { LOUISIANA_BAYOU_LOCATION_INDEX, CONGO_RIVER_LOCATION_INDEX } from '../config/storyLocations.js';
+import { CONGO_RIVER_NAME } from '../locations.js';
 import { STARFISH_ID } from '../config/starfishEncounter.js';
 import { collectHiddenRelic } from '../hiddenRelics.js';
 import { AMAZON_DEPTHS_NAME } from '../locations.js';
@@ -88,6 +89,8 @@ export function initStoryTestPanel(game) {
         <button type="button" data-action="celestial">Go to Celestial Depths</button>
         <button type="button" data-action="cortez">Go to Cortez Backwaters</button>
         <button type="button" data-action="bayou">Go to Louisiana Bayou</button>
+        <button type="button" data-action="congo">Go to Congo River</button>
+        <button type="button" data-action="congo-portrait">Congo portrait pan (face Halley)</button>
         <button type="button" data-action="reset-starfish">Reset Starfish (first catch)</button>
         <div class="story-test-panel-section">Amazon Depths</div>
         <button type="button" data-action="spawn-anaconda">Spawn anaconda shadow</button>
@@ -159,6 +162,35 @@ export function initStoryTestPanel(game) {
             player.save({ skipSync: true });
             jumpToLocation(game, LOUISIANA_BAYOU_LOCATION_INDEX);
             ui.showBannerNotification?.('Louisiana Bayou — still dark-green backwater preview.', '#86efac', 4200);
+            return;
+        }
+
+        if (action === 'congo') {
+            grantStarfishCaught(player, game.fishCollection);
+            player.fatherJournalReceived = true;
+            player.save({ skipSync: true });
+            jumpToLocation(game, CONGO_RIVER_LOCATION_INDEX);
+            ui.showBannerNotification?.('Congo River — green river flowing downstream from the big boat.', '#86efac', 4200);
+            return;
+        }
+
+        if (action === 'congo-portrait') {
+            grantStarfishCaught(player, game.fishCollection);
+            player.fatherJournalReceived = true;
+            player.save({ skipSync: true });
+            const atCongo = game.locations?.getCurrentLocation()?.name === CONGO_RIVER_NAME;
+            if (!atCongo) {
+                jumpToLocation(game, CONGO_RIVER_LOCATION_INDEX);
+            }
+            void game.ensureCongoScenery?.(false);
+            const active = game.toggleDevCongoPortraitPreview?.() === true;
+            ui.showBannerNotification?.(
+                active
+                    ? 'Congo portrait pan — camera easing in to face Halley.'
+                    : 'Congo portrait pan off — back to fishing view.',
+                active ? '#86efac' : '#93c5fd',
+                3200
+            );
             return;
         }
 

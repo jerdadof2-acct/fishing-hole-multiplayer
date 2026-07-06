@@ -287,6 +287,8 @@ export function makeWaterMaterial({
           float cs = 0.9553;
           float sn = 0.2955;
           bedXZ = vec2(bedXZ.x * cs - bedXZ.y * sn, bedXZ.x * sn + bedXZ.y * cs);
+        } else if (uRiverMode > 0.5 && fLen > 0.001) {
+          bedXZ += fDir * flowScrollT * (0.11 / 0.042);
         }
         vec2 bedUV = bedXZ * (uSandBed > 0.5 ? 0.02 : 0.042);
         vec3 bed = texture2D(uLakeBed, bedUV).rgb;

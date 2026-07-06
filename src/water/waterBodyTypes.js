@@ -478,6 +478,94 @@ export function applyLouisianaBayouWater(material) {
     }
 }
 
+/** Downstream (+Z) — shader scroll is opposite flowDirection, so use (0, -1) for away-from-camera. */
+export const CONGO_RIVER_FLOW_DIRECTION = new THREE.Vector2(0, -1);
+
+/**
+ * Congo River — murky green/brown tropical river with a gentle downstream current.
+ */
+export const CONGO_RIVER_WATER = {
+    deepColor: new THREE.Color(0x2a3820),
+    shallowColor: new THREE.Color(0x5c7044),
+    fogColor: new THREE.Color(0x465238),
+    fogDepth: 10.0,
+    fogIntensity: 0.58,
+    turbidity: 0.84,
+    absorption: 0.86,
+    opacity: 0.97,
+    sparkleStrength: 0.068,
+    envIntensity: 0.14,
+    fresnelScale: 0.82,
+    waveScale: 0.94,
+    waveSpeed: 0.92,
+    waveAmplitude: 0.019,
+    rippleAmp: 0.1,
+    flowDirection: CONGO_RIVER_FLOW_DIRECTION,
+    flowSpeed: 0.54,
+    flowMapStrength: 0.82,
+    windScroll1: new THREE.Vector2(0.0, -0.028),
+    windScroll2: new THREE.Vector2(0.0, -0.02)
+};
+
+/** Re-apply Congo River green/brown water and gentle downstream flow. */
+export function applyCongoRiverWater(material) {
+    if (!material?.uniforms) {
+        return;
+    }
+    const w = CONGO_RIVER_WATER;
+    const u = material.uniforms;
+    u.uColorDeep.value.copy(w.deepColor);
+    u.uColorShallow.value.copy(w.shallowColor);
+    u.uFogColor.value.copy(w.fogColor);
+    u.uAbsorption.value = w.absorption;
+    u.uTurbidity.value = w.turbidity;
+    u.uOpacity.value = w.opacity;
+    u.uFogIntensity.value = w.fogIntensity;
+    u.uFogDepth.value = w.fogDepth;
+    if (u.uSparkleStrength) {
+        u.uSparkleStrength.value = w.sparkleStrength;
+    }
+    if (u.uFlatWater) {
+        u.uFlatWater.value = 0.0;
+    }
+    if (u.uOpaqueDeep) {
+        u.uOpaqueDeep.value = 0.0;
+    }
+    if (u.uEnvIntensity) {
+        u.uEnvIntensity.value = w.envIntensity;
+    }
+    if (u.uFresnelScale) {
+        u.uFresnelScale.value = w.fresnelScale;
+    }
+    if (u.waveScale) {
+        u.waveScale.value = w.waveScale;
+    }
+    if (u.waveSpeed) {
+        u.waveSpeed.value = w.waveSpeed;
+    }
+    if (u.waveAmplitude) {
+        u.waveAmplitude.value = w.waveAmplitude;
+    }
+    if (u.rippleAmp) {
+        u.rippleAmp.value = w.rippleAmp;
+    }
+    if (u.uScroll1) {
+        u.uScroll1.value.copy(w.windScroll1);
+    }
+    if (u.uScroll2) {
+        u.uScroll2.value.copy(w.windScroll2);
+    }
+    if (u.uFlowDirection) {
+        u.uFlowDirection.value.copy(w.flowDirection);
+    }
+    if (u.uFlowSpeed) {
+        u.uFlowSpeed.value = w.flowSpeed;
+    }
+    if (u.uFlowMapStrength) {
+        u.uFlowMapStrength.value = w.flowMapStrength;
+    }
+}
+
 /** Re-apply Cortez Backwaters shallow bay water to live shader uniforms. */
 export function applyCortezBackwatersWaterColors(material) {
     applyShallowBayWaterColors(

@@ -85,7 +85,14 @@ export const FishTypes = [
     { id: 58, name: 'Gaspergou', rarity: 'Common', minWeight: 2.0, maxWeight: 18.0, recordWeight: 55.0, value: 16, experience: 9, season: 'All' },
     { id: 59, name: 'Bowfin', rarity: 'Uncommon', minWeight: 2.0, maxWeight: 12.0, recordWeight: 18.0, value: 38, experience: 16, season: 'All' },
     { id: 60, name: 'Spotted Gar', rarity: 'Rare', minWeight: 3.0, maxWeight: 15.0, recordWeight: 22.0, value: 75, experience: 28, season: 'All' },
-    { id: 61, name: 'Paddlefish', rarity: 'Legendary', minWeight: 15.0, maxWeight: 80.0, recordWeight: 145.0, value: 950, experience: 92, season: 'All' }
+    { id: 61, name: 'Paddlefish', rarity: 'Legendary', minWeight: 15.0, maxWeight: 80.0, recordWeight: 145.0, value: 950, experience: 92, season: 'All' },
+
+    // Congo River — African river giants (62-66)
+    { id: 62, name: 'Tigerfish', rarity: 'Common', minWeight: 1.5, maxWeight: 8.0, recordWeight: 35.0, value: 32, experience: 15, season: 'All' },
+    { id: 63, name: 'Nile Perch', rarity: 'Uncommon', minWeight: 5.0, maxWeight: 35.0, recordWeight: 180.0, value: 72, experience: 26, season: 'All' },
+    { id: 64, name: 'African Lungfish', rarity: 'Rare', minWeight: 10.0, maxWeight: 40.0, recordWeight: 75.0, value: 145, experience: 44, season: 'All' },
+    { id: 65, name: 'Goliath Tigerfish', rarity: 'Legendary', minWeight: 25.0, maxWeight: 90.0, recordWeight: 110.0, value: 1900, experience: 98, season: 'All' },
+    { id: 66, name: 'Electric Catfish', rarity: 'Common', minWeight: 1.0, maxWeight: 6.0, recordWeight: 12.0, value: 26, experience: 13, season: 'All' }
 ];
 
 // Fish facts database
@@ -143,7 +150,12 @@ export const FishFacts = {
     'Gaspergou': { fact: 'Louisiana nickname for the freshwater drum — drumming muscles in its swim bladder make a croaking sound underwater.', fun: 'Named for the noise it makes; sounds grumpy before you even hook it!', real: 'Freshwater drum are the only freshwater member of the croaker family in North America.' },
     'Bowfin': { fact: 'Living fossil with a long dorsal fin and lungs that let it gulp air in stagnant backwaters.', fun: 'Swam with dinosaurs and still looks offended when you catch it!', real: 'Bowfin survive low oxygen in bayous and can breathe air at the surface.' },
     'Spotted Gar': { fact: 'Long-snouted ambusher armored in ganoid scales — a true bayou survivor.', fun: 'More spots than a leopard and twice as toothy!', real: 'Spotted gar haunt shallow, vegetation-choked Louisiana sloughs and bayous.' },
-    'Paddlefish': { fact: 'Prehistoric filter-feeder with a paddle-shaped rostrum that sweeps plankton from murky water.', fun: 'Snout so long it looks like it forgot to stop growing!', real: 'American paddlefish are ancient river giants prized in Gulf Coast and Mississippi basin waters.' }
+    'Paddlefish': { fact: 'Prehistoric filter-feeder with a paddle-shaped rostrum that sweeps plankton from murky water.', fun: 'Snout so long it looks like it forgot to stop growing!', real: 'American paddlefish are ancient river giants prized in Gulf Coast and Mississippi basin waters.' },
+    'Tigerfish': { fact: 'Silver-flanked ambusher with interlocking teeth built for tearing through fast Congo currents.', fun: 'Stripes like a cat, appetite like a tiger!', real: 'Hydrocynus vittatus are among Africa\'s most aggressive freshwater game fish.' },
+    'Nile Perch': { fact: 'Deep-bodied river predator that lurks along green banks and surges after bait in muddy water.', fun: 'Looks calm until your reel screams!', real: 'Lates niloticus thrives in African rivers and lakes and can exceed 200 pounds.' },
+    'African Lungfish': { fact: 'Prehistoric survivor that gulps air at the surface and burrows when the river drops.', fun: 'Swam with dinosaurs and still refuses to evolve!', real: 'Protopterus species can estivate in mud cocoons during dry seasons.' },
+    'Goliath Tigerfish': { fact: 'The Congo\'s apex river hunter — teeth like knives and strikes that feel like a freight train.', fun: 'The fish his father\'s journal only drew in pencil!', real: 'Hydrocynus goliath can exceed 100 pounds and is one of Africa\'s most prized trophies.' },
+    'Electric Catfish': { fact: 'Mud-brown lurker that hunts by touch and shock in murky Congo backwaters.', fun: 'Zaps prey and your nerves — handle with care!', real: 'Malapterurus electricus can produce hundreds of volts to stun prey in dark water.' }
 };
 
 /**

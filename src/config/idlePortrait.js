@@ -28,6 +28,8 @@ export const GAMEPLAY_CAMERA_OFFSET = new THREE.Vector3(0, 16, -12);
 export const PORTRAIT_CAMERA_OFFSET = new THREE.Vector3(0, 2.05, -4.2);
 /** Cortez dock: raised and pulled back so portrait pan clears inner mangrove canopy. */
 export const PORTRAIT_CAMERA_OFFSET_CORTEZ = new THREE.Vector3(0, 3.45, -5.65);
+/** Congo large boat: pulled back slightly for deck + rocking headroom. */
+export const PORTRAIT_CAMERA_OFFSET_CONGO = new THREE.Vector3(0, 3.1, -5.85);
 export const GAMEPLAY_LOOK_AT_OFFSET = new THREE.Vector3(0, 1.5, 4);
 
 // --- Portrait blend ---

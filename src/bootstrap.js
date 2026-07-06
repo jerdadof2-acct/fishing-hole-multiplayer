@@ -1,4 +1,4 @@
-import Game from './main.js?v=20260705-bayou-ambience';
+import Game from './main.js?v=20260705-congo-banks';
 import { api } from './api.js';
 import { ensureProloguePack, prefetchProloguePack, startDeferredPackDownload } from './assetPack.js';
 import { loadingProgress } from './loadingProgress.js';
