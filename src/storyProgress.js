@@ -412,6 +412,11 @@ export function reconcileStoryLocationUnlocks(player, locations) {
         unlocked.add(LOUISIANA_BAYOU_LOCATION_INDEX);
     }
 
+    // Journal chain: first catch at the Bayou opens the Congo River (see DOCS/halleys-big-catch-story.md).
+    if (hasCaughtStarfish(player) && player.louisianaBayouComplete === true) {
+        unlocked.add(CONGO_RIVER_LOCATION_INDEX);
+    }
+
     return [...unlocked].sort((a, b) => a - b);
 }
 
