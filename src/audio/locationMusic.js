@@ -39,6 +39,10 @@ export const LOUISIANA_BAYOU_AMBIENCE_URL =
     '/src/audio/dbsound-mosquito-and-fly-buzz-over-swamp-252287.mp3';
 export const LOUISIANA_BAYOU_AMBIENCE_VOLUME = 0.24;
 
+/** Congo River — powerful current shares the Amazon river-flow bed, a touch louder. */
+export const CONGO_RIVER_AMBIENCE_URL = AMAZON_DEPTHS_AMBIENCE_URL;
+export const CONGO_RIVER_AMBIENCE_VOLUME = 0.42;
+
 export class LoopingLocationAmbience {
     /**
      * @param {{ resolveSource: () => string, peakVolume: number }} options
@@ -271,6 +275,15 @@ export class LouisianaBayouAmbience extends LoopingLocationAmbience {
         super({
             resolveSource: () => LOUISIANA_BAYOU_AMBIENCE_URL,
             peakVolume: LOUISIANA_BAYOU_AMBIENCE_VOLUME
+        });
+    }
+}
+
+export class CongoRiverAmbience extends LoopingLocationAmbience {
+    constructor() {
+        super({
+            resolveSource: () => CONGO_RIVER_AMBIENCE_URL,
+            peakVolume: CONGO_RIVER_AMBIENCE_VOLUME
         });
     }
 }

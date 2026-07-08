@@ -36,9 +36,10 @@ import {
     CortezBackwatersAmbience,
     CraggyCoastAmbience,
     LouisianaBayouAmbience,
+    CongoRiverAmbience,
     SandyShoalsAmbience,
     StormbreakerBayAmbience
-} from './audio/locationMusic.js?v=20260705-bayou-ambience';
+} from './audio/locationMusic.js?v=20260707-congo-ambience';
 import { VOICEOVER_TAP_COOLDOWN_MS, VOICEOVER_ANACONDA_COOLDOWN_MS } from './config/voiceover.js';
 
 /** How close the snake must pass Halley's look point (world XZ) to trigger a bark. */
@@ -131,6 +132,7 @@ export class Game {
         this.craggyCoastAmbience = new CraggyCoastAmbience();
         this.stormbreakerBayAmbience = new StormbreakerBayAmbience();
         this.louisianaBayouAmbience = new LouisianaBayouAmbience();
+        this.congoRiverAmbience = new CongoRiverAmbience();
         
         // Gameplay systems
         this.player = null;
@@ -879,6 +881,7 @@ export class Game {
         this.craggyCoastAmbience?.resumeAfterGesture?.();
         this.stormbreakerBayAmbience?.resumeAfterGesture?.();
         this.louisianaBayouAmbience?.resumeAfterGesture?.();
+        this.congoRiverAmbience?.resumeAfterGesture?.();
         if (isDevFaceCameraEnabled() || this._devCongoPortraitPreview) {
             return;
         }
@@ -2065,6 +2068,7 @@ export class Game {
         const playCraggy = location?.name === CRAGGY_COAST_NAME;
         const playStormbreaker = location?.name === STORMBREAKER_BAY_NAME;
         const playLouisianaBayou = location?.name === LOUISIANA_BAYOU_NAME;
+        const playCongoRiver = location?.name === CONGO_RIVER_NAME;
 
         if (playCelestial) {
             this.amazonAmbience?.stop();
@@ -2074,6 +2078,7 @@ export class Game {
             this.craggyCoastAmbience?.stop();
             this.stormbreakerBayAmbience?.stop();
             this.louisianaBayouAmbience?.stop();
+            this.congoRiverAmbience?.stop();
             this.celestialMusic?.start();
             return;
         }
@@ -2086,6 +2091,7 @@ export class Game {
             this.craggyCoastAmbience?.stop();
             this.stormbreakerBayAmbience?.stop();
             this.louisianaBayouAmbience?.stop();
+            this.congoRiverAmbience?.stop();
             this.amazonAmbience?.start();
             return;
         }
@@ -2098,6 +2104,7 @@ export class Game {
             this.craggyCoastAmbience?.stop();
             this.stormbreakerBayAmbience?.stop();
             this.louisianaBayouAmbience?.stop();
+            this.congoRiverAmbience?.stop();
             this.cortezAmbience?.start();
             return;
         }
@@ -2110,6 +2117,7 @@ export class Game {
             this.craggyCoastAmbience?.stop();
             this.stormbreakerBayAmbience?.stop();
             this.louisianaBayouAmbience?.stop();
+            this.congoRiverAmbience?.stop();
             this.sandyShoalsAmbience?.start();
             return;
         }
@@ -2122,6 +2130,7 @@ export class Game {
             this.sandyShoalsAmbience?.stop();
             this.stormbreakerBayAmbience?.stop();
             this.louisianaBayouAmbience?.stop();
+            this.congoRiverAmbience?.stop();
             this.craggyCoastAmbience?.start();
             return;
         }
@@ -2134,6 +2143,7 @@ export class Game {
             this.sandyShoalsAmbience?.stop();
             this.craggyCoastAmbience?.stop();
             this.louisianaBayouAmbience?.stop();
+            this.congoRiverAmbience?.stop();
             this.stormbreakerBayAmbience?.start();
             return;
         }
@@ -2146,7 +2156,21 @@ export class Game {
             this.sandyShoalsAmbience?.stop();
             this.craggyCoastAmbience?.stop();
             this.stormbreakerBayAmbience?.stop();
+            this.congoRiverAmbience?.stop();
             this.louisianaBayouAmbience?.start();
+            return;
+        }
+
+        if (playCongoRiver) {
+            this.celestialMusic?.stop();
+            this.amazonAmbience?.stop();
+            this.crescentPondAmbience?.stop();
+            this.cortezAmbience?.stop();
+            this.sandyShoalsAmbience?.stop();
+            this.craggyCoastAmbience?.stop();
+            this.stormbreakerBayAmbience?.stop();
+            this.louisianaBayouAmbience?.stop();
+            this.congoRiverAmbience?.start();
             return;
         }
 
@@ -2158,6 +2182,7 @@ export class Game {
             this.craggyCoastAmbience?.stop();
             this.stormbreakerBayAmbience?.stop();
             this.louisianaBayouAmbience?.stop();
+            this.congoRiverAmbience?.stop();
             this.crescentPondAmbience?.start();
             return;
         }
@@ -2170,6 +2195,7 @@ export class Game {
         this.craggyCoastAmbience?.stop();
         this.stormbreakerBayAmbience?.stop();
         this.louisianaBayouAmbience?.stop();
+        this.congoRiverAmbience?.stop();
     }
     
     /**
