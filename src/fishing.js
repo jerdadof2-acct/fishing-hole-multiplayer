@@ -13,6 +13,8 @@ import { attachRodToHand } from './fishing/attachRod.js';
 import { aimRodForwardAt45 } from './fishing/aimRod.js';
 import { STARFISH_LANDING_REEL_RATE } from './config/starfishEncounter.js';
 import { BobberWake } from './effects/bobberWake.js';
+import { LOUISIANA_BAYOU_NAME } from './locations.js';
+import { tryStartleBayouGatorFromBobber } from './effects/bayouExtras.js';
 
 // Apply tug visual to bobber when fish pulls
 export function applyTug(bobber, intensity = 1.0, sfx = null, scene = null) {
@@ -1227,6 +1229,22 @@ export class Fishing {
                 // Trigger water ripple at bobber position
                 if (this.water && this.water.mesh && this.water.mesh.splashAt) {
                     this.water.mesh.splashAt(this.bobber.position.x, this.bobber.position.z);
+                }
+
+                if (
+                    this.game?.locations?.getCurrentLocation()?.name ===
+                        LOUISIANA_BAYOU_NAME &&
+                    this.game.bayouExtras &&
+                    this.bobber
+                ) {
+                    tryStartleBayouGatorFromBobber(
+                        this.game.bayouExtras,
+                        this.bobber.position,
+                        {
+                            splash: this.splash,
+                            water: this.water
+                        }
+                    );
                 }
                 
                 // Initialize wake tracking when bobber lands
