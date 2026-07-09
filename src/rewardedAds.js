@@ -174,19 +174,23 @@ function showAdsenseEnergyReward() {
         document.body.appendChild(overlay);
 
         const host = overlay.querySelector('#adsense-energy-host');
-        const mounted = mountAdsenseUnit(host, ADSENSE_ENERGY_SLOT, {
+        void mountAdsenseUnit(host, ADSENSE_ENERGY_SLOT, {
             format: 'auto',
-            fullWidthResponsive: true
-        });
+            fullWidthResponsive: true,
+            managedLabel: 'energy'
+        }).then((mounted) => {
+            if (!mounted) {
+                removeOverlay(overlay);
+                reject(new Error('AdSense energy unit failed to mount'));
+                return;
+            }
 
-        if (!mounted) {
+            runRewardTimer(overlay, durationMs, () => {
+                resolve({ success: true, type: 'energy' });
+            });
+        }).catch((error) => {
             removeOverlay(overlay);
-            reject(new Error('AdSense energy unit failed to mount'));
-            return;
-        }
-
-        runRewardTimer(overlay, durationMs, () => {
-            resolve({ success: true, type: 'energy' });
+            reject(error);
         });
     });
 }

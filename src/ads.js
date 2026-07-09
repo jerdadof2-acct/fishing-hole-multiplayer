@@ -148,6 +148,7 @@ const MAX_BANNER_MOUNT_ATTEMPTS = 80;
 let currentIndex = 0;
 let rotationTimer = null;
 let bannerContentMounted = false;
+let bannerMountInFlight = false;
 let bannerMountAttempts = 0;
 
 function isBannerReady(banner) {
@@ -243,33 +244,40 @@ function mountBannerContentForced(banner, bannerContent, adWidth) {
     mountBannerContentWithWidth(bannerContent, adWidth);
 }
 
-function mountBannerContentWithWidth(bannerContent, adWidth) {
-    if (bannerContentMounted || !bannerContent) {
+async function mountBannerContentWithWidth(bannerContent, adWidth) {
+    if (bannerContentMounted || bannerMountInFlight || !bannerContent) {
         return;
     }
 
-    bannerContent.innerHTML = '';
-    stopRotation();
+    bannerMountInFlight = true;
 
-    const adsEnabled = getAdsEnabled();
+    try {
+        bannerContent.innerHTML = '';
+        stopRotation();
 
-    if (!adsEnabled) {
-        bannerContent.appendChild(createPlaceholder());
+        const adsEnabled = getAdsEnabled();
+
+        if (!adsEnabled) {
+            bannerContent.appendChild(createPlaceholder());
+            bannerContentMounted = true;
+            return;
+        }
+
+        if (hasConfiguredBannerAd() && await mountAdsenseUnit(bannerContent, ADSENSE_BANNER_SLOT, {
+            width: adWidth,
+            height: 50,
+            fullWidthResponsive: false,
+            managedLabel: 'banner'
+        })) {
+            bannerContentMounted = true;
+            return;
+        }
+
+        mountFictionalAdRotator(bannerContent);
         bannerContentMounted = true;
-        return;
+    } finally {
+        bannerMountInFlight = false;
     }
-
-    if (hasConfiguredBannerAd() && mountAdsenseUnit(bannerContent, ADSENSE_BANNER_SLOT, {
-        width: adWidth,
-        height: 50,
-        fullWidthResponsive: false
-    })) {
-        bannerContentMounted = true;
-        return;
-    }
-
-    mountFictionalAdRotator(bannerContent);
-    bannerContentMounted = true;
 }
 
 export function hasConfiguredBannerAd() {
@@ -280,6 +288,26 @@ export function hasConfiguredEnergyAd() {
     return Boolean(ADSENSE_CLIENT && ADSENSE_ENERGY_SLOT);
 }
 
+/** Slot IDs we intentionally mount — used to spot orphan injections. */
+export const MANAGED_ADSENSE_SLOT_IDS = new Set([
+    ADSENSE_BANNER_SLOT,
+    ADSENSE_ENERGY_SLOT
+]);
+
+export function isManagedAdsenseUnit(node) {
+    if (!node || typeof node.getAttribute !== 'function') {
+        return false;
+    }
+    const slot = node.getAttribute('data-ad-slot');
+    if (slot && MANAGED_ADSENSE_SLOT_IDS.has(slot)) {
+        return true;
+    }
+    if (node.closest?.('#ad-banner, #adsense-energy-host')) {
+        return true;
+    }
+    return node.getAttribute('data-halley-managed') === 'true';
+}
+
 function getAdsEnabled() {
     if (typeof window !== 'undefined' && typeof window.__KITTY_CREEK_ADS_ENABLED__ === 'boolean') {
         return window.__KITTY_CREEK_ADS_ENABLED__;
@@ -287,13 +315,69 @@ function getAdsEnabled() {
     return DEFAULT_ADS_ENABLED;
 }
 
+let adsenseScriptPromise = null;
+let pageLevelAdsDisabled = false;
+
+/**
+ * Prevent page-level / Auto-style injection (orphan ins on body with no data-ad-slot).
+ * Must be the first adsbygoogle.push() on the page.
+ */
+function disablePageLevelAds() {
+    if (pageLevelAdsDisabled || !ADSENSE_CLIENT) {
+        return;
+    }
+    pageLevelAdsDisabled = true;
+    try {
+        (window.adsbygoogle = window.adsbygoogle || []).push({
+            google_ad_client: ADSENSE_CLIENT,
+            enable_page_level_ads: false
+        });
+    } catch (err) {
+        console.warn('[ads] Failed to disable page-level AdSense:', err);
+    }
+}
+
+/** Load adsbygoogle.js only when we mount a manual unit (not on loading/login screens). */
+export function ensureAdsenseScriptLoaded() {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+        return Promise.resolve();
+    }
+    if (window.adsbygoogle) {
+        disablePageLevelAds();
+        return Promise.resolve();
+    }
+    if (adsenseScriptPromise) {
+        return adsenseScriptPromise;
+    }
+
+    adsenseScriptPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.async = true;
+        // No ?client= on the script URL — publisher id lives on each <ins> only (manual units).
+        script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
+        script.crossOrigin = 'anonymous';
+        script.onload = () => {
+            disablePageLevelAds();
+            resolve();
+        };
+        script.onerror = () => {
+            adsenseScriptPromise = null;
+            reject(new Error('AdSense script failed to load'));
+        };
+        document.head.appendChild(script);
+    });
+
+    return adsenseScriptPromise;
+}
+
 /**
  * Mount one manual AdSense unit inside a container we own (never page-wide Auto ads).
  * @param {HTMLElement} container
  * @param {string} slotId
- * @param {{ format?: string, fullWidthResponsive?: boolean, width?: number, height?: number }} [options]
+ * @param {{ format?: string, fullWidthResponsive?: boolean, width?: number, height?: number, managedLabel?: string }} [options]
+ * @returns {Promise<boolean>}
  */
-export function mountAdsenseUnit(container, slotId, options = {}) {
+export async function mountAdsenseUnit(container, slotId, options = {}) {
     if (!ADSENSE_CLIENT || !slotId || !container) {
         return false;
     }
@@ -302,7 +386,8 @@ export function mountAdsenseUnit(container, slotId, options = {}) {
         format = 'auto',
         fullWidthResponsive = true,
         width = null,
-        height = null
+        height = null,
+        managedLabel = 'unit'
     } = options;
 
     container.innerHTML = '';
@@ -315,6 +400,8 @@ export function mountAdsenseUnit(container, slotId, options = {}) {
     ins.className = 'adsbygoogle';
     ins.setAttribute('data-ad-client', ADSENSE_CLIENT);
     ins.setAttribute('data-ad-slot', slotId);
+    ins.setAttribute('data-halley-managed', 'true');
+    ins.setAttribute('data-halley-ad', managedLabel);
 
     if (width && height) {
         ins.style.display = 'inline-block';
@@ -337,7 +424,16 @@ export function mountAdsenseUnit(container, slotId, options = {}) {
     container.appendChild(ins);
     void ins.offsetWidth;
 
+    if (!ins.isConnected) {
+        return false;
+    }
+
     try {
+        await ensureAdsenseScriptLoaded();
+        if (!ins.isConnected) {
+            return false;
+        }
+        // One push per <ins> — extra push() calls inject orphan units elsewhere on the page.
         (window.adsbygoogle = window.adsbygoogle || []).push({});
     } catch (err) {
         console.warn('[ads] AdSense push failed:', err);

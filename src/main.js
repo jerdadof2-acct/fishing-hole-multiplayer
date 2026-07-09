@@ -188,7 +188,7 @@ export class Game {
         document.getElementById('site-legal-footer')?.classList.remove('hidden');
         showAdBanner();
 
-        window.setTimeout(() => warnAboutUnmanagedAdsenseUnits(), 1200);
+        window.setTimeout(() => warnAboutUnmanagedAdsenseUnits(), 3500);
 
         syncViewportShell();
         requestAnimationFrame(() => {
