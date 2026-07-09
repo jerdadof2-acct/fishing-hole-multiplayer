@@ -3032,7 +3032,45 @@ function createBayouGator(random) {
         currentRise: -0.22
     });
 
+    ensureGatorHeadTapHelper(gator);
+
     return gator;
+}
+
+function ensureGatorHeadTapHelper(gator) {
+    if (gator.userData.headTapHelper) {
+        return gator.userData.headTapHelper;
+    }
+
+    const headBone = gator.userData.headBone;
+
+    if (!headBone) {
+        return null;
+    }
+
+    const helper = new THREE.Mesh(
+        new THREE.SphereGeometry(0.55, 10, 8),
+        new THREE.MeshBasicMaterial({
+            visible: false,
+            depthWrite: false
+        })
+    );
+
+    helper.name = 'gatorHeadTapHelper';
+    helper.userData.bayouGatorTap = true;
+    helper.userData.gator = gator;
+    helper.position.set(
+        GATOR_HEAD_LEN * 0.35 +
+            GATOR_SNOUT_MESH_X +
+            GATOR_SNOUT_LEN * 0.42,
+        0.1,
+        0
+    );
+    helper.scale.set(1.35, 0.95, 1.15);
+    headBone.add(helper);
+    gator.userData.headTapHelper = helper;
+
+    return helper;
 }
 
 function gatorTurnAlignedSway(
@@ -4327,6 +4365,84 @@ export function syncBayouExtrasVisibility(group, visible) {
     }
 }
 
+export function getBayouGatorHeadTapTargets(group) {
+    const targets = [];
+
+    for (const gator of group?.userData?.gators || []) {
+        const helper =
+            gator.userData.headTapHelper ||
+            ensureGatorHeadTapHelper(gator);
+
+        if (helper) {
+            targets.push(helper);
+        }
+    }
+
+    return targets;
+}
+
+function tryStartleBayouGatorAtThreat(
+    group,
+    gator,
+    threatX,
+    threatZ,
+    hooks = {}
+) {
+    if (!group || !gator) {
+        return false;
+    }
+
+    const now = performance.now();
+    const lastStartle = group.userData._lastGatorBobberStartleAt ?? 0;
+
+    if (now - lastStartle < GATOR_BOBBER_STARTLE_COOLDOWN_MS) {
+        return false;
+    }
+
+    beginGatorStartle(
+        gator.userData,
+        gator,
+        threatX,
+        threatZ,
+        hooks
+    );
+    group.userData._lastGatorBobberStartleAt = now;
+
+    return true;
+}
+
+/**
+ * Visual-only reaction when the player taps the gator's head (Louisiana Bayou).
+ */
+export function tryStartleBayouGatorFromTap(
+    group,
+    hitObject,
+    hitPoint,
+    hooks = {}
+) {
+    let node = hitObject;
+
+    while (node) {
+        if (node.userData?.bayouGatorTap && node.userData.gator) {
+            const gator = node.userData.gator;
+            const threatX = hitPoint?.x ?? gator.position.x;
+            const threatZ = hitPoint?.z ?? gator.position.z;
+
+            return tryStartleBayouGatorAtThreat(
+                group,
+                gator,
+                threatX,
+                threatZ,
+                hooks
+            );
+        }
+
+        node = node.parent;
+    }
+
+    return false;
+}
+
 /**
  * Visual-only reaction when a bobber lands near the gator's snout (Louisiana Bayou).
  * Returns true if a gator was startled.
@@ -4337,13 +4453,6 @@ export function tryStartleBayouGatorFromBobber(
     hooks = {}
 ) {
     if (!group?.userData?.gators?.length || !bobberPosition) {
-        return false;
-    }
-
-    const now = performance.now();
-    const lastStartle = group.userData._lastGatorBobberStartleAt ?? 0;
-
-    if (now - lastStartle < GATOR_BOBBER_STARTLE_COOLDOWN_MS) {
         return false;
     }
 
@@ -4358,15 +4467,13 @@ export function tryStartleBayouGatorFromBobber(
         );
 
         if (dist <= GATOR_BOBBER_STARTLE_RADIUS) {
-            beginGatorStartle(
-                gator.userData,
+            return tryStartleBayouGatorAtThreat(
+                group,
                 gator,
                 bobberPosition.x,
                 bobberPosition.z,
                 hooks
             );
-            group.userData._lastGatorBobberStartleAt = now;
-            return true;
         }
     }
 

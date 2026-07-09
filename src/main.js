@@ -421,6 +421,35 @@ export class Game {
                         return;
                     }
                 }
+
+                const gatorTargets =
+                    this._bayouModules.getBayouGatorHeadTapTargets?.(
+                        this.bayouExtras
+                    ) || [];
+
+                if (gatorTargets.length) {
+                    const gatorHits = raycaster.intersectObjects(
+                        gatorTargets,
+                        false
+                    );
+
+                    if (
+                        gatorHits.length &&
+                        this._bayouModules.tryStartleBayouGatorFromTap?.(
+                            this.bayouExtras,
+                            gatorHits[0].object,
+                            gatorHits[0].point,
+                            {
+                                splash: this.splash,
+                                water: this.water
+                            }
+                        )
+                    ) {
+                        lastTapMs = now;
+                        this.markActivity();
+                        return;
+                    }
+                }
             }
 
             const targets = this.cat.getTapTargets?.() || [];
