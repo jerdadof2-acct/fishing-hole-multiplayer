@@ -198,7 +198,10 @@ export class LoopingLocationAmbience {
 
     /** Immediate pause when the app is backgrounded (no fade). */
     pauseImmediate() {
-        this._resumeAfterBackground = this.active && this.audio && !this.audio.paused;
+        const wasPlaying = Boolean(this.audio && !this.audio.paused);
+        if (wasPlaying) {
+            this._resumeAfterBackground = true;
+        }
         this._pendingStart = false;
         this._cancelFade();
         if (this.audio) {
@@ -214,8 +217,12 @@ export class LoopingLocationAmbience {
         this._resumeAfterBackground = false;
 
         const audio = this.audio;
-        if (!audio || !this.active) {
+        if (!audio) {
             return;
+        }
+
+        if (!this.active) {
+            this.active = true;
         }
 
         const playAttempt = audio.play();

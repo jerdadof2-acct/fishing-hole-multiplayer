@@ -19,11 +19,16 @@ import {
 import { readIsAdmin } from './admin/adminAuth.js';
 import { initPwaInstallPrompt, scheduleInstallPromptWhenIdle } from './pwaInstall.js';
 import { syncViewportShell } from './viewport.js';
+import {
+    bindGameBackgroundPause,
+    installBackgroundPauseHandlers
+} from './backgroundPause.js';
 
 const AUTH_STORAGE_KEY = 'kittyCreekAuth';
 
 initPwaInstallPrompt();
 syncViewportShell();
+installBackgroundPauseHandlers();
 
 function registerServiceWorker() {
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
@@ -116,6 +121,7 @@ async function launchGame(gameOptions) {
         deferReveal: needsPreEntry
     });
     window.game = game;
+    bindGameBackgroundPause(game);
 
     if (playFullPrologue) {
         await playStoryPrologue({

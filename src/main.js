@@ -211,7 +211,6 @@ export class Game {
 
         this.startGalleryImageWarmup();
         this.setupActivityTracking();
-        this.setupBackgroundPause();
         this.setupCatTap();
         if (this.locations) {
             this.syncLocationMusic(this.locations.getCurrentLocation());
@@ -833,6 +832,9 @@ export class Game {
 
             if (this.deferReveal) {
                 loadingProgress.update(100, 'Ready to cast!');
+                if (typeof document !== 'undefined' && (document.hidden || document.visibilityState === 'hidden')) {
+                    this.pauseForBackground();
+                }
                 return;
             }
 
@@ -933,6 +935,15 @@ export class Game {
         this._backgroundPaused = true;
         this.scene?.clock?.stop();
         this.pauseLocationMusicForBackground();
+        this.fishing?.stopActiveReelSounds?.();
+
+        if (this.sfx?.listener) {
+            if (this._savedListenerVolume == null) {
+                this._savedListenerVolume = this.sfx.listener.getMasterVolume();
+            }
+            this.sfx.listener.setMasterVolume(0);
+        }
+
         this.suspendGameAudioContexts();
     }
 
@@ -940,39 +951,22 @@ export class Game {
         if (!this._backgroundPaused) {
             return;
         }
+        if (typeof document !== 'undefined'
+            && (document.visibilityState === 'hidden' || document.hidden)) {
+            return;
+        }
 
         this._backgroundPaused = false;
         this.scene?.clock?.start();
         this.resumeGameAudioContexts();
+
+        if (this.sfx?.listener && this._savedListenerVolume != null) {
+            this.sfx.listener.setMasterVolume(this._savedListenerVolume);
+            this._savedListenerVolume = null;
+        }
+
         this.resumeLocationMusicFromBackground();
         this.lastActivityTime = performance.now();
-    }
-
-    setupBackgroundPause() {
-        if (this._backgroundPauseBound || typeof document === 'undefined') {
-            return;
-        }
-        this._backgroundPauseBound = true;
-
-        const syncBackgroundState = () => {
-            if (document.visibilityState === 'hidden' || document.hidden) {
-                this.pauseForBackground();
-                return;
-            }
-            this.resumeFromBackground();
-        };
-
-        document.addEventListener('visibilitychange', syncBackgroundState);
-        window.addEventListener('pagehide', () => this.pauseForBackground());
-        window.addEventListener('pageshow', () => {
-            if (document.visibilityState !== 'hidden' && !document.hidden) {
-                this.resumeFromBackground();
-            }
-        });
-
-        if (document.visibilityState === 'hidden' || document.hidden) {
-            this.pauseForBackground();
-        }
     }
 
     markActivity() {
