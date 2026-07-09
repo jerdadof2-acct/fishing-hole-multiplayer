@@ -87,11 +87,14 @@ export function warnAboutUnmanagedAdsenseUnits() {
         return;
     }
 
+    const noAblateOrphans = extra.filter((node) => node.classList.contains('adsbygoogle-noablate'));
+
     console.warn(
         '[ads] Found AdSense units we did not mount:',
         extra.map(describeAdsenseUnit),
-        'Slot "(no slot id)" on <body> is page-level injection — code now sends enable_page_level_ads:false.',
-        'Also confirm AdSense → Ads → By site → Auto ads is OFF for every domain.',
+        noAblateOrphans.length > 0
+            ? 'adsbygoogle-noablate on <body> = page-level slot. index.html now queues enable_page_level_ads:false before the script loads.'
+            : 'Check AdSense → Ads → By site → Auto ads OFF, and Ad blocking recovery OFF.',
         extra
     );
 }

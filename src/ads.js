@@ -318,9 +318,11 @@ function getAdsEnabled() {
 let adsenseScriptPromise = null;
 let pageLevelAdsDisabled = false;
 
+const ADSENSE_SCRIPT_SELECTOR = 'script[data-halley-adsense="1"]';
+
 /**
- * Prevent page-level / Auto-style injection (orphan ins on body with no data-ad-slot).
- * Must be the first adsbygoogle.push() on the page.
+ * Prevent page-level / Auto-style injection (orphan ins.adsbygoogle-noablate on body).
+ * Queued before adsbygoogle.js loads — index.html also queues this at parse time.
  */
 function disablePageLevelAds() {
     if (pageLevelAdsDisabled || !ADSENSE_CLIENT) {
@@ -337,27 +339,52 @@ function disablePageLevelAds() {
     }
 }
 
+function isAdsenseLibraryReady() {
+    return document.querySelector(`${ADSENSE_SCRIPT_SELECTOR}[data-halley-ready="1"]`) !== null;
+}
+
 /** Load adsbygoogle.js only when we mount a manual unit (not on loading/login screens). */
 export function ensureAdsenseScriptLoaded() {
     if (typeof window === 'undefined' || typeof document === 'undefined') {
         return Promise.resolve();
     }
-    if (window.adsbygoogle) {
-        disablePageLevelAds();
+
+    // Must queue before the script tag is inserted (not on script onload — too late).
+    disablePageLevelAds();
+
+    if (isAdsenseLibraryReady()) {
         return Promise.resolve();
     }
+
     if (adsenseScriptPromise) {
+        return adsenseScriptPromise;
+    }
+
+    const existingScript = document.querySelector(ADSENSE_SCRIPT_SELECTOR);
+    if (existingScript) {
+        adsenseScriptPromise = new Promise((resolve, reject) => {
+            if (existingScript.dataset.halleyReady === '1') {
+                resolve();
+                return;
+            }
+            existingScript.addEventListener('load', () => resolve(), { once: true });
+            existingScript.addEventListener('error', () => {
+                adsenseScriptPromise = null;
+                reject(new Error('AdSense script failed to load'));
+            }, { once: true });
+        });
         return adsenseScriptPromise;
     }
 
     adsenseScriptPromise = new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.async = true;
+        script.dataset.halleyAdsense = '1';
         // No ?client= on the script URL — publisher id lives on each <ins> only (manual units).
         script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
         script.crossOrigin = 'anonymous';
         script.onload = () => {
-            disablePageLevelAds();
+            script.dataset.halleyReady = '1';
             resolve();
         };
         script.onerror = () => {

@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'halleys-big-catch-media';
-const CACHE_VERSION = 'v30';
+const CACHE_VERSION = 'v31';
 const CACHE_NAME = `${CACHE_PREFIX}-${CACHE_VERSION}`;
 
 /** App shell + prologue images only — audio and game assets load on demand. */
