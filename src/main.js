@@ -147,6 +147,7 @@ export class Game {
         this.lastActivityTime = performance.now();
         this._portraitIdleActive = false;
         this._devCongoPortraitPreview = false;
+        this._backgroundPaused = false;
         this._savedRimIntensity = null;
         this.deferReveal = options.deferReveal === true;
         this._revealed = false;
@@ -210,6 +211,7 @@ export class Game {
 
         this.startGalleryImageWarmup();
         this.setupActivityTracking();
+        this.setupBackgroundPause();
         this.setupCatTap();
         if (this.locations) {
             this.syncLocationMusic(this.locations.getCurrentLocation());
@@ -871,6 +873,108 @@ export class Game {
         });
     }
 
+    getLocationAmbiences() {
+        return [
+            this.celestialMusic,
+            this.amazonAmbience,
+            this.crescentPondAmbience,
+            this.cortezAmbience,
+            this.sandyShoalsAmbience,
+            this.craggyCoastAmbience,
+            this.stormbreakerBayAmbience,
+            this.louisianaBayouAmbience,
+            this.congoRiverAmbience
+        ];
+    }
+
+    suspendGameAudioContexts() {
+        const contexts = [
+            this.sfx?.listener?.context,
+            this.soundManager?.audioContext
+        ];
+
+        for (const ctx of contexts) {
+            if (ctx?.state === 'running') {
+                ctx.suspend().catch(() => {});
+            }
+        }
+    }
+
+    resumeGameAudioContexts() {
+        const contexts = [
+            this.sfx?.listener?.context,
+            this.soundManager?.audioContext
+        ];
+
+        for (const ctx of contexts) {
+            if (ctx?.state === 'suspended') {
+                ctx.resume().catch(() => {});
+            }
+        }
+    }
+
+    pauseLocationMusicForBackground() {
+        for (const ambience of this.getLocationAmbiences()) {
+            ambience?.pauseImmediate?.();
+        }
+    }
+
+    resumeLocationMusicFromBackground() {
+        for (const ambience of this.getLocationAmbiences()) {
+            ambience?.resumeFromBackground?.();
+        }
+    }
+
+    pauseForBackground() {
+        if (this._backgroundPaused) {
+            return;
+        }
+
+        this._backgroundPaused = true;
+        this.scene?.clock?.stop();
+        this.pauseLocationMusicForBackground();
+        this.suspendGameAudioContexts();
+    }
+
+    resumeFromBackground() {
+        if (!this._backgroundPaused) {
+            return;
+        }
+
+        this._backgroundPaused = false;
+        this.scene?.clock?.start();
+        this.resumeGameAudioContexts();
+        this.resumeLocationMusicFromBackground();
+        this.lastActivityTime = performance.now();
+    }
+
+    setupBackgroundPause() {
+        if (this._backgroundPauseBound || typeof document === 'undefined') {
+            return;
+        }
+        this._backgroundPauseBound = true;
+
+        const syncBackgroundState = () => {
+            if (document.visibilityState === 'hidden' || document.hidden) {
+                this.pauseForBackground();
+                return;
+            }
+            this.resumeFromBackground();
+        };
+
+        document.addEventListener('visibilitychange', syncBackgroundState);
+        window.addEventListener('pagehide', () => this.pauseForBackground());
+        window.addEventListener('pageshow', () => {
+            if (document.visibilityState !== 'hidden' && !document.hidden) {
+                this.resumeFromBackground();
+            }
+        });
+
+        if (document.visibilityState === 'hidden' || document.hidden) {
+            this.pauseForBackground();
+        }
+    }
+
     markActivity() {
         this.lastActivityTime = performance.now();
         this.celestialMusic?.resumeAfterGesture?.();
@@ -1058,7 +1162,11 @@ export class Game {
 
     animate() {
         requestAnimationFrame(() => this.animate());
-        
+
+        if (this._backgroundPaused) {
+            return;
+        }
+
         const delta = this.scene.clock.getDelta();
         
         // Update water with new tick method (includes ripple animation)

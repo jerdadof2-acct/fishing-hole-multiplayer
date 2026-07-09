@@ -196,7 +196,41 @@ export class LoopingLocationAmbience {
         }
     }
 
+    /** Immediate pause when the app is backgrounded (no fade). */
+    pauseImmediate() {
+        this._resumeAfterBackground = this.active && this.audio && !this.audio.paused;
+        this._pendingStart = false;
+        this._cancelFade();
+        if (this.audio) {
+            this.audio.pause();
+        }
+    }
+
+    /** Resume looping ambience after returning from background. */
+    resumeFromBackground() {
+        if (!this._resumeAfterBackground) {
+            return;
+        }
+        this._resumeAfterBackground = false;
+
+        const audio = this.audio;
+        if (!audio || !this.active) {
+            return;
+        }
+
+        const playAttempt = audio.play();
+        if (!playAttempt) {
+            return;
+        }
+
+        playAttempt.catch(() => {
+            this._pendingStart = true;
+            this._bindGestureRetry();
+        });
+    }
+
     stop() {
+        this._resumeAfterBackground = false;
         this._pendingStart = false;
         this._unbindGestureRetry();
 
@@ -314,5 +348,15 @@ export class StormbreakerBayAmbience {
     resumeAfterGesture() {
         this.wind.resumeAfterGesture();
         this.surf.resumeAfterGesture();
+    }
+
+    pauseImmediate() {
+        this.wind.pauseImmediate();
+        this.surf.pauseImmediate();
+    }
+
+    resumeFromBackground() {
+        this.wind.resumeFromBackground();
+        this.surf.resumeFromBackground();
     }
 }

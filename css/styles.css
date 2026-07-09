@@ -3908,15 +3908,26 @@ body.energy-blocked #location-picker-btn {
 }
 
 .story-chapter-card {
-    width: min(94vw, 520px);
-    max-height: 85vh;
-    overflow-y: auto;
-    padding: 24px 22px;
+    width: min(94vw, 480px);
+    max-height: min(85vh, calc(100dvh - 24px));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
     border-radius: 16px;
     border: 2px solid rgba(147, 197, 253, 0.45);
     background: rgba(12, 18, 40, 0.96);
     color: #f6fbff;
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.48);
+}
+
+.story-chapter-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 20px 18px 12px;
+    -webkit-overflow-scrolling: touch;
 }
 
 .story-chapter-eyebrow {
@@ -3959,8 +3970,12 @@ body.energy-blocked #location-picker-btn {
 .story-chapter-actions {
     display: flex;
     gap: 10px;
-    margin-top: 20px;
+    flex: 0 0 auto;
     flex-wrap: wrap;
+    margin-top: 0;
+    padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid rgba(147, 197, 253, 0.22);
+    background: rgba(12, 18, 40, 0.98);
 }
 
 .story-chapter-btn {
@@ -3982,6 +3997,50 @@ body.energy-blocked #location-picker-btn {
 .story-chapter-btn--secondary {
     background: rgba(255, 255, 255, 0.12);
     color: rgba(255, 255, 255, 0.88);
+}
+
+@media (max-width: 520px) {
+    .story-chapter-overlay {
+        align-items: flex-end;
+        padding: 8px 8px max(8px, env(safe-area-inset-bottom, 0px));
+    }
+
+    .story-chapter-card {
+        width: 100%;
+        max-height: min(76vh, calc(100dvh - 12px));
+        border-radius: 14px;
+    }
+
+    .story-chapter-scroll {
+        padding: 16px 14px 10px;
+    }
+
+    .story-chapter-title {
+        margin-bottom: 12px;
+        font-size: 1.12rem;
+    }
+
+    .story-chapter-body p {
+        margin-bottom: 8px;
+        font-size: 0.92rem;
+        line-height: 1.45;
+    }
+
+    .story-chapter-halley,
+    .story-chapter-father {
+        margin-top: 12px;
+        font-size: 0.9rem;
+    }
+
+    .story-chapter-actions {
+        padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .story-chapter-btn {
+        min-width: 120px;
+        padding: 11px 12px;
+        font-size: 14px;
+    }
 }
 
 /* Funny placeholder rewarded ads */

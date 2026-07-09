@@ -3896,12 +3896,14 @@ export class UI {
             : '';
 
         card.innerHTML = `
-            <p class="story-chapter-eyebrow">Chapter</p>
-            <h2 class="story-chapter-title">${chapter.title}</h2>
-            <div class="story-chapter-body">${narration}</div>
-            ${halleyLine}
-            ${fatherLine}
-            ${unlockNoteHtml}
+            <div class="story-chapter-scroll">
+                <p class="story-chapter-eyebrow">Chapter</p>
+                <h2 class="story-chapter-title">${chapter.title}</h2>
+                <div class="story-chapter-body">${narration}</div>
+                ${halleyLine}
+                ${fatherLine}
+                ${unlockNoteHtml}
+            </div>
             <div class="story-chapter-actions">
                 ${options.showKeepFishing ? '<button type="button" class="story-chapter-btn story-chapter-btn--secondary" data-action="stay">Keep Fishing Here</button>' : ''}
                 <button type="button" class="story-chapter-btn story-chapter-btn--primary" data-action="close">${options.primaryLabel || 'Continue'}</button>
