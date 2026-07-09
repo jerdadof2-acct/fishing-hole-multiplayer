@@ -1,8 +1,10 @@
 /**
- * Pause game audio/rendering when the tab or PWA is backgrounded.
+ * Pause game audio, animation, and background work when the app loses focus.
  * Location ambience uses detached HTMLAudioElement instances (not in the DOM),
- * so visibility handlers must route through the Game pause hooks.
+ * so handlers must route through Game + prologue pause hooks.
  */
+
+import { pauseActivePrologue, resumeActivePrologue } from './prologue.js';
 
 let installed = false;
 /** @type {import('./main.js').Game | null} */
@@ -12,20 +14,44 @@ export function isPageHidden() {
     return document.visibilityState === 'hidden' || document.hidden === true;
 }
 
+export function shouldGamePause() {
+    if (typeof document === 'undefined') {
+        return false;
+    }
+    return isPageHidden() || !document.hasFocus();
+}
+
+export function shouldGameResume() {
+    if (typeof document === 'undefined') {
+        return false;
+    }
+    return !isPageHidden() && document.hasFocus();
+}
+
 /** @param {import('./main.js').Game | null} game */
 export function bindGameBackgroundPause(game) {
     activeGame = game;
 }
 
 export function pauseForPageBackground() {
+    pauseActivePrologue();
     activeGame?.pauseForBackground?.();
 }
 
 export function resumeFromPageForeground() {
-    if (isPageHidden()) {
+    if (!shouldGameResume()) {
         return;
     }
     activeGame?.resumeFromBackground?.();
+    resumeActivePrologue();
+}
+
+function syncBackgroundState() {
+    if (shouldGamePause()) {
+        pauseForPageBackground();
+        return;
+    }
+    resumeFromPageForeground();
 }
 
 export function installBackgroundPauseHandlers() {
@@ -34,35 +60,30 @@ export function installBackgroundPauseHandlers() {
     }
     installed = true;
 
-    const sync = () => {
-        if (isPageHidden()) {
-            pauseForPageBackground();
-            return;
-        }
-        resumeFromPageForeground();
-    };
-
-    document.addEventListener('visibilitychange', sync);
+    document.addEventListener('visibilitychange', syncBackgroundState);
     window.addEventListener('pagehide', pauseForPageBackground);
-    window.addEventListener('pageshow', () => {
-        if (!isPageHidden()) {
-            resumeFromPageForeground();
-        }
-    });
+    window.addEventListener('pageshow', syncBackgroundState);
 
-    // iOS / Android often background the PWA on blur before visibility settles.
     window.addEventListener('blur', () => {
-        window.setTimeout(() => {
-            if (isPageHidden()) {
+        window.requestAnimationFrame(() => {
+            if (shouldGamePause()) {
                 pauseForPageBackground();
             }
-        }, 0);
+        });
+    });
+
+    window.addEventListener('focus', () => {
+        window.requestAnimationFrame(() => {
+            if (shouldGameResume()) {
+                resumeFromPageForeground();
+            }
+        });
     });
 
     document.addEventListener('freeze', pauseForPageBackground);
-    document.addEventListener('resume', resumeFromPageForeground);
+    document.addEventListener('resume', syncBackgroundState);
 
-    if (isPageHidden()) {
+    if (shouldGamePause()) {
         pauseForPageBackground();
     }
 }

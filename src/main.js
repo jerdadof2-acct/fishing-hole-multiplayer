@@ -38,7 +38,9 @@ import {
     LouisianaBayouAmbience,
     CongoRiverAmbience,
     SandyShoalsAmbience,
-    StormbreakerBayAmbience
+    StormbreakerBayAmbience,
+    pauseAllLoopingAmbiences,
+    resumeAllLoopingAmbiences
 } from './audio/locationMusic.js?v=20260707-congo-ambience';
 import { VOICEOVER_TAP_COOLDOWN_MS, VOICEOVER_ANACONDA_COOLDOWN_MS } from './config/voiceover.js';
 
@@ -52,6 +54,7 @@ import { Leaderboard } from './leaderboard.js';
 import { FishCollection } from './fishCollection.js';
 import { loadingProgress, removeLoadingOverlay } from './loadingProgress.js';
 import { dismissAllGameplayObscurers, warnAboutUnmanagedAdsenseUnits } from './gameplayObscurers.js';
+import { shouldGameResume } from './backgroundPause.js';
 import { collectGalleryImageUrls, warmImageCache } from './utils/imageAssets.js';
 import { showAdBanner } from './ads.js';
 import { bindViewportSync, getGameViewportSize, syncViewportShell, runMobileLayoutBurst } from './viewport.js';
@@ -148,6 +151,8 @@ export class Game {
         this._portraitIdleActive = false;
         this._devCongoPortraitPreview = false;
         this._backgroundPaused = false;
+        this._animateLoopActive = false;
+        this._animateFrameId = null;
         this._savedRimIntensity = null;
         this.deferReveal = options.deferReveal === true;
         this._revealed = false;
@@ -215,7 +220,7 @@ export class Game {
         if (this.locations) {
             this.syncLocationMusic(this.locations.getCurrentLocation());
         }
-        this.animate();
+        this.startAnimationLoop();
 
         if (this.ui && typeof this.ui.maybeStartGameplayOnboarding === 'function') {
             this.ui.maybeStartGameplayOnboarding();
@@ -875,20 +880,6 @@ export class Game {
         });
     }
 
-    getLocationAmbiences() {
-        return [
-            this.celestialMusic,
-            this.amazonAmbience,
-            this.crescentPondAmbience,
-            this.cortezAmbience,
-            this.sandyShoalsAmbience,
-            this.craggyCoastAmbience,
-            this.stormbreakerBayAmbience,
-            this.louisianaBayouAmbience,
-            this.congoRiverAmbience
-        ];
-    }
-
     suspendGameAudioContexts() {
         const contexts = [
             this.sfx?.listener?.context,
@@ -915,27 +906,18 @@ export class Game {
         }
     }
 
-    pauseLocationMusicForBackground() {
-        for (const ambience of this.getLocationAmbiences()) {
-            ambience?.pauseImmediate?.();
-        }
-    }
-
-    resumeLocationMusicFromBackground() {
-        for (const ambience of this.getLocationAmbiences()) {
-            ambience?.resumeFromBackground?.();
-        }
-    }
-
     pauseForBackground() {
         if (this._backgroundPaused) {
             return;
         }
 
         this._backgroundPaused = true;
+        this.stopAnimationLoop();
         this.scene?.clock?.stop();
-        this.pauseLocationMusicForBackground();
+        pauseAllLoopingAmbiences();
         this.fishing?.stopActiveReelSounds?.();
+        this.cat?.setAnimationsPaused?.(true);
+        this.ui?.pauseForBackground?.();
 
         if (this.sfx?.listener) {
             if (this._savedListenerVolume == null) {
@@ -951,8 +933,7 @@ export class Game {
         if (!this._backgroundPaused) {
             return;
         }
-        if (typeof document !== 'undefined'
-            && (document.visibilityState === 'hidden' || document.hidden)) {
+        if (!shouldGameResume()) {
             return;
         }
 
@@ -965,8 +946,27 @@ export class Game {
             this._savedListenerVolume = null;
         }
 
-        this.resumeLocationMusicFromBackground();
+        resumeAllLoopingAmbiences();
+        this.cat?.setAnimationsPaused?.(false);
+        this.ui?.resumeFromBackground?.();
+        this.startAnimationLoop();
         this.lastActivityTime = performance.now();
+    }
+
+    startAnimationLoop() {
+        if (this._animateLoopActive) {
+            return;
+        }
+        this._animateLoopActive = true;
+        this.animate();
+    }
+
+    stopAnimationLoop() {
+        this._animateLoopActive = false;
+        if (this._animateFrameId != null) {
+            cancelAnimationFrame(this._animateFrameId);
+            this._animateFrameId = null;
+        }
     }
 
     markActivity() {
@@ -1155,7 +1155,11 @@ export class Game {
     }
 
     animate() {
-        requestAnimationFrame(() => this.animate());
+        if (!this._animateLoopActive) {
+            return;
+        }
+
+        this._animateFrameId = requestAnimationFrame(() => this.animate());
 
         if (this._backgroundPaused) {
             return;

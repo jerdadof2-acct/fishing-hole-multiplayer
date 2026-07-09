@@ -11,6 +11,9 @@ import { getPrologueMusicSource } from '../assetPack.js';
 const FADE_IN_SEC = 2.5;
 const FADE_OUT_SEC = 1.8;
 
+/** Every looping ambience instance — used to pause detached Audio elements on background. */
+const LOOPING_AMBIENCE_INSTANCES = new Set();
+
 function clampVolume(value) {
     return Math.min(1, Math.max(0, Number(value) || 0));
 }
@@ -57,6 +60,7 @@ export class LoopingLocationAmbience {
         this._fadeId = 0;
         this._pendingStart = false;
         this._gestureHandler = null;
+        LOOPING_AMBIENCE_INSTANCES.add(this);
     }
 
     _getSource() {
@@ -254,6 +258,18 @@ export class LoopingLocationAmbience {
             audio.pause();
             this.active = false;
         });
+    }
+}
+
+export function pauseAllLoopingAmbiences() {
+    for (const ambience of LOOPING_AMBIENCE_INSTANCES) {
+        ambience.pauseImmediate();
+    }
+}
+
+export function resumeAllLoopingAmbiences() {
+    for (const ambience of LOOPING_AMBIENCE_INSTANCES) {
+        ambience.resumeFromBackground();
     }
 }
 

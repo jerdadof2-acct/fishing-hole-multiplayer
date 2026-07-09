@@ -93,6 +93,8 @@ export class UI {
         this.friendRefreshTimer = null;
         this.presencePingTimer = null;
         this.announcementPollTimer = null;
+        this._playerInfoTimer = null;
+        this._backgroundUiPaused = false;
         this.lastFriendSnapshot = { friends: new Map(), activities: new Set() };
         this.affordableNotified = new Set();
         this.notificationState = {
@@ -176,10 +178,55 @@ export class UI {
         }, 1000);
         
         // Update player info periodically (energy regen ticks here too)
-        setInterval(() => {
+        this._playerInfoTimer = setInterval(() => {
+            if (this._backgroundUiPaused) {
+                return;
+            }
             this.tickEnergy();
             this.updatePlayerInfo();
         }, 1000);
+    }
+
+    pauseForBackground() {
+        this._backgroundUiPaused = true;
+
+        if (this._playerInfoTimer) {
+            clearInterval(this._playerInfoTimer);
+            this._playerInfoTimer = null;
+        }
+        if (this.friendRefreshTimer) {
+            clearInterval(this.friendRefreshTimer);
+            this.friendRefreshTimer = null;
+        }
+        if (this.presencePingTimer) {
+            clearInterval(this.presencePingTimer);
+            this.presencePingTimer = null;
+        }
+        if (this.announcementPollTimer) {
+            clearInterval(this.announcementPollTimer);
+            this.announcementPollTimer = null;
+        }
+    }
+
+    resumeFromBackground() {
+        if (!this._backgroundUiPaused) {
+            return;
+        }
+        this._backgroundUiPaused = false;
+
+        if (!this._playerInfoTimer) {
+            this._playerInfoTimer = setInterval(() => {
+                if (this._backgroundUiPaused) {
+                    return;
+                }
+                this.tickEnergy();
+                this.updatePlayerInfo();
+            }, 1000);
+        }
+
+        this.startPresencePing();
+        this.ensureAnnouncementPolling();
+        this.ensureFriendActivityPolling();
     }
 
     initEnergySystem() {

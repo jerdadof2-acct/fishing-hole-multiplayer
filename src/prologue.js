@@ -29,6 +29,14 @@ import { loadingProgress } from './loadingProgress.js';
 /** Ends any in-flight prologue before starting a new one (e.g. settings replay). */
 let activePrologueSession = null;
 
+export function pauseActivePrologue() {
+    activePrologueSession?.pause?.();
+}
+
+export function resumeActivePrologue() {
+    activePrologueSession?.resume?.();
+}
+
 /** True when this build's prologue has not been shown yet (replay on each PROLOGUE_GAME_VERSION bump). */
 export function shouldPlayStoryPrologue() {
     try {
@@ -127,6 +135,7 @@ export async function playStoryPrologue(options = {}) {
     let lastCreditLine = null;
     let creditsFinished = false;
     let startGateAbort = null;
+    let prologuePaused = false;
 
     const refreshLastCreditLine = () => {
         lastCreditLine = creditsInner.querySelector('.prologue-credit-line:last-child');
@@ -307,7 +316,31 @@ export async function playStoryPrologue(options = {}) {
             resolve();
         };
 
-        activePrologueSession = { cleanup, abort };
+        const pause = () => {
+            if (prologuePaused || done) {
+                return;
+            }
+            prologuePaused = true;
+            if (rafId) {
+                cancelAnimationFrame(rafId);
+                rafId = null;
+            }
+            audioBed?.pauseImmediate?.();
+        };
+
+        const resume = () => {
+            if (!prologuePaused || done) {
+                return;
+            }
+            prologuePaused = false;
+            audioBed?.resumeFromBackground?.();
+            if (phase === 'credits' && !rafId) {
+                lastTs = 0;
+                rafId = requestAnimationFrame(tick);
+            }
+        };
+
+        activePrologueSession = { cleanup, abort, pause, resume };
 
         const onEnter = async () => {
             if (!canEnter) return;
@@ -420,7 +453,7 @@ export async function playStoryPrologue(options = {}) {
         };
 
         const tick = (ts) => {
-            if (phase !== 'credits') return;
+            if (phase !== 'credits' || prologuePaused) return;
 
             if (!lastTs) {
                 lastTs = ts;

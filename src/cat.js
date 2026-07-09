@@ -658,6 +658,23 @@ export class Cat {
         });
     }
 
+    setAnimationsPaused(paused) {
+        if (!this.mixer) {
+            return;
+        }
+
+        if (paused) {
+            if (this._savedMixerTimeScale == null) {
+                this._savedMixerTimeScale = this.mixer.timeScale;
+            }
+            this.mixer.timeScale = 0;
+            return;
+        }
+
+        this.mixer.timeScale = this._savedMixerTimeScale ?? 1;
+        this._savedMixerTimeScale = null;
+    }
+
     updateSkeleton() {
         if (!this.model) return;
         this.model.traverse((child) => {

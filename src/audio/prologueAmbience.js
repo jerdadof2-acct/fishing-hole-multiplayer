@@ -59,6 +59,7 @@ export class PrologueAudioBed {
         this._fadingOut = false;
         this._stopTimer = null;
         this._voStartTimer = null;
+        this._resumeAfterBackground = false;
     }
 
     async start() {
@@ -199,6 +200,43 @@ export class PrologueAudioBed {
         }
         this._duckLayer(this.oceanLayer);
         this._duckLayer(this.musicLayer);
+    }
+
+    pauseImmediate() {
+        if (!this.running) {
+            return;
+        }
+
+        this._resumeAfterBackground = true;
+        [this.oceanLayer, this.musicLayer, this.voiceoverLayer].forEach((layer) => {
+            try {
+                layer?.audio?.pause?.();
+            } catch {
+                /* ignore */
+            }
+        });
+
+        if (this.ctx?.state === 'running') {
+            this.ctx.suspend().catch(() => {});
+        }
+    }
+
+    resumeFromBackground() {
+        if (!this._resumeAfterBackground || !this.running) {
+            return;
+        }
+        this._resumeAfterBackground = false;
+
+        if (this.ctx?.state === 'suspended') {
+            this.ctx.resume().catch(() => {});
+        }
+
+        [this.oceanLayer, this.musicLayer, this.voiceoverLayer].forEach((layer) => {
+            if (!layer?.audio) {
+                return;
+            }
+            layer.audio.play().catch(() => {});
+        });
     }
 
     startFadeOut(durationSec = 3) {
