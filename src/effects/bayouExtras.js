@@ -310,6 +310,15 @@ function lerpAngle(current, target, t) {
     return current + delta * t;
 }
 
+function shortestAngleDiff(current, target) {
+    let delta = target - current;
+    delta = (delta + Math.PI) % (Math.PI * 2) - Math.PI;
+    if (delta < -Math.PI) {
+        delta += Math.PI * 2;
+    }
+    return delta;
+}
+
 /** Dragonfly body +X is the head — align it with velocity ~80% of darts. */
 function applyDragonflyHeading(dragonfly, data, delta) {
     const vx = data.velocity.x;
@@ -1591,27 +1600,56 @@ function isValidGatorSwimPoint(x, z, data) {
     return true;
 }
 
+function isNearDockHidingSpot(x, z) {
+    return (
+        z < 3.2 &&
+        Math.abs(x) < 9 &&
+        distanceFromBoat(x, z) < 7
+    );
+}
+
 function sampleGatorFishingViewPoint(data, random) {
-    for (let attempt = 0; attempt < 64; attempt++) {
+    for (let attempt = 0; attempt < 80; attempt++) {
         let x;
         let z;
+        const roll = random();
 
-        if (attempt < 14) {
-            const side = random() < 0.5 ? -1 : 1;
-
-            x =
-                side *
-                THREE.MathUtils.lerp(2.8, 7.2, random());
-            z = THREE.MathUtils.lerp(
-                BOAT_ANCHOR_Z - 0.8,
-                6.5,
+        if (roll < 0.44) {
+            const angle = THREE.MathUtils.lerp(
+                -0.82 * Math.PI,
+                0.82 * Math.PI,
                 random()
             );
-        } else if (attempt < 50) {
+            const depthScale = THREE.MathUtils.lerp(
+                0.38,
+                0.96,
+                random()
+            );
+
+            x =
+                CAST_CLEAR_CENTER_X +
+                Math.cos(angle) *
+                    CAST_CLEAR_RADIUS_X *
+                    depthScale;
+            z =
+                CAST_CLEAR_CENTER_Z +
+                Math.sin(angle) *
+                    CAST_CLEAR_RADIUS_Z *
+                    depthScale;
+
+            if (z < 4.5) {
+                z = THREE.MathUtils.lerp(
+                    4.5,
+                    CAST_CLEAR_CENTER_Z +
+                        CAST_CLEAR_RADIUS_Z * 0.88,
+                    random()
+                );
+            }
+        } else if (roll < 0.82) {
             const angle = random() * Math.PI * 2;
             const depthScale = THREE.MathUtils.lerp(
-                0.12,
-                0.9,
+                0.22,
+                0.98,
                 random()
             );
 
@@ -1628,8 +1666,8 @@ function sampleGatorFishingViewPoint(data, random) {
         } else {
             const angle = random() * Math.PI * 2;
             const depthScale = THREE.MathUtils.lerp(
-                0.15,
-                0.82,
+                0.28,
+                1,
                 random()
             );
 
@@ -1647,7 +1685,14 @@ function sampleGatorFishingViewPoint(data, random) {
 
         if (data.mobileHome) {
             x = THREE.MathUtils.clamp(x, -7.5, 7.5);
-            z = THREE.MathUtils.clamp(z, -2.5, 24);
+            z = THREE.MathUtils.clamp(z, 3, 24);
+        }
+
+        if (
+            isNearDockHidingSpot(x, z) &&
+            attempt < 68
+        ) {
+            continue;
         }
 
         if (isValidGatorSwimPoint(x, z, data)) {
@@ -1762,8 +1807,8 @@ function resolveGatorCollisions(gator, data) {
 function beginGatorLurk(data, gator) {
     data.mode = 'lurk';
     data.modeTime = THREE.MathUtils.lerp(
-        10,
-        22,
+        4,
+        9,
         data.random()
     );
     data.targetRise = THREE.MathUtils.lerp(
@@ -1775,7 +1820,17 @@ function beginGatorLurk(data, gator) {
     let lurkX = gator.position.x;
     let lurkZ = gator.position.z;
 
-    if (!isValidGatorSwimPoint(lurkX, lurkZ, data)) {
+    const openSpot = sampleGatorFishingViewPoint(
+        data,
+        data.random
+    );
+
+    if (openSpot && !isNearDockHidingSpot(openSpot.x, openSpot.z)) {
+        lurkX = openSpot.x;
+        lurkZ = openSpot.z;
+        gator.position.x = lurkX;
+        gator.position.z = lurkZ;
+    } else if (!isValidGatorSwimPoint(lurkX, lurkZ, data)) {
         const spot = sampleGatorFishingViewPoint(
             data,
             data.random
@@ -1795,8 +1850,8 @@ function beginGatorLurk(data, gator) {
 }
 
 function beginGatorSubmerged(data, {
-    minSeconds = 28,
-    maxSeconds = 52,
+    minSeconds = 14,
+    maxSeconds = 28,
     maybeMove = true
 } = {}) {
     data.mode = 'submerged';
@@ -1811,8 +1866,13 @@ function beginGatorSubmerged(data, {
         data.random()
     );
 
-    if (maybeMove && data.random() < 0.38) {
+    if (maybeMove) {
         pickGatorTarget(data);
+        data.swimLegTime = THREE.MathUtils.lerp(
+            6,
+            13,
+            data.random()
+        );
     }
 }
 
@@ -1832,6 +1892,33 @@ function beginGatorPeek(data, gator) {
     data.peekTargetZ = gator.position.z;
     data.velocity.x *= 0.12;
     data.velocity.z *= 0.12;
+}
+
+function isGatorHoldingPosition(data) {
+    return (
+        data.mode === 'lurk' ||
+        data.mode === 'peek' ||
+        data.mode === 'headup'
+    );
+}
+
+/** Stop, lift snout/head above the surface, hold, then dive again. */
+function beginGatorHeadUp(data, gator) {
+    data.mode = 'headup';
+    data.modeTime = THREE.MathUtils.lerp(
+        4.5,
+        8,
+        data.random()
+    );
+    data.targetRise = THREE.MathUtils.lerp(
+        0.15,
+        0.28,
+        data.random()
+    );
+    data.headUpTargetX = gator.position.x;
+    data.headUpTargetZ = gator.position.z;
+    data.velocity.set(0, 0, 0);
+    data.swimLegTime = null;
 }
 
 function placeTurtlesOnLogs(root, random) {
@@ -2912,10 +2999,13 @@ function createBayouGator(random) {
         mode: 'submerged',
         modeTime: THREE.MathUtils.lerp(28, 48, random()),
 
-        speed: THREE.MathUtils.lerp(0.58, 0.76, random()),
-        turnSharpness: THREE.MathUtils.lerp(0.14, 0.22, random()),
-        yawTurnRate: THREE.MathUtils.lerp(0.2, 0.28, random()),
+        speed: THREE.MathUtils.lerp(0.72, 0.96, random()),
+        turnSharpness: THREE.MathUtils.lerp(0.18, 0.28, random()),
+        yawTurnRate: THREE.MathUtils.lerp(0.24, 0.34, random()),
         swimFrequency: THREE.MathUtils.lerp(1.05, 1.22, random()),
+
+        smoothedTurnBias: 0,
+        swimLegTime: THREE.MathUtils.lerp(6, 12, random()),
 
         patrolRadiusX: THREE.MathUtils.lerp(12, 20, random()),
         patrolRadiusZ: THREE.MathUtils.lerp(8, 16, random()),
@@ -2927,6 +3017,31 @@ function createBayouGator(random) {
 
     return gator;
 }
+
+function gatorTurnAlignedSway(
+    sinValue,
+    amplitude,
+    turnSign,
+    turnBlend
+) {
+    const sway = sinValue * amplitude;
+
+    if (turnBlend < 0.05 || turnSign === 0) {
+        return sway;
+    }
+
+    const sameSide =
+        Math.max(0, sinValue * turnSign) *
+        turnSign *
+        amplitude;
+
+    return THREE.MathUtils.lerp(
+        sway,
+        sameSide,
+        turnBlend
+    );
+}
+
 function updateGator(
     gator,
     elapsedTime,
@@ -2941,14 +3056,14 @@ function updateGator(
             case 'submerged': {
                 const roll = data.random();
 
-                if (roll < 0.09) {
+                if (roll < 0.03) {
                     beginGatorLurk(data, gator);
-                } else if (roll < 0.13) {
-                    beginGatorPeek(data, gator);
+                } else if (roll < 0.17) {
+                    beginGatorHeadUp(data, gator);
                 } else {
                     beginGatorSubmerged(data, {
-                        minSeconds: 26,
-                        maxSeconds: 54
+                        minSeconds: 12,
+                        maxSeconds: 24
                     });
                 }
                 break;
@@ -2956,38 +3071,35 @@ function updateGator(
 
             case 'cruise':
                 beginGatorSubmerged(data, {
-                    minSeconds: 24,
-                    maxSeconds: 46,
+                    minSeconds: 10,
+                    maxSeconds: 20,
                     maybeMove: true
                 });
                 break;
 
             case 'lurk':
-                if (data.random() < 0.08) {
-                    beginGatorLurk(data, gator);
-                } else {
-                    beginGatorSubmerged(data, {
-                        minSeconds: 34,
-                        maxSeconds: 62,
-                        maybeMove: data.random() < 0.28
-                    });
-                    data.velocity.set(0, 0, 0);
-                }
+                beginGatorSubmerged(data, {
+                    minSeconds: 12,
+                    maxSeconds: 22,
+                    maybeMove: true
+                });
+                data.velocity.set(0, 0, 0);
                 break;
 
             case 'peek':
+            case 'headup':
             case 'rise':
                 beginGatorSubmerged(data, {
-                    minSeconds: 30,
-                    maxSeconds: 56,
-                    maybeMove: false
+                    minSeconds: 12,
+                    maxSeconds: 22,
+                    maybeMove: true
                 });
                 break;
 
             case 'leave':
                 beginGatorSubmerged(data, {
-                    minSeconds: 28,
-                    maxSeconds: 50,
+                    minSeconds: 12,
+                    maxSeconds: 22,
                     maybeMove: true
                 });
                 break;
@@ -3004,6 +3116,9 @@ function updateGator(
     } else if (data.mode === 'peek') {
         data.target.x = data.peekTargetX ?? gator.position.x;
         data.target.z = data.peekTargetZ ?? gator.position.z;
+    } else if (data.mode === 'headup') {
+        data.target.x = data.headUpTargetX ?? gator.position.x;
+        data.target.z = data.headUpTargetZ ?? gator.position.z;
     }
 
     const dx =
@@ -3016,25 +3131,54 @@ function updateGator(
         Math.hypot(dx, dz);
 
     if (
-        distance < 2.2 &&
-        data.mode !== 'lurk' &&
-        data.mode !== 'peek'
+        distance < 3.4 &&
+        !isGatorHoldingPosition(data)
     ) {
         pickGatorTarget(data);
+        data.swimLegTime = THREE.MathUtils.lerp(
+            6,
+            13,
+            data.random()
+        );
+    }
+
+    if (
+        data.mode === 'submerged' &&
+        data.swimLegTime != null
+    ) {
+        data.swimLegTime -= delta;
+
+        if (data.swimLegTime <= 0) {
+            if (
+                data.random() < 0.1 &&
+                !isNearDockHidingSpot(
+                    gator.position.x,
+                    gator.position.z
+                )
+            ) {
+                beginGatorHeadUp(data, gator);
+            } else {
+                pickGatorTarget(data);
+                data.swimLegTime = THREE.MathUtils.lerp(
+                    6,
+                    14,
+                    data.random()
+                );
+            }
+        }
     }
 
     const inverseDistance =
         1 / Math.max(distance, 0.0001);
 
     const modeSpeed =
-        data.mode === 'lurk' ||
-        data.mode === 'peek'
+        isGatorHoldingPosition(data)
             ? 0
             : data.mode === 'submerged'
-                ? 0.38
+                ? 0.58
                 : data.mode === 'leave'
-                    ? 0.55
-                    : 0.45;
+                    ? 0.62
+                    : 0.52;
 
     const desiredVX =
         dx *
@@ -3068,10 +3212,7 @@ function updateGator(
         ) *
         steering;
 
-    if (
-        data.mode === 'lurk' ||
-        data.mode === 'peek'
-    ) {
+    if (isGatorHoldingPosition(data)) {
         const braking =
             1 -
             Math.exp(-4.5 * delta);
@@ -3113,40 +3254,111 @@ function updateGator(
         data.phase;
 
     const activeDrive =
-        data.mode === 'lurk' ||
-        data.mode === 'peek'
-            ? 0.06
+        isGatorHoldingPosition(data)
+            ? data.mode === 'headup'
+                ? 0.14
+                : 0.1
             : data.mode === 'submerged'
                 ? THREE.MathUtils.lerp(
-                    0.22,
-                    0.62,
+                    0.34,
+                    0.78,
                     drive
                 )
                 : THREE.MathUtils.lerp(
-                    0.35,
-                    0.85,
+                    0.42,
+                    0.92,
                     drive
                 );
 
+    const tailPhase =
+        elapsedTime * frequency * 0.76 +
+        data.phase;
+
+    let smoothedTurnBias = data.smoothedTurnBias ?? 0;
+
+    if (
+        swimSpeed > 0.02 &&
+        !isGatorHoldingPosition(data)
+    ) {
+        const desiredYaw = Math.atan2(
+            -data.velocity.z,
+            data.velocity.x
+        );
+        const yawError = shortestAngleDiff(
+            gator.rotation.y,
+            desiredYaw
+        );
+        const turnTarget = THREE.MathUtils.clamp(
+            yawError * 0.82,
+            -0.52,
+            0.52
+        );
+        const turnSmooth =
+            1 - Math.exp(-5.2 * delta);
+
+        smoothedTurnBias +=
+            (turnTarget - smoothedTurnBias) * turnSmooth;
+    } else {
+        const turnDecay =
+            1 - Math.exp(-4 * delta);
+
+        smoothedTurnBias *= 1 - turnDecay;
+    }
+
+    data.smoothedTurnBias = smoothedTurnBias;
+
+    const tailTurnSign =
+        smoothedTurnBias < -0.001
+            ? 1
+            : smoothedTurnBias > 0.001
+                ? -1
+                : 0;
+
+    const turnBlend = THREE.MathUtils.clamp(
+        Math.abs(smoothedTurnBias) / 0.22,
+        0,
+        1
+    );
+
+    const headTurnLead =
+        smoothedTurnBias *
+        THREE.MathUtils.lerp(0.46, 0.82, drive);
+
+    const tailTurnLead =
+        -smoothedTurnBias *
+        THREE.MathUtils.lerp(0.42, 0.78, drive);
+
     const chestYaw =
-        Math.sin(phase) *
-        0.022 *
-        activeDrive;
+        gatorTurnAlignedSway(
+            Math.sin(tailPhase),
+            0.03 * activeDrive,
+            tailTurnSign,
+            turnBlend * 0.35
+        );
 
     const abdomenYaw =
-        Math.sin(phase - 0.16) *
-        0.052 *
-        activeDrive;
+        gatorTurnAlignedSway(
+            Math.sin(tailPhase - 0.2),
+            0.082 * activeDrive,
+            tailTurnSign,
+            turnBlend
+        );
 
     const pelvisYaw =
-        Math.sin(phase - 0.32) *
-        0.075 *
-        activeDrive;
+        gatorTurnAlignedSway(
+            Math.sin(tailPhase - 0.4),
+            0.118 * activeDrive,
+            tailTurnSign,
+            turnBlend
+        );
 
     const tailRootYaw =
-        Math.sin(phase - 0.48) *
-        0.095 *
-        activeDrive;
+        gatorTurnAlignedSway(
+            Math.sin(tailPhase - 0.62),
+            0.148 * activeDrive,
+            tailTurnSign,
+            turnBlend
+        );
 
     const bodyFollow =
         1 -
@@ -3161,21 +3373,24 @@ function updateGator(
 
     data.abdomenBone.rotation.y +=
         (
-            abdomenYaw -
+            abdomenYaw +
+            tailTurnLead * 0.22 -
             data.abdomenBone.rotation.y
         ) *
         bodyFollow;
 
     data.pelvisBone.rotation.y +=
         (
-            pelvisYaw -
+            pelvisYaw +
+            tailTurnLead * 0.38 -
             data.pelvisBone.rotation.y
         ) *
         bodyFollow;
 
     data.tailRootBone.rotation.y +=
         (
-            tailRootYaw -
+            tailRootYaw +
+            tailTurnLead * 0.52 -
             data.tailRootBone.rotation.y
         ) *
         bodyFollow;
@@ -3192,22 +3407,34 @@ function updateGator(
             (i + 1) / tailBones.length;
 
         const phaseDelay =
-            0.48 +
-            normalized * 1.2;
+            0.52 +
+            normalized * 1.35;
 
         const amplitude =
             THREE.MathUtils.lerp(
-                0.055,
-                0.27,
-                Math.pow(normalized, 1.15)
+                0.1,
+                0.46,
+                Math.pow(normalized, 1.08)
             ) *
             activeDrive;
 
+        const turnContribution =
+            tailTurnLead *
+            Math.pow(normalized, 1.18);
+
+        const rawSin = Math.sin(
+            tailPhase - phaseDelay
+        );
+
+        const swimSway = gatorTurnAlignedSway(
+            rawSin,
+            amplitude,
+            tailTurnSign,
+            turnBlend
+        );
+
         const targetYaw =
-            Math.sin(
-                phase - phaseDelay
-            ) *
-            amplitude;
+            swimSway + turnContribution;
 
         const followSpeed =
             THREE.MathUtils.lerp(
@@ -3241,8 +3468,8 @@ function updateGator(
     }
 
     const headCounterYaw =
-        -chestYaw * 0.7 -
-        abdomenYaw * 0.22;
+        -chestYaw * 0.42 -
+        abdomenYaw * 0.16;
 
     const headFollow =
         1 -
@@ -3250,23 +3477,48 @@ function updateGator(
 
     data.neckBone.rotation.y +=
         (
-            -chestYaw * 0.45 -
+            -chestYaw * 0.32 +
+            headTurnLead * 0.58 -
             data.neckBone.rotation.y
         ) *
         headFollow;
 
     data.headBone.rotation.y +=
         (
-            headCounterYaw -
+            headCounterYaw +
+            headTurnLead -
             data.headBone.rotation.y
         ) *
         headFollow;
 
     data.headBone.rotation.z =
-        Math.sin(
-            elapsedTime * 0.32 +
-            data.phase
-        ) * 0.008;
+        data.mode === 'headup'
+            ? THREE.MathUtils.lerp(
+                data.headBone.rotation.z,
+                -0.11,
+                1 - Math.exp(-3.2 * delta)
+            )
+            : Math.sin(
+                elapsedTime * 0.32 +
+                data.phase
+            ) * 0.008;
+
+    if (data.mode === 'headup') {
+        const liftFollow =
+            1 - Math.exp(-3.4 * delta);
+
+        data.neckBone.rotation.z +=
+            (
+                -0.24 -
+                data.neckBone.rotation.z
+            ) *
+            liftFollow;
+    } else {
+        const neckRelax =
+            1 - Math.exp(-4 * delta);
+
+        data.neckBone.rotation.z *= 1 - neckRelax;
+    }
 
     for (
         let i = 0;
@@ -3354,11 +3606,14 @@ function updateGator(
             elapsedTime * 0.6 +
             data.phase
         ) *
-        (data.mode === 'lurk' ? 0.003 : 0.006);
+        (data.mode === 'lurk' || data.mode === 'headup'
+            ? 0.003
+            : 0.006);
 
     if (
         data.velocity.lengthSq() >
-        0.00005
+        0.00005 &&
+        !isGatorHoldingPosition(data)
     ) {
         const targetYaw =
             Math.atan2(
@@ -3383,8 +3638,9 @@ function updateGator(
 
     const jawTarget =
         data.mode === 'peek' ||
-        data.mode === 'rise'
-            ? 0.012
+        data.mode === 'rise' ||
+        data.mode === 'headup'
+            ? 0.014
             : 0;
 
     data.jawBone.rotation.z +=
@@ -3427,20 +3683,20 @@ function configureGatorHomeRange(data, waterLevel, isMobile) {
         data.center.set(
             CAST_CLEAR_CENTER_X,
             waterLevel,
-            THREE.MathUtils.lerp(4, 10, data.random())
+            THREE.MathUtils.lerp(7, 13, data.random())
         );
-        data.patrolRadiusX = CAST_CLEAR_RADIUS_X * 0.62;
-        data.patrolRadiusZ = CAST_CLEAR_RADIUS_Z * 0.58;
+        data.patrolRadiusX = CAST_CLEAR_RADIUS_X * 0.84;
+        data.patrolRadiusZ = CAST_CLEAR_RADIUS_Z * 0.8;
         return;
     }
 
     data.center.set(
         CAST_CLEAR_CENTER_X,
         waterLevel,
-        CAST_CLEAR_CENTER_Z
+        THREE.MathUtils.lerp(8, 14, data.random())
     );
-    data.patrolRadiusX = CAST_CLEAR_RADIUS_X * 0.72;
-    data.patrolRadiusZ = CAST_CLEAR_RADIUS_Z * 0.72;
+    data.patrolRadiusX = CAST_CLEAR_RADIUS_X * 0.9;
+    data.patrolRadiusZ = CAST_CLEAR_RADIUS_Z * 0.88;
 }
 
 function placeGator({
@@ -3469,19 +3725,33 @@ function placeGator({
         );
 
         if (isMobile) {
-            gator.position.set(
-                data.center.x,
-                waterLevel - 0.22,
-                data.center.z
+            const spawn = sampleGatorFishingViewPoint(
+                data,
+                random
             );
+
+            if (spawn) {
+                gator.position.set(
+                    spawn.x,
+                    waterLevel - 0.22,
+                    spawn.z
+                );
+            } else {
+                gator.position.set(
+                    data.center.x,
+                    waterLevel - 0.22,
+                    data.center.z
+                );
+            }
+
             gator.rotation.y = Math.atan2(
                 BOAT_ANCHOR_X - gator.position.x,
                 BOAT_ANCHOR_Z - gator.position.z
             );
             beginGatorSubmerged(data, {
-                minSeconds: 22,
-                maxSeconds: 42,
-                maybeMove: false
+                minSeconds: 10,
+                maxSeconds: 18,
+                maybeMove: true
             });
         } else {
             const spawn = sampleGatorFishingViewPoint(
