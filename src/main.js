@@ -53,7 +53,7 @@ import { FishCollection } from './fishCollection.js';
 import { loadingProgress, removeLoadingOverlay } from './loadingProgress.js';
 import { dismissAllGameplayObscurers, warnAboutUnmanagedAdsenseUnits } from './gameplayObscurers.js';
 import { collectGalleryImageUrls, warmImageCache } from './utils/imageAssets.js';
-import { showAdBanner } from './ads.js';
+import { showAdBanner, pruneOrphanAdsenseNoablate } from './ads.js';
 import { bindViewportSync, getGameViewportSize, syncViewportShell, runMobileLayoutBurst } from './viewport.js';
 import {
     IDLE_PORTRAIT_DELAY_SEC,
@@ -188,7 +188,10 @@ export class Game {
         document.getElementById('site-legal-footer')?.classList.remove('hidden');
         showAdBanner();
 
-        window.setTimeout(() => warnAboutUnmanagedAdsenseUnits(), 3500);
+        window.setTimeout(() => {
+            pruneOrphanAdsenseNoablate();
+            warnAboutUnmanagedAdsenseUnits();
+        }, 3500);
 
         syncViewportShell();
         requestAnimationFrame(() => {

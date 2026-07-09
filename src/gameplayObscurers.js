@@ -2,7 +2,8 @@ import { removeLoadingOverlay } from './loadingProgress.js';
 import {
     ADSENSE_BANNER_SLOT,
     ADSENSE_ENERGY_SLOT,
-    isManagedAdsenseUnit
+    isManagedAdsenseUnit,
+    pruneOrphanAdsenseNoablate
 } from './ads.js';
 
 /**
@@ -54,6 +55,8 @@ function describeAdsenseUnit(node) {
  * Also flags our slot IDs if they appear outside those containers (orphan from double push).
  */
 export function warnAboutUnmanagedAdsenseUnits() {
+    pruneOrphanAdsenseNoablate();
+
     const all = [...document.querySelectorAll('ins.adsbygoogle')];
     const managed = all.filter((node) => isManagedAdsenseUnit(node));
     const extra = all.filter((node) => !isManagedAdsenseUnit(node));

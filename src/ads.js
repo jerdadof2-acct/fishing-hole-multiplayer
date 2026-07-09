@@ -308,6 +308,73 @@ export function isManagedAdsenseUnit(node) {
     return node.getAttribute('data-halley-managed') === 'true';
 }
 
+/**
+ * Remove unfilled page-level placeholders (ins.adsbygoogle-noablate on body).
+ * These are not our manual units — Google injects them despite enable_page_level_ads:false.
+ * Only removes empty slots (no iframe, not filled) outside our containers.
+ * @returns {number}
+ */
+export function pruneOrphanAdsenseNoablate() {
+    if (!getAdsEnabled()) {
+        return 0;
+    }
+
+    const orphans = [...document.querySelectorAll('ins.adsbygoogle')].filter((node) => {
+        if (isManagedAdsenseUnit(node)) {
+            return false;
+        }
+        if (node.getAttribute('data-ad-slot')) {
+            return false;
+        }
+        if (node.closest('#ad-banner, #adsense-energy-host')) {
+            return false;
+        }
+        if (!node.classList.contains('adsbygoogle-noablate')) {
+            return false;
+        }
+        if (node.querySelector('iframe')) {
+            return false;
+        }
+        if (node.getAttribute('data-adsbygoogle-status') === 'done') {
+            return false;
+        }
+        return true;
+    });
+
+    orphans.forEach((node) => node.remove());
+
+    if (orphans.length > 0) {
+        console.info(
+            '[ads] Removed',
+            orphans.length,
+            'unfilled page-level AdSense placeholder(s) (adsbygoogle-noablate).'
+        );
+    }
+
+    return orphans.length;
+}
+
+let adsenseOrphanGuardStarted = false;
+
+/** Watch for and remove page-level noablate placeholders as Google injects them. */
+export function startAdsenseOrphanGuard() {
+    if (adsenseOrphanGuardStarted || typeof document === 'undefined' || !getAdsEnabled()) {
+        return;
+    }
+    adsenseOrphanGuardStarted = true;
+
+    const run = () => pruneOrphanAdsenseNoablate();
+
+    run();
+
+    if (typeof MutationObserver !== 'undefined' && document.body) {
+        const observer = new MutationObserver(() => run());
+        observer.observe(document.body, { childList: true, subtree: false });
+    }
+
+    [400, 1200, 2500, 5000, 8000].forEach((ms) => window.setTimeout(run, ms));
+}
+
 function getAdsEnabled() {
     if (typeof window !== 'undefined' && typeof window.__KITTY_CREEK_ADS_ENABLED__ === 'boolean') {
         return window.__KITTY_CREEK_ADS_ENABLED__;
@@ -377,20 +444,27 @@ export function ensureAdsenseScriptLoaded() {
     }
 
     adsenseScriptPromise = new Promise((resolve, reject) => {
+        disablePageLevelAds();
+
+        // Inline push immediately before the external script tag (DOM order matters to Google).
+        const inline = document.createElement('script');
+        inline.textContent = `(window.adsbygoogle=window.adsbygoogle||[]).push({google_ad_client:'${ADSENSE_CLIENT}',enable_page_level_ads:false});`;
+
         const script = document.createElement('script');
         script.async = true;
         script.dataset.halleyAdsense = '1';
-        // No ?client= on the script URL — publisher id lives on each <ins> only (manual units).
         script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
         script.crossOrigin = 'anonymous';
         script.onload = () => {
             script.dataset.halleyReady = '1';
+            pruneOrphanAdsenseNoablate();
             resolve();
         };
         script.onerror = () => {
             adsenseScriptPromise = null;
             reject(new Error('AdSense script failed to load'));
         };
+        document.head.appendChild(inline);
         document.head.appendChild(script);
     });
 
@@ -466,6 +540,9 @@ export async function mountAdsenseUnit(container, slotId, options = {}) {
         console.warn('[ads] AdSense push failed:', err);
         return false;
     }
+
+    window.setTimeout(() => pruneOrphanAdsenseNoablate(), 100);
+    window.setTimeout(() => pruneOrphanAdsenseNoablate(), 800);
 
     return true;
 }
@@ -560,6 +637,7 @@ export function showAdBanner() {
 
     banner.classList.remove('hidden');
     bannerMountAttempts = 0;
+    startAdsenseOrphanGuard();
 
     // Wait for loading overlay to hide and layout to settle before AdSense measures the slot.
     window.setTimeout(() => {
