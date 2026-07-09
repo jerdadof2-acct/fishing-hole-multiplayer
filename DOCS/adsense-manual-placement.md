@@ -4,8 +4,10 @@ Google is injecting ads across the page because **Auto ads** are turned on in yo
 
 | Placement | When | Code |
 |-----------|------|------|
-| **Top banner** | During normal play | `#ad-banner` → `ADSENSE_BANNER_SLOT` |
-| **Energy reward** | User taps “Watch Ad (+20 Energy)” when out of energy | Full-screen overlay → `ADSENSE_ENERGY_SLOT` |
+| **Top banner** | During normal play | `#ad-banner` iframe → `/ad-banner.html` |
+| **Energy reward** | User taps “Watch Ad (+20 Energy)” when out of energy | Overlay iframe → `/ad-energy.html` |
+
+**Important:** `adsbygoogle.js` must **not** load on `index.html` (the game page). Isolated ad HTML pages load the script so Google cannot inject `adsbygoogle-noablate` on the game UI.
 
 Everything else must **not** show Google ads.
 

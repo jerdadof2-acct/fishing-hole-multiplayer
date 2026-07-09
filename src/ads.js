@@ -7,6 +7,10 @@ export const ADSENSE_BANNER_SLOT = '7906348086';
 /** Energy reward — shown only when user taps Watch Ad on out-of-energy modal. */
 export const ADSENSE_ENERGY_SLOT = '1178086965';
 
+/** Isolated ad pages — AdSense script never loads on the game page (prevents body noablate). */
+export const AD_BANNER_FRAME_URL = '/ad-banner.html';
+export const AD_ENERGY_FRAME_URL = '/ad-energy.html';
+
 /** Minimum view time before granting energy reward (real AdSense unit). */
 export const ADSENSE_ENERGY_VIEW_MS = 15000;
 
@@ -244,6 +248,19 @@ function mountBannerContentForced(banner, bannerContent, adWidth) {
     mountBannerContentWithWidth(bannerContent, adWidth);
 }
 
+function mountAdBannerIframe(bannerContent) {
+    bannerContent.innerHTML = '';
+    const iframe = document.createElement('iframe');
+    iframe.src = AD_BANNER_FRAME_URL;
+    iframe.title = 'Advertisement';
+    iframe.setAttribute('data-halley-ad', 'banner');
+    iframe.setAttribute('loading', 'lazy');
+    iframe.setAttribute('scrolling', 'no');
+    iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+    iframe.style.cssText = 'display:block;width:100%;max-width:728px;height:50px;border:0;margin:0 auto;';
+    bannerContent.appendChild(iframe);
+}
+
 async function mountBannerContentWithWidth(bannerContent, adWidth) {
     if (bannerContentMounted || bannerMountInFlight || !bannerContent) {
         return;
@@ -263,12 +280,8 @@ async function mountBannerContentWithWidth(bannerContent, adWidth) {
             return;
         }
 
-        if (hasConfiguredBannerAd() && await mountAdsenseUnit(bannerContent, ADSENSE_BANNER_SLOT, {
-            width: adWidth,
-            height: 50,
-            fullWidthResponsive: false,
-            managedLabel: 'banner'
-        })) {
+        if (hasConfiguredBannerAd()) {
+            mountAdBannerIframe(bannerContent);
             bannerContentMounted = true;
             return;
         }
@@ -637,9 +650,8 @@ export function showAdBanner() {
 
     banner.classList.remove('hidden');
     bannerMountAttempts = 0;
-    startAdsenseOrphanGuard();
 
-    // Wait for loading overlay to hide and layout to settle before AdSense measures the slot.
+    // Wait for loading overlay to hide and layout to settle before the iframe measures width.
     window.setTimeout(() => {
         requestAnimationFrame(() => {
             requestAnimationFrame(mountBannerContent);

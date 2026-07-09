@@ -4,8 +4,7 @@
  */
 
 import {
-    mountAdsenseUnit,
-    ADSENSE_ENERGY_SLOT,
+    AD_ENERGY_FRAME_URL,
     ADSENSE_ENERGY_VIEW_MS,
     hasConfiguredEnergyAd
 } from './ads.js';
@@ -174,23 +173,19 @@ function showAdsenseEnergyReward() {
         document.body.appendChild(overlay);
 
         const host = overlay.querySelector('#adsense-energy-host');
-        void mountAdsenseUnit(host, ADSENSE_ENERGY_SLOT, {
-            format: 'auto',
-            fullWidthResponsive: true,
-            managedLabel: 'energy'
-        }).then((mounted) => {
-            if (!mounted) {
-                removeOverlay(overlay);
-                reject(new Error('AdSense energy unit failed to mount'));
-                return;
-            }
+        host.innerHTML = '';
+        const iframe = document.createElement('iframe');
+        iframe.src = AD_ENERGY_FRAME_URL;
+        iframe.title = 'Sponsored message';
+        iframe.setAttribute('data-halley-ad', 'energy');
+        iframe.setAttribute('loading', 'eager');
+        iframe.setAttribute('scrolling', 'no');
+        iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+        iframe.style.cssText = 'display:block;width:100%;min-height:280px;border:0;';
+        host.appendChild(iframe);
 
-            runRewardTimer(overlay, durationMs, () => {
-                resolve({ success: true, type: 'energy' });
-            });
-        }).catch((error) => {
-            removeOverlay(overlay);
-            reject(error);
+        runRewardTimer(overlay, durationMs, () => {
+            resolve({ success: true, type: 'energy' });
         });
     });
 }

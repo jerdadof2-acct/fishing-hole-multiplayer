@@ -1,10 +1,4 @@
 import { removeLoadingOverlay } from './loadingProgress.js';
-import {
-    ADSENSE_BANNER_SLOT,
-    ADSENSE_ENERGY_SLOT,
-    isManagedAdsenseUnit,
-    pruneOrphanAdsenseNoablate
-} from './ads.js';
 
 /**
  * Remove or hide layers that can sit above the WebGL canvas on mobile
@@ -27,77 +21,33 @@ export function dismissAllGameplayObscurers() {
     document.body.classList.add('game-ready');
 }
 
-function describeAdsenseUnit(node) {
-    const slot = node.getAttribute('data-ad-slot') || '(no slot id)';
-    const parent = node.parentElement;
-    const ancestry = [];
-    let current = parent;
-    while (current && ancestry.length < 4) {
-        const label = current.id
-            ? `#${current.id}`
-            : current.className
-                ? `.${String(current.className).split(/\s+/).slice(0, 2).join('.')}`
-                : current.tagName?.toLowerCase();
-        ancestry.push(label);
-        current = current.parentElement;
-    }
-
-    return {
-        slot,
-        halleyAd: node.getAttribute('data-halley-ad') || null,
-        status: node.getAttribute('data-adsbygoogle-status') || null,
-        parentChain: ancestry.join(' ← ')
-    };
-}
-
 /**
- * Warn when Google injects ad units we did not mount in #ad-banner or #adsense-energy-host.
- * Also flags our slot IDs if they appear outside those containers (orphan from double push).
+ * The game page must not load adsbygoogle.js — ads live in ad-banner.html / ad-energy.html iframes.
+ * Any ins.adsbygoogle on the parent document means script leaked onto the game page.
  */
 export function warnAboutUnmanagedAdsenseUnits() {
-    pruneOrphanAdsenseNoablate();
+    const onGamePage = [...document.querySelectorAll('ins.adsbygoogle')];
+    const inFrames = [...document.querySelectorAll('iframe[data-halley-ad]')];
 
-    const all = [...document.querySelectorAll('ins.adsbygoogle')];
-    const managed = all.filter((node) => isManagedAdsenseUnit(node));
-    const extra = all.filter((node) => !isManagedAdsenseUnit(node));
-
-    if (all.length === 0) {
+    if (onGamePage.length > 0) {
+        const details = onGamePage.map((node) => ({
+            slot: node.getAttribute('data-ad-slot') || '(no slot)',
+            classes: node.className,
+            parent: node.parentElement?.id || String(node.parentElement?.className || '').slice(0, 40)
+        }));
+        console.warn(
+            '[ads] AdSense <ins> found on the game page — ads should only load inside iframes.',
+            details,
+            onGamePage
+        );
         return;
     }
 
-    const orphansWithOurSlots = all.filter((node) => {
-        const slot = node.getAttribute('data-ad-slot');
-        return (slot === ADSENSE_BANNER_SLOT || slot === ADSENSE_ENERGY_SLOT)
-            && !node.closest('#ad-banner, #adsense-energy-host');
-    });
-
-    if (orphansWithOurSlots.length > 0) {
-        console.warn(
-            '[ads] Found our ad slot(s) outside the banner/energy containers —',
-            'usually caused by calling adsbygoogle.push() more than once per <ins>.',
-            orphansWithOurSlots.map(describeAdsenseUnit)
+    if (inFrames.length > 0) {
+        console.info(
+            '[ads] Game page clean —',
+            inFrames.length,
+            'isolated ad iframe(s). AdSense runs only inside ad-banner.html / ad-energy.html.'
         );
     }
-
-    if (extra.length === 0) {
-        if (managed.length > 1) {
-            console.info(
-                '[ads] Multiple managed AdSense units on page (expected: 1 banner during play,',
-                '+ 1 energy unit only while the reward overlay is open).',
-                managed.map(describeAdsenseUnit)
-            );
-        }
-        return;
-    }
-
-    const noAblateOrphans = extra.filter((node) => node.classList.contains('adsbygoogle-noablate'));
-
-    console.warn(
-        '[ads] Found AdSense units we did not mount:',
-        extra.map(describeAdsenseUnit),
-        noAblateOrphans.length > 0
-            ? 'adsbygoogle-noablate on <body> = page-level slot. index.html now queues enable_page_level_ads:false before the script loads.'
-            : 'Check AdSense → Ads → By site → Auto ads OFF, and Ad blocking recovery OFF.',
-        extra
-    );
 }

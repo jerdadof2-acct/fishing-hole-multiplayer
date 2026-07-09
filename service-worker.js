@@ -1,11 +1,13 @@
 const CACHE_PREFIX = 'halleys-big-catch-media';
-const CACHE_VERSION = 'v32';
+const CACHE_VERSION = 'v33';
 const CACHE_NAME = `${CACHE_PREFIX}-${CACHE_VERSION}`;
 
 /** App shell + prologue images only — audio and game assets load on demand. */
 const BOOT_ASSETS = [
     '/',
     '/index.html',
+    '/ad-banner.html',
+    '/ad-energy.html',
     '/asset-manifest.json',
     '/manifest.json',
     '/css/styles.css',
