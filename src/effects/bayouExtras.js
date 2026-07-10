@@ -1807,8 +1807,8 @@ function beginGatorSubmerged(data, {
         data.random()
     );
     data.targetRise = THREE.MathUtils.lerp(
-        -0.23,
-        -0.19,
+        -0.28,
+        -0.22,
         data.random()
     );
 
@@ -3028,8 +3028,8 @@ function createBayouGator(random) {
         patrolRadiusZ: THREE.MathUtils.lerp(8, 16, random()),
 
         baseWaterY: 0,
-        targetRise: -0.22,
-        currentRise: -0.22
+        targetRise: -0.24,
+        currentRise: -0.24
     });
 
     ensureGatorHeadTapHelper(gator);
@@ -3557,33 +3557,50 @@ function updateGator(
         ) *
         headFollow;
 
-    data.headBone.rotation.z =
-        data.mode === 'headup'
-            ? THREE.MathUtils.lerp(
-                data.headBone.rotation.z,
-                -0.11,
-                1 - Math.exp(-3.2 * delta)
-            )
-            : Math.sin(
-                elapsedTime * 0.32 +
-                data.phase
-            ) * 0.008;
+    const headIdleRoll =
+        Math.sin(
+            elapsedTime * 0.32 +
+            data.phase
+        ) *
+        0.004;
+
+    const headPoseFollow =
+        1 -
+        Math.exp(-4.5 * delta);
+
+    data.headBone.rotation.z +=
+        (
+            headIdleRoll -
+            data.headBone.rotation.z
+        ) *
+        headPoseFollow;
+
+    const neckNeutralFollow =
+        1 -
+        Math.exp(-5 * delta);
 
     if (data.mode === 'headup') {
         const liftFollow =
             1 - Math.exp(-3.4 * delta);
 
+        data.neckBone.rotation.x +=
+            (
+                0.26 -
+                data.neckBone.rotation.x
+            ) *
+            liftFollow;
+
         data.neckBone.rotation.z +=
             (
-                -0.24 -
+                0 -
                 data.neckBone.rotation.z
             ) *
             liftFollow;
+    } else if (data.startleFlinchTime <= 0) {
+        data.neckBone.rotation.x *= 1 - neckNeutralFollow;
+        data.neckBone.rotation.z *= 1 - neckNeutralFollow;
     } else {
-        const neckRelax =
-            1 - Math.exp(-4 * delta);
-
-        data.neckBone.rotation.z *= 1 - neckRelax;
+        data.neckBone.rotation.z *= 1 - neckNeutralFollow;
     }
 
     if (data.startleFlinchTime > 0) {
@@ -3612,6 +3629,8 @@ function updateGator(
                 data.jawBone.rotation.x
             ) *
             (1 - Math.exp(-10 * delta));
+    } else {
+        data.jawBone.rotation.x *= 1 - neckNeutralFollow;
     }
 
     for (
