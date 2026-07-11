@@ -9,7 +9,7 @@ export const DAILY_BONUS_COINS = 100;
 export const FIRST_CATCH_BONUS_COINS = 50;
 export const FIRST_CATCH_BONUS_ENERGY = 5;
 export const LEVEL_UP_ENERGY_BONUS = 8;
-export const AD_ENERGY_REWARD = 22;
+export const AD_ENERGY_REWARD = 40;
 
 /** Halley-flavored lines when out of energy (random pick). */
 export const OUT_OF_ENERGY_LINES = [

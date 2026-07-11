@@ -240,9 +240,13 @@ export class UI {
         const energyModal = document.getElementById('energy-modal');
         const dailyModal = document.getElementById('daily-bonus-modal');
 
-        document.getElementById('energy-ad-btn')?.addEventListener('click', () => {
-            this.watchAdForEnergy();
-        });
+        const energyAdBtn = document.getElementById('energy-ad-btn');
+        if (energyAdBtn) {
+            energyAdBtn.textContent = `📺 Watch Ad (+${AD_ENERGY_REWARD} Energy)`;
+            energyAdBtn.addEventListener('click', () => {
+                this.watchAdForEnergy();
+            });
+        }
         document.getElementById('energy-wait-btn')?.addEventListener('click', () => {
             this.hideOutOfEnergyModal();
         });

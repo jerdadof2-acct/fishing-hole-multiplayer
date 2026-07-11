@@ -1,5 +1,5 @@
 /**
- * Rewarded ads — energy boost (+20) when out of energy.
+ * Rewarded ads — energy boost when out of energy.
  * Uses manual AdSense unit when ADSENSE_ENERGY_SLOT is set; otherwise mock overlay.
  */
 
@@ -8,6 +8,7 @@ import {
     ADSENSE_ENERGY_VIEW_MS,
     hasConfiguredEnergyAd
 } from './ads.js';
+import { AD_ENERGY_REWARD } from './config/energy.js';
 
 const MOCK_REWARDED_AD_DURATION_MS = 5200;
 
@@ -88,7 +89,7 @@ const DOUBLE_COINS_ADS = [
 ];
 
 const REWARD_LABELS = {
-    energy: '+20 Energy',
+    energy: `+${AD_ENERGY_REWARD} Energy`,
     double_coins: 'Double Coins'
 };
 
@@ -159,7 +160,7 @@ function showAdsenseEnergyReward() {
         overlay.innerHTML = `
             <div class="rewarded-ad-frame rewarded-ad-frame--adsense">
                 <div class="rewarded-ad-top">
-                    <span class="rewarded-ad-reward-tag">Reward: +20 Energy</span>
+                    <span class="rewarded-ad-reward-tag">Reward: +${AD_ENERGY_REWARD} Energy</span>
                     <span class="rewarded-ad-timer" data-timer>${durationSec}s</span>
                 </div>
                 <div class="adsense-energy-host" id="adsense-energy-host"></div>
