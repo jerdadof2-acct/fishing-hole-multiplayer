@@ -3178,7 +3178,8 @@ function ensureGatorHeadTapHelper(gator) {
 function getGatorFloatPitchTarget(mode) {
     switch (mode) {
         case 'headup':
-            return 0.18;
+            // Neck pitch lifts the head; skip root bank so he does not lean sideways.
+            return 0;
         case 'lurk':
         case 'peek':
         case 'rise':
@@ -3589,28 +3590,38 @@ function updateGator(
         1 -
         Math.exp(-4.5 * delta);
 
+    // Head-up: keep neck/head square — no left/right yaw or roll, only lift pitch.
+    const headYawTarget =
+        data.mode === 'headup'
+            ? 0
+            : headCounterYaw + headTurnLead;
+    const neckYawTarget =
+        data.mode === 'headup'
+            ? 0
+            : -chestYaw * 0.32 + headTurnLead * 0.58;
+
     data.neckBone.rotation.y +=
         (
-            -chestYaw * 0.32 +
-            headTurnLead * 0.58 -
+            neckYawTarget -
             data.neckBone.rotation.y
         ) *
         headFollow;
 
     data.headBone.rotation.y +=
         (
-            headCounterYaw +
-            headTurnLead -
+            headYawTarget -
             data.headBone.rotation.y
         ) *
         headFollow;
 
     const headIdleRoll =
-        Math.sin(
-            elapsedTime * 0.32 +
-            data.phase
-        ) *
-        0.004;
+        data.mode === 'headup'
+            ? 0
+            : Math.sin(
+                elapsedTime * 0.32 +
+                data.phase
+            ) *
+            0.004;
 
     const headPoseFollow =
         1 -
@@ -3643,6 +3654,20 @@ function updateGator(
             (
                 0 -
                 data.neckBone.rotation.z
+            ) *
+            liftFollow;
+
+        data.headBone.rotation.z +=
+            (
+                0 -
+                data.headBone.rotation.z
+            ) *
+            liftFollow;
+
+        data.headBone.rotation.x +=
+            (
+                0 -
+                data.headBone.rotation.x
             ) *
             liftFollow;
     } else if (data.startleFlinchTime <= 0) {
