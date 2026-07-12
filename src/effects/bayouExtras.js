@@ -2345,10 +2345,10 @@ function addGatorSkinBumps(
             THREE.MathUtils.lerp(0.25, 1, row / 2);
 
         const bump = createGatorEllipsoid(
-            size * THREE.MathUtils.lerp(0.85, 1.15, (i % 5) / 4),
-            1.05,
-            0.58,
-            0.92,
+            size * THREE.MathUtils.lerp(0.85, 1.1, (i % 5) / 4),
+            1.02,
+            0.4,
+            0.88,
             GATOR_SCUTE_MATERIAL,
             8,
             6
@@ -2356,121 +2356,101 @@ function addGatorSkinBumps(
 
         bump.position.set(
             startX + span * t + side * 0.012,
-            baseY + (i % 3) * 0.004,
+            baseY + (i % 3) * 0.002,
             z
         );
         parent.add(bump);
     }
 }
 
-/** Match head/snout armor density to the ridged body scutes. */
+/** Match head/snout armor density to the ridged body — subdued so shape still reads. */
 function addGatorHeadArmor(headBone, jawBone) {
-    // Cranial table ridges behind the eyes.
+    // Cranial table behind / between the eyes.
     addGatorDorsalScutes(
         headBone,
-        -0.18,
-        0.06,
-        4,
+        -0.2,
+        0.02,
         3,
-        0.48,
-        0.2,
-        0.16
-    );
-    addGatorSkinBumps(headBone, -0.2, 0.08, 0.175, 0.2, 10, 0.042);
-
-    // Brow / interorbital armor.
-    addGatorDorsalScutes(
-        headBone,
-        -0.08,
-        0.1,
         3,
-        2,
-        0.36,
-        0.215,
+        0.32,
+        0.178,
         0.12
     );
+    addGatorSkinBumps(headBone, -0.22, 0.04, 0.168, 0.14, 12, 0.028);
 
-    // Upper snout — follow the thick muzzle crest.
+    // Interorbital — continue the texture between the eye sockets.
+    addGatorDorsalScutes(
+        headBone,
+        -0.06,
+        0.12,
+        2,
+        3,
+        0.26,
+        0.188,
+        0.055
+    );
+    addGatorSkinBumps(headBone, -0.05, 0.14, 0.182, 0.06, 8, 0.026);
+
+    // Upper snout — lower crest so bumps sit in the skin, not spikes.
     addGatorDorsalScutes(
         headBone,
         0.18,
         0.48,
-        4,
         3,
-        0.42,
-        0.195,
-        0.15
+        3,
+        0.28,
+        0.172,
+        0.12
     );
     addGatorDorsalScutes(
         headBone,
         0.48,
         0.78,
-        4,
         3,
-        0.36,
-        0.19,
-        0.14
+        3,
+        0.24,
+        0.17,
+        0.11
     );
     addGatorDorsalScutes(
         headBone,
         0.72,
-        0.96,
-        3,
+        0.94,
         2,
-        0.3,
+        2,
         0.2,
-        0.11
+        0.178,
+        0.09
     );
 
-    addGatorSkinBumps(headBone, 0.16, 0.55, 0.185, 0.18, 14, 0.036);
-    addGatorSkinBumps(headBone, 0.52, 0.92, 0.188, 0.16, 12, 0.032);
+    addGatorSkinBumps(headBone, 0.16, 0.55, 0.168, 0.14, 12, 0.026);
+    addGatorSkinBumps(headBone, 0.52, 0.9, 0.17, 0.12, 10, 0.024);
 
-    // Cheek / lateral snout pebbling.
+    // Cheek / lateral snout pebbling — soft.
     for (const side of [-1, 1]) {
-        for (let i = 0; i < 7; i++) {
-            const t = i / 6;
+        for (let i = 0; i < 6; i++) {
+            const t = i / 5;
             const bump = createGatorEllipsoid(
-                THREE.MathUtils.lerp(0.04, 0.028, t),
-                1.05,
-                0.62,
-                0.85,
+                THREE.MathUtils.lerp(0.028, 0.02, t),
+                1.02,
+                0.48,
+                0.78,
                 GATOR_SCUTE_MATERIAL,
                 8,
                 6
             );
 
             bump.position.set(
-                THREE.MathUtils.lerp(0.12, 0.88, t),
-                THREE.MathUtils.lerp(0.04, 0.08, t),
-                side * THREE.MathUtils.lerp(0.24, 0.17, t)
+                THREE.MathUtils.lerp(0.12, 0.85, t),
+                THREE.MathUtils.lerp(0.035, 0.065, t),
+                side * THREE.MathUtils.lerp(0.23, 0.16, t)
             );
             headBone.add(bump);
         }
     }
 
-    // Lower jaw — lighter armor so it stays secondary.
-    addGatorSkinBumps(jawBone, 0.2, 0.85, 0.05, 0.12, 8, 0.028);
-    for (const side of [-1, 1]) {
-        for (let i = 0; i < 5; i++) {
-            const t = i / 4;
-            const bump = createGatorEllipsoid(
-                0.026,
-                1.0,
-                0.55,
-                0.8,
-                GATOR_SCUTE_MATERIAL,
-                7,
-                5
-            );
-
-            bump.position.set(
-                THREE.MathUtils.lerp(0.22, 0.88, t),
-                0.02,
-                side * THREE.MathUtils.lerp(0.16, 0.11, t)
-            );
-            jawBone.add(bump);
-        }
-    }
+    // Lower jaw — light texture only.
+    addGatorSkinBumps(jawBone, 0.22, 0.82, 0.042, 0.1, 6, 0.022);
 }
 
 function addGatorTailScutes(
@@ -2511,7 +2491,7 @@ function addGatorTailScutes(
     );
 }
 
-/** Raised orbital mounds with yellow eyes — embedded in the skull, only slightly proud. */
+/** Raised orbital mounds with yellow eyes and a skin lid for blinking. */
 function createGatorEye(parent, x, y, z, side) {
     const mound = createGatorEllipsoid(
         0.1,
@@ -2592,6 +2572,34 @@ function createGatorEye(parent, x, y, z, side) {
         z + side * 0.062
     );
     parent.add(pupil);
+
+    // Skin lid — thin when open, covers the yellow when closed.
+    const lid = createGatorEllipsoid(
+        0.046,
+        1.12,
+        0.75,
+        0.82,
+        GATOR_SKIN_MATERIAL,
+        12,
+        8
+    );
+
+    const openLidY = y + 0.072;
+    const closedLidY = y + 0.048;
+
+    lid.position.set(x + 0.014, openLidY, z + side * 0.05);
+    lid.scale.set(1.08, 0.14, 1.08);
+    parent.add(lid);
+
+    return {
+        eye,
+        pupil,
+        lid,
+        openLidY,
+        closedLidY,
+        openScaleY: 0.14,
+        closedScaleY: 1.05
+    };
 }
 
 function buildGatorSkeleton(gator) {
@@ -2960,13 +2968,17 @@ function skinGatorHead(bones) {
     nostrilMound.position.set(0.98, 0.095, 0);
     headBone.add(nostrilMound);
 
+    const eyes = [];
+
     for (const side of [-1, 1]) {
-        createGatorEye(
-            headBone,
-            0.04,
-            0.155,
-            side * 0.215,
-            side
+        eyes.push(
+            createGatorEye(
+                headBone,
+                0.04,
+                0.155,
+                side * 0.215,
+                side
+            )
         );
 
         const nostril = createGatorEllipsoid(
@@ -3089,6 +3101,8 @@ function skinGatorHead(bones) {
     }
 
     addGatorHeadArmor(headBone, jawBone);
+
+    return eyes;
 }
 
 function skinGatorTail(bones) {
@@ -3262,7 +3276,7 @@ function createBayouGator(random) {
     const bones = buildGatorSkeleton(gator);
 
     skinGatorTorso(bones);
-    skinGatorHead(bones);
+    const eyes = skinGatorHead(bones);
     skinGatorTail(bones);
     skinGatorScutes(bones);
 
@@ -3287,6 +3301,7 @@ function createBayouGator(random) {
         tailRootBone: bones.tailRootBone,
         tailBones: bones.tailBones,
         legs,
+        eyes,
 
         random,
         center: new THREE.Vector3(),
@@ -3316,7 +3331,11 @@ function createBayouGator(random) {
         baseWaterY: 0,
         targetRise: -0.24,
         currentRise: -0.24,
-        floatPitch: 0
+        floatPitch: 0,
+
+        blinkTime: 0,
+        blinkDuration: 0,
+        nextBlinkIn: THREE.MathUtils.lerp(4, 9, random())
     });
 
     ensureGatorHeadTapHelper(gator);
@@ -3377,12 +3396,84 @@ function getGatorFloatPitchTarget(mode) {
     }
 }
 
+function updateGatorBlink(data, delta) {
+    const eyes = data.eyes || [];
+
+    if (eyes.length === 0) {
+        return;
+    }
+
+    if (data.blinkTime <= 0) {
+        data.nextBlinkIn -= delta;
+
+        if (data.nextBlinkIn <= 0) {
+            data.blinkDuration = THREE.MathUtils.lerp(
+                0.85,
+                1.2,
+                data.random()
+            );
+            data.blinkTime = data.blinkDuration;
+            data.nextBlinkIn = THREE.MathUtils.lerp(
+                5,
+                12,
+                data.random()
+            );
+        }
+    } else {
+        data.blinkTime -= delta;
+    }
+
+    let closeAmount = 0;
+
+    if (data.blinkTime > 0 && data.blinkDuration > 0) {
+        const remaining = data.blinkTime;
+        const elapsed = data.blinkDuration - remaining;
+
+        if (elapsed < 0.14) {
+            closeAmount = elapsed / 0.14;
+        } else if (remaining < 0.16) {
+            closeAmount = remaining / 0.16;
+        } else {
+            closeAmount = 1;
+        }
+    }
+
+    closeAmount = THREE.MathUtils.clamp(closeAmount, 0, 1);
+
+    for (let i = 0; i < eyes.length; i++) {
+        const eye = eyes[i];
+        const lid = eye.lid;
+
+        if (!lid) {
+            continue;
+        }
+
+        lid.position.y = THREE.MathUtils.lerp(
+            eye.openLidY,
+            eye.closedLidY,
+            closeAmount
+        );
+        lid.scale.y = THREE.MathUtils.lerp(
+            eye.openScaleY,
+            eye.closedScaleY,
+            closeAmount
+        );
+
+        // Hide yellow under the lid while closed.
+        const showEye = closeAmount < 0.55;
+        eye.eye.visible = showEye;
+        eye.pupil.visible = showEye;
+    }
+}
+
 function updateGator(
     gator,
     elapsedTime,
     delta
 ) {
     const data = gator.userData;
+
+    updateGatorBlink(data, delta);
 
     data.modeTime -= delta;
 
