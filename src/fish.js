@@ -39,7 +39,7 @@ export class Fish {
         this.mesh = this.fish;
         
         this.speedFight = 1.25;             // m/s, not too fast
-        this.speedLanding = 3.5;            // controlled homeward pull (slowed for smoother landing)
+        this.speedLanding = 8.0;            // Keep fish mesh tracking the fast final reel-in
         this._dir = new THREE.Vector3(1, 0, 0);
         this._dirT = 0;
         this._fightT = 0;
@@ -256,6 +256,7 @@ export class Fish {
             this._landingStartLogged = false;
             this._lastLandingLogTime = 0;
             this._landingElapsed = 0;
+            this._nearBoatTime = 0;
             debugLog('[FISH] startLanding() called, state set to LANDING');
             if (this._gentleReunion) {
                 const castButton = document.getElementById('cast-button');
@@ -704,8 +705,9 @@ export class Fish {
             // Keep fish hidden during landing too
             this.mesh.visible = false;
             
-            // Catch once the bobber reaches the boat midline — generous enough that
-            // rope thrash / tip spring cannot leave Halley shaking in LANDING.
+            // Catch only when the bobber is actually at the boat midline.
+            // Do NOT use tip distance — the tip sits out over the water and was
+            // completing catches ~10ft short of the boat.
             let catchTriggered = false;
 
             if (this._gentleReunion) {
@@ -727,32 +729,24 @@ export class Fish {
                 );
                 const distToLandingCenter = toLanding.length();
                 const lateralOffset = Math.abs(bobberPos.x - dockRefPos.x);
-                const bobberDistToTip = rodTip
-                    ? new THREE.Vector3().subVectors(bobberPos, rodTip).length()
-                    : Infinity;
 
-                // Arrive-at-boat window: still centered (reel-in looks correct), but complete
-                // before the final inch of rope thrash starts the stuck-shake loop.
-                const CATCH_RADIUS = 3.25;
-                const MAX_LATERAL = 2.75;
-                const TIP_CATCH = 3.5;
-                const NEAR_BOAT = distToLandingCenter < CATCH_RADIUS && lateralOffset < MAX_LATERAL;
+                const CATCH_RADIUS = 1.85;
+                const MAX_LATERAL = 2.0;
 
-                if (NEAR_BOAT || bobberDistToTip < TIP_CATCH) {
+                if (distToLandingCenter < CATCH_RADIUS && lateralOffset < MAX_LATERAL) {
                     debugLog(
                         `[FISH] Landing complete — center=${distToLandingCenter.toFixed(2)}, ` +
-                        `lateral=${lateralOffset.toFixed(2)}, tip=${bobberDistToTip.toFixed(2)}`
+                        `lateral=${lateralOffset.toFixed(2)}`
                     );
                     catchTriggered = true;
                 } else if (
-                    this._landingElapsed > 1.75 &&
-                    distToLandingCenter < 4.5 &&
-                    lateralOffset < 3.25
+                    this._landingElapsed > 2.5 &&
+                    distToLandingCenter < 2.5 &&
+                    lateralOffset < 2.5
                 ) {
-                    // Nearly home; finish before prolonged reeling shake.
+                    // At the boat but rope thrash preventing the tight radius.
                     catchTriggered = true;
-                } else if (this._landingElapsed > 5.0) {
-                    // Hard timeout so LANDING cannot stick forever.
+                } else if (this._landingElapsed > 6.0 && distToLandingCenter < 3.5) {
                     catchTriggered = true;
                 }
             }

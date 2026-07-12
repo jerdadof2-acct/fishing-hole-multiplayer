@@ -1799,7 +1799,7 @@ export class Fishing {
     // Reel speed constants
     REEL_RATE_BASE = 3.2;               // no-fish reel-in (m/s along rope)
     REEL_RATE_FIGHT = 2.08;             // REEL_RATE_BASE * 0.65 - slower while fighting
-    REEL_RATE_LANDING = 1.25;             // Slow speed during landing (half speed for smoother final reel-in)
+    REEL_RATE_LANDING = 3.5;              // Fast final pull to the boat (was 1.25 — felt like a slow troll)
     
     updateReel(delta) {
         const fish = this.sceneRef?.fish;
@@ -2101,11 +2101,11 @@ export class Fishing {
             // When reeling without fish, also pull harder to prevent stalling
             // Note: nudgeMultiplier is increased to compensate for slower reelRate during landing
             // to keep pull strength the same (5.0 * 2.5 = 12.5, so 10.0 * 1.25 = 12.5)
-            const nudgeMultiplier = (this.fishOnLine && fish?.state === 'LANDING') ? 12.0 : 
+            const nudgeMultiplier = (this.fishOnLine && fish?.state === 'LANDING') ? 14.0 : 
                                      (!this.fishOnLine) ? 5.0 : 0.8;
-            // Soft cap avoids huge hitch jumps without slowing a normal approach to a crawl.
+            // Allow a large per-frame step so the last stretch does not crawl.
             const rawStep = reelRate * nudgeMultiplier * delta;
-            const maxLandingStep = (this.fishOnLine && fish?.state === 'LANDING') ? 0.7 : Infinity;
+            const maxLandingStep = (this.fishOnLine && fish?.state === 'LANDING') ? 1.4 : Infinity;
             const step = Math.min(rawStep, distXZ, maxLandingStep);
             if (this.rope.nudgeBobberXZ) {
                 this.rope.nudgeBobberXZ(pullDir.x * step, pullDir.z * step);
@@ -2127,9 +2127,21 @@ export class Fishing {
                 if (Math.abs(lateralRemain) > 0.05) {
                     const lateralStep = Math.sign(lateralRemain) * Math.min(
                         Math.abs(lateralRemain),
-                        8.0 * delta
+                        14.0 * delta
                     );
                     this.rope.nudgeBobberXZ(lateralStep, 0);
+                }
+                // Once close, yank the last few units home so catch can fire without a shake stall.
+                const homeZ = catPos.z + 0.65;
+                const remainZ = homeZ - bob.z;
+                const remainX = catPos.x - bob.x;
+                const remainDist = Math.hypot(remainX, remainZ);
+                if (remainDist < 4.0 && remainDist > 0.05) {
+                    const homeStep = Math.min(remainDist, 10.0 * delta);
+                    this.rope.nudgeBobberXZ(
+                        (remainX / remainDist) * homeStep,
+                        (remainZ / remainDist) * homeStep
+                    );
                 }
             }
         }
