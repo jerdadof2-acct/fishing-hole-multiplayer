@@ -1,13 +1,9 @@
 /**
  * Rewarded ads — energy boost when out of energy.
- * Uses manual AdSense unit when ADSENSE_ENERGY_SLOT is set; otherwise mock overlay.
+ * Uses fictional Halley ads only. Google AdSense display units are not allowed
+ * on behavioral / out-of-energy screens (publisher-content policy).
  */
 
-import {
-    AD_ENERGY_FRAME_URL,
-    ADSENSE_ENERGY_VIEW_MS,
-    hasConfiguredEnergyAd
-} from './ads.js';
 import { AD_ENERGY_REWARD } from './config/energy.js';
 
 const MOCK_REWARDED_AD_DURATION_MS = 5200;
@@ -17,7 +13,7 @@ const ENERGY_ADS = [
         badge: 'NOT A REAL AD',
         label: 'Emergency casting fuel',
         headline: "Halley's Energy Shot™",
-        tagline: 'One sip = 20 energy. Two sips = your vet calls Halley.',
+        tagline: `One sip = ${AD_ENERGY_REWARD} energy. Two sips = your vet calls Halley.`,
         emoji: ['⚡', '🐱', '🥤'],
         gradient: 'linear-gradient(145deg, #facc15 0%, #f59e0b 45%, #b45309 100%)',
         finePrint: 'Do not operate heavy fishing rods while napping.'
@@ -145,52 +141,6 @@ function runRewardTimer(overlay, durationMs, onComplete) {
     }, durationMs);
 }
 
-/**
- * Full-screen manual AdSense unit — only when user opts in via energy modal.
- */
-function showAdsenseEnergyReward() {
-    return new Promise((resolve, reject) => {
-        const durationMs = ADSENSE_ENERGY_VIEW_MS;
-        const durationSec = Math.ceil(durationMs / 1000);
-
-        const overlay = document.createElement('div');
-        overlay.className = 'rewarded-ad-overlay rewarded-ad-overlay--adsense';
-        overlay.setAttribute('role', 'dialog');
-        overlay.setAttribute('aria-label', 'Sponsored message');
-        overlay.innerHTML = `
-            <div class="rewarded-ad-frame rewarded-ad-frame--adsense">
-                <div class="rewarded-ad-top">
-                    <span class="rewarded-ad-reward-tag">Reward: +${AD_ENERGY_REWARD} Energy</span>
-                    <span class="rewarded-ad-timer" data-timer>${durationSec}s</span>
-                </div>
-                <div class="adsense-energy-host" id="adsense-energy-host"></div>
-                <div class="rewarded-ad-progress-track">
-                    <div class="rewarded-ad-progress-bar" data-progress></div>
-                </div>
-                <p class="rewarded-ad-skip" data-skip>Reward in ${durationSec}s…</p>
-            </div>
-        `;
-
-        document.body.appendChild(overlay);
-
-        const host = overlay.querySelector('#adsense-energy-host');
-        host.innerHTML = '';
-        const iframe = document.createElement('iframe');
-        iframe.src = AD_ENERGY_FRAME_URL;
-        iframe.title = 'Sponsored message';
-        iframe.setAttribute('data-halley-ad', 'energy');
-        iframe.setAttribute('loading', 'eager');
-        iframe.setAttribute('scrolling', 'no');
-        iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
-        iframe.style.cssText = 'display:block;width:100%;min-height:280px;border:0;';
-        host.appendChild(iframe);
-
-        runRewardTimer(overlay, durationMs, () => {
-            resolve({ success: true, type: 'energy' });
-        });
-    });
-}
-
 function showMockRewardedAd(rewardType) {
     return new Promise((resolve) => {
         const ad = pickAd(rewardType);
@@ -237,8 +187,5 @@ function showMockRewardedAd(rewardType) {
  * @returns {Promise<{ success: boolean, type: string }>}
  */
 export function showRewardedAd(rewardType) {
-    if (rewardType === 'energy' && hasConfiguredEnergyAd()) {
-        return showAdsenseEnergyReward();
-    }
     return showMockRewardedAd(rewardType);
 }

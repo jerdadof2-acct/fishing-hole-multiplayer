@@ -1,15 +1,22 @@
 # AdSense — Manual Placement Only (Halley's Big Catch)
 
-Google is injecting ads across the page because **Auto ads** are turned on in your AdSense account. This game only allows ads in **two places you control**:
+Google-served ads are allowed **only** as the top banner during active gameplay
+(on a screen that already has publisher content: the fishing game).
 
-| Placement | When | Code |
-|-----------|------|------|
-| **Top banner** | During normal play | `#ad-banner` iframe → `/ad-banner.html` |
-| **Energy reward** | User taps “Watch Ad (+20 Energy)” when out of energy | Overlay iframe → `/ad-energy.html` |
+| Placement | When | Implementation |
+|-----------|------|----------------|
+| **Top banner** | During normal play after `reveal()` | `#ad-banner` iframe via **srcdoc** (no public ad-only URL) |
+| **Energy reward** | User taps “Watch Ad” when out of energy | **Fictional Halley ads only** — no Google AdSense |
 
-**Important:** `adsbygoogle.js` must **not** load on `index.html` (the game page). Isolated ad HTML pages load the script so Google cannot inject `adsbygoogle-noablate` on the game UI.
+**Why energy cannot use AdSense:** Google forbids ads on screens without publisher
+content, including behavioral / reward overlays. Using a display unit there caused
+the “Google-served ads on screens without publisher-content” policy hit.
 
-Everything else must **not** show Google ads.
+**Important:** `adsbygoogle.js` must **not** load on `index.html` (the game page).
+The banner iframe uses srcdoc so the game document stays ad-script-free.
+
+`/ad-banner.html` and `/ad-energy.html` are **redirect stubs** (no ads) and are
+blocked in `robots.txt`. Do not put AdSense tags on those files again.
 
 ---
 
@@ -34,55 +41,46 @@ Save. Changes can take up to an hour to apply; clear cache and hard refresh when
 
 ---
 
-## Step 2 — Create TWO manual ad units (not Auto ads)
+## Step 2 — Manual banner unit only
 
 In AdSense: **Ads** → **By ad unit** → **Display ads**
 
 ### Unit A — Top banner
 
 - **Name:** Halley Top Banner  
-- **Type:** Display ad → **Responsive**  
-- **Use:** Only in `#ad-banner` at top of game  
+- **Type:** Display ad → fixed 320×50 or responsive  
+- **Use:** Only in `#ad-banner` at top of game during play  
 
-Copy the **ad slot ID** (numeric) into `src/ads.js`:
+Copy the **ad slot ID** into `src/ads.js`:
 
 ```js
 export const ADSENSE_BANNER_SLOT = 'YOUR_BANNER_SLOT_ID';
 ```
 
-### Unit B — Energy reward (user opt-in)
+### Energy reward
 
-- **Name:** Halley Energy Reward  
-- **Type:** Display ad → **Responsive** (or large rectangle on mobile)  
-- **Use:** Only when player chooses “Watch Ad” on the out-of-energy modal  
-
-Copy the slot ID into:
-
-```js
-export const ADSENSE_ENERGY_SLOT = 'YOUR_ENERGY_SLOT_ID';
-```
+Do **not** create or attach a Google display unit for energy. The overlay uses joke ads
+and still grants `AD_ENERGY_REWARD`. For true rewarded video later, use Google’s
+**Ad Placement API** (H5 games) — not a blank display overlay.
 
 ---
 
-## Step 3 — Deploy
+## Step 3 — Deploy & request review
 
-Commit and push after pasting both slot IDs. Until slots are set, the game shows **placeholder** cat ads (banner) and **mock** rewarded overlay (energy).
+1. Deploy this build (redirect stubs + robots.txt + no energy AdSense).
+2. Confirm Auto ads are OFF.
+3. Visit `/ad-banner.html` and `/ad-energy.html` — both should redirect home with **no ads**.
+4. In AdSense, request a review after the fix is live.
 
 ---
 
 ## What we do NOT use
 
 - **Auto ads** — off in dashboard  
-- **Page-level ads** — blocked in code via `enable_page_level_ads: false` (first `adsbygoogle.push`)  
+- **Page-level ads** — blocked via `enable_page_level_ads: false` inside the banner srcdoc  
+- **Google ads on energy / alert / loading screens**  
+- **Public HTML pages that only contain an ad**  
 - **AdMob** — native apps only; this is a PWA  
-- **Ads on shop / inventory / friends tabs** — no ad units there  
-- **Ads during fishing fight** — banner stays at top only; no interstitials unless user requests energy ad  
-
----
-
-## True “rewarded video” on the web (later)
-
-AdSense **display** units in our energy overlay work for “watch then get +20 energy.” For skippable **video** rewarded ads on the web, Google’s **Ad Placement API** (H5 games) is a separate integration. The current design is correct for launch: manual banner + opt-in full-size unit on energy.
 
 ---
 
@@ -92,9 +90,9 @@ AdSense **display** units in our energy overlay work for “watch then get +20 e
 |---------|-----|
 | Ads appear in random places | Auto ads still on — disable in Step 1 |
 | Banner empty | Slot ID wrong, site not approved, or low fill — wait 24–48h after approval |
-| Energy ad shows mock | `ADSENSE_ENERGY_SLOT` still empty |
-| Ads on loading screen | Auto ads — disable; banner is hidden until game `reveal()` |
+| Policy: screens without content | Do not restore AdSense on energy overlay or ad-*.html |
+| Orphans on game page | Banner must stay in srcdoc iframe; never load adsbygoogle on index.html |
 
 ---
 
-*Publisher ID:* `ca-pub-8602130362499092` (already in `index.html`)
+*Publisher ID:* `ca-pub-8602130362499092`

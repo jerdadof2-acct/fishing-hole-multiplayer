@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+# Ad-only shell URLs must never be crawled or indexed (AdSense publisher-content policy).
+Disallow: /ad-banner.html
+Disallow: /ad-energy.html

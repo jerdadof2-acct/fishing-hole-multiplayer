@@ -4,15 +4,17 @@ export const ADSENSE_CLIENT = 'ca-pub-8602130362499092';
 /** Top banner — `#ad-banner` only. See DOCS/adsense-manual-placement.md */
 export const ADSENSE_BANNER_SLOT = '7906348086';
 
-/** Energy reward — shown only when user taps Watch Ad on out-of-energy modal. */
-export const ADSENSE_ENERGY_SLOT = '1178086965';
+/**
+ * Energy “Watch Ad” overlay must NOT use Google AdSense display units.
+ * AdSense forbids Google-served ads on behavioral / low-content screens
+ * (out-of-energy reward overlays). Energy uses fictional Halley ads only.
+ * @deprecated Kept empty so old iframe URLs never serve an energy unit.
+ */
+export const ADSENSE_ENERGY_SLOT = '';
 
-/** Isolated ad pages — AdSense script never loads on the game page (prevents body noablate). */
+/** Legacy public ad HTML paths — must not serve ads (redirect stubs only). */
 export const AD_BANNER_FRAME_URL = '/ad-banner.html';
 export const AD_ENERGY_FRAME_URL = '/ad-energy.html';
-
-/** Minimum view time before granting energy reward (real AdSense unit). */
-export const ADSENSE_ENERGY_VIEW_MS = 15000;
 
 /** Fictional cat-product ads — emoji mini “product shots”, no real sponsors. */
 const ADS = [
@@ -248,15 +250,37 @@ function mountBannerContentForced(banner, bannerContent, adWidth) {
     mountBannerContentWithWidth(bannerContent, adWidth);
 }
 
+/**
+ * Banner AdSense unit as srcdoc iframe (isolated from game page script).
+ * Do not use a public /ad-banner.html URL — crawlable ad-only pages violate
+ * “ads on screens without publisher-content.”
+ */
+function buildBannerAdSrcdoc() {
+    const client = ADSENSE_CLIENT;
+    const slot = ADSENSE_BANNER_SLOT;
+    return `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex,nofollow">
+<style>html,body{margin:0;padding:0;background:transparent;overflow:hidden}</style>
+<script>(window.adsbygoogle=window.adsbygoogle||[]).push({google_ad_client:'${client}',enable_page_level_ads:false});</script>
+</head><body>
+<ins class="adsbygoogle" style="display:inline-block;width:320px;height:50px"
+ data-ad-client="${client}" data-ad-slot="${slot}"></ins>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js" crossorigin="anonymous"></script>
+<script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
+</body></html>`;
+}
+
 function mountAdBannerIframe(bannerContent) {
     bannerContent.innerHTML = '';
     const iframe = document.createElement('iframe');
-    iframe.src = AD_BANNER_FRAME_URL;
+    iframe.srcdoc = buildBannerAdSrcdoc();
     iframe.title = 'Advertisement';
     iframe.setAttribute('data-halley-ad', 'banner');
     iframe.setAttribute('loading', 'lazy');
     iframe.setAttribute('scrolling', 'no');
     iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox');
     iframe.style.cssText = 'display:block;width:100%;max-width:728px;height:50px;border:0;margin:0 auto;';
     bannerContent.appendChild(iframe);
 }
@@ -297,15 +321,15 @@ export function hasConfiguredBannerAd() {
     return Boolean(ADSENSE_CLIENT && ADSENSE_BANNER_SLOT);
 }
 
+/** Always false — energy overlays cannot host Google-served ads (AdSense policy). */
 export function hasConfiguredEnergyAd() {
-    return Boolean(ADSENSE_CLIENT && ADSENSE_ENERGY_SLOT);
+    return false;
 }
 
 /** Slot IDs we intentionally mount — used to spot orphan injections. */
-export const MANAGED_ADSENSE_SLOT_IDS = new Set([
-    ADSENSE_BANNER_SLOT,
-    ADSENSE_ENERGY_SLOT
-]);
+export const MANAGED_ADSENSE_SLOT_IDS = new Set(
+    [ADSENSE_BANNER_SLOT].filter(Boolean)
+);
 
 export function isManagedAdsenseUnit(node) {
     if (!node || typeof node.getAttribute !== 'function') {
