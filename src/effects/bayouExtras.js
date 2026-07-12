@@ -2323,6 +2323,156 @@ function addGatorDorsalScutes(
     }
 }
 
+/** Small raised osteoderm bumps — same pebbled language as the body ridges. */
+function addGatorSkinBumps(
+    parent,
+    startX,
+    endX,
+    baseY,
+    zSpread,
+    count,
+    size = 0.038
+) {
+    const span = endX - startX;
+
+    for (let i = 0; i < count; i++) {
+        const t = count <= 1 ? 0.5 : i / (count - 1);
+        const side = i % 2 === 0 ? -1 : 1;
+        const row = Math.floor(i / 2) % 3;
+        const z =
+            side *
+            zSpread *
+            THREE.MathUtils.lerp(0.25, 1, row / 2);
+
+        const bump = createGatorEllipsoid(
+            size * THREE.MathUtils.lerp(0.85, 1.15, (i % 5) / 4),
+            1.05,
+            0.58,
+            0.92,
+            GATOR_SCUTE_MATERIAL,
+            8,
+            6
+        );
+
+        bump.position.set(
+            startX + span * t + side * 0.012,
+            baseY + (i % 3) * 0.004,
+            z
+        );
+        parent.add(bump);
+    }
+}
+
+/** Match head/snout armor density to the ridged body scutes. */
+function addGatorHeadArmor(headBone, jawBone) {
+    // Cranial table ridges behind the eyes.
+    addGatorDorsalScutes(
+        headBone,
+        -0.18,
+        0.06,
+        4,
+        3,
+        0.48,
+        0.2,
+        0.16
+    );
+    addGatorSkinBumps(headBone, -0.2, 0.08, 0.175, 0.2, 10, 0.042);
+
+    // Brow / interorbital armor.
+    addGatorDorsalScutes(
+        headBone,
+        -0.08,
+        0.1,
+        3,
+        2,
+        0.36,
+        0.215,
+        0.12
+    );
+
+    // Upper snout — follow the thick muzzle crest.
+    addGatorDorsalScutes(
+        headBone,
+        0.18,
+        0.48,
+        4,
+        3,
+        0.42,
+        0.195,
+        0.15
+    );
+    addGatorDorsalScutes(
+        headBone,
+        0.48,
+        0.78,
+        4,
+        3,
+        0.36,
+        0.19,
+        0.14
+    );
+    addGatorDorsalScutes(
+        headBone,
+        0.72,
+        0.96,
+        3,
+        2,
+        0.3,
+        0.2,
+        0.11
+    );
+
+    addGatorSkinBumps(headBone, 0.16, 0.55, 0.185, 0.18, 14, 0.036);
+    addGatorSkinBumps(headBone, 0.52, 0.92, 0.188, 0.16, 12, 0.032);
+
+    // Cheek / lateral snout pebbling.
+    for (const side of [-1, 1]) {
+        for (let i = 0; i < 7; i++) {
+            const t = i / 6;
+            const bump = createGatorEllipsoid(
+                THREE.MathUtils.lerp(0.04, 0.028, t),
+                1.05,
+                0.62,
+                0.85,
+                GATOR_SCUTE_MATERIAL,
+                8,
+                6
+            );
+
+            bump.position.set(
+                THREE.MathUtils.lerp(0.12, 0.88, t),
+                THREE.MathUtils.lerp(0.04, 0.08, t),
+                side * THREE.MathUtils.lerp(0.24, 0.17, t)
+            );
+            headBone.add(bump);
+        }
+    }
+
+    // Lower jaw — lighter armor so it stays secondary.
+    addGatorSkinBumps(jawBone, 0.2, 0.85, 0.05, 0.12, 8, 0.028);
+    for (const side of [-1, 1]) {
+        for (let i = 0; i < 5; i++) {
+            const t = i / 4;
+            const bump = createGatorEllipsoid(
+                0.026,
+                1.0,
+                0.55,
+                0.8,
+                GATOR_SCUTE_MATERIAL,
+                7,
+                5
+            );
+
+            bump.position.set(
+                THREE.MathUtils.lerp(0.22, 0.88, t),
+                0.02,
+                side * THREE.MathUtils.lerp(0.16, 0.11, t)
+            );
+            jawBone.add(bump);
+        }
+    }
+}
+
 function addGatorTailScutes(
     parent,
     startX,
@@ -2796,18 +2946,6 @@ function skinGatorHead(bones) {
         ]
     });
 
-    // Bumpy osteoderm texture along the top of the snout (same as body scutes).
-    addGatorDorsalScutes(
-        headBone,
-        0.2,
-        0.82,
-        5,
-        2,
-        0.22,
-        0.095,
-        0.13
-    );
-
     // Raised fleshy nostril mound at the tip — breathes while submerged.
     const nostrilMound = createGatorEllipsoid(
         0.095,
@@ -2949,6 +3087,8 @@ function skinGatorHead(bones) {
             headBone.add(tooth);
         }
     }
+
+    addGatorHeadArmor(headBone, jawBone);
 }
 
 function skinGatorTail(bones) {
@@ -3009,16 +3149,7 @@ function skinGatorTail(bones) {
 }
 
 function skinGatorScutes(bones) {
-    addGatorDorsalScutes(
-        bones.headBone,
-        -0.02,
-        -0.16,
-        4,
-        2,
-        0.44,
-        0.084,
-        0.17
-    );
+    // Head/snout armor is applied in skinGatorHead via addGatorHeadArmor.
 
     addGatorDorsalScutes(
         bones.neckBone,
