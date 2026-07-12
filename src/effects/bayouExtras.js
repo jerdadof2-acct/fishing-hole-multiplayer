@@ -1517,17 +1517,16 @@ function distanceFromBoat(x, z) {
 
 const GATOR_BODY_RADIUS = 1.4;
 const GATOR_VIEW_EDGE_PADDING = 0.06;
-const GATOR_MIN_BOAT_DISTANCE = 1.35;
-const GATOR_DOCK_MIN_BOAT_DISTANCE = 1.05;
-
-function isUnderDockSwimZone(x, z) {
-    return (
-        z < 4.4 &&
-        Math.abs(x) < 10
-    );
-}
+/** Stay clear of the hull so he does not tuck behind the boat off-camera. */
+const GATOR_MIN_BOAT_DISTANCE = 3.35;
+/** Cast ellipse includes water behind the boat — keep patrols in front for play view. */
+const GATOR_MIN_FORWARD_Z = 2.15;
 
 function isInGatorFishingView(x, z) {
+    if (z < GATOR_MIN_FORWARD_Z) {
+        return false;
+    }
+
     if (
         !isInCastClearZone(
             x,
@@ -1538,11 +1537,7 @@ function isInGatorFishingView(x, z) {
         return false;
     }
 
-    const minBoatDistance = isUnderDockSwimZone(x, z)
-        ? GATOR_DOCK_MIN_BOAT_DISTANCE
-        : GATOR_MIN_BOAT_DISTANCE;
-
-    return distanceFromBoat(x, z) >= minBoatDistance;
+    return distanceFromBoat(x, z) >= GATOR_MIN_BOAT_DISTANCE;
 }
 
 function getCypressCollisionRadius(tree) {
@@ -1654,12 +1649,18 @@ function sampleGatorFishingViewPoint(data, random) {
         let z;
         const roll = random();
 
-        if (roll < 0.3) {
-            x = THREE.MathUtils.lerp(-9.5, 9.5, random());
-            z = THREE.MathUtils.lerp(0.7, 4.3, random());
+        if (roll < 0.35) {
+            // Near-field cruise lane in front of the boat (always on mobile cameras).
+            x = THREE.MathUtils.lerp(-8.5, 8.5, random());
+            z = THREE.MathUtils.lerp(3.0, 14.0, random());
+        } else if (roll < 0.7) {
+            // Mid cast-ellipse water ahead of the boat.
+            x = THREE.MathUtils.lerp(-10.5, 10.5, random());
+            z = THREE.MathUtils.lerp(6.0, 22.0, random());
         } else {
-            const angle = random() * Math.PI * 2;
-            const depthScale = Math.sqrt(random());
+            // Far edge of the fishing view — still forward of the boat.
+            const angle = THREE.MathUtils.lerp(0.2, Math.PI - 0.2, random());
+            const depthScale = 0.35 + 0.65 * Math.sqrt(random());
 
             x =
                 CAST_CLEAR_CENTER_X +
@@ -1820,8 +1821,8 @@ function resolveGatorCollisions(gator, data) {
 function beginGatorLurk(data, gator) {
     data.mode = 'lurk';
     data.modeTime = THREE.MathUtils.lerp(
-        4,
-        9,
+        6,
+        12,
         data.random()
     );
     data.targetRise = THREE.MathUtils.lerp(
@@ -1854,11 +1855,47 @@ function beginGatorLurk(data, gator) {
     data.lurkTargetX = lurkX;
     data.lurkTargetZ = lurkZ;
     data.velocity.set(0, 0, 0);
+    data.swimLegTime = null;
+}
+
+/** Surface cruise — visible swimming across the fishing view. */
+function beginGatorCruise(data, gator) {
+    data.mode = 'cruise';
+    data.modeTime = THREE.MathUtils.lerp(
+        9,
+        18,
+        data.random()
+    );
+    data.targetRise = THREE.MathUtils.lerp(
+        0.03,
+        0.052,
+        data.random()
+    );
+    pickGatorTarget(data);
+    data.swimLegTime = THREE.MathUtils.lerp(
+        5,
+        11,
+        data.random()
+    );
+
+    if (gator && !isValidGatorSwimPoint(gator.position.x, gator.position.z, data)) {
+        const nearby = sampleNearbyGatorSwimPoint(
+            data,
+            gator.position.x,
+            gator.position.z,
+            data.random,
+            { minRadius: 1.2, maxRadius: 8, attempts: 64 }
+        );
+        if (nearby) {
+            gator.position.x = nearby.x;
+            gator.position.z = nearby.z;
+        }
+    }
 }
 
 function beginGatorSubmerged(data, {
-    minSeconds = 14,
-    maxSeconds = 28,
+    minSeconds = 5,
+    maxSeconds = 11,
     maybeMove = true
 } = {}) {
     data.mode = 'submerged';
@@ -1876,8 +1913,8 @@ function beginGatorSubmerged(data, {
     if (maybeMove) {
         pickGatorTarget(data);
         data.swimLegTime = THREE.MathUtils.lerp(
-            6,
-            13,
+            4,
+            9,
             data.random()
         );
     }
@@ -3074,8 +3111,8 @@ function createBayouGator(random) {
 
         phase: random() * Math.PI * 2,
 
-        mode: 'submerged',
-        modeTime: THREE.MathUtils.lerp(28, 48, random()),
+        mode: 'cruise',
+        modeTime: THREE.MathUtils.lerp(10, 16, random()),
 
         speed: THREE.MathUtils.lerp(0.72, 0.96, random()),
         turnSharpness: THREE.MathUtils.lerp(0.18, 0.28, random()),
@@ -3083,14 +3120,14 @@ function createBayouGator(random) {
         swimFrequency: THREE.MathUtils.lerp(1.05, 1.22, random()),
 
         smoothedTurnBias: 0,
-        swimLegTime: THREE.MathUtils.lerp(6, 12, random()),
+        swimLegTime: THREE.MathUtils.lerp(5, 10, random()),
 
         patrolRadiusX: THREE.MathUtils.lerp(12, 20, random()),
         patrolRadiusZ: THREE.MathUtils.lerp(8, 16, random()),
 
         baseWaterY: 0,
-        targetRise: -0.24,
-        currentRise: -0.24
+        targetRise: 0.04,
+        currentRise: 0.04
     });
 
     ensureGatorHeadTapHelper(gator);
@@ -3158,6 +3195,27 @@ function gatorTurnAlignedSway(
     );
 }
 
+/** Prefer surfacing so the gator stays a bayou character, not an underwater ghost. */
+function beginGatorSurfaceBehavior(data, gator) {
+    const roll = data.random();
+
+    if (roll < 0.42) {
+        beginGatorCruise(data, gator);
+    } else if (roll < 0.72) {
+        beginGatorLurk(data, gator);
+    } else {
+        beginGatorHeadUp(data, gator);
+    }
+}
+
+function beginGatorBriefDive(data) {
+    beginGatorSubmerged(data, {
+        minSeconds: 4,
+        maxSeconds: 9,
+        maybeMove: true
+    });
+}
+
 function updateGator(
     gator,
     elapsedTime,
@@ -3170,66 +3228,54 @@ function updateGator(
     if (data.modeTime <= 0) {
         switch (data.mode) {
             case 'submerged': {
-                const roll = data.random();
-
-                if (roll < 0.03) {
-                    beginGatorLurk(data, gator);
-                } else if (roll < 0.17) {
-                    beginGatorHeadUp(data, gator);
+                // Mostly resurface; only rarely stay under for another short leg.
+                if (data.random() < 0.18) {
+                    beginGatorBriefDive(data);
                 } else {
-                    beginGatorSubmerged(data, {
-                        minSeconds: 12,
-                        maxSeconds: 24
-                    });
+                    beginGatorSurfaceBehavior(data, gator);
                 }
                 break;
             }
 
             case 'cruise':
-                beginGatorSubmerged(data, {
-                    minSeconds: 10,
-                    maxSeconds: 20,
-                    maybeMove: true
-                });
+                if (data.random() < 0.22) {
+                    beginGatorBriefDive(data);
+                } else {
+                    beginGatorSurfaceBehavior(data, gator);
+                }
                 break;
 
             case 'lurk':
-                beginGatorSubmerged(data, {
-                    minSeconds: 12,
-                    maxSeconds: 22,
-                    maybeMove: true
-                });
+                if (data.random() < 0.28) {
+                    beginGatorBriefDive(data);
+                } else if (data.random() < 0.55) {
+                    beginGatorCruise(data, gator);
+                } else {
+                    beginGatorHeadUp(data, gator);
+                }
                 data.velocity.set(0, 0, 0);
                 break;
 
             case 'peek':
             case 'headup':
             case 'rise':
-                beginGatorSubmerged(data, {
-                    minSeconds: 12,
-                    maxSeconds: 22,
-                    maybeMove: true
-                });
+                if (data.random() < 0.3) {
+                    beginGatorBriefDive(data);
+                } else {
+                    beginGatorSurfaceBehavior(data, gator);
+                }
                 break;
 
             case 'startled':
-                beginGatorSubmerged(data, {
-                    minSeconds: 14,
-                    maxSeconds: 26,
-                    maybeMove: true
-                });
+                beginGatorBriefDive(data);
                 break;
 
             case 'leave':
-                beginGatorSubmerged(data, {
-                    minSeconds: 12,
-                    maxSeconds: 22,
-                    maybeMove: true
-                });
+                beginGatorSurfaceBehavior(data, gator);
                 break;
 
             default:
-                beginGatorSubmerged(data);
+                beginGatorSurfaceBehavior(data, gator);
                 break;
         }
     }
@@ -3268,19 +3314,29 @@ function updateGator(
     }
 
     if (
-        data.mode === 'submerged' &&
+        (data.mode === 'submerged' || data.mode === 'cruise') &&
         data.swimLegTime != null
     ) {
         data.swimLegTime -= delta;
 
         if (data.swimLegTime <= 0) {
-            if (data.random() < 0.1) {
-                beginGatorHeadUp(data, gator);
+            if (data.mode === 'submerged') {
+                // Prefer coming up mid-patrol rather than staying invisible.
+                if (data.random() < 0.62) {
+                    beginGatorSurfaceBehavior(data, gator);
+                } else {
+                    pickGatorTarget(data);
+                    data.swimLegTime = THREE.MathUtils.lerp(
+                        4,
+                        9,
+                        data.random()
+                    );
+                }
             } else {
                 pickGatorTarget(data);
                 data.swimLegTime = THREE.MathUtils.lerp(
-                    6,
-                    14,
+                    5,
+                    11,
                     data.random()
                 );
             }
@@ -3899,13 +3955,13 @@ function placeGator({
             if (spawn) {
                 gator.position.set(
                     spawn.x,
-                    waterLevel - 0.22,
+                    waterLevel + 0.04,
                     spawn.z
                 );
             } else {
                 gator.position.set(
                     data.center.x,
-                    waterLevel - 0.22,
+                    waterLevel + 0.04,
                     data.center.z
                 );
             }
@@ -3914,11 +3970,7 @@ function placeGator({
                 BOAT_ANCHOR_X - gator.position.x,
                 BOAT_ANCHOR_Z - gator.position.z
             );
-            beginGatorSubmerged(data, {
-                minSeconds: 10,
-                maxSeconds: 18,
-                maybeMove: true
-            });
+            beginGatorCruise(data, gator);
         } else {
             const spawn = sampleGatorFishingViewPoint(
                 data,
@@ -3928,13 +3980,13 @@ function placeGator({
             if (spawn) {
                 gator.position.set(
                     spawn.x,
-                    waterLevel - 0.22,
+                    waterLevel + 0.04,
                     spawn.z
                 );
             } else {
                 gator.position.set(
                     0,
-                    waterLevel - 0.22,
+                    waterLevel + 0.04,
                     10
                 );
                 data.center.set(0, waterLevel, 10);
@@ -3944,6 +3996,7 @@ function placeGator({
                 BOAT_ANCHOR_X - gator.position.x,
                 BOAT_ANCHOR_Z - gator.position.z
             );
+            beginGatorCruise(data, gator);
         }
 
         pickGatorTarget(data);
