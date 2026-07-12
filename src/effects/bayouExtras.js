@@ -2492,16 +2492,17 @@ function addGatorTailScutes(
 }
 
 /**
- * Dorsal orbital mounds — closer together on top of the skull, facing outward/up.
+ * Dorsal orbital mounds — closer on the crown, sockets facing fully outward (±Z).
  * Returns lid/eye refs for independent blinking.
  */
 function createGatorEye(parent, x, y, z, side) {
     const assembly = new THREE.Group();
     assembly.position.set(x, y, z);
-    // Mostly sideways, with a little upward tilt so yellow reads from the boat.
-    assembly.rotation.y = side * Math.PI * 0.38;
-    assembly.rotation.x = -0.28;
-    assembly.rotation.z = side * -0.08;
+    // Yaw first so +X aims straight out the side, then tip slightly upward.
+    assembly.rotation.order = 'YXZ';
+    assembly.rotation.y = side * Math.PI * 0.55;
+    assembly.rotation.x = -0.22;
+    assembly.rotation.z = 0;
     parent.add(assembly);
 
     const mound = createGatorEllipsoid(
@@ -2527,7 +2528,7 @@ function createGatorEye(parent, x, y, z, side) {
         8
     );
 
-    rim.position.set(0.03, 0.042, 0);
+    rim.position.set(0.035, 0.042, 0);
     assembly.add(rim);
 
     const socket = createGatorEllipsoid(
@@ -2540,10 +2541,10 @@ function createGatorEye(parent, x, y, z, side) {
         7
     );
 
-    socket.position.set(0.04, 0.04, 0);
+    socket.position.set(0.045, 0.04, 0);
     assembly.add(socket);
 
-    // Larger yellow globe proud of the socket so it stays readable.
+    // Yellow globe sits on the outward face of the socket.
     const eye = createGatorEllipsoid(
         0.052,
         1.08,
@@ -2554,7 +2555,7 @@ function createGatorEye(parent, x, y, z, side) {
         8
     );
 
-    eye.position.set(0.055, 0.058, 0);
+    eye.position.set(0.07, 0.055, 0);
     assembly.add(eye);
 
     const pupil = createGatorEllipsoid(
@@ -2567,7 +2568,7 @@ function createGatorEye(parent, x, y, z, side) {
         5
     );
 
-    pupil.position.set(0.082, 0.062, 0);
+    pupil.position.set(0.1, 0.058, 0);
     assembly.add(pupil);
 
     // Thin open lid on the crest — closes down over the yellow when blinking.
@@ -2581,10 +2582,10 @@ function createGatorEye(parent, x, y, z, side) {
         8
     );
 
-    const openLidY = 0.088;
+    const openLidY = 0.09;
     const closedLidY = 0.055;
 
-    lid.position.set(0.058, openLidY, 0);
+    lid.position.set(0.072, openLidY, 0);
     lid.scale.set(1.1, 0.1, 1.1);
     assembly.add(lid);
 
