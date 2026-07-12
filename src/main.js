@@ -1422,12 +1422,10 @@ export class Game {
             this.fish.update(delta, ctx);
         }
 
-        // Update fishing system (syncs bobber to fish position after fish has moved)
+        // Update fishing system (syncs bobber to fish position after fish has moved).
+        // Do not call updateReel here — fishing.update already reels when isReeling.
         if (this.fishing) {
             this.fishing.update(delta);
-            if (this.fishing.isReeling) {
-                this.fishing.updateReel(delta);
-            }
             this.fishing.syncCatAnimation?.();
         }
 

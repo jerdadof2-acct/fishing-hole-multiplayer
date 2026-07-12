@@ -2099,7 +2099,10 @@ export class Fishing {
             // to keep pull strength the same (5.0 * 2.5 = 12.5, so 10.0 * 1.25 = 12.5)
             const nudgeMultiplier = (this.fishOnLine && fish?.state === 'LANDING') ? 10.0 : 
                                      (!this.fishOnLine) ? 5.0 : 0.8; // Increased to 5.0 for reeling without fish to overcome rope constraints and complete faster
-            const step = Math.min(reelRate * nudgeMultiplier * delta, distXZ);
+            // Cap landing steps so a slow frame cannot jump past catch checks in one tick.
+            const rawStep = reelRate * nudgeMultiplier * delta;
+            const maxLandingStep = (this.fishOnLine && fish?.state === 'LANDING') ? 0.35 : Infinity;
+            const step = Math.min(rawStep, distXZ, maxLandingStep);
             if (this.rope.nudgeBobberXZ) {
                 this.rope.nudgeBobberXZ(pullDir.x * step, pullDir.z * step);
             } else {

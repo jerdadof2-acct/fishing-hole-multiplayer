@@ -703,45 +703,31 @@ export class Fish {
             // Keep fish hidden during landing too
             this.mesh.visible = false;
             
-            // Check if bobber is close enough to rod tip OR dock for catch
+            // Catch once the bobber is within landing range of the cat/dock.
+            // Use a one-sided threshold (not a thin band): landing pull + double-reel
+            // used to skip past 8.0–8.5 and leave Halley stuck shaking in LANDING.
             let catchTriggered = false;
 
             if (this._gentleReunion) {
                 this._checkGentleReunionCatch();
                 if (this.state === FishState.LANDED) return;
-            } else if (rodTip) {
-                const toTip = new THREE.Vector3().subVectors(bobberPos, rodTip);
-                const bobberDistToTip = toTip.length();
-                
-                // Bobber must be at perfect landing position
-                // Perfect landing: bobber oscillates around ~8.3 units from dock (position ~0, 3.9)
-                // Only catch when bobber reaches perfect landing position (8.0-8.5 from dock)
-                const CATCH_DISTANCE_TIP = 15.0; // Large enough to allow reaching perfect spot
-                // Only catch if bobber is at perfect landing range (8.0-8.5 from dock) AND close to tip
-                if (bobberDistToTip < CATCH_DISTANCE_TIP && bobberDistToDock >= 8.0 && bobberDistToDock < 8.5 && this.state !== FishState.LANDED) {
-                    debugLog(`[FISH] Bobber is at perfect landing position (${bobberDistToDock.toFixed(2)}), marking fish as caught`);
+            } else if (this.state !== FishState.LANDED) {
+                const CATCH_DISTANCE_DOCK = 8.5;
+                const CATCH_DISTANCE_TIP = 4.0;
+                const bobberDistToTip = rodTip
+                    ? new THREE.Vector3().subVectors(bobberPos, rodTip).length()
+                    : Infinity;
+
+                if (bobberDistToDock < CATCH_DISTANCE_DOCK || bobberDistToTip < CATCH_DISTANCE_TIP) {
+                    debugLog(
+                        `[FISH] Landing complete — dock=${bobberDistToDock.toFixed(2)}, tip=${bobberDistToTip.toFixed(2)}`
+                    );
                     catchTriggered = true;
                 }
             }
-            
-            // Also check dock distance - catch at perfect landing position (~8.3 units)
-            if (!this._gentleReunion) {
-            // Perfect landing position: bobber oscillates around 8.3 units from dock (position ~0, 3.9)
-            // Only catch when bobber reaches this perfect landing position (8.2-8.5 range)
-            const CATCH_DISTANCE_DOCK = 8.5; // Catch at perfect landing position (~8.3 units)
-            const MIN_DOCK_DISTANCE = 8.0; // Don't catch before reaching perfect landing
-            if (!catchTriggered && bobberDistToDock < CATCH_DISTANCE_DOCK && bobberDistToDock >= MIN_DOCK_DISTANCE && this.state !== FishState.LANDED) {
-                debugLog(`[FISH] Bobber is at perfect landing position (${bobberDistToDock.toFixed(2)}), marking fish as caught`);
-                catchTriggered = true;
-            }
-            }
-            
+
             if (catchTriggered) {
                 this.markLanded();
-            } else if (!this._gentleReunion && (bobberDistToDock < 3.5 || (rodTip && bobberPos.distanceTo(rodTip) < 4.0))) {
-                // Log when getting close (updated threshold)
-                const tipDist = rodTip ? bobberPos.distanceTo(rodTip).toFixed(2) : 'N/A';
-                debugLog(`[FISH] Bobber getting close - dock: ${bobberDistToDock.toFixed(2)}, tip: ${tipDist}`);
             }
         }
         
