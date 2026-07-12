@@ -300,7 +300,6 @@ export function createMangrove(options = {}) {
     mangrove.scale.setScalar(scale);
 
     // Shadows are assigned after the tree geometry is merged.
-    // Leaves will not cast shadows because they are the most expensive part.
     return mangrove;
 }
 
@@ -712,9 +711,9 @@ function optimizeMangroveTree(tree) {
             ? 'mangroveLeavesMerged'
             : 'mangroveWoodMerged';
 
-        // Trunks and roots retain shadows.
-        // Foliage does not cast or receive shadows.
-        mergedMesh.castShadow = !bucket.isLeaf;
+        // Canopy tops cast like bayou cypress — mangroves are dense enough that
+        // foliage shadows matter more than limb-only shadows on Cortez water.
+        mergedMesh.castShadow = true;
         mergedMesh.receiveShadow = !bucket.isLeaf;
 
         tree.add(mergedMesh);
