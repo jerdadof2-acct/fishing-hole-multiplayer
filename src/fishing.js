@@ -2101,11 +2101,11 @@ export class Fishing {
             // When reeling without fish, also pull harder to prevent stalling
             // Note: nudgeMultiplier is increased to compensate for slower reelRate during landing
             // to keep pull strength the same (5.0 * 2.5 = 12.5, so 10.0 * 1.25 = 12.5)
-            const nudgeMultiplier = (this.fishOnLine && fish?.state === 'LANDING') ? 9.0 : 
+            const nudgeMultiplier = (this.fishOnLine && fish?.state === 'LANDING') ? 6.5 : 
                                      (!this.fishOnLine) ? 5.0 : 0.8;
             // Soft per-frame cap keeps the last stretch smooth without crawling.
             const rawStep = reelRate * nudgeMultiplier * delta;
-            const maxLandingStep = (this.fishOnLine && fish?.state === 'LANDING') ? 0.85 : Infinity;
+            const maxLandingStep = (this.fishOnLine && fish?.state === 'LANDING') ? 0.55 : Infinity;
             const step = Math.min(rawStep, distXZ, maxLandingStep);
             if (this.rope.nudgeBobberXZ) {
                 this.rope.nudgeBobberXZ(pullDir.x * step, pullDir.z * step);
@@ -2127,7 +2127,7 @@ export class Fishing {
                 if (Math.abs(lateralRemain) > 0.05) {
                     const lateralStep = Math.sign(lateralRemain) * Math.min(
                         Math.abs(lateralRemain),
-                        9.0 * delta
+                        6.5 * delta
                     );
                     this.rope.nudgeBobberXZ(lateralStep, 0);
                 }
@@ -2137,7 +2137,7 @@ export class Fishing {
                 const remainX = catPos.x - bob.x;
                 const remainDist = Math.hypot(remainX, remainZ);
                 if (remainDist < 6.0 && remainDist > 0.08) {
-                    const homeStep = Math.min(remainDist, 7.0 * delta);
+                    const homeStep = Math.min(remainDist, 4.5 * delta);
                     this.rope.nudgeBobberXZ(
                         (remainX / remainDist) * homeStep,
                         (remainZ / remainDist) * homeStep
