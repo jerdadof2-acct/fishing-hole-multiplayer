@@ -3174,30 +3174,6 @@ function ensureGatorHeadTapHelper(gator) {
     return helper;
 }
 
-function gatorTurnAlignedSway(
-    sinValue,
-    amplitude,
-    turnSign,
-    turnBlend
-) {
-    const sway = sinValue * amplitude;
-
-    if (turnBlend < 0.05 || turnSign === 0) {
-        return sway;
-    }
-
-    const sameSide =
-        Math.max(0, sinValue * turnSign) *
-        turnSign *
-        amplitude;
-
-    return THREE.MathUtils.lerp(
-        sway,
-        sameSide,
-        turnBlend
-    );
-}
-
 /** Gator faces +X; positive Z pitch tips the snout up and hangs the rear lower. */
 function getGatorFloatPitchTarget(mode) {
     switch (mode) {
@@ -3421,8 +3397,8 @@ function updateGator(
     const frequency =
         data.swimFrequency *
         THREE.MathUtils.lerp(
-            0.78,
-            1.08,
+            0.82,
+            1.12,
             drive
         );
 
@@ -3433,29 +3409,25 @@ function updateGator(
     const activeDrive =
         isGatorHoldingPosition(data)
             ? data.mode === 'headup'
-                ? 0.14
+                ? 0.16
                 : 0.1
             : data.mode === 'startled'
                 ? THREE.MathUtils.lerp(
-                    0.72,
-                    0.96,
+                    0.78,
+                    1.05,
                     drive
                 )
                 : data.mode === 'submerged'
                     ? THREE.MathUtils.lerp(
-                        0.34,
-                        0.78,
+                        0.52,
+                        0.98,
                         drive
                     )
                     : THREE.MathUtils.lerp(
-                        0.42,
-                        0.92,
+                        0.48,
+                        0.95,
                         drive
                     );
-
-    const tailPhase =
-        elapsedTime * frequency * 0.76 +
-        data.phase;
 
     let smoothedTurnBias = data.smoothedTurnBias ?? 0;
 
@@ -3472,12 +3444,12 @@ function updateGator(
             desiredYaw
         );
         const turnTarget = THREE.MathUtils.clamp(
-            yawError * 0.82,
-            -0.52,
-            0.52
+            yawError * 0.55,
+            -0.28,
+            0.28
         );
         const turnSmooth =
-            1 - Math.exp(-5.2 * delta);
+            1 - Math.exp(-4.2 * delta);
 
         smoothedTurnBias +=
             (turnTarget - smoothedTurnBias) * turnSmooth;
@@ -3490,62 +3462,41 @@ function updateGator(
 
     data.smoothedTurnBias = smoothedTurnBias;
 
-    const tailTurnSign =
-        smoothedTurnBias < -0.001
-            ? 1
-            : smoothedTurnBias > 0.001
-                ? -1
-                : 0;
+    // Wave starts at the hips and travels down the tail to the tip.
+    const wavePhase = phase;
+    const travelLag = 2.05;
 
-    const turnBlend = THREE.MathUtils.clamp(
-        Math.abs(smoothedTurnBias) / 0.22,
-        0,
-        1
-    );
-
-    const headTurnLead =
-        smoothedTurnBias *
-        THREE.MathUtils.lerp(0.46, 0.82, drive);
-
-    const tailTurnLead =
-        -smoothedTurnBias *
-        THREE.MathUtils.lerp(0.42, 0.78, drive);
+    const headTurnLead = smoothedTurnBias * 0.55;
+    // Soft bend only — never clamps the serpentine left/right stroke.
+    const turnBend = smoothedTurnBias * 0.22;
 
     const chestYaw =
-        gatorTurnAlignedSway(
-            Math.sin(tailPhase),
-            0.03 * activeDrive,
-            tailTurnSign,
-            turnBlend * 0.35
-        );
+        Math.sin(wavePhase) *
+            0.02 *
+            activeDrive +
+        turnBend * 0.08;
 
     const abdomenYaw =
-        gatorTurnAlignedSway(
-            Math.sin(tailPhase - 0.2),
-            0.082 * activeDrive,
-            tailTurnSign,
-            turnBlend
-        );
+        Math.sin(wavePhase - travelLag * 0.18) *
+            0.045 *
+            activeDrive +
+        turnBend * 0.18;
 
     const pelvisYaw =
-        gatorTurnAlignedSway(
-            Math.sin(tailPhase - 0.4),
-            0.118 * activeDrive,
-            tailTurnSign,
-            turnBlend
-        );
+        Math.sin(wavePhase - travelLag * 0.32) *
+            0.06 *
+            activeDrive +
+        turnBend * 0.28;
 
     const tailRootYaw =
-        gatorTurnAlignedSway(
-            Math.sin(tailPhase - 0.62),
-            0.148 * activeDrive,
-            tailTurnSign,
-            turnBlend
-        );
+        Math.sin(wavePhase - travelLag * 0.42) *
+            0.085 *
+            activeDrive +
+        turnBend * 0.38;
 
     const bodyFollow =
         1 -
-        Math.exp(-5.5 * delta);
+        Math.exp(-6.2 * delta);
 
     data.chestBone.rotation.y +=
         (
@@ -3556,75 +3507,52 @@ function updateGator(
 
     data.abdomenBone.rotation.y +=
         (
-            abdomenYaw +
-            tailTurnLead * 0.22 -
+            abdomenYaw -
             data.abdomenBone.rotation.y
         ) *
         bodyFollow;
 
     data.pelvisBone.rotation.y +=
         (
-            pelvisYaw +
-            tailTurnLead * 0.38 -
+            pelvisYaw -
             data.pelvisBone.rotation.y
         ) *
         bodyFollow;
 
     data.tailRootBone.rotation.y +=
         (
-            tailRootYaw +
-            tailTurnLead * 0.52 -
+            tailRootYaw -
             data.tailRootBone.rotation.y
         ) *
         bodyFollow;
 
     const tailBones =
         data.tailBones || [];
+    const tailCount = Math.max(tailBones.length, 1);
 
     for (
         let i = 0;
         i < tailBones.length;
         i++
     ) {
-        const normalized =
-            (i + 1) / tailBones.length;
-
-        const phaseDelay =
-            0.52 +
-            normalized * 1.35;
-
+        // 0 at base → 1 at tip; tip lags so the wave travels hips → tip.
+        const t = (i + 1) / tailCount;
+        const lag = travelLag * (0.48 + t * 0.52);
         const amplitude =
             THREE.MathUtils.lerp(
-                0.1,
-                0.46,
-                Math.pow(normalized, 1.08)
+                0.12,
+                0.72,
+                Math.pow(t, 1.35)
             ) *
             activeDrive;
 
-        const turnContribution =
-            tailTurnLead *
-            Math.pow(normalized, 1.18);
-
-        const rawSin = Math.sin(
-            tailPhase - phaseDelay
-        );
-
-        const swimSway = gatorTurnAlignedSway(
-            rawSin,
-            amplitude,
-            tailTurnSign,
-            turnBlend
-        );
-
         const targetYaw =
-            swimSway + turnContribution;
+            Math.sin(wavePhase - lag) * amplitude +
+            turnBend * THREE.MathUtils.lerp(0.2, 0.55, t);
 
+        // Base follows the hip wave quickly; tip trails for the serpentine whip.
         const followSpeed =
-            THREE.MathUtils.lerp(
-                8,
-                5,
-                normalized
-            );
+            THREE.MathUtils.lerp(11, 6.5, Math.pow(t, 1.05));
 
         const follow =
             1 -
