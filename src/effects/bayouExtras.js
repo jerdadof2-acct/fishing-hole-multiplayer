@@ -2361,86 +2361,85 @@ function addGatorTailScutes(
     );
 }
 
-/** Raised orbital mounds with yellow eyes on top — stick above the snout like a real gator. */
+/** Raised orbital mounds with yellow eyes — embedded in the skull, only slightly proud. */
 function createGatorEye(parent, x, y, z, side) {
     const mound = createGatorEllipsoid(
-        0.11,
-        1.15,
-        0.85,
-        0.78,
+        0.1,
+        1.12,
+        0.62,
+        0.74,
         GATOR_SKIN_MATERIAL,
         14,
         10
     );
 
-    mound.position.set(x, y + 0.04, z);
+    mound.position.set(x, y + 0.012, z);
     mound.rotation.y = side * 0.12;
-    mound.rotation.z = side * -0.18;
+    mound.rotation.z = side * -0.16;
     parent.add(mound);
 
     const rim = createGatorEllipsoid(
-        0.072,
-        0.95,
-        0.55,
-        0.7,
+        0.062,
+        0.92,
+        0.42,
+        0.65,
         GATOR_SKIN_MATERIAL,
         12,
         8
     );
 
-    rim.position.set(x + 0.01, y + 0.08, z + side * 0.02);
+    rim.position.set(x + 0.008, y + 0.038, z + side * 0.018);
     rim.rotation.y = side * 0.1;
     parent.add(rim);
 
     const socket = createGatorEllipsoid(
-        0.036,
-        0.9,
-        0.35,
-        0.55,
+        0.032,
+        0.88,
+        0.28,
+        0.5,
         GATOR_DARK_MATERIAL,
         10,
         7
     );
 
     socket.position.set(
-        x + 0.012,
-        y + 0.07,
-        z + side * 0.04
+        x + 0.01,
+        y + 0.032,
+        z + side * 0.036
     );
     parent.add(socket);
 
     const eye = createGatorEllipsoid(
-        0.048,
-        1.05,
-        0.7,
-        0.72,
+        0.042,
+        1.02,
+        0.58,
+        0.68,
         GATOR_EYE_MATERIAL,
         12,
         8
     );
 
-    // Sit on top of the mound, facing mostly upward / outward.
     eye.position.set(
-        x + 0.018,
-        y + 0.095,
-        z + side * 0.055
+        x + 0.014,
+        y + 0.048,
+        z + side * 0.05
     );
     parent.add(eye);
 
     const pupil = createGatorEllipsoid(
-        0.01,
-        0.16,
-        1.05,
-        0.12,
+        0.009,
+        0.15,
+        0.95,
+        0.11,
         GATOR_DARK_MATERIAL,
         7,
         5
     );
 
     pupil.position.set(
-        x + 0.038,
-        y + 0.1,
-        z + side * 0.068
+        x + 0.032,
+        y + 0.052,
+        z + side * 0.062
     );
     parent.add(pupil);
 }
@@ -2827,8 +2826,8 @@ function skinGatorHead(bones) {
         createGatorEye(
             headBone,
             0.04,
-            0.2,
-            side * 0.22,
+            0.155,
+            side * 0.215,
             side
         );
 
