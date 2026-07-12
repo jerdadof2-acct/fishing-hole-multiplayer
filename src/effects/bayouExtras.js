@@ -1404,9 +1404,9 @@ function createSwampFly(random) {
     fly.userData.target = new THREE.Vector3();
     fly.userData.mode = 'idle';
     fly.userData.modeTime = 0;
-    fly.userData.orbitRadius = THREE.MathUtils.lerp(0.28, 0.55, random());
-    fly.userData.orbitSpeed = THREE.MathUtils.lerp(7.5, 12.5, random());
-    fly.userData.buzzAmp = THREE.MathUtils.lerp(0.08, 0.16, random());
+    fly.userData.orbitRadius = THREE.MathUtils.lerp(0.72, 1.15, random());
+    fly.userData.orbitSpeed = THREE.MathUtils.lerp(5.5, 9.5, random());
+    fly.userData.buzzAmp = THREE.MathUtils.lerp(0.18, 0.32, random());
     fly.userData.bayouRoot = null;
 
     return fly;
@@ -1517,16 +1517,16 @@ function updateSwampFly(fly, headLocal, delta, elapsedTime, swarmActive) {
             headLocal.x +
             Math.sin(elapsedTime * data.orbitSpeed + data.orbitPhase) *
                 data.orbitRadius *
-                0.35;
+                0.7;
         const buzzY =
             headLocal.y +
-            0.12 +
-            Math.sin(elapsedTime * (data.orbitSpeed * 1.3) + data.phase) * 0.1;
+            0.22 +
+            Math.sin(elapsedTime * (data.orbitSpeed * 1.3) + data.phase) * 0.16;
         const buzzZ =
             headLocal.z +
             Math.cos(elapsedTime * data.orbitSpeed + data.orbitPhase) *
                 data.orbitRadius *
-                0.35;
+                0.7;
 
         const settle = 1 - Math.exp(-3.4 * delta);
         fly.position.x += (buzzX - fly.position.x) * settle;
@@ -1556,9 +1556,9 @@ function updateSwampFly(fly, headLocal, delta, elapsedTime, swarmActive) {
             Math.sin(t * data.orbitSpeed + data.orbitPhase) * data.orbitRadius +
             Math.sin(t * 23 + data.phase) * data.buzzAmp;
         const oy =
-            0.08 +
-            Math.sin(t * (data.orbitSpeed * 1.7) + data.phase) * 0.14 +
-            Math.sin(t * 31 + data.orbitPhase) * data.buzzAmp * 0.7;
+            0.28 +
+            Math.sin(t * (data.orbitSpeed * 1.7) + data.phase) * 0.22 +
+            Math.sin(t * 31 + data.orbitPhase) * data.buzzAmp * 0.85;
         const oz =
             Math.cos(t * data.orbitSpeed * 0.92 + data.orbitPhase) *
                 data.orbitRadius +
