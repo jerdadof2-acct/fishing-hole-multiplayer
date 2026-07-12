@@ -2026,10 +2026,10 @@ function beginGatorHeadUp(data, gator) {
         8,
         data.random()
     );
-    // Keep the body well under — neck pitch alone clears the head.
+    // Body stays low; a small neck pitch clears just the eyes/snout.
     data.targetRise = THREE.MathUtils.lerp(
-        -0.2,
         -0.14,
+        -0.08,
         data.random()
     );
     data.headUpTargetX = gator.position.x;
@@ -3532,21 +3532,21 @@ function updateGator(
 
     // Sagittal hang pitch (chain is along +X: Z tips nose up / tail down; X is roll).
     const hangFollow =
-        1 - Math.exp(-3.6 * delta);
+        1 - Math.exp(-4.2 * delta);
     const hangPitch =
-        data.mode === 'headup' ? 0.14 : 0;
+        data.mode === 'headup' ? 0.06 : 0;
 
     data.chestBone.rotation.z +=
-        (hangPitch * 0.55 - data.chestBone.rotation.z) *
+        (hangPitch * 0.4 - data.chestBone.rotation.z) *
         hangFollow;
     data.abdomenBone.rotation.z +=
-        (hangPitch * 0.9 - data.abdomenBone.rotation.z) *
+        (hangPitch * 0.7 - data.abdomenBone.rotation.z) *
         hangFollow;
     data.pelvisBone.rotation.z +=
-        (hangPitch * 1.15 - data.pelvisBone.rotation.z) *
+        (hangPitch * 0.85 - data.pelvisBone.rotation.z) *
         hangFollow;
     data.tailRootBone.rotation.z +=
-        (hangPitch * 0.7 - data.tailRootBone.rotation.z) *
+        (hangPitch * 0.5 - data.tailRootBone.rotation.z) *
         hangFollow;
 
     const tailBones =
@@ -3656,16 +3656,18 @@ function updateGator(
 
     const neckNeutralFollow =
         1 -
-        Math.exp(-5 * delta);
+        Math.exp(
+            data.mode === 'headup' ? -5 * delta : -7.5 * delta
+        );
 
     if (data.mode === 'headup') {
         const liftFollow =
             1 - Math.exp(-3.4 * delta);
 
-        // Pitch around Z (up/down). X is left/right roll — keep it zero.
+        // Mild pitch — eyes/snout at the surface, not a crane.
         data.neckBone.rotation.z +=
             (
-                0.52 -
+                0.22 -
                 data.neckBone.rotation.z
             ) *
             liftFollow;
@@ -3679,7 +3681,7 @@ function updateGator(
 
         data.headBone.rotation.z +=
             (
-                0.08 -
+                0.03 -
                 data.headBone.rotation.z
             ) *
             liftFollow;
@@ -3693,8 +3695,10 @@ function updateGator(
     } else if (data.startleFlinchTime <= 0) {
         data.neckBone.rotation.x *= 1 - neckNeutralFollow;
         data.neckBone.rotation.z *= 1 - neckNeutralFollow;
+        data.headBone.rotation.z *= 1 - neckNeutralFollow;
     } else {
         data.neckBone.rotation.x *= 1 - neckNeutralFollow;
+        data.headBone.rotation.z *= 1 - neckNeutralFollow;
     }
 
     if (data.startleFlinchTime > 0) {
