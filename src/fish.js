@@ -704,8 +704,8 @@ export class Fish {
             // Keep fish hidden during landing too
             this.mesh.visible = false;
             
-            // Catch at the boat/dock center landing spot — not anywhere on a wide radius
-            // around the cat (that finished catches off to the left/right as a slow troll).
+            // Catch once the bobber reaches the boat midline — generous enough that
+            // rope thrash / tip spring cannot leave Halley shaking in LANDING.
             let catchTriggered = false;
 
             if (this._gentleReunion) {
@@ -731,27 +731,27 @@ export class Fish {
                     ? new THREE.Vector3().subVectors(bobberPos, rodTip).length()
                     : Infinity;
 
-                const CATCH_RADIUS = 1.25;
-                const MAX_LATERAL = 1.5;
-                const TIP_CATCH = 2.0;
+                // Arrive-at-boat window: still centered (reel-in looks correct), but complete
+                // before the final inch of rope thrash starts the stuck-shake loop.
+                const CATCH_RADIUS = 3.25;
+                const MAX_LATERAL = 2.75;
+                const TIP_CATCH = 3.5;
+                const NEAR_BOAT = distToLandingCenter < CATCH_RADIUS && lateralOffset < MAX_LATERAL;
 
-                if (
-                    (distToLandingCenter < CATCH_RADIUS && lateralOffset < MAX_LATERAL) ||
-                    bobberDistToTip < TIP_CATCH
-                ) {
+                if (NEAR_BOAT || bobberDistToTip < TIP_CATCH) {
                     debugLog(
                         `[FISH] Landing complete — center=${distToLandingCenter.toFixed(2)}, ` +
                         `lateral=${lateralOffset.toFixed(2)}, tip=${bobberDistToTip.toFixed(2)}`
                     );
                     catchTriggered = true;
                 } else if (
-                    this._landingElapsed > 4.0 &&
-                    distToLandingCenter < 3.0 &&
-                    lateralOffset < 2.5
+                    this._landingElapsed > 1.75 &&
+                    distToLandingCenter < 4.5 &&
+                    lateralOffset < 3.25
                 ) {
-                    // Safety: nearly home but rope thrash preventing the tight radius.
+                    // Nearly home; finish before prolonged reeling shake.
                     catchTriggered = true;
-                } else if (this._landingElapsed > 7.0) {
+                } else if (this._landingElapsed > 5.0) {
                     // Hard timeout so LANDING cannot stick forever.
                     catchTriggered = true;
                 }
