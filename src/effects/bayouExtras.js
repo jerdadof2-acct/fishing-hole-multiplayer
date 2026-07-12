@@ -2498,11 +2498,12 @@ function addGatorTailScutes(
 function createGatorEye(parent, x, y, z, side) {
     const assembly = new THREE.Group();
     assembly.position.set(x, y, z);
-    // Yaw first so +X aims straight out the side, then tip slightly upward.
-    assembly.rotation.order = 'YXZ';
-    assembly.rotation.y = side * Math.PI * 0.55;
-    assembly.rotation.x = -0.22;
-    assembly.rotation.z = 0;
+    // Local +X is the socket opening — aim it straight out the side (±Z),
+    // with a slight upward tilt so the yellow still reads on the crown.
+    assembly.quaternion.setFromUnitVectors(
+        new THREE.Vector3(1, 0, 0),
+        new THREE.Vector3(0, 0.18, side).normalize()
+    );
     parent.add(assembly);
 
     const mound = createGatorEllipsoid(
@@ -3061,7 +3062,7 @@ function skinGatorHead(bones) {
                 headBone,
                 0.0,
                 0.205,
-                side * 0.135,
+                side * 0.175,
                 side
             )
         );
