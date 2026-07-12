@@ -257,6 +257,7 @@ export class Fish {
             this._lastLandingLogTime = 0;
             this._landingElapsed = 0;
             this._nearBoatTime = 0;
+            this._closestDockDist = Infinity;
             debugLog('[FISH] startLanding() called, state set to LANDING');
             if (this._gentleReunion) {
                 const castButton = document.getElementById('cast-button');
@@ -705,9 +706,9 @@ export class Fish {
             // Keep fish hidden during landing too
             this.mesh.visible = false;
             
-            // Catch only when the bobber is actually at the boat midline.
-            // Do NOT use tip distance — the tip sits out over the water and was
-            // completing catches ~10ft short of the boat.
+            // Catch when the bobber is at the water-side of the boat/dock.
+            // Do NOT require Halley's feet (cat.z+0.65): rope tip stays over the water, so the
+            // bobber equilibrates at the hull edge and never reaches feet — stuck shake forever.
             let catchTriggered = false;
 
             if (this._gentleReunion) {
@@ -716,37 +717,41 @@ export class Fish {
             } else if (this.state !== FishState.LANDED) {
                 this._landingElapsed = (this._landingElapsed || 0) + delta;
 
-                // Same center point empty-reel uses: slightly in front of Halley on the boat midline.
-                const landingCenter = new THREE.Vector3(
-                    dockRefPos.x,
-                    0,
-                    dockRefPos.z + 0.65
-                );
-                const toLanding = new THREE.Vector3(
-                    bobberPos.x - landingCenter.x,
-                    0,
-                    bobberPos.z - landingCenter.z
-                );
-                const distToLandingCenter = toLanding.length();
-                const lateralOffset = Math.abs(bobberPos.x - dockRefPos.x);
+                const catRef =
+                    this.fishing?.cat?.getSavedPosition?.() ||
+                    dockRefPos;
+                const lateralOffset = Math.abs(bobberPos.x - catRef.x);
+                // Prefer saved cat pose; model can rock on boats and skew the distance.
+                const dockDist = Math.hypot(bobberPos.x - catRef.x, bobberPos.z - catRef.z);
+                this._closestDockDist = Math.min(this._closestDockDist ?? Infinity, dockDist);
 
-                const CATCH_RADIUS = 1.85;
-                const MAX_LATERAL = 2.0;
+                // Water-side "at boat" zone: close + centered, without needing under-hull reach.
+                const AT_BOAT_DIST = 5.25;
+                const AT_BOAT_LATERAL = 2.75;
+                const nearBoat = dockDist < AT_BOAT_DIST && lateralOffset < AT_BOAT_LATERAL;
 
-                if (distToLandingCenter < CATCH_RADIUS && lateralOffset < MAX_LATERAL) {
+                if (nearBoat) {
+                    this._nearBoatTime = (this._nearBoatTime || 0) + delta;
+                } else {
+                    this._nearBoatTime = 0;
+                }
+
+                if (nearBoat && this._nearBoatTime >= 0.12) {
                     debugLog(
-                        `[FISH] Landing complete — center=${distToLandingCenter.toFixed(2)}, ` +
-                        `lateral=${lateralOffset.toFixed(2)}`
+                        `[FISH] Landing complete — dock=${dockDist.toFixed(2)}, ` +
+                        `lateral=${lateralOffset.toFixed(2)}, nearBoat=${this._nearBoatTime.toFixed(2)}s`
                     );
                     catchTriggered = true;
                 } else if (
-                    this._landingElapsed > 2.5 &&
-                    distToLandingCenter < 2.5 &&
-                    lateralOffset < 2.5
+                    this._landingElapsed > 1.6 &&
+                    dockDist < 6.5 &&
+                    lateralOffset < 3.5
                 ) {
-                    // At the boat but rope thrash preventing the tight radius.
                     catchTriggered = true;
-                } else if (this._landingElapsed > 6.0 && distToLandingCenter < 3.5) {
+                } else if (this._landingElapsed > 2.75 && this._closestDockDist < 8.5) {
+                    // Reeled in at least once; force finish before endless shake.
+                    catchTriggered = true;
+                } else if (this._landingElapsed > 4.0) {
                     catchTriggered = true;
                 }
             }

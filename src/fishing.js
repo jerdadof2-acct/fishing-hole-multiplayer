@@ -2055,10 +2055,11 @@ export class Fishing {
         // Use dock distance for rope length calculation when landing
         let effectiveStraight = straight;
         if (this.fishOnLine && fish?.state === 'LANDING') {
-            // During landing, calculate rope length based on distance to boat-center landing spot
-            const catPos = this.cat?.getModel()?.position || this.cat?.getSavedPosition?.();
+            // Aim for water just in front of Halley (boat midline). Targeting his feet
+            // fights the rod-tip rope constraint and stalls the bobber in a shake loop.
+            const catPos = this.cat?.getSavedPosition?.() || this.cat?.getModel()?.position;
             if (catPos) {
-                const dockTarget = new THREE.Vector3(catPos.x, 0, catPos.z + 0.65);
+                const dockTarget = new THREE.Vector3(catPos.x, 0, catPos.z + 3.25);
                 effectiveStraight = new THREE.Vector3(dockTarget.x - bob.x, 0, dockTarget.z - bob.z).length();
             }
         }
@@ -2074,12 +2075,11 @@ export class Fishing {
         let pullDir = new THREE.Vector3(tip.x - bob.x, 0, tip.z - bob.z);
         
         if (this.fishOnLine && fish?.state === 'LANDING') {
-            // Pull straight to boat midline in front of Halley (not an off-side arc).
-            const catPos = this.cat?.getModel()?.position || this.cat?.getSavedPosition?.();
+            // Pull to centered water-side landing spot (not under the hull at Halley's feet).
+            const catPos = this.cat?.getSavedPosition?.() || this.cat?.getModel()?.position;
             if (catPos) {
-                pullTarget = new THREE.Vector3(catPos.x, 0, catPos.z + 0.65);
+                pullTarget = new THREE.Vector3(catPos.x, 0, catPos.z + 3.25);
                 pullDir = new THREE.Vector3(pullTarget.x - bob.x, 0, pullTarget.z - bob.z);
-                // Bias lateral correction so wide casts snap to center instead of trolling sideways.
                 const lateral = bob.x - catPos.x;
                 if (Math.abs(lateral) > 0.15) {
                     pullDir.x -= lateral * 1.75;
@@ -2121,7 +2121,7 @@ export class Fishing {
 
         // During fish landing, snap remaining X offset toward boat center each frame.
         if (this.fishOnLine && fish?.state === 'LANDING' && this.rope?.nudgeBobberXZ) {
-            const catPos = this.cat?.getModel()?.position || this.cat?.getSavedPosition?.();
+            const catPos = this.cat?.getSavedPosition?.() || this.cat?.getModel()?.position;
             if (catPos) {
                 const lateralRemain = catPos.x - bob.x;
                 if (Math.abs(lateralRemain) > 0.05) {
@@ -2131,13 +2131,13 @@ export class Fishing {
                     );
                     this.rope.nudgeBobberXZ(lateralStep, 0);
                 }
-                // Once close, yank the last few units home so catch can fire without a shake stall.
-                const homeZ = catPos.z + 0.65;
+                // Home toward water-side landing spot (matches catch zone).
+                const homeZ = catPos.z + 3.25;
                 const remainZ = homeZ - bob.z;
                 const remainX = catPos.x - bob.x;
                 const remainDist = Math.hypot(remainX, remainZ);
-                if (remainDist < 4.0 && remainDist > 0.05) {
-                    const homeStep = Math.min(remainDist, 10.0 * delta);
+                if (remainDist < 6.0 && remainDist > 0.08) {
+                    const homeStep = Math.min(remainDist, 12.0 * delta);
                     this.rope.nudgeBobberXZ(
                         (remainX / remainDist) * homeStep,
                         (remainZ / remainDist) * homeStep
