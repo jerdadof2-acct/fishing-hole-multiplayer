@@ -2187,110 +2187,118 @@ function createGatorEllipsoid(
     return mesh;
 }
 
-/** Broad U-shaped alligator muzzle — thick oval cross-section, not a flat duck bill. */
+/**
+ * American alligator rostrum (research):
+ * - Broad, nearly parallel sides with a rounded U / parabolic tip
+ * - Relatively flat dorsal plate, but real skull depth (not a paper paddle)
+ * - Elevated nostrils near the tip, built into the surface — never a separate spike
+ */
 function createGatorSnoutGeometry(
     length,
     height,
     rearWidth,
-    frontWidth,
-    tipWidth = frontWidth * 0.94
+    tipWidth = rearWidth * 0.88
 ) {
-    const radialSegments = 22;
-    const bodyRings = 14;
+    const radialSegments = 24;
+    const bodyRings = 16;
     const capRings = 8;
     const positions = [];
     const indices = [];
 
-    // Slight downward bias at the tip — real gators hang the jaw a little.
-    const tipY = -height * 0.12;
-    const capRadius = tipWidth * 0.52;
-    const capHeight = height * 0.42;
-    const bodyEndX = length - capRadius * 0.22;
+    const capRadius = tipWidth * 0.42;
+    const bodyEndX = length - capRadius * 0.35;
 
     for (let ring = 0; ring <= bodyRings; ring++) {
         const t = ring / bodyRings;
-        // Ease out so most length stays full before the rounded tip.
-        const u = 1 - Math.pow(1 - t, 1.15);
+        const u = t;
         const x = u * bodyEndX;
 
-        // Alligator snout stays broad (U), only softens near the tip.
+        // Parallel-sided most of the way, then round into a broad U tip.
+        const taper =
+            u < 0.58
+                ? 0
+                : THREE.MathUtils.smoothstep((u - 0.58) / 0.42, 0, 1);
         const halfWidth = THREE.MathUtils.lerp(
             rearWidth * 0.5,
             tipWidth * 0.5,
-            Math.pow(u, 1.35)
+            Math.pow(taper, 0.85)
         );
 
-        // Keep real height along most of the muzzle — duck-bill was flattening this.
-        const halfHeight =
+        // Keep depth along the muzzle so it reads as skull, not a duck bill.
+        let halfHeight =
             height *
-            THREE.MathUtils.lerp(
-                0.5,
-                0.38,
-                Math.pow(u, 1.1)
-            );
+            THREE.MathUtils.lerp(0.5, 0.4, Math.pow(u, 1.05));
 
-        const centerY =
-            THREE.MathUtils.lerp(
-                height * 0.02,
-                tipY,
-                Math.pow(u, 1.4)
-            );
+        // Level dorsal plate; slight tip rise for the nostril region only.
+        let centerY = height * 0.04;
+        if (u > 0.78) {
+            const nostrilU = (u - 0.78) / 0.22;
+            centerY += height * 0.05 * nostrilU;
+            halfHeight *= 1 + 0.06 * nostrilU;
+        }
 
-        // Oval cross-section (not a squashed pancake).
-        const roundness = THREE.MathUtils.lerp(
-            0.55,
-            0.72,
-            Math.pow(u, 0.85)
-        );
+        // Superellipse: flatter top/bottom like a gator skull plate (n > 2).
+        const n = THREE.MathUtils.lerp(2.55, 2.9, u);
 
         for (let segment = 0; segment < radialSegments; segment++) {
             const angle =
                 (segment / radialSegments) * Math.PI * 2;
-
             const cosA = Math.cos(angle);
             const sinA = Math.sin(angle);
 
-            // Slightly flatter on top (dorsal plate), fuller underneath.
-            const topBias =
-                sinA > 0
-                    ? Math.pow(sinA, roundness) * 0.92
-                    : -Math.pow(Math.abs(sinA), roundness) * 1.05;
-
-            const y = topBias * halfHeight;
-
+            let y =
+                Math.sign(sinA) *
+                halfHeight *
+                Math.pow(Math.abs(sinA), 2 / n);
             const z =
                 Math.sign(cosA) *
-                Math.pow(Math.abs(cosA), roundness) *
-                halfWidth;
+                halfWidth *
+                Math.pow(Math.abs(cosA), 2 / n);
+
+            // Flatten the dorsal face a little more (alligator cranial table).
+            if (y > 0) {
+                y *= 0.82;
+            } else {
+                y *= 1.08;
+            }
 
             positions.push(x, centerY + y, z);
         }
     }
 
+    // Rounded parabolic tip — blends into the body rings.
     for (let cap = 0; cap <= capRings; cap++) {
         const theta = (cap / capRings) * Math.PI * 0.5;
         const ringScale = Math.sin(theta);
-
         const x =
             length -
             capRadius * (1 - Math.cos(theta));
 
-        const halfWidth = tipWidth * 0.5 * Math.max(ringScale, 0.08);
-        const halfHeight = capHeight * Math.max(ringScale, 0.08);
-
-        const centerY =
-            tipY +
-            (1 - ringScale) * height * 0.02;
+        const halfWidth =
+            tipWidth * 0.5 * Math.max(ringScale, 0.06);
+        const halfHeight =
+            height * 0.38 * Math.max(ringScale, 0.06);
+        const centerY = height * 0.07 * (1 - ringScale * 0.35);
+        const n = 2.7;
 
         for (let segment = 0; segment < radialSegments; segment++) {
             const angle =
                 (segment / radialSegments) * Math.PI * 2;
-
-            const sinA = Math.sin(angle);
             const cosA = Math.cos(angle);
-            const y =
-                (sinA > 0 ? sinA * 0.9 : sinA * 1.05) * halfHeight;
-            const z = cosA * halfWidth;
+            const sinA = Math.sin(angle);
+
+            let y =
+                Math.sign(sinA) *
+                halfHeight *
+                Math.pow(Math.abs(sinA), 2 / n);
+            const z =
+                Math.sign(cosA) *
+                halfWidth *
+                Math.pow(Math.abs(cosA), 2 / n);
+
+            if (y > 0) {
+                y *= 0.85;
+            }
 
             positions.push(x, centerY + y, z);
         }
@@ -2807,16 +2815,16 @@ function skinGatorHead(bones) {
     headBone.add(craniumPlate);
 
     const interocularKeel = createGatorEllipsoid(
-        0.072,
-        2.1,
-        0.36,
-        0.16,
+        0.055,
+        1.35,
+        0.28,
+        0.14,
         GATOR_SKIN_MATERIAL,
         12,
         7
     );
 
-    interocularKeel.position.set(-0.02, 0.168, 0);
+    interocularKeel.position.set(-0.06, 0.155, 0);
     headBone.add(interocularKeel);
 
     for (const side of [-1, 1]) {
@@ -2835,48 +2843,33 @@ function skinGatorHead(bones) {
         headBone.add(cheek);
     }
 
+    // One solid upper muzzle — no separate ridge/horn on top.
     const upperSnout = new THREE.Mesh(
         createGatorSnoutGeometry(
             1.02,
-            0.24,
-            0.54,
-            0.46,
-            0.44
+            0.3,
+            0.58,
+            0.5
         ),
         GATOR_SKIN_MATERIAL
     );
 
-    upperSnout.position.set(0.06, 0.02, 0);
+    upperSnout.position.set(0.06, 0.01, 0);
     upperSnout.castShadow = true;
     upperSnout.receiveShadow = true;
     headBone.add(upperSnout);
 
-    // Dorsal nasal ridge — breaks the flat paddle silhouette.
-    const nasalRidge = createGatorEllipsoid(
-        0.72,
-        1.35,
-        0.12,
-        0.22,
-        GATOR_SKIN_MATERIAL,
-        14,
-        7
-    );
-
-    nasalRidge.position.set(0.42, 0.11, 0);
-    headBone.add(nasalRidge);
-
     const lowerSnout = new THREE.Mesh(
         createGatorSnoutGeometry(
-            0.96,
-            0.16,
-            0.5,
-            0.42,
-            0.4
+            0.94,
+            0.14,
+            0.52,
+            0.44
         ),
         GATOR_DARK_MATERIAL
     );
 
-    lowerSnout.position.set(0.04, -0.055, 0);
+    lowerSnout.position.set(0.05, -0.072, 0);
     lowerSnout.castShadow = true;
     lowerSnout.receiveShadow = true;
     jawBone.add(lowerSnout);
@@ -2890,31 +2883,18 @@ function skinGatorHead(bones) {
             side
         );
 
-        // Raised nostril pads near the rounded tip.
-        const nostrilPad = createGatorEllipsoid(
-            0.055,
-            1.15,
-            0.42,
-            0.78,
-            GATOR_SKIN_MATERIAL,
-            10,
-            6
-        );
-
-        nostrilPad.position.set(0.95, 0.072, side * 0.1);
-        headBone.add(nostrilPad);
-
+        // Flush nostril pits on the tip — elevated slightly, not protruding spikes.
         const nostril = createGatorEllipsoid(
-            0.024,
-            1.05,
-            0.28,
-            0.72,
+            0.022,
+            1.1,
+            0.55,
+            0.85,
             GATOR_DARK_MATERIAL,
             8,
             5
         );
 
-        nostril.position.set(0.98, 0.088, side * 0.1);
+        nostril.position.set(0.94, 0.118, side * 0.095);
         headBone.add(nostril);
     }
 
