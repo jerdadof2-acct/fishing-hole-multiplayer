@@ -814,6 +814,66 @@ app.put('/api/players/me/save', authenticate, async (req, res) => {
             return res.status(400).json({ error: 'Invalid save data' });
         }
 
+        // Never let a thin device save erase story progress already on the account.
+        const existing = await pool.query(
+            `SELECT game_save FROM players WHERE id = $1`,
+            [req.userId]
+        );
+        const existingSave =
+            existing.rows[0]?.game_save && typeof existing.rows[0].game_save === 'object'
+                ? existing.rows[0].game_save
+                : null;
+        const incomingPlayer = gameSave.player && typeof gameSave.player === 'object'
+            ? { ...gameSave.player }
+            : null;
+        const existingPlayer =
+            existingSave?.player && typeof existingSave.player === 'object'
+                ? existingSave.player
+                : null;
+
+        if (incomingPlayer && existingPlayer) {
+            const union = (a, b) => [
+                ...new Set([...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])])
+            ];
+            incomingPlayer.hiddenRelicsCollected = union(
+                incomingPlayer.hiddenRelicsCollected,
+                existingPlayer.hiddenRelicsCollected
+            );
+            incomingPlayer.locationUnlocks = union(
+                incomingPlayer.locationUnlocks,
+                existingPlayer.locationUnlocks
+            ).sort((a, b) => a - b);
+            incomingPlayer.storyChaptersCompleted = union(
+                incomingPlayer.storyChaptersCompleted,
+                existingPlayer.storyChaptersCompleted
+            );
+            incomingPlayer.starlightLureCrafted =
+                incomingPlayer.starlightLureCrafted === true ||
+                existingPlayer.starlightLureCrafted === true;
+            incomingPlayer.fatherJournalReceived =
+                incomingPlayer.fatherJournalReceived === true ||
+                existingPlayer.fatherJournalReceived === true;
+            incomingPlayer.louisianaBayouComplete =
+                incomingPlayer.louisianaBayouComplete === true ||
+                existingPlayer.louisianaBayouComplete === true;
+            incomingPlayer.congoRiverComplete =
+                incomingPlayer.congoRiverComplete === true ||
+                existingPlayer.congoRiverComplete === true;
+            incomingPlayer.crazyCatchCoveComplete =
+                incomingPlayer.crazyCatchCoveComplete === true ||
+                existingPlayer.crazyCatchCoveComplete === true;
+            if (
+                existingPlayer.relicLocationProgress &&
+                typeof existingPlayer.relicLocationProgress === 'object'
+            ) {
+                incomingPlayer.relicLocationProgress = {
+                    ...(existingPlayer.relicLocationProgress || {}),
+                    ...(incomingPlayer.relicLocationProgress || {})
+                };
+            }
+            gameSave.player = incomingPlayer;
+        }
+
         const payload = JSON.stringify(gameSave);
         if (payload.length > 2_000_000) {
             return res.status(413).json({ error: 'Save data too large' });

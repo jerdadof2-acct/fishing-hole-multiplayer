@@ -8,7 +8,7 @@ import {
     shouldPlayStoryPrologue,
     shouldShowReturnSplash
 } from './prologue.js';
-import { applyGameSaveToLocal, captureLocalGameSave, getNewerGameSave } from './cloudSave.js';
+import { applyGameSaveToLocal, captureLocalGameSave, getNewerGameSave, mergeStoryProgressIntoSave } from './cloudSave.js';
 import {
     ensureSavePin,
     normalizeHasPin,
@@ -220,9 +220,19 @@ async function fetchPlayerState(userId) {
     try {
         const profile = await api.getPlayer();
         const saveResponse = await api.getGameSave().catch(() => null);
-        const localSave = captureLocalGameSave();
+        // Do not bump savedAt here — a fresh timestamp would make a thin local
+        // tablet save look newer than the real cloud progress.
+        const localSave = captureLocalGameSave({ bumpTimestamp: false });
         const remoteSave = saveResponse?.gameSave;
-        const mergedSave = getNewerGameSave(localSave, remoteSave);
+        let mergedSave = getNewerGameSave(localSave, remoteSave);
+        if (mergedSave && localSave?.player && remoteSave?.player) {
+            // Keep relics/unlocks from both devices when they share an account.
+            const other = mergedSave === remoteSave ? localSave : remoteSave;
+            mergedSave = mergeStoryProgressIntoSave(
+                JSON.parse(JSON.stringify(mergedSave)),
+                other
+            );
+        }
         if (mergedSave) {
             applyGameSaveToLocal(mergedSave);
         }
@@ -247,7 +257,7 @@ async function fetchPlayerState(userId) {
             }
         }
 
-        const localCollection = captureLocalGameSave()?.collection?.caughtFishCollection;
+        const localCollection = captureLocalGameSave({ bumpTimestamp: false })?.collection?.caughtFishCollection;
         if (localCollection && typeof localCollection === 'object') {
             collection = { ...collection, ...localCollection };
         }
@@ -340,7 +350,7 @@ async function finishClaimedAccount(claimed) {
         friendCode: claimed.friendCode
     });
 
-    if (claimed.gameSave) {
+    if (claimed.gameSave?.player) {
         applyGameSaveToLocal(claimed.gameSave);
     }
 
@@ -519,7 +529,7 @@ async function promptForUsername(options = {}) {
                             friendCode: login.friendCode
                         });
 
-                        if (login.gameSave) {
+                        if (login.gameSave?.player) {
                             applyGameSaveToLocal(login.gameSave);
                         }
 
