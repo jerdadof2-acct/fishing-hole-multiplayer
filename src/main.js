@@ -1345,9 +1345,20 @@ export class Game {
             );
         }
 
-        // Lake-facing reset before animation (portrait/scold keeps turned pose); feet aligned after update
+        // Lake-facing only while idle. During cast/fight/reel, forcing rotation every frame
+        // fights Throw/Reeling animation and bobber look-at (constant twitch).
         if (this.cat && this.platform) {
-            this.cat.applyLakeFacing(preserveCatFacing);
+            const fishStateEarly = this.fish?.state;
+            const sequenceCompleteEarly =
+                fishStateEarly === 'LANDED' &&
+                !this.fishing?.isReeling &&
+                !this.fishing?.fishOnLine;
+            const fishingPoseActive =
+                this.fishing?.isCasting ||
+                this.fishing?.isReeling ||
+                this.fishing?.fishOnLine ||
+                (this.fishing?.bobber?.visible && !sequenceCompleteEarly);
+            this.cat.applyLakeFacing(preserveCatFacing || fishingPoseActive);
         }
         
         // Update cat with sway and bobber tracking (only when idle - not casting or reeling)
@@ -1357,29 +1368,17 @@ export class Game {
                 const sequenceComplete = fishCaught && !this.fishing.isReeling && !this.fishing.fishOnLine;
                 const bobberInWater = this.fishing?.bobber && this.fishing.bobber.visible;
 
-                // Bobber facing during wait/fight only — not while casting (arc chase twitches
-                // Halley) and not post-catch idle. Landing uses a stable forward look target.
+                // Face bobber only while waiting/fighting — not cast, not reel/landing.
                 let bobberPos = null;
                 if (
                     catFacingBlend < PORTRAIT_BOBBER_TRACKING_CUTOFF &&
                     bobberInWater &&
                     !sequenceComplete &&
-                    !this.fishing?.isCasting
+                    !this.fishing?.isCasting &&
+                    !this.fishing?.isReeling &&
+                    fishState !== 'LANDING'
                 ) {
-                    if (fishState === 'LANDING') {
-                        const catAnchor =
-                            this.cat.savedPosition ||
-                            this.cat.getModel()?.position;
-                        if (catAnchor) {
-                            bobberPos = new THREE.Vector3(
-                                catAnchor.x,
-                                catAnchor.y,
-                                catAnchor.z + 5
-                            );
-                        }
-                    } else {
-                        bobberPos = this.fishing.bobber.position.clone();
-                    }
+                    bobberPos = this.fishing.bobber.position.clone();
                 }
                 
                 // Sequence starts immediately when cast button is clicked (isCasting = true)

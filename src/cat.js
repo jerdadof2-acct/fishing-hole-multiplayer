@@ -276,6 +276,7 @@ export class Cat {
         this._devManualRotation = false;
         this._devRotationY = 0;
         this._holdReelingAfterThrow = false;
+        this._throwPlayedThisCast = false;
     }
 
     async load(onProgress = null) {
@@ -755,12 +756,35 @@ export class Cat {
     ensureThrowAnimation() {
         if (!this.useGlbAnimations) return null;
         const clip = this.animationClips['Throw'];
+        if (!clip) return null;
         const current = this._currentAction;
-        if (clip && current?.getClip() === clip && current.isRunning() && !current.paused) {
+
+        // Throw already started this cast — never restart it every frame (that twitches Halley).
+        if (this._throwPlayedThisCast) {
+            if (current?.getClip() === clip) {
+                if (current.isRunning() && !current.paused) {
+                    return current;
+                }
+                // Hold the end pose until cast finishes.
+                current.enabled = true;
+                current.paused = true;
+                current.time = clip.duration;
+                current.setEffectiveWeight(1);
+                return current;
+            }
             return current;
         }
+
+        this._throwPlayedThisCast = true;
         this._holdReelingAfterThrow = false;
-        return this.playThrow();
+        return this.playThrow(() => {
+            // Stay on the finished Throw pose; syncCatAnimation will hold it while casting.
+        });
+    }
+
+    /** Call when a cast ends so the next cast can play Throw once. */
+    resetThrowCastGate() {
+        this._throwPlayedThisCast = false;
     }
 
     ensureReelingAnimation() {
@@ -771,6 +795,7 @@ export class Cat {
             return current;
         }
         this._holdReelingAfterThrow = true;
+        this._throwPlayedThisCast = false;
         return this.playReeling();
     }
 
@@ -1002,16 +1027,17 @@ export class Cat {
 
     /**
      * Reset Y rotation to lake-facing (position unchanged). Called each frame before cat.update().
-     * @param {boolean} preserveFacing - When true, keep current Y rotation (idle portrait only).
+     * @param {boolean} preserveFacing - When true, leave rotation alone (active cast/reel/portrait).
      */
     applyLakeFacing(preserveFacing = false) {
+        if (preserveFacing) {
+            return;
+        }
         const anchor = this.catAnchor || this.model;
         if (!anchor) return;
         anchor.rotation.x = 0;
         anchor.rotation.z = 0;
-        if (!preserveFacing) {
-            anchor.rotation.y = this.baseRotationY;
-        }
+        anchor.rotation.y = this.baseRotationY;
     }
 
     /**
@@ -3044,8 +3070,7 @@ export class Cat {
                         }
                         this.updateRodTipMarker();
 
-                        anchor.rotation.x = 0;
-                        anchor.rotation.z = 0;
+                        // Do not zero X/Z every frame — that fights Throw/Reeling root motion and twitches.
 
                         if (this._devManualRotation) {
                             anchor.rotation.y = this._devRotationY;
@@ -3060,14 +3085,17 @@ export class Cat {
                             const catPos = anchor.position.clone();
                             const toBobber = bobberPosition.clone().sub(catPos);
                             const distance = toBobber.length();
-                            if (distance > 0.5) {
+                            if (distance > 1.25) {
                                 toBobber.y = 0;
                                 toBobber.normalize();
-                                const targetAngle = Math.atan2(toBobber.x, toBobber.z) + Math.PI;
+                                // Same lake-facing convention as CAT_FACING_Y (no +Math.PI flip).
+                                const targetAngle = Math.atan2(toBobber.x, toBobber.z);
                                 let angleDiff = targetAngle - anchor.rotation.y;
                                 while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
                                 while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-                                anchor.rotation.y += angleDiff * Math.min(1, delta * 2);
+                                // Slow turn so small bobber drift does not twitch the body.
+                                anchor.rotation.y += angleDiff * Math.min(1, delta * 1.1);
+                                this.baseRotationY = anchor.rotation.y;
                             }
                         } else {
                             let angleDiff = this.baseRotationY - anchor.rotation.y;

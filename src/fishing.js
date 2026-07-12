@@ -940,7 +940,9 @@ export class Fishing {
         this.castT = 0;
         this.clearBobberWaitFlags();
         this.updateStarlightMode();
-        this.cat?.playThrow?.();
+        // One Throw per cast — ensureThrowAnimation gates restarts that caused twitching.
+        this.cat?.resetThrowCastGate?.();
+        this.cat?.ensureThrowAnimation?.();
         
         // Set rope states
         if (this.rope) {
@@ -1175,6 +1177,7 @@ export class Fishing {
             // Check if cast completed
             if (t >= 1) {
                 this.isCasting = false;
+                this.cat?.resetThrowCastGate?.();
 
                 if (this.rope && this.rope.rope.length > 0) {
                     // Get tip and bobber positions
@@ -1761,6 +1764,7 @@ export class Fishing {
         if (this.isCasting) {
             this.isCasting = false;
             this.castT = 1.0; // Complete the cast tween
+            this.cat?.resetThrowCastGate?.();
             console.log('[FISHING] Stopped cast tween on hook');
         }
         
