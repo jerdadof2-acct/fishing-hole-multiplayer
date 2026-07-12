@@ -1799,7 +1799,7 @@ export class Fishing {
     // Reel speed constants
     REEL_RATE_BASE = 3.2;               // no-fish reel-in (m/s along rope)
     REEL_RATE_FIGHT = 2.08;             // REEL_RATE_BASE * 0.65 - slower while fighting
-    REEL_RATE_LANDING = 3.5;              // Fast final pull to the boat (was 1.25 — felt like a slow troll)
+    REEL_RATE_LANDING = 2.15;             // Final pull — a bit slower than the snappy 3.5, still faster than the old crawl
     
     updateReel(delta) {
         const fish = this.sceneRef?.fish;
@@ -2101,11 +2101,11 @@ export class Fishing {
             // When reeling without fish, also pull harder to prevent stalling
             // Note: nudgeMultiplier is increased to compensate for slower reelRate during landing
             // to keep pull strength the same (5.0 * 2.5 = 12.5, so 10.0 * 1.25 = 12.5)
-            const nudgeMultiplier = (this.fishOnLine && fish?.state === 'LANDING') ? 14.0 : 
+            const nudgeMultiplier = (this.fishOnLine && fish?.state === 'LANDING') ? 9.0 : 
                                      (!this.fishOnLine) ? 5.0 : 0.8;
-            // Allow a large per-frame step so the last stretch does not crawl.
+            // Soft per-frame cap keeps the last stretch smooth without crawling.
             const rawStep = reelRate * nudgeMultiplier * delta;
-            const maxLandingStep = (this.fishOnLine && fish?.state === 'LANDING') ? 1.4 : Infinity;
+            const maxLandingStep = (this.fishOnLine && fish?.state === 'LANDING') ? 0.85 : Infinity;
             const step = Math.min(rawStep, distXZ, maxLandingStep);
             if (this.rope.nudgeBobberXZ) {
                 this.rope.nudgeBobberXZ(pullDir.x * step, pullDir.z * step);
@@ -2127,7 +2127,7 @@ export class Fishing {
                 if (Math.abs(lateralRemain) > 0.05) {
                     const lateralStep = Math.sign(lateralRemain) * Math.min(
                         Math.abs(lateralRemain),
-                        14.0 * delta
+                        9.0 * delta
                     );
                     this.rope.nudgeBobberXZ(lateralStep, 0);
                 }
@@ -2137,7 +2137,7 @@ export class Fishing {
                 const remainX = catPos.x - bob.x;
                 const remainDist = Math.hypot(remainX, remainZ);
                 if (remainDist < 6.0 && remainDist > 0.08) {
-                    const homeStep = Math.min(remainDist, 12.0 * delta);
+                    const homeStep = Math.min(remainDist, 7.0 * delta);
                     this.rope.nudgeBobberXZ(
                         (remainX / remainDist) * homeStep,
                         (remainZ / remainDist) * homeStep
