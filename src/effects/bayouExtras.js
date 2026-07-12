@@ -2022,14 +2022,14 @@ function beginGatorStartle(data, gator, bobberX, bobberZ, hooks = {}) {
 function beginGatorHeadUp(data, gator) {
     data.mode = 'headup';
     data.modeTime = THREE.MathUtils.lerp(
-        4.5,
-        8,
+        GATOR_HEADUP_DURATION_MIN,
+        GATOR_HEADUP_DURATION_MAX,
         data.random()
     );
     // Body stays low; a small neck pitch clears just the eyes/snout.
     data.targetRise = THREE.MathUtils.lerp(
-        -0.14,
-        -0.08,
+        GATOR_HEADUP_RISE_MIN,
+        GATOR_HEADUP_RISE_MAX,
         data.random()
     );
     data.headUpTargetX = gator.position.x;
@@ -2094,6 +2094,31 @@ const GATOR_TAIL_ATTACH_X =
     GATOR_ABDOMEN_LEN -
     GATOR_PELVIS_LEN -
     GATOR_TAIL_ROOT_LEN;
+
+/**
+ * Locked motion profile — lifelike bayou swim / head-up as of Jul 2026.
+ * Prefer mesh/shape work over changing these unless behavior regresses.
+ */
+const GATOR_SWIM_FREQUENCY_MIN = 0.55;
+const GATOR_SWIM_FREQUENCY_MAX = 0.68;
+const GATOR_SWIM_FREQ_DRIVE_MIN = 0.72;
+const GATOR_SWIM_FREQ_DRIVE_MAX = 0.92;
+const GATOR_SWIM_TRAVEL_LAG = 3.15;
+const GATOR_SWIM_CHEST_AMP = 0.012;
+const GATOR_SWIM_ABDOMEN_AMP = 0.024;
+const GATOR_SWIM_PELVIS_AMP = 0.032;
+const GATOR_SWIM_TAIL_ROOT_AMP = 0.04;
+const GATOR_SWIM_TAIL_AMP_BASE = 0.045;
+const GATOR_SWIM_TAIL_AMP_TIP = 0.2;
+const GATOR_SWIM_TURN_BEND_MIN = 0.2;
+const GATOR_SWIM_TURN_BEND_MAX = 0.36;
+const GATOR_HEADUP_DURATION_MIN = 4.5;
+const GATOR_HEADUP_DURATION_MAX = 8;
+const GATOR_HEADUP_RISE_MIN = -0.14;
+const GATOR_HEADUP_RISE_MAX = -0.08;
+const GATOR_HEADUP_NECK_PITCH = 0.22;
+const GATOR_HEADUP_HEAD_PITCH = 0.03;
+const GATOR_HEADUP_HANG_PITCH = 0.06;
 
 // Real alligators: tail length = 50% of total (snout tip -> tail tip).
 // So the span from tail attachment -> tip matches snout tip -> attachment.
@@ -2162,66 +2187,60 @@ function createGatorEllipsoid(
     return mesh;
 }
 
+/** Broad U-shaped alligator muzzle — thick oval cross-section, not a flat duck bill. */
 function createGatorSnoutGeometry(
     length,
     height,
     rearWidth,
     frontWidth,
-    flareWidth = frontWidth * 1.08
+    tipWidth = frontWidth * 0.94
 ) {
-    const radialSegments = 20;
-    const bodyRings = 13;
-    const capRings = 7;
+    const radialSegments = 22;
+    const bodyRings = 14;
+    const capRings = 8;
     const positions = [];
     const indices = [];
 
-    const tipY = -height * 0.46;
-    const capRadius = flareWidth * 0.48;
-    const capHeight = height * 0.3;
-    const bodyEndX = length - capRadius * 0.08;
+    // Slight downward bias at the tip — real gators hang the jaw a little.
+    const tipY = -height * 0.12;
+    const capRadius = tipWidth * 0.52;
+    const capHeight = height * 0.42;
+    const bodyEndX = length - capRadius * 0.22;
 
     for (let ring = 0; ring <= bodyRings; ring++) {
         const t = ring / bodyRings;
-        const u = 1 - Math.pow(1 - t, 0.78);
+        // Ease out so most length stays full before the rounded tip.
+        const u = 1 - Math.pow(1 - t, 1.15);
         const x = u * bodyEndX;
 
-        let halfWidth;
+        // Alligator snout stays broad (U), only softens near the tip.
+        const halfWidth = THREE.MathUtils.lerp(
+            rearWidth * 0.5,
+            tipWidth * 0.5,
+            Math.pow(u, 1.35)
+        );
 
-        if (u < 0.8) {
-            halfWidth = THREE.MathUtils.lerp(
-                rearWidth * 0.5,
-                frontWidth * 0.5,
-                Math.pow(u / 0.8, 0.72)
-            );
-        } else {
-            const flareU = (u - 0.8) / 0.2;
-
-            halfWidth = THREE.MathUtils.lerp(
-                frontWidth * 0.5,
-                flareWidth * 0.5,
-                THREE.MathUtils.smoothstep(flareU, 0, 1) * 0.65
-            );
-        }
-
+        // Keep real height along most of the muzzle — duck-bill was flattening this.
         const halfHeight =
             height *
             THREE.MathUtils.lerp(
-                0.46,
-                0.2,
-                Math.pow(u, 0.88)
+                0.5,
+                0.38,
+                Math.pow(u, 1.1)
             );
 
         const centerY =
             THREE.MathUtils.lerp(
-                0,
+                height * 0.02,
                 tipY,
-                Math.pow(u, 0.92)
+                Math.pow(u, 1.4)
             );
 
+        // Oval cross-section (not a squashed pancake).
         const roundness = THREE.MathUtils.lerp(
-            0.62,
-            0.98,
-            Math.pow(u, 0.65)
+            0.55,
+            0.72,
+            Math.pow(u, 0.85)
         );
 
         for (let segment = 0; segment < radialSegments; segment++) {
@@ -2231,10 +2250,13 @@ function createGatorSnoutGeometry(
             const cosA = Math.cos(angle);
             const sinA = Math.sin(angle);
 
-            const y =
-                Math.sign(sinA) *
-                Math.pow(Math.abs(sinA), roundness) *
-                halfHeight;
+            // Slightly flatter on top (dorsal plate), fuller underneath.
+            const topBias =
+                sinA > 0
+                    ? Math.pow(sinA, roundness) * 0.92
+                    : -Math.pow(Math.abs(sinA), roundness) * 1.05;
+
+            const y = topBias * halfHeight;
 
             const z =
                 Math.sign(cosA) *
@@ -2253,21 +2275,22 @@ function createGatorSnoutGeometry(
             length -
             capRadius * (1 - Math.cos(theta));
 
-        const halfWidth = capRadius * ringScale;
-        const halfHeight = capHeight * ringScale;
+        const halfWidth = tipWidth * 0.5 * Math.max(ringScale, 0.08);
+        const halfHeight = capHeight * Math.max(ringScale, 0.08);
 
         const centerY =
             tipY +
-            (1 - ringScale) * height * 0.04;
+            (1 - ringScale) * height * 0.02;
 
         for (let segment = 0; segment < radialSegments; segment++) {
             const angle =
                 (segment / radialSegments) * Math.PI * 2;
 
+            const sinA = Math.sin(angle);
+            const cosA = Math.cos(angle);
             const y =
-                Math.sin(angle) * halfHeight;
-            const z =
-                Math.cos(angle) * halfWidth;
+                (sinA > 0 ? sinA * 0.9 : sinA * 1.05) * halfHeight;
+            const z = cosA * halfWidth;
 
             positions.push(x, centerY + y, z);
         }
@@ -2815,31 +2838,45 @@ function skinGatorHead(bones) {
     const upperSnout = new THREE.Mesh(
         createGatorSnoutGeometry(
             1.02,
-            0.105,
-            0.58,
-            0.43,
-            0.45
+            0.24,
+            0.54,
+            0.46,
+            0.44
         ),
         GATOR_SKIN_MATERIAL
     );
 
-    upperSnout.position.set(0.06, 0.012, 0);
+    upperSnout.position.set(0.06, 0.02, 0);
     upperSnout.castShadow = true;
     upperSnout.receiveShadow = true;
     headBone.add(upperSnout);
 
+    // Dorsal nasal ridge — breaks the flat paddle silhouette.
+    const nasalRidge = createGatorEllipsoid(
+        0.72,
+        1.35,
+        0.12,
+        0.22,
+        GATOR_SKIN_MATERIAL,
+        14,
+        7
+    );
+
+    nasalRidge.position.set(0.42, 0.11, 0);
+    headBone.add(nasalRidge);
+
     const lowerSnout = new THREE.Mesh(
         createGatorSnoutGeometry(
             0.96,
-            0.082,
-            0.54,
-            0.4,
-            0.42
+            0.16,
+            0.5,
+            0.42,
+            0.4
         ),
         GATOR_DARK_MATERIAL
     );
 
-    lowerSnout.position.set(0.04, -0.018, 0);
+    lowerSnout.position.set(0.04, -0.055, 0);
     lowerSnout.castShadow = true;
     lowerSnout.receiveShadow = true;
     jawBone.add(lowerSnout);
@@ -2853,17 +2890,31 @@ function skinGatorHead(bones) {
             side
         );
 
+        // Raised nostril pads near the rounded tip.
+        const nostrilPad = createGatorEllipsoid(
+            0.055,
+            1.15,
+            0.42,
+            0.78,
+            GATOR_SKIN_MATERIAL,
+            10,
+            6
+        );
+
+        nostrilPad.position.set(0.95, 0.072, side * 0.1);
+        headBone.add(nostrilPad);
+
         const nostril = createGatorEllipsoid(
-            0.029,
+            0.024,
             1.05,
-            0.26,
+            0.28,
             0.72,
             GATOR_DARK_MATERIAL,
             8,
             5
         );
 
-        nostril.position.set(1.0, 0.028, side * 0.118);
+        nostril.position.set(0.98, 0.088, side * 0.1);
         headBone.add(nostril);
     }
 
@@ -3119,7 +3170,11 @@ function createBayouGator(random) {
         speed: THREE.MathUtils.lerp(0.72, 0.96, random()),
         turnSharpness: THREE.MathUtils.lerp(0.18, 0.28, random()),
         yawTurnRate: THREE.MathUtils.lerp(0.24, 0.34, random()),
-        swimFrequency: THREE.MathUtils.lerp(0.55, 0.68, random()),
+        swimFrequency: THREE.MathUtils.lerp(
+            GATOR_SWIM_FREQUENCY_MIN,
+            GATOR_SWIM_FREQUENCY_MAX,
+            random()
+        ),
 
         smoothedTurnBias: 0,
         swimLegTime: THREE.MathUtils.lerp(6, 12, random()),
@@ -3398,8 +3453,8 @@ function updateGator(
     const frequency =
         data.swimFrequency *
         THREE.MathUtils.lerp(
-            0.72,
-            0.92,
+            GATOR_SWIM_FREQ_DRIVE_MIN,
+            GATOR_SWIM_FREQ_DRIVE_MAX,
             drive
         );
 
@@ -3465,36 +3520,40 @@ function updateGator(
 
     // Slow traveling S-curve: hips lead, tip follows — snake undulation, not a whip.
     const wavePhase = phase;
-    const travelLag = 3.15;
+    const travelLag = GATOR_SWIM_TRAVEL_LAG;
 
     const headTurnLead = smoothedTurnBias * 0.5;
     // Soft arc into the turn (additive on top of the wave — does not clamp serpentine).
     // Aft bones use the opposite local sign because the chain runs down -X.
     const turnBend =
         -smoothedTurnBias *
-        THREE.MathUtils.lerp(0.2, 0.36, drive);
+        THREE.MathUtils.lerp(
+            GATOR_SWIM_TURN_BEND_MIN,
+            GATOR_SWIM_TURN_BEND_MAX,
+            drive
+        );
 
     const chestYaw =
         Math.sin(wavePhase) *
-            0.012 *
+            GATOR_SWIM_CHEST_AMP *
             activeDrive +
         turnBend * 0.1;
 
     const abdomenYaw =
         Math.sin(wavePhase - travelLag * 0.16) *
-            0.024 *
+            GATOR_SWIM_ABDOMEN_AMP *
             activeDrive +
         turnBend * 0.28;
 
     const pelvisYaw =
         Math.sin(wavePhase - travelLag * 0.28) *
-            0.032 *
+            GATOR_SWIM_PELVIS_AMP *
             activeDrive +
         turnBend * 0.48;
 
     const tailRootYaw =
         Math.sin(wavePhase - travelLag * 0.4) *
-            0.04 *
+            GATOR_SWIM_TAIL_ROOT_AMP *
             activeDrive +
         turnBend * 0.62;
 
@@ -3534,7 +3593,7 @@ function updateGator(
     const hangFollow =
         1 - Math.exp(-4.2 * delta);
     const hangPitch =
-        data.mode === 'headup' ? 0.06 : 0;
+        data.mode === 'headup' ? GATOR_HEADUP_HANG_PITCH : 0;
 
     data.chestBone.rotation.z +=
         (hangPitch * 0.4 - data.chestBone.rotation.z) *
@@ -3564,8 +3623,8 @@ function updateGator(
         // Modest per-segment angles — hierarchy already stacks toward the tip.
         const amplitude =
             THREE.MathUtils.lerp(
-                0.045,
-                0.2,
+                GATOR_SWIM_TAIL_AMP_BASE,
+                GATOR_SWIM_TAIL_AMP_TIP,
                 Math.pow(t, 1.2)
             ) *
             activeDrive;
@@ -3667,7 +3726,7 @@ function updateGator(
         // Mild pitch — eyes/snout at the surface, not a crane.
         data.neckBone.rotation.z +=
             (
-                0.22 -
+                GATOR_HEADUP_NECK_PITCH -
                 data.neckBone.rotation.z
             ) *
             liftFollow;
@@ -3681,7 +3740,7 @@ function updateGator(
 
         data.headBone.rotation.z +=
             (
-                0.03 -
+                GATOR_HEADUP_HEAD_PITCH -
                 data.headBone.rotation.z
             ) *
             liftFollow;
