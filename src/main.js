@@ -1365,7 +1365,16 @@ export class Game {
                     bobberInWater &&
                     !sequenceComplete
                 ) {
-                    bobberPos = this.fishing.bobber.position.clone();
+                    // Final reel-in: look straight ahead at boat midline — tracking a close,
+                    // jittery bobber made Halley flail the rod left/right.
+                    if (fishState === 'LANDING') {
+                        const catAnchor = this.cat.getSavedPosition?.() || this.cat.getModel()?.position;
+                        if (catAnchor) {
+                            bobberPos = new THREE.Vector3(catAnchor.x, catAnchor.y, catAnchor.z + 5);
+                        }
+                    } else {
+                        bobberPos = this.fishing.bobber.position.clone();
+                    }
                 }
                 
                 // Sequence starts immediately when cast button is clicked (isCasting = true)

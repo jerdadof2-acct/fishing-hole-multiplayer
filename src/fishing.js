@@ -1023,6 +1023,11 @@ export class Fishing {
             return Math.min(2.2, moveSpeed * 0.55 + 0.55);
         }
 
+        // Final reel-in: keep rod tip calm — short rope + bobber nudges used to thrash the tip.
+        if (this.isReeling && fishInstance?.state === 'LANDING') {
+            return 0.28;
+        }
+
         if (this.isReeling) {
             const straightDist = rodTip.distanceTo(bobberPos);
             const ropeRatio = this.rope.ropeLen / Math.max(straightDist, 0.1);
@@ -1799,7 +1804,7 @@ export class Fishing {
     // Reel speed constants
     REEL_RATE_BASE = 3.2;               // no-fish reel-in (m/s along rope)
     REEL_RATE_FIGHT = 2.08;             // REEL_RATE_BASE * 0.65 - slower while fighting
-    REEL_RATE_LANDING = 1.55;             // Natural final pull — slower than the snappy passes
+    REEL_RATE_LANDING = 0.95;             // Smooth final pull — slower, less thrash
     
     updateReel(delta) {
         const fish = this.sceneRef?.fish;
@@ -2065,7 +2070,7 @@ export class Fishing {
         }
         const targetLen = Math.max(minRopeLen, effectiveStraight - reelRate * delta);
         // Faster lerp during landing for quicker response
-        const lerpRate = (fish?.state === 'LANDING') ? 0.95 : 0.85;
+        const lerpRate = (fish?.state === 'LANDING') ? 0.7 : 0.85;
         this.rope.ropeLen = THREE.MathUtils.lerp(this.rope.ropeLen, targetLen, lerpRate);
         
         // 2) guarantee horizontal progress toward the tip/dock so it never "stalls"
@@ -2080,9 +2085,10 @@ export class Fishing {
             if (catPos) {
                 pullTarget = new THREE.Vector3(catPos.x, 0, catPos.z + 3.25);
                 pullDir = new THREE.Vector3(pullTarget.x - bob.x, 0, pullTarget.z - bob.z);
+                // Gentle center bias only — strong lateral snaps made Halley flail with the bobber.
                 const lateral = bob.x - catPos.x;
-                if (Math.abs(lateral) > 0.15) {
-                    pullDir.x -= lateral * 1.75;
+                if (Math.abs(lateral) > 0.35) {
+                    pullDir.x -= lateral * 0.55;
                 }
             }
         } else if (!this.fishOnLine && this.isReeling) {
@@ -2097,15 +2103,11 @@ export class Fishing {
         const distXZ = pullDir.length();
         if (distXZ > 1e-4) {
             pullDir.normalize();
-            // During LANDING, pull much harder to get bobber closer to dock
-            // When reeling without fish, also pull harder to prevent stalling
-            // Note: nudgeMultiplier is increased to compensate for slower reelRate during landing
-            // to keep pull strength the same (5.0 * 2.5 = 12.5, so 10.0 * 1.25 = 12.5)
-            const nudgeMultiplier = (this.fishOnLine && fish?.state === 'LANDING') ? 6.5 : 
+            // Steady landing pull — avoid yanky steps that thrash the rod tip.
+            const nudgeMultiplier = (this.fishOnLine && fish?.state === 'LANDING') ? 3.25 : 
                                      (!this.fishOnLine) ? 5.0 : 0.8;
-            // Soft per-frame cap keeps the last stretch smooth without crawling.
             const rawStep = reelRate * nudgeMultiplier * delta;
-            const maxLandingStep = (this.fishOnLine && fish?.state === 'LANDING') ? 0.55 : Infinity;
+            const maxLandingStep = (this.fishOnLine && fish?.state === 'LANDING') ? 0.28 : Infinity;
             const step = Math.min(rawStep, distXZ, maxLandingStep);
             if (this.rope.nudgeBobberXZ) {
                 this.rope.nudgeBobberXZ(pullDir.x * step, pullDir.z * step);
@@ -2119,29 +2121,17 @@ export class Fishing {
             }
         }
 
-        // During fish landing, snap remaining X offset toward boat center each frame.
+        // Soft lateral ease toward boat center (no hard snaps — those caused rod flail).
         if (this.fishOnLine && fish?.state === 'LANDING' && this.rope?.nudgeBobberXZ) {
             const catPos = this.cat?.getSavedPosition?.() || this.cat?.getModel()?.position;
             if (catPos) {
                 const lateralRemain = catPos.x - bob.x;
-                if (Math.abs(lateralRemain) > 0.05) {
+                if (Math.abs(lateralRemain) > 0.2) {
                     const lateralStep = Math.sign(lateralRemain) * Math.min(
                         Math.abs(lateralRemain),
-                        6.5 * delta
+                        2.2 * delta
                     );
                     this.rope.nudgeBobberXZ(lateralStep, 0);
-                }
-                // Home toward water-side landing spot (matches catch zone).
-                const homeZ = catPos.z + 3.25;
-                const remainZ = homeZ - bob.z;
-                const remainX = catPos.x - bob.x;
-                const remainDist = Math.hypot(remainX, remainZ);
-                if (remainDist < 6.0 && remainDist > 0.08) {
-                    const homeStep = Math.min(remainDist, 4.5 * delta);
-                    this.rope.nudgeBobberXZ(
-                        (remainX / remainDist) * homeStep,
-                        (remainZ / remainDist) * homeStep
-                    );
                 }
             }
         }
