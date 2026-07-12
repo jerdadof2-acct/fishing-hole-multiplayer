@@ -255,6 +255,7 @@ export class Fish {
             this.state = FishState.LANDING;
             this._landingStartLogged = false;
             this._lastLandingLogTime = 0;
+            this._landingElapsed = 0;
             debugLog('[FISH] startLanding() called, state set to LANDING');
             if (this._gentleReunion) {
                 const castButton = document.getElementById('cast-button');
@@ -703,25 +704,55 @@ export class Fish {
             // Keep fish hidden during landing too
             this.mesh.visible = false;
             
-            // Catch once the bobber is within landing range of the cat/dock.
-            // Use a one-sided threshold (not a thin band): landing pull + double-reel
-            // used to skip past 8.0–8.5 and leave Halley stuck shaking in LANDING.
+            // Catch at the boat/dock center landing spot — not anywhere on a wide radius
+            // around the cat (that finished catches off to the left/right as a slow troll).
             let catchTriggered = false;
 
             if (this._gentleReunion) {
                 this._checkGentleReunionCatch();
                 if (this.state === FishState.LANDED) return;
             } else if (this.state !== FishState.LANDED) {
-                const CATCH_DISTANCE_DOCK = 8.5;
-                const CATCH_DISTANCE_TIP = 4.0;
+                this._landingElapsed = (this._landingElapsed || 0) + delta;
+
+                // Same center point empty-reel uses: slightly in front of Halley on the boat midline.
+                const landingCenter = new THREE.Vector3(
+                    dockRefPos.x,
+                    0,
+                    dockRefPos.z + 0.65
+                );
+                const toLanding = new THREE.Vector3(
+                    bobberPos.x - landingCenter.x,
+                    0,
+                    bobberPos.z - landingCenter.z
+                );
+                const distToLandingCenter = toLanding.length();
+                const lateralOffset = Math.abs(bobberPos.x - dockRefPos.x);
                 const bobberDistToTip = rodTip
                     ? new THREE.Vector3().subVectors(bobberPos, rodTip).length()
                     : Infinity;
 
-                if (bobberDistToDock < CATCH_DISTANCE_DOCK || bobberDistToTip < CATCH_DISTANCE_TIP) {
+                const CATCH_RADIUS = 1.25;
+                const MAX_LATERAL = 1.5;
+                const TIP_CATCH = 2.0;
+
+                if (
+                    (distToLandingCenter < CATCH_RADIUS && lateralOffset < MAX_LATERAL) ||
+                    bobberDistToTip < TIP_CATCH
+                ) {
                     debugLog(
-                        `[FISH] Landing complete — dock=${bobberDistToDock.toFixed(2)}, tip=${bobberDistToTip.toFixed(2)}`
+                        `[FISH] Landing complete — center=${distToLandingCenter.toFixed(2)}, ` +
+                        `lateral=${lateralOffset.toFixed(2)}, tip=${bobberDistToTip.toFixed(2)}`
                     );
+                    catchTriggered = true;
+                } else if (
+                    this._landingElapsed > 4.0 &&
+                    distToLandingCenter < 3.0 &&
+                    lateralOffset < 2.5
+                ) {
+                    // Safety: nearly home but rope thrash preventing the tight radius.
+                    catchTriggered = true;
+                } else if (this._landingElapsed > 7.0) {
+                    // Hard timeout so LANDING cannot stick forever.
                     catchTriggered = true;
                 }
             }
