@@ -3466,32 +3466,36 @@ function updateGator(
     const wavePhase = phase;
     const travelLag = 3.15;
 
-    const headTurnLead = smoothedTurnBias * 0.48;
-    const turnBend = smoothedTurnBias * 0.14;
+    const headTurnLead = smoothedTurnBias * 0.5;
+    // Soft arc into the turn (additive on top of the wave — does not clamp serpentine).
+    // Aft bones use the opposite local sign because the chain runs down -X.
+    const turnBend =
+        -smoothedTurnBias *
+        THREE.MathUtils.lerp(0.2, 0.36, drive);
 
     const chestYaw =
         Math.sin(wavePhase) *
             0.012 *
             activeDrive +
-        turnBend * 0.06;
+        turnBend * 0.1;
 
     const abdomenYaw =
         Math.sin(wavePhase - travelLag * 0.16) *
             0.024 *
             activeDrive +
-        turnBend * 0.12;
+        turnBend * 0.28;
 
     const pelvisYaw =
         Math.sin(wavePhase - travelLag * 0.28) *
             0.032 *
             activeDrive +
-        turnBend * 0.18;
+        turnBend * 0.48;
 
     const tailRootYaw =
         Math.sin(wavePhase - travelLag * 0.4) *
             0.04 *
             activeDrive +
-        turnBend * 0.22;
+        turnBend * 0.62;
 
     const bodyFollow =
         1 -
@@ -3548,7 +3552,7 @@ function updateGator(
 
         const targetYaw =
             Math.sin(wavePhase - lag) * amplitude +
-            turnBend * THREE.MathUtils.lerp(0.12, 0.28, t);
+            turnBend * THREE.MathUtils.lerp(0.55, 0.9, Math.pow(t, 1.1));
 
         const followSpeed =
             THREE.MathUtils.lerp(5.2, 3.4, Math.pow(t, 1.05));
