@@ -3135,7 +3135,7 @@ export class Cat {
             
             // Only rotate if bobber is far enough away (avoid jitter when too close)
             const distance = toBobber.length();
-            if (distance > 2.5) {
+            if (distance > 0.5) {
                 // Calculate direction to bobber (only XZ plane, ignore Y)
                 toBobber.y = 0; // Only rotate horizontally (Y rotation)
                 toBobber.normalize();
@@ -3145,8 +3145,8 @@ export class Cat {
                 const targetAngle = Math.atan2(toBobber.x, toBobber.z);
                 
                 // Smooth interpolation toward target angle for natural rotation
-                // Near bobbers use a gentler turn rate so the rod does not thrash.
-                const lerpSpeed = distance < 6.0 ? 1.35 : 4.0;
+                // Reduced lerp speed for smoother, less abrupt turning
+                const lerpSpeed = 4.0; // How fast cat rotates to face bobber (reduced from 8.0 for smoother motion)
                 const currentAngle = this.model.rotation.y;
                 
                 // Handle angle wrapping (shortest rotation path)

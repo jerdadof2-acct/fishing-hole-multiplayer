@@ -1357,20 +1357,25 @@ export class Game {
                 const sequenceComplete = fishCaught && !this.fishing.isReeling && !this.fishing.fishOnLine;
                 const bobberInWater = this.fishing?.bobber && this.fishing.bobber.visible;
 
-                // Bobber tracking only during an active fishing sequence — not post-catch idle
-                // (avoids fighting applyLakeFacing when the bobber sits near Halley's feet).
+                // Bobber facing during wait/fight only — not while casting (arc chase twitches
+                // Halley) and not post-catch idle. Landing uses a stable forward look target.
                 let bobberPos = null;
                 if (
                     catFacingBlend < PORTRAIT_BOBBER_TRACKING_CUTOFF &&
                     bobberInWater &&
-                    !sequenceComplete
+                    !sequenceComplete &&
+                    !this.fishing?.isCasting
                 ) {
-                    // Final reel-in: look straight ahead at boat midline — tracking a close,
-                    // jittery bobber made Halley flail the rod left/right.
                     if (fishState === 'LANDING') {
-                        const catAnchor = this.cat.getSavedPosition?.() || this.cat.getModel()?.position;
+                        const catAnchor =
+                            this.cat.savedPosition ||
+                            this.cat.getModel()?.position;
                         if (catAnchor) {
-                            bobberPos = new THREE.Vector3(catAnchor.x, catAnchor.y, catAnchor.z + 5);
+                            bobberPos = new THREE.Vector3(
+                                catAnchor.x,
+                                catAnchor.y,
+                                catAnchor.z + 5
+                            );
                         }
                     } else {
                         bobberPos = this.fishing.bobber.position.clone();
