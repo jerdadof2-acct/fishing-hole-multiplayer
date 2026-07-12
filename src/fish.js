@@ -39,7 +39,7 @@ export class Fish {
         this.mesh = this.fish;
         
         this.speedFight = 1.25;             // m/s, not too fast
-        this.speedLanding = 5.0;            // Match moderated final reel-in speed
+        this.speedLanding = 3.75;           // Match natural final reel-in speed
         this._dir = new THREE.Vector3(1, 0, 0);
         this._dirT = 0;
         this._fightT = 0;

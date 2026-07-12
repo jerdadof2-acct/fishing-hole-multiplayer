@@ -1799,7 +1799,7 @@ export class Fishing {
     // Reel speed constants
     REEL_RATE_BASE = 3.2;               // no-fish reel-in (m/s along rope)
     REEL_RATE_FIGHT = 2.08;             // REEL_RATE_BASE * 0.65 - slower while fighting
-    REEL_RATE_LANDING = 2.15;             // Final pull — a bit slower than the snappy 3.5, still faster than the old crawl
+    REEL_RATE_LANDING = 1.55;             // Natural final pull — slower than the snappy passes
     
     updateReel(delta) {
         const fish = this.sceneRef?.fish;
