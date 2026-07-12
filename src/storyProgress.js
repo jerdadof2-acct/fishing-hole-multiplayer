@@ -130,7 +130,8 @@ export function recordSuccessfulCatchForRelicProgress(player, locationName, fish
         return true;
     });
 
-    player.save({ skipSync: true });
+    // Sync so relic eligibility progress is not stuck on one device.
+    player.save();
     return { clues, progress, tier, step };
 }
 
@@ -160,7 +161,7 @@ export function markAmazonAnacondaSighted(player, locationName) {
     const progress = getRelicLocationProgress(player, locationName);
     progress.flags.anacondaSighted = true;
     progress.flags.specialConditionMet = true;
-    player?.save?.({ skipSync: true });
+    player?.save?.();
 }
 
 export function isRelicEligible(player, locationName, locationIndex) {
@@ -254,7 +255,7 @@ export function markChapterComplete(player, chapterId) {
     }
     if (!player.storyChaptersCompleted.includes(chapterId)) {
         player.storyChaptersCompleted.push(chapterId);
-        player.save({ skipSync: true });
+        player.save();
     }
 }
 
@@ -373,7 +374,7 @@ export function notifyPendingStoryTravelUnlock(player, locations) {
 
     const name = locations[index]?.name || 'A new location';
     player.pendingStoryTravelIndex = null;
-    player.save({ skipSync: true });
+    player.save();
     return name;
 }
 

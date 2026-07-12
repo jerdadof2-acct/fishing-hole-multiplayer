@@ -62,6 +62,19 @@ export function getNewerGameSave(localSave, remoteSave) {
     if (!localSave?.player) {
         return remoteSave;
     }
+
+    const localUserId = localSave.player.userId || localSave.player.id || null;
+    const remoteUserId = remoteSave.player.userId || remoteSave.player.id || null;
+
+    // Prefer the account cloud save when local data belongs to a different
+    // (or guest) profile — e.g. a fresh tablet with leftover guest play.
+    if (remoteUserId && localUserId && remoteUserId !== localUserId) {
+        return remoteSave;
+    }
+    if (remoteUserId && !localUserId) {
+        return remoteSave;
+    }
+
     const localTs = localSave.savedAt || 0;
     const remoteTs = remoteSave.savedAt || 0;
     return remoteTs >= localTs ? remoteSave : localSave;

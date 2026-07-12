@@ -3895,7 +3895,7 @@ export class UI {
 
         if (travelOffer.pendingTravelLocationIndex != null) {
             this.player.pendingStoryTravelIndex = travelOffer.pendingTravelLocationIndex;
-            this.player.save({ skipSync: true });
+            this.player.save();
         }
 
         const unlockNote = [

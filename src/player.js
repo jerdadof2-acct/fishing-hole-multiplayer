@@ -585,10 +585,31 @@ export class Player {
     }
 
     /**
-     * Allow background synchronization once initial data has been loaded
+     * Allow background synchronization once initial data has been loaded.
+     * Immediately schedules a flush so any local-only story/relic progress
+     * written before sync was enabled still reaches the cloud.
      */
     enableSync() {
         this.syncEnabled = true;
+        this.scheduleSync();
+    }
+
+    /**
+     * Push local state to the server now (or as soon as sync is allowed).
+     * Used on page hide so relic/unlock writes are not lost if the tab closes
+     * before the 500ms debounce fires.
+     */
+    flushSync() {
+        if (!this.syncEnabled || !this.api || !this.userId) {
+            return;
+        }
+        if (this._syncTimeout) {
+            clearTimeout(this._syncTimeout);
+            this._syncTimeout = null;
+        }
+        this.syncToServer().catch(error => {
+            console.error('[PLAYER] Failed to flush sync:', error);
+        });
     }
 
     /**
@@ -902,7 +923,8 @@ export class Player {
         }
 
         if (previous !== next) {
-            this.save({ skipSync: true });
+            // Unlock list must reach the cloud so other devices see the same map.
+            this.save();
         }
     }
 

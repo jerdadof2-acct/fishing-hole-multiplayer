@@ -42,7 +42,8 @@ export function collectHiddenRelic(player, relicId) {
     }
 
     player.syncStoryUnlocks();
-    player.save({ skipSync: true });
+    // Must sync: location unlocks depend on relics and must follow the account across devices.
+    player.save();
     return forged;
 }
 

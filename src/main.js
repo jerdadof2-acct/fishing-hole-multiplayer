@@ -864,6 +864,19 @@ export class Game {
                 this.fishCollection.enableSync();
             }
 
+            if (typeof document !== 'undefined' && !this._cloudFlushBound) {
+                this._cloudFlushBound = true;
+                const flushCloudSave = () => {
+                    this.player?.flushSync?.();
+                };
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'hidden') {
+                        flushCloudSave();
+                    }
+                });
+                window.addEventListener('pagehide', flushCloudSave);
+            }
+
             if (this.deferReveal) {
                 loadingProgress.update(100, 'Ready to cast!');
                 if (typeof document !== 'undefined' && (document.hidden || document.visibilityState === 'hidden')) {
