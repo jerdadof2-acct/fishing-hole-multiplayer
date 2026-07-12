@@ -1573,10 +1573,12 @@ function buildGatorSwimObstacles({
             continue;
         }
 
+        // Logs are thin floaters — keep a modest exclusion so the gator can
+        // cruise past the turtle log without getting shoved into invalid water.
         obstacles.push({
             x: child.position.x,
             z: child.position.z,
-            radius: 1.55
+            radius: 1.05
         });
     }
 
@@ -1614,6 +1616,36 @@ function isValidGatorSwimPoint(x, z, data) {
     }
 
     return true;
+}
+
+/** Prefer a nearby open spot so recovery never teleports across the bayou. */
+function sampleNearbyGatorSwimPoint(
+    data,
+    originX,
+    originZ,
+    random,
+    {
+        minRadius = 0.6,
+        maxRadius = 4.5,
+        attempts = 48
+    } = {}
+) {
+    for (let attempt = 0; attempt < attempts; attempt++) {
+        const angle = random() * Math.PI * 2;
+        const radius = THREE.MathUtils.lerp(
+            minRadius,
+            maxRadius,
+            Math.sqrt(random())
+        );
+        const x = originX + Math.cos(angle) * radius;
+        const z = originZ + Math.sin(angle) * radius;
+
+        if (isValidGatorSwimPoint(x, z, data)) {
+            return { x, z };
+        }
+    }
+
+    return null;
 }
 
 function sampleGatorFishingViewPoint(data, random) {
@@ -1660,7 +1692,7 @@ function applyGatorObstacleSteering(gator, data, delta) {
         const influence =
             obstacle.radius +
             GATOR_BODY_RADIUS +
-            2.8;
+            1.8;
 
         if (dist >= influence || dist < 0.001) {
             continue;
@@ -1675,7 +1707,7 @@ function applyGatorObstacleSteering(gator, data, delta) {
 
     if (repelX !== 0 || repelZ !== 0) {
         const repelScale =
-            data.speed * 0.75 * delta;
+            data.speed * 0.9 * delta;
 
         data.velocity.x += repelX * repelScale;
         data.velocity.z += repelZ * repelScale;
@@ -1699,7 +1731,15 @@ function applyGatorViewBoundarySteering(gator, data, delta) {
 
     data.velocity.x += (dx / len) * push;
     data.velocity.z += (dz / len) * push;
-    pickGatorTarget(data);
+
+    // Retarget only occasionally — every-frame retargets cause path thrashing.
+    data._boundaryRetargetCooldown =
+        (data._boundaryRetargetCooldown ?? 0) - delta;
+
+    if (data._boundaryRetargetCooldown <= 0) {
+        pickGatorTarget(data);
+        data._boundaryRetargetCooldown = 1.4;
+    }
 }
 
 function resolveGatorCollisions(gator, data) {
@@ -1741,7 +1781,34 @@ function resolveGatorCollisions(gator, data) {
         data.velocity.x *= 0.35;
         data.velocity.z *= 0.35;
 
-        if (data.mode === 'lurk') {
+        const recovered = sampleNearbyGatorSwimPoint(
+            data,
+            x,
+            z,
+            data.random
+        );
+
+        if (recovered) {
+            gator.position.x = recovered.x;
+            gator.position.z = recovered.z;
+
+            if (data.mode === 'lurk') {
+                data.lurkTargetX = recovered.x;
+                data.lurkTargetZ = recovered.z;
+            } else if (data.mode === 'peek') {
+                data.peekTargetX = recovered.x;
+                data.peekTargetZ = recovered.z;
+            } else if (data.mode === 'headup') {
+                data.headUpTargetX = recovered.x;
+                data.headUpTargetZ = recovered.z;
+            } else {
+                data.target.set(
+                    recovered.x,
+                    data.baseWaterY,
+                    recovered.z
+                );
+            }
+        } else if (data.mode === 'lurk') {
             data.lurkTargetX = gator.position.x;
             data.lurkTargetZ = gator.position.z;
         } else {
@@ -1763,28 +1830,22 @@ function beginGatorLurk(data, gator) {
         data.random()
     );
 
+    // Lurk in place — never teleport to a random bayou sample (that caused
+    // visible blips from the turtle log / open water back to the cypress line).
     let lurkX = gator.position.x;
     let lurkZ = gator.position.z;
 
-    const lurkSpot = sampleGatorFishingViewPoint(
-        data,
-        data.random
-    );
-
-    if (lurkSpot) {
-        lurkX = lurkSpot.x;
-        lurkZ = lurkSpot.z;
-        gator.position.x = lurkX;
-        gator.position.z = lurkZ;
-    } else if (!isValidGatorSwimPoint(lurkX, lurkZ, data)) {
-        const spot = sampleGatorFishingViewPoint(
+    if (!isValidGatorSwimPoint(lurkX, lurkZ, data)) {
+        const nearby = sampleNearbyGatorSwimPoint(
             data,
+            lurkX,
+            lurkZ,
             data.random
         );
 
-        if (spot) {
-            lurkX = spot.x;
-            lurkZ = spot.z;
+        if (nearby) {
+            lurkX = nearby.x;
+            lurkZ = nearby.z;
             gator.position.x = lurkX;
             gator.position.z = lurkZ;
         }
