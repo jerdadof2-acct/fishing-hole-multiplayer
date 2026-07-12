@@ -2860,6 +2860,90 @@ function addGatorTorsoWeldMeshes(bones) {
     bones.tailRootBone.add(tailRootCollar);
 }
 
+/**
+ * Alligator dentition (research):
+ * - Upper jaw is wider; top teeth hang down and are the ones you mainly see
+ * - Lower teeth point up and sit inside the upper row (overbite)
+ * Game gape: show upper clearly, let lower peek so both rows read.
+ */
+function addGatorTeeth(headBone, jawBone) {
+    const toothMaterial = new THREE.MeshStandardMaterial({
+        color: 0xe8e0c8,
+        roughness: 0.62,
+        metalness: 0.05
+    });
+
+    const makeTooth = (length, radius) => {
+        const tooth = new THREE.Mesh(
+            new THREE.ConeGeometry(radius, length, 6),
+            toothMaterial
+        );
+
+        tooth.castShadow = true;
+        tooth.receiveShadow = true;
+        return tooth;
+    };
+
+    // Maxillary — outer lip, tips pointing down.
+    const upperTeeth = [
+        { x: 0.26, size: 0.92 },
+        { x: 0.38, size: 1.12 },
+        { x: 0.5, size: 1.0 },
+        { x: 0.62, size: 1.18 },
+        { x: 0.74, size: 0.95 },
+        { x: 0.86, size: 0.82 },
+        { x: 0.96, size: 0.7 }
+    ];
+
+    for (const side of [-1, 1]) {
+        for (const spec of upperTeeth) {
+            const t = (spec.x - 0.26) / 0.7;
+            const tooth = makeTooth(
+                0.055 * spec.size,
+                0.016 * spec.size
+            );
+
+            // Cone default +Y; flip to hang down from the upper jaw.
+            tooth.rotation.z = Math.PI;
+            tooth.position.set(
+                spec.x,
+                -0.028,
+                side * THREE.MathUtils.lerp(0.2, 0.155, t)
+            );
+            headBone.add(tooth);
+        }
+    }
+
+    // Mandibular — inset inside the upper row, tips pointing up.
+    const lowerTeeth = [
+        { x: 0.3, size: 0.78 },
+        { x: 0.42, size: 0.95 },
+        { x: 0.54, size: 0.88 },
+        { x: 0.66, size: 1.05 },
+        { x: 0.78, size: 0.8 },
+        { x: 0.9, size: 0.68 }
+    ];
+
+    for (const side of [-1, 1]) {
+        for (const spec of lowerTeeth) {
+            const t = (spec.x - 0.3) / 0.6;
+            const tooth = makeTooth(
+                0.042 * spec.size,
+                0.013 * spec.size
+            );
+
+            // Point up from the lower jaw into the mouth seam.
+            tooth.rotation.z = 0;
+            tooth.position.set(
+                spec.x - 0.1,
+                0.058,
+                side * THREE.MathUtils.lerp(0.15, 0.115, t)
+            );
+            jawBone.add(tooth);
+        }
+    }
+}
+
 function skinGatorHead(bones) {
     const { headBone, jawBone } = bones;
 
@@ -3041,16 +3125,16 @@ function skinGatorHead(bones) {
 
     // Dark mouth seam / interior only — not the whole lower jaw.
     const mouthSeam = createGatorEllipsoid(
+        0.1,
+        3.2,
         0.12,
-        3.4,
-        0.18,
-        0.72,
+        0.62,
         GATOR_DARK_MATERIAL,
         14,
         8
     );
 
-    mouthSeam.position.set(0.52, 0.02, 0);
+    mouthSeam.position.set(0.5, 0.008, 0);
     jawBone.add(mouthSeam);
 
     const chin = createGatorEllipsoid(
@@ -3066,39 +3150,7 @@ function skinGatorHead(bones) {
     chin.position.set(0.08, -0.04, 0);
     jawBone.add(chin);
 
-    const toothMaterial = new THREE.MeshStandardMaterial({
-        color: 0xd8d1b7,
-        roughness: 0.8,
-        metalness: 0
-    });
-
-    const toothPositions = [
-        { x: 0.36, size: 1.0 },
-        { x: 0.55, size: 0.9 },
-        { x: 0.74, size: 0.78 },
-        { x: 0.9, size: 0.65 }
-    ];
-
-    for (const side of [-1, 1]) {
-        for (const spec of toothPositions) {
-            const tooth = new THREE.Mesh(
-                new THREE.ConeGeometry(
-                    0.012 * spec.size,
-                    0.03 * spec.size,
-                    6
-                ),
-                toothMaterial
-            );
-
-            tooth.rotation.z = Math.PI;
-            tooth.position.set(
-                spec.x,
-                -0.055,
-                side * THREE.MathUtils.lerp(0.18, 0.14, (spec.x - 0.36) / 0.54)
-            );
-            headBone.add(tooth);
-        }
-    }
+    addGatorTeeth(headBone, jawBone);
 
     addGatorHeadArmor(headBone, jawBone);
 
