@@ -2469,7 +2469,7 @@ function buildGatorSkeleton(gator) {
         'gatorJawBone',
         headBone,
         0.1,
-        -0.085,
+        -0.065,
         0
     );
 
@@ -2749,16 +2749,52 @@ function skinGatorHead(bones) {
         headBone.add(cheek);
     }
 
-    // Upper jaw — overlapping volumes like the torso (broad U muzzle, real depth).
+    // Upper jaw — broad, heavy, rounded American alligator muzzle.
     addGatorJawVolume(headBone, {
         material: GATOR_SKIN_MATERIAL,
-        yBase: 0.02,
+        yBase: 0.025,
+        sideBulge: false,
         segments: [
-            { x: 0.22, radius: 0.2, scaleX: 1.15, scaleY: 0.62, scaleZ: 1.2 },
-            { x: 0.42, radius: 0.185, scaleX: 1.2, scaleY: 0.58, scaleZ: 1.16 },
-            { x: 0.62, radius: 0.17, scaleX: 1.18, scaleY: 0.55, scaleZ: 1.1 },
-            { x: 0.8, radius: 0.155, scaleX: 1.12, scaleY: 0.54, scaleZ: 1.05 },
-            { x: 0.95, radius: 0.14, scaleX: 1.05, scaleY: 0.58, scaleZ: 1.0, y: 0.012 }
+            {
+                x: 0.2,
+                radius: 0.215,
+                scaleX: 1.18,
+                scaleY: 0.8,
+                scaleZ: 1.28,
+                y: 0
+            },
+            {
+                x: 0.41,
+                radius: 0.2,
+                scaleX: 1.18,
+                scaleY: 0.76,
+                scaleZ: 1.23,
+                y: 0.008
+            },
+            {
+                x: 0.62,
+                radius: 0.185,
+                scaleX: 1.16,
+                scaleY: 0.73,
+                scaleZ: 1.2,
+                y: 0.018
+            },
+            {
+                x: 0.82,
+                radius: 0.172,
+                scaleX: 1.12,
+                scaleY: 0.72,
+                scaleZ: 1.18,
+                y: 0.03
+            },
+            {
+                x: 0.98,
+                radius: 0.162,
+                scaleX: 1.04,
+                scaleY: 0.78,
+                scaleZ: 1.16,
+                y: 0.045
+            }
         ]
     });
 
@@ -2811,26 +2847,70 @@ function skinGatorHead(bones) {
         headBone.add(nostril);
     }
 
-    // Lower jaw — separate darker volume that hangs under the upper.
+    // Lower jaw — tucked beneath upper jaw, narrower and less visually dominant.
     addGatorJawVolume(jawBone, {
-        material: GATOR_DARK_MATERIAL,
-        yBase: -0.02,
-        sideBulge: true,
+        material: GATOR_SKIN_MATERIAL,
+        yBase: 0,
+        sideBulge: false,
         segments: [
-            { x: 0.18, radius: 0.155, scaleX: 1.1, scaleY: 0.48, scaleZ: 1.05 },
-            { x: 0.4, radius: 0.14, scaleX: 1.15, scaleY: 0.45, scaleZ: 1.0 },
-            { x: 0.62, radius: 0.125, scaleX: 1.12, scaleY: 0.42, scaleZ: 0.95 },
-            { x: 0.82, radius: 0.11, scaleX: 1.05, scaleY: 0.4, scaleZ: 0.9 },
-            { x: 0.96, radius: 0.095, scaleX: 1.0, scaleY: 0.42, scaleZ: 0.85 }
+            {
+                x: 0.16,
+                radius: 0.17,
+                scaleX: 1.12,
+                scaleY: 0.62,
+                scaleZ: 1.08
+            },
+            {
+                x: 0.38,
+                radius: 0.158,
+                scaleX: 1.16,
+                scaleY: 0.58,
+                scaleZ: 1.04
+            },
+            {
+                x: 0.6,
+                radius: 0.145,
+                scaleX: 1.14,
+                scaleY: 0.55,
+                scaleZ: 1
+            },
+            {
+                x: 0.8,
+                radius: 0.132,
+                scaleX: 1.08,
+                scaleY: 0.54,
+                scaleZ: 0.96
+            },
+            {
+                x: 0.95,
+                radius: 0.12,
+                scaleX: 1.02,
+                scaleY: 0.58,
+                scaleZ: 0.92
+            }
         ]
     });
+
+    // Dark mouth seam / interior only — not the whole lower jaw.
+    const mouthSeam = createGatorEllipsoid(
+        0.12,
+        3.4,
+        0.18,
+        0.72,
+        GATOR_DARK_MATERIAL,
+        14,
+        8
+    );
+
+    mouthSeam.position.set(0.52, 0.02, 0);
+    jawBone.add(mouthSeam);
 
     const chin = createGatorEllipsoid(
         0.1,
         1.05,
         0.45,
         0.9,
-        GATOR_DARK_MATERIAL,
+        GATOR_SKIN_MATERIAL,
         12,
         8
     );
