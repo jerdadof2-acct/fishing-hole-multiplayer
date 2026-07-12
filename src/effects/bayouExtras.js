@@ -18,6 +18,12 @@ const CAST_CLEAR_RADIUS_Z = 30;
 
 const LOG_COUNT = 9;
 const DRAGONFLY_COUNT = 2;
+/** Tiny swamp flies that briefly swarm Halley. */
+const SWAMP_FLY_COUNT = 4;
+const SWAMP_FLY_SWARM_MIN_GAP = 120;
+const SWAMP_FLY_SWARM_MAX_GAP = 210;
+const SWAMP_FLY_SWARM_DURATION_MIN = 9;
+const SWAMP_FLY_SWARM_DURATION_MAX = 16;
 const TURTLE_COUNT = 2;
 const GATOR_COUNT = 1;
 const GATOR_BOBBER_STARTLE_RADIUS = 2.5;
@@ -180,6 +186,99 @@ const HAT_DRAGONFLY_PERCH_ROT = {
 
 const _hatPerchWorld = new THREE.Vector3();
 const _worldScratch = new THREE.Vector3();
+const _flyHeadLocal = new THREE.Vector3();
+
+const SWAMP_FLY_BODY_MATERIAL = new THREE.MeshStandardMaterial({
+    color: 0x1a1512,
+    roughness: 0.85,
+    metalness: 0.05
+});
+
+const SWAMP_FLY_WING_MATERIAL = new THREE.MeshBasicMaterial({
+    color: 0xc8c4b8,
+    transparent: true,
+    opacity: 0.35,
+    side: THREE.DoubleSide,
+    depthWrite: false
+});
+
+/** Three hover posts around the cast lane — free dragonfly only, never lands. */
+function buildFreeDragonflyHoverStations(waterLevel) {
+    return [
+        new THREE.Vector3(-5.2, waterLevel + 1.2, 6.5),
+        new THREE.Vector3(4.8, waterLevel + 1.35, 10.5),
+        new THREE.Vector3(0.6, waterLevel + 1.1, 1.2)
+    ];
+}
+
+function beginStationHover(data, random) {
+    data.mode = 'station_hover';
+    data.modeTime = THREE.MathUtils.lerp(7, 14, random());
+    data.velocity.set(0, 0, 0);
+    const station = data.hoverStations[data.hoverStationIndex];
+    data.currentTarget.copy(station);
+}
+
+function beginStationTransit(data, random) {
+    data.mode = 'station_transit';
+    data.hoverStationIndex =
+        (data.hoverStationIndex + 1) % data.hoverStations.length;
+    data.currentTarget.copy(data.hoverStations[data.hoverStationIndex]);
+    data.flyHeadFirst = true;
+    data.nextDecisionTime = 10;
+    data.dartSpeed = THREE.MathUtils.lerp(4.2, 6.2, random());
+}
+
+function updateStationDragonflyFlight(dragonfly, data, delta, elapsedTime) {
+    if (data.mode === 'station_hover') {
+        const jitter = 0.012;
+        const settle = 1 - Math.exp(-2.2 * delta);
+
+        dragonfly.position.x +=
+            (data.currentTarget.x - dragonfly.position.x) * settle +
+            Math.sin(elapsedTime * 7.5 + data.phase) * jitter;
+        dragonfly.position.y +=
+            (data.currentTarget.y - dragonfly.position.y) * settle +
+            Math.sin(elapsedTime * 10.5 + data.phase * 1.3) * jitter * 0.45;
+        dragonfly.position.z +=
+            (data.currentTarget.z - dragonfly.position.z) * settle +
+            Math.cos(elapsedTime * 8.2 + data.phase) * jitter;
+
+        data.velocity.multiplyScalar(Math.pow(0.05, delta));
+        data.modeTime = Math.max(0, data.modeTime - delta);
+
+        if (data.modeTime <= 0) {
+            beginStationTransit(data, data.random);
+        }
+
+        return;
+    }
+
+    // station_transit — glide to the next fixed hover post
+    const toX = data.currentTarget.x - dragonfly.position.x;
+    const toY = data.currentTarget.y - dragonfly.position.y;
+    const toZ = data.currentTarget.z - dragonfly.position.z;
+    const dist = Math.hypot(toX, toY, toZ);
+
+    if (dist < 0.35) {
+        beginStationHover(data, data.random);
+        return;
+    }
+
+    const speed = data.dartSpeed;
+    const inv = 1 / Math.max(dist, 0.0001);
+    const steering = 1 - Math.exp(-data.turnSharpness * 0.85 * delta);
+
+    data.velocity.x += (toX * inv * speed - data.velocity.x) * steering;
+    data.velocity.y += (toY * inv * speed - data.velocity.y) * steering;
+    data.velocity.z += (toZ * inv * speed - data.velocity.z) * steering;
+
+    dragonfly.position.x += data.velocity.x * delta;
+    dragonfly.position.y += data.velocity.y * delta;
+    dragonfly.position.z += data.velocity.z * delta;
+
+    applyDragonflyHeading(dragonfly, data, delta);
+}
 
 function pickRestHoverPoint(data, random) {
     data.currentTarget.set(
@@ -400,6 +499,11 @@ function updateDragonflyFlight(
     elapsedTime,
     { cat = null } = {}
 ) {
+    if (data.hoverStations) {
+        updateStationDragonflyFlight(dragonfly, data, delta, elapsedTime);
+        return;
+    }
+
     const hatAnchor = cat?.getHatPerchAnchor?.() ?? null;
 
     if (data.mode === 'perched') {
@@ -1251,6 +1355,345 @@ function createDragonfly(random) {
     dragonfly.userData.bayouRoot = null;
 
     return dragonfly;
+}
+
+function createSwampFly(random) {
+    const fly = new THREE.Group();
+    fly.name = 'bayouSwampFly';
+
+    const body = new THREE.Mesh(
+        new THREE.SphereGeometry(0.018, 6, 5),
+        SWAMP_FLY_BODY_MATERIAL
+    );
+    body.scale.set(1.35, 0.72, 0.78);
+    body.castShadow = false;
+    body.receiveShadow = false;
+    fly.add(body);
+
+    const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.01, 5, 4),
+        SWAMP_FLY_BODY_MATERIAL
+    );
+    head.position.set(0.018, 0.002, 0);
+    head.castShadow = false;
+    head.receiveShadow = false;
+    fly.add(head);
+
+    for (const side of [-1, 1]) {
+        const wing = new THREE.Mesh(
+            new THREE.PlaneGeometry(0.028, 0.014),
+            SWAMP_FLY_WING_MATERIAL
+        );
+        wing.position.set(-0.002, 0.006, side * 0.012);
+        wing.rotation.y = side * 0.35;
+        wing.castShadow = false;
+        wing.receiveShadow = false;
+        fly.add(wing);
+        if (!fly.userData.wings) {
+            fly.userData.wings = [];
+        }
+        fly.userData.wings.push(wing);
+    }
+
+    fly.scale.setScalar(THREE.MathUtils.lerp(0.85, 1.15, random()));
+    fly.visible = false;
+
+    fly.userData.random = random;
+    fly.userData.phase = random() * Math.PI * 2;
+    fly.userData.velocity = new THREE.Vector3();
+    fly.userData.target = new THREE.Vector3();
+    fly.userData.mode = 'idle';
+    fly.userData.modeTime = 0;
+    fly.userData.orbitRadius = THREE.MathUtils.lerp(0.28, 0.55, random());
+    fly.userData.orbitSpeed = THREE.MathUtils.lerp(7.5, 12.5, random());
+    fly.userData.buzzAmp = THREE.MathUtils.lerp(0.08, 0.16, random());
+    fly.userData.bayouRoot = null;
+
+    return fly;
+}
+
+function parkSwampFlyOffscreen(fly, random, waterLevel) {
+    const side = random() < 0.5 ? -1 : 1;
+    fly.position.set(
+        side * THREE.MathUtils.lerp(14, 22, random()),
+        waterLevel + THREE.MathUtils.lerp(1.4, 3.2, random()),
+        THREE.MathUtils.lerp(-6, 24, random())
+    );
+    fly.userData.velocity.set(0, 0, 0);
+    fly.userData.mode = 'idle';
+    fly.visible = false;
+}
+
+function placeSwampFlies({ root, random, waterLevel }) {
+    const flies = [];
+
+    for (let i = 0; i < SWAMP_FLY_COUNT; i++) {
+        const fly = createSwampFly(mulberry32((random() * 1e9) | 0));
+        fly.userData.bayouRoot = root;
+        fly.userData.waterLevel = waterLevel;
+        parkSwampFlyOffscreen(fly, fly.userData.random, waterLevel);
+        root.add(fly);
+        flies.push(fly);
+    }
+
+    root.userData.swampFlies = flies;
+    root.userData.flySwarm = {
+        nextSwarmIn: THREE.MathUtils.lerp(
+            SWAMP_FLY_SWARM_MIN_GAP * 0.45,
+            SWAMP_FLY_SWARM_MAX_GAP * 0.7,
+            random()
+        ),
+        swarmTime: 0,
+        active: false,
+        waterLevel
+    };
+}
+
+function getCatHeadInBayou(cat, bayouRoot, target) {
+    if (!cat?.getHeadWorldPosition || !bayouRoot) {
+        return null;
+    }
+
+    const headWorld = cat.getHeadWorldPosition();
+    if (!headWorld) {
+        return null;
+    }
+
+    target.copy(headWorld);
+    bayouRoot.worldToLocal(target);
+    return target;
+}
+
+function beginFlyApproach(fly, headLocal, random) {
+    const data = fly.userData;
+    const side = random() < 0.5 ? -1 : 1;
+    const waterLevel = data.waterLevel ?? 0;
+
+    fly.position.set(
+        headLocal.x + side * THREE.MathUtils.lerp(6, 11, random()),
+        headLocal.y + THREE.MathUtils.lerp(0.4, 1.8, random()),
+        headLocal.z + THREE.MathUtils.lerp(-2, 4, random())
+    );
+    // Keep a sensible altitude if head lookup is weird on first frame.
+    if (!Number.isFinite(fly.position.y)) {
+        fly.position.y = waterLevel + 1.6;
+    }
+
+    data.mode = 'approach';
+    data.modeTime = THREE.MathUtils.lerp(1.4, 2.4, random());
+    data.orbitPhase = random() * Math.PI * 2;
+    fly.visible = true;
+}
+
+function beginFlyDepart(fly, headLocal, random) {
+    const data = fly.userData;
+    const side = random() < 0.5 ? -1 : 1;
+
+    data.mode = 'depart';
+    data.modeTime = THREE.MathUtils.lerp(1.6, 2.8, random());
+    data.target.set(
+        headLocal.x + side * THREE.MathUtils.lerp(10, 16, random()),
+        headLocal.y + THREE.MathUtils.lerp(1.2, 3.5, random()),
+        headLocal.z + THREE.MathUtils.lerp(-4, 8, random())
+    );
+}
+
+function updateSwampFly(fly, headLocal, delta, elapsedTime, swarmActive) {
+    const data = fly.userData;
+    const wings = data.wings || [];
+
+    for (let i = 0; i < wings.length; i++) {
+        const side = i === 0 ? -1 : 1;
+        wings[i].rotation.z =
+            Math.sin(elapsedTime * 95 + data.phase + i) * 0.55 * side;
+    }
+
+    if (data.mode === 'idle') {
+        return;
+    }
+
+    if (data.mode === 'approach') {
+        const buzzX =
+            headLocal.x +
+            Math.sin(elapsedTime * data.orbitSpeed + data.orbitPhase) *
+                data.orbitRadius *
+                0.35;
+        const buzzY =
+            headLocal.y +
+            0.12 +
+            Math.sin(elapsedTime * (data.orbitSpeed * 1.3) + data.phase) * 0.1;
+        const buzzZ =
+            headLocal.z +
+            Math.cos(elapsedTime * data.orbitSpeed + data.orbitPhase) *
+                data.orbitRadius *
+                0.35;
+
+        const settle = 1 - Math.exp(-3.4 * delta);
+        fly.position.x += (buzzX - fly.position.x) * settle;
+        fly.position.y += (buzzY - fly.position.y) * settle;
+        fly.position.z += (buzzZ - fly.position.z) * settle;
+
+        data.modeTime -= delta;
+        if (data.modeTime <= 0) {
+            data.mode = 'buzz';
+        }
+
+        fly.rotation.y = Math.atan2(
+            -(buzzZ - fly.position.z),
+            buzzX - fly.position.x + 0.0001
+        );
+        return;
+    }
+
+    if (data.mode === 'buzz') {
+        if (!swarmActive) {
+            beginFlyDepart(fly, headLocal, data.random);
+            return;
+        }
+
+        const t = elapsedTime;
+        const ox =
+            Math.sin(t * data.orbitSpeed + data.orbitPhase) * data.orbitRadius +
+            Math.sin(t * 23 + data.phase) * data.buzzAmp;
+        const oy =
+            0.08 +
+            Math.sin(t * (data.orbitSpeed * 1.7) + data.phase) * 0.14 +
+            Math.sin(t * 31 + data.orbitPhase) * data.buzzAmp * 0.7;
+        const oz =
+            Math.cos(t * data.orbitSpeed * 0.92 + data.orbitPhase) *
+                data.orbitRadius +
+            Math.cos(t * 19 + data.phase) * data.buzzAmp;
+
+        const targetX = headLocal.x + ox;
+        const targetY = headLocal.y + oy;
+        const targetZ = headLocal.z + oz;
+        const chase = 1 - Math.exp(-11 * delta);
+
+        fly.position.x += (targetX - fly.position.x) * chase;
+        fly.position.y += (targetY - fly.position.y) * chase;
+        fly.position.z += (targetZ - fly.position.z) * chase;
+
+        const vx = targetX - fly.position.x;
+        const vz = targetZ - fly.position.z;
+        if (Math.hypot(vx, vz) > 0.001) {
+            fly.rotation.y = Math.atan2(-vz, vx);
+        }
+        return;
+    }
+
+    if (data.mode === 'depart') {
+        const settle = 1 - Math.exp(-2.6 * delta);
+        fly.position.x += (data.target.x - fly.position.x) * settle;
+        fly.position.y += (data.target.y - fly.position.y) * settle;
+        fly.position.z += (data.target.z - fly.position.z) * settle;
+
+        fly.rotation.y = Math.atan2(
+            -(data.target.z - fly.position.z),
+            data.target.x - fly.position.x + 0.0001
+        );
+
+        data.modeTime -= delta;
+        const dist = Math.hypot(
+            data.target.x - fly.position.x,
+            data.target.y - fly.position.y,
+            data.target.z - fly.position.z
+        );
+
+        if (data.modeTime <= 0 || dist < 0.6) {
+            parkSwampFlyOffscreen(
+                fly,
+                data.random,
+                data.waterLevel ?? 0
+            );
+        }
+    }
+}
+
+function updateSwampFlies(group, elapsedTime, delta, cat, isBayou) {
+    const flies = group.userData.swampFlies || [];
+    const swarm = group.userData.flySwarm;
+
+    if (!swarm || flies.length === 0) {
+        return;
+    }
+
+    if (!isBayou) {
+        if (swarm.active) {
+            swarm.active = false;
+            swarm.swarmTime = 0;
+            for (const fly of flies) {
+                parkSwampFlyOffscreen(
+                    fly,
+                    fly.userData.random,
+                    swarm.waterLevel ?? 0
+                );
+            }
+        }
+        return;
+    }
+
+    const headLocal = getCatHeadInBayou(cat, group, _flyHeadLocal);
+
+    if (!swarm.active) {
+        swarm.nextSwarmIn -= delta;
+
+        if (swarm.nextSwarmIn <= 0 && headLocal) {
+            swarm.active = true;
+            swarm.swarmTime = THREE.MathUtils.lerp(
+                SWAMP_FLY_SWARM_DURATION_MIN,
+                SWAMP_FLY_SWARM_DURATION_MAX,
+                Math.random()
+            );
+
+            const activeCount = 2 + Math.floor(Math.random() * 3);
+            for (let i = 0; i < flies.length; i++) {
+                if (i < activeCount) {
+                    beginFlyApproach(flies[i], headLocal, flies[i].userData.random);
+                } else {
+                    parkSwampFlyOffscreen(
+                        flies[i],
+                        flies[i].userData.random,
+                        swarm.waterLevel ?? 0
+                    );
+                }
+            }
+        }
+    } else {
+        swarm.swarmTime -= delta;
+
+        if (swarm.swarmTime <= 0) {
+            swarm.active = false;
+            swarm.nextSwarmIn = THREE.MathUtils.lerp(
+                SWAMP_FLY_SWARM_MIN_GAP,
+                SWAMP_FLY_SWARM_MAX_GAP,
+                Math.random()
+            );
+
+            if (headLocal) {
+                for (const fly of flies) {
+                    if (fly.userData.mode === 'buzz' || fly.userData.mode === 'approach') {
+                        beginFlyDepart(fly, headLocal, fly.userData.random);
+                    }
+                }
+            } else {
+                for (const fly of flies) {
+                    parkSwampFlyOffscreen(
+                        fly,
+                        fly.userData.random,
+                        swarm.waterLevel ?? 0
+                    );
+                }
+            }
+        }
+    }
+
+    if (!headLocal) {
+        return;
+    }
+
+    for (const fly of flies) {
+        updateSwampFly(fly, headLocal, delta, elapsedTime, swarm.active);
+    }
 }
 
 function createBayouTurtle(random) {
@@ -4474,6 +4917,7 @@ function placeDragonflies({
     waterLevel
 }) {
     const dragonflies = [];
+    const freeHoverStations = buildFreeDragonflyHoverStations(waterLevel);
 
     for (let i = 0; i < DRAGONFLY_COUNT; i++) {
         const dragonfly = createDragonfly(random);
@@ -4490,12 +4934,19 @@ function placeDragonflies({
         const data = dragonfly.userData;
         data.bayouRoot = root;
         data.landsOnHalley = i === 0;
-        pickRestHoverPoint(data, random);
-        dragonfly.position.copy(data.currentTarget);
 
         if (data.landsOnHalley) {
+            pickRestHoverPoint(data, random);
+            dragonfly.position.copy(data.currentTarget);
             data.modeTime = THREE.MathUtils.lerp(3.5, 7, random());
             data.forceHatVisit = true;
+        } else {
+            // Free flier — cycles three fixed hover posts around the cast lane.
+            data.hoverStations = freeHoverStations.map((p) => p.clone());
+            data.hoverStationIndex = Math.floor(random() * data.hoverStations.length);
+            beginStationHover(data, random);
+            dragonfly.position.copy(data.currentTarget);
+            data.modeTime = THREE.MathUtils.lerp(4, 8, random());
         }
 
         root.add(dragonfly);
@@ -4506,7 +4957,7 @@ function placeDragonflies({
 }
 
 /**
- * Creates swamp logs, Spanish moss and two dragonflies.
+ * Creates swamp logs, Spanish moss, dragonflies, and occasional swamp flies.
  *
  * Pass the cypress group returned by createBayouCypress() so moss can be
  * attached directly to the generated trees.
@@ -4527,6 +4978,7 @@ export function createBayouExtras(scene, {
     const randomGator = mulberry32(seed + 404);
     const randomTurtles = mulberry32(seed + 505);
     const randomMoss = mulberry32(seed + 606);
+    const randomFlies = mulberry32(seed + 707);
 
     const turtleLogPoint = placeTurtleLog({
         root,
@@ -4553,6 +5005,12 @@ export function createBayouExtras(scene, {
     placeDragonflies({
         root,
         random: randomDragonflies,
+        waterLevel
+    });
+
+    placeSwampFlies({
+        root,
+        random: randomFlies,
         waterLevel
     });
 
@@ -4674,6 +5132,19 @@ export function updateBayouExtras(group, elapsedTime, isBayou, context = {}) {
             data.wingBlurGroups || [],
             elapsedTime
         );
+    }
+
+    const flySwarm = group.userData.flySwarm;
+    if (flySwarm) {
+        const flyDelta = Math.min(
+            0.05,
+            Math.max(
+                0.001,
+                elapsedTime - (flySwarm.lastElapsedTime ?? elapsedTime)
+            )
+        );
+        flySwarm.lastElapsedTime = elapsedTime;
+        updateSwampFlies(group, elapsedTime, flyDelta, cat, isBayou);
     }
 
     const gators = group.userData.gators || [];
