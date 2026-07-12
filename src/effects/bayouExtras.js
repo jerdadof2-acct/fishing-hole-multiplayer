@@ -2491,105 +2491,100 @@ function addGatorTailScutes(
     );
 }
 
-/** Raised orbital mounds with yellow eyes and a skin lid for blinking. */
+/**
+ * Side-facing orbital mounds — each eye looks outward (±Z), not down the snout.
+ * Returns lid/eye refs for independent blinking.
+ */
 function createGatorEye(parent, x, y, z, side) {
+    const assembly = new THREE.Group();
+    assembly.position.set(x, y, z);
+    // Turn the socket so local +X aims out the side of the head.
+    assembly.rotation.y = side * Math.PI * 0.48;
+    assembly.rotation.z = side * -0.12;
+    parent.add(assembly);
+
     const mound = createGatorEllipsoid(
         0.1,
         1.12,
         0.62,
-        0.74,
+        0.78,
         GATOR_SKIN_MATERIAL,
         14,
         10
     );
 
-    mound.position.set(x, y + 0.012, z);
-    mound.rotation.y = side * 0.12;
-    mound.rotation.z = side * -0.16;
-    parent.add(mound);
+    mound.position.set(0.02, 0.012, 0);
+    assembly.add(mound);
 
     const rim = createGatorEllipsoid(
         0.062,
-        0.92,
+        0.95,
         0.42,
-        0.65,
+        0.7,
         GATOR_SKIN_MATERIAL,
         12,
         8
     );
 
-    rim.position.set(x + 0.008, y + 0.038, z + side * 0.018);
-    rim.rotation.y = side * 0.1;
-    parent.add(rim);
+    rim.position.set(0.04, 0.038, 0);
+    assembly.add(rim);
 
     const socket = createGatorEllipsoid(
         0.032,
-        0.88,
-        0.28,
-        0.5,
+        0.9,
+        0.3,
+        0.52,
         GATOR_DARK_MATERIAL,
         10,
         7
     );
 
-    socket.position.set(
-        x + 0.01,
-        y + 0.032,
-        z + side * 0.036
-    );
-    parent.add(socket);
+    socket.position.set(0.05, 0.032, 0);
+    assembly.add(socket);
 
     const eye = createGatorEllipsoid(
-        0.042,
-        1.02,
-        0.58,
-        0.68,
+        0.044,
+        1.05,
+        0.6,
+        0.72,
         GATOR_EYE_MATERIAL,
         12,
         8
     );
 
-    eye.position.set(
-        x + 0.014,
-        y + 0.048,
-        z + side * 0.05
-    );
-    parent.add(eye);
+    eye.position.set(0.06, 0.048, 0);
+    assembly.add(eye);
 
     const pupil = createGatorEllipsoid(
-        0.009,
-        0.15,
-        0.95,
-        0.11,
+        0.01,
+        0.16,
+        1.0,
+        0.12,
         GATOR_DARK_MATERIAL,
         7,
         5
     );
 
-    pupil.position.set(
-        x + 0.032,
-        y + 0.052,
-        z + side * 0.062
-    );
-    parent.add(pupil);
+    // Pupil sits on the outward face of the yellow eye.
+    pupil.position.set(0.085, 0.05, 0);
+    assembly.add(pupil);
 
-    // Skin lid — thin when open, covers the yellow when closed.
     const lid = createGatorEllipsoid(
-        0.046,
+        0.048,
         1.12,
         0.75,
-        0.82,
+        0.85,
         GATOR_SKIN_MATERIAL,
         12,
         8
     );
 
-    const openLidY = y + 0.072;
-    const closedLidY = y + 0.048;
+    const openLidY = 0.072;
+    const closedLidY = 0.048;
 
-    lid.position.set(x + 0.014, openLidY, z + side * 0.05);
+    lid.position.set(0.062, openLidY, 0);
     lid.scale.set(1.08, 0.14, 1.08);
-    parent.add(lid);
+    assembly.add(lid);
 
     return {
         eye,
@@ -2598,7 +2593,10 @@ function createGatorEye(parent, x, y, z, side) {
         openLidY,
         closedLidY,
         openScaleY: 0.14,
-        closedScaleY: 1.05
+        closedScaleY: 1.05,
+        blinkTime: 0,
+        blinkDuration: 0,
+        nextBlinkIn: 0
     };
 }
 
@@ -3058,9 +3056,9 @@ function skinGatorHead(bones) {
         eyes.push(
             createGatorEye(
                 headBone,
-                0.04,
+                0.02,
                 0.155,
-                side * 0.215,
+                side * 0.245,
                 side
             )
         );
@@ -3383,12 +3381,19 @@ function createBayouGator(random) {
         baseWaterY: 0,
         targetRise: -0.24,
         currentRise: -0.24,
-        floatPitch: 0,
-
-        blinkTime: 0,
-        blinkDuration: 0,
-        nextBlinkIn: THREE.MathUtils.lerp(4, 9, random())
+        floatPitch: 0
     });
+
+    // Stagger independent blink timers per eye.
+    for (let i = 0; i < eyes.length; i++) {
+        eyes[i].nextBlinkIn = THREE.MathUtils.lerp(
+            3 + i * 1.5,
+            8 + i * 2.5,
+            random()
+        );
+        eyes[i].blinkTime = 0;
+        eyes[i].blinkDuration = 0;
+    }
 
     ensureGatorHeadTapHelper(gator);
 
@@ -3451,70 +3456,65 @@ function getGatorFloatPitchTarget(mode) {
 function updateGatorBlink(data, delta) {
     const eyes = data.eyes || [];
 
-    if (eyes.length === 0) {
-        return;
-    }
-
-    if (data.blinkTime <= 0) {
-        data.nextBlinkIn -= delta;
-
-        if (data.nextBlinkIn <= 0) {
-            data.blinkDuration = THREE.MathUtils.lerp(
-                0.85,
-                1.2,
-                data.random()
-            );
-            data.blinkTime = data.blinkDuration;
-            data.nextBlinkIn = THREE.MathUtils.lerp(
-                5,
-                12,
-                data.random()
-            );
-        }
-    } else {
-        data.blinkTime -= delta;
-    }
-
-    let closeAmount = 0;
-
-    if (data.blinkTime > 0 && data.blinkDuration > 0) {
-        const remaining = data.blinkTime;
-        const elapsed = data.blinkDuration - remaining;
-
-        if (elapsed < 0.14) {
-            closeAmount = elapsed / 0.14;
-        } else if (remaining < 0.16) {
-            closeAmount = remaining / 0.16;
-        } else {
-            closeAmount = 1;
-        }
-    }
-
-    closeAmount = THREE.MathUtils.clamp(closeAmount, 0, 1);
-
     for (let i = 0; i < eyes.length; i++) {
-        const eye = eyes[i];
-        const lid = eye.lid;
+        const eyeData = eyes[i];
+        const lid = eyeData.lid;
 
         if (!lid) {
             continue;
         }
 
+        if (eyeData.blinkTime <= 0) {
+            eyeData.nextBlinkIn -= delta;
+
+            if (eyeData.nextBlinkIn <= 0) {
+                eyeData.blinkDuration = THREE.MathUtils.lerp(
+                    0.8,
+                    1.15,
+                    data.random()
+                );
+                eyeData.blinkTime = eyeData.blinkDuration;
+                eyeData.nextBlinkIn = THREE.MathUtils.lerp(
+                    4.5,
+                    11,
+                    data.random()
+                );
+            }
+        } else {
+            eyeData.blinkTime -= delta;
+        }
+
+        let closeAmount = 0;
+
+        if (eyeData.blinkTime > 0 && eyeData.blinkDuration > 0) {
+            const remaining = eyeData.blinkTime;
+            const elapsed = eyeData.blinkDuration - remaining;
+
+            if (elapsed < 0.14) {
+                closeAmount = elapsed / 0.14;
+            } else if (remaining < 0.16) {
+                closeAmount = remaining / 0.16;
+            } else {
+                closeAmount = 1;
+            }
+        }
+
+        closeAmount = THREE.MathUtils.clamp(closeAmount, 0, 1);
+
         lid.position.y = THREE.MathUtils.lerp(
-            eye.openLidY,
-            eye.closedLidY,
+            eyeData.openLidY,
+            eyeData.closedLidY,
             closeAmount
         );
         lid.scale.y = THREE.MathUtils.lerp(
-            eye.openScaleY,
-            eye.closedScaleY,
+            eyeData.openScaleY,
+            eyeData.closedScaleY,
             closeAmount
         );
 
-        // Hide yellow under the lid while closed.
         const showEye = closeAmount < 0.55;
-        eye.eye.visible = showEye;
-        eye.pupil.visible = showEye;
+        eyeData.eye.visible = showEye;
+        eyeData.pupil.visible = showEye;
     }
 }
 
