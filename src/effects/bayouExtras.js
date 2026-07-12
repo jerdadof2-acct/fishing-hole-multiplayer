@@ -2492,98 +2492,100 @@ function addGatorTailScutes(
 }
 
 /**
- * Side-facing orbital mounds — each eye looks outward (±Z), not down the snout.
+ * Dorsal orbital mounds — closer together on top of the skull, facing outward/up.
  * Returns lid/eye refs for independent blinking.
  */
 function createGatorEye(parent, x, y, z, side) {
     const assembly = new THREE.Group();
     assembly.position.set(x, y, z);
-    // Turn the socket so local +X aims out the side of the head.
-    assembly.rotation.y = side * Math.PI * 0.48;
-    assembly.rotation.z = side * -0.12;
+    // Mostly sideways, with a little upward tilt so yellow reads from the boat.
+    assembly.rotation.y = side * Math.PI * 0.38;
+    assembly.rotation.x = -0.28;
+    assembly.rotation.z = side * -0.08;
     parent.add(assembly);
 
     const mound = createGatorEllipsoid(
-        0.1,
-        1.12,
-        0.62,
-        0.78,
+        0.088,
+        1.05,
+        0.7,
+        0.72,
         GATOR_SKIN_MATERIAL,
         14,
         10
     );
 
-    mound.position.set(0.02, 0.012, 0);
+    mound.position.set(0.01, 0.01, 0);
     assembly.add(mound);
 
     const rim = createGatorEllipsoid(
-        0.062,
-        0.95,
-        0.42,
-        0.7,
+        0.055,
+        0.92,
+        0.48,
+        0.65,
         GATOR_SKIN_MATERIAL,
         12,
         8
     );
 
-    rim.position.set(0.04, 0.038, 0);
+    rim.position.set(0.03, 0.042, 0);
     assembly.add(rim);
 
     const socket = createGatorEllipsoid(
-        0.032,
-        0.9,
-        0.3,
-        0.52,
+        0.03,
+        0.88,
+        0.28,
+        0.48,
         GATOR_DARK_MATERIAL,
         10,
         7
     );
 
-    socket.position.set(0.05, 0.032, 0);
+    socket.position.set(0.04, 0.04, 0);
     assembly.add(socket);
 
+    // Larger yellow globe proud of the socket so it stays readable.
     const eye = createGatorEllipsoid(
-        0.044,
-        1.05,
-        0.6,
+        0.052,
+        1.08,
         0.72,
+        0.78,
         GATOR_EYE_MATERIAL,
         12,
         8
     );
 
-    eye.position.set(0.06, 0.048, 0);
+    eye.position.set(0.055, 0.058, 0);
     assembly.add(eye);
 
     const pupil = createGatorEllipsoid(
-        0.01,
-        0.16,
-        1.0,
-        0.12,
+        0.011,
+        0.18,
+        1.05,
+        0.14,
         GATOR_DARK_MATERIAL,
         7,
         5
     );
 
-    // Pupil sits on the outward face of the yellow eye.
-    pupil.position.set(0.085, 0.05, 0);
+    pupil.position.set(0.082, 0.062, 0);
     assembly.add(pupil);
 
+    // Thin open lid on the crest — closes down over the yellow when blinking.
     const lid = createGatorEllipsoid(
-        0.048,
-        1.12,
-        0.75,
-        0.85,
+        0.055,
+        1.15,
+        0.7,
+        0.88,
         GATOR_SKIN_MATERIAL,
         12,
         8
     );
 
-    const openLidY = 0.072;
-    const closedLidY = 0.048;
+    const openLidY = 0.088;
+    const closedLidY = 0.055;
 
-    lid.position.set(0.062, openLidY, 0);
-    lid.scale.set(1.08, 0.14, 1.08);
+    lid.position.set(0.058, openLidY, 0);
+    lid.scale.set(1.1, 0.1, 1.1);
     assembly.add(lid);
 
     return {
@@ -2592,8 +2594,8 @@ function createGatorEye(parent, x, y, z, side) {
         lid,
         openLidY,
         closedLidY,
-        openScaleY: 0.14,
-        closedScaleY: 1.05,
+        openScaleY: 0.1,
+        closedScaleY: 1.08,
         blinkTime: 0,
         blinkDuration: 0,
         nextBlinkIn: 0
@@ -3056,9 +3058,9 @@ function skinGatorHead(bones) {
         eyes.push(
             createGatorEye(
                 headBone,
-                0.02,
-                0.155,
-                side * 0.245,
+                0.0,
+                0.205,
+                side * 0.135,
                 side
             )
         );
