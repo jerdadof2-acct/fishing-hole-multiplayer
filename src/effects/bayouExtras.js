@@ -3119,7 +3119,7 @@ function createBayouGator(random) {
         speed: THREE.MathUtils.lerp(0.72, 0.96, random()),
         turnSharpness: THREE.MathUtils.lerp(0.18, 0.28, random()),
         yawTurnRate: THREE.MathUtils.lerp(0.24, 0.34, random()),
-        swimFrequency: THREE.MathUtils.lerp(1.05, 1.22, random()),
+        swimFrequency: THREE.MathUtils.lerp(0.55, 0.68, random()),
 
         smoothedTurnBias: 0,
         swimLegTime: THREE.MathUtils.lerp(6, 12, random()),
@@ -3397,8 +3397,8 @@ function updateGator(
     const frequency =
         data.swimFrequency *
         THREE.MathUtils.lerp(
-            0.82,
-            1.12,
+            0.72,
+            0.92,
             drive
         );
 
@@ -3409,23 +3409,23 @@ function updateGator(
     const activeDrive =
         isGatorHoldingPosition(data)
             ? data.mode === 'headup'
-                ? 0.16
-                : 0.1
+                ? 0.12
+                : 0.08
             : data.mode === 'startled'
                 ? THREE.MathUtils.lerp(
+                    0.55,
                     0.78,
-                    1.05,
                     drive
                 )
                 : data.mode === 'submerged'
                     ? THREE.MathUtils.lerp(
-                        0.52,
-                        0.98,
+                        0.38,
+                        0.72,
                         drive
                     )
                     : THREE.MathUtils.lerp(
-                        0.48,
-                        0.95,
+                        0.36,
+                        0.7,
                         drive
                     );
 
@@ -3444,12 +3444,12 @@ function updateGator(
             desiredYaw
         );
         const turnTarget = THREE.MathUtils.clamp(
-            yawError * 0.55,
-            -0.28,
-            0.28
+            yawError * 0.45,
+            -0.22,
+            0.22
         );
         const turnSmooth =
-            1 - Math.exp(-4.2 * delta);
+            1 - Math.exp(-3.6 * delta);
 
         smoothedTurnBias +=
             (turnTarget - smoothedTurnBias) * turnSmooth;
@@ -3462,41 +3462,40 @@ function updateGator(
 
     data.smoothedTurnBias = smoothedTurnBias;
 
-    // Wave starts at the hips and travels down the tail to the tip.
+    // Slow traveling S-curve: hips lead, tip follows — snake undulation, not a whip.
     const wavePhase = phase;
-    const travelLag = 2.05;
+    const travelLag = 3.15;
 
-    const headTurnLead = smoothedTurnBias * 0.55;
-    // Soft bend only — never clamps the serpentine left/right stroke.
-    const turnBend = smoothedTurnBias * 0.22;
+    const headTurnLead = smoothedTurnBias * 0.48;
+    const turnBend = smoothedTurnBias * 0.14;
 
     const chestYaw =
         Math.sin(wavePhase) *
-            0.02 *
+            0.012 *
             activeDrive +
-        turnBend * 0.08;
+        turnBend * 0.06;
 
     const abdomenYaw =
-        Math.sin(wavePhase - travelLag * 0.18) *
-            0.045 *
+        Math.sin(wavePhase - travelLag * 0.16) *
+            0.024 *
+            activeDrive +
+        turnBend * 0.12;
+
+    const pelvisYaw =
+        Math.sin(wavePhase - travelLag * 0.28) *
+            0.032 *
             activeDrive +
         turnBend * 0.18;
 
-    const pelvisYaw =
-        Math.sin(wavePhase - travelLag * 0.32) *
-            0.06 *
-            activeDrive +
-        turnBend * 0.28;
-
     const tailRootYaw =
-        Math.sin(wavePhase - travelLag * 0.42) *
-            0.085 *
+        Math.sin(wavePhase - travelLag * 0.4) *
+            0.04 *
             activeDrive +
-        turnBend * 0.38;
+        turnBend * 0.22;
 
     const bodyFollow =
         1 -
-        Math.exp(-6.2 * delta);
+        Math.exp(-3.8 * delta);
 
     data.chestBone.rotation.y +=
         (
@@ -3537,22 +3536,22 @@ function updateGator(
     ) {
         // 0 at base → 1 at tip; tip lags so the wave travels hips → tip.
         const t = (i + 1) / tailCount;
-        const lag = travelLag * (0.48 + t * 0.52);
+        const lag = travelLag * (0.45 + t * 0.55);
+        // Modest per-segment angles — hierarchy already stacks toward the tip.
         const amplitude =
             THREE.MathUtils.lerp(
-                0.12,
-                0.72,
-                Math.pow(t, 1.35)
+                0.045,
+                0.2,
+                Math.pow(t, 1.2)
             ) *
             activeDrive;
 
         const targetYaw =
             Math.sin(wavePhase - lag) * amplitude +
-            turnBend * THREE.MathUtils.lerp(0.2, 0.55, t);
+            turnBend * THREE.MathUtils.lerp(0.12, 0.28, t);
 
-        // Base follows the hip wave quickly; tip trails for the serpentine whip.
         const followSpeed =
-            THREE.MathUtils.lerp(11, 6.5, Math.pow(t, 1.05));
+            THREE.MathUtils.lerp(5.2, 3.4, Math.pow(t, 1.05));
 
         const follow =
             1 -
