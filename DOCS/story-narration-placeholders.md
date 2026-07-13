@@ -2,6 +2,8 @@
 
 Runtime wiring lives in `src/config/storyChapters.js`, `src/storyProgress.js`, and `src/ui.js`.
 
+Canon bible: `DOCS/halleys-big-catch-story.md` — player story starts at Halley’s birth; ancient lore is discovered in play.
+
 Replace placeholder copy below when final narrations are ready. Each section lists **where it plays**, **config key**, and **what it should say** (intent).
 
 ---
@@ -13,33 +15,37 @@ Replace placeholder copy below when final narrations are ready. Each section lis
 | **1–7** | After each relic discovery | `STORY_CHAPTERS[]` |
 | **8 — Celestial Depths** | First arrival at Celestial Depths | `POST_STARFISH_CHAPTERS.chapter_8_celestial` |
 | **9 — Starfish reunion** | After first Starfish popup closes | `POST_STARFISH_CHAPTERS.chapter_9_starfish` |
-| **10 — Cortez homecoming** | First arrival at Cortez Backwaters | `POST_STARFISH_CHAPTERS.chapter_10_cortez` |
-| **11 — Father's journal** | First Tarpon catch at Cortez | `POST_STARFISH_CHAPTERS.chapter_11_journal` |
-| **12 — Louisiana Bayou** | First arrival at Louisiana Bayou | `POST_STARFISH_CHAPTERS.chapter_12_bayou` |
-| **13 — Congo River** | First arrival at Congo River | `POST_STARFISH_CHAPTERS.chapter_13_congo` |
-| **14 — CrazyCatch Cove** | First arrival at CrazyCatch Cove | `POST_STARFISH_CHAPTERS.chapter_14_crazycatch` |
+| **10 — Cortez (Patience)** | First arrival at Cortez Backwaters | `POST_STARFISH_CHAPTERS.chapter_10_cortez` |
+| **11 — Path forward** | First Tarpon catch at Cortez | `POST_STARFISH_CHAPTERS.chapter_11_journal` |
+| **12 — Louisiana Bayou (Courage)** | First arrival at Louisiana Bayou | `POST_STARFISH_CHAPTERS.chapter_12_bayou` |
+| **13 — Congo River (Determination)** | First arrival at Congo River | `POST_STARFISH_CHAPTERS.chapter_13_congo` |
+| **14 — Starfall Lagoon** | First arrival at Starfall Lagoon | `POST_STARFISH_CHAPTERS.chapter_14_crazycatch` *(internal id kept for saves)* |
 | **Epilogue** | After Chapter 14 modal closes | `POST_STARFISH_CHAPTERS.epilogue` |
 
 ### Intent per chapter (for your rewrites)
 
 - **Chapter 8:** Halley enters the Celestial Depths for the first time with the Starlight Lure. Fear, wonder, father's presence without him physically there.
-- **Chapter 9:** Full Starfish reunion — medallion origin, release, comet vs father theme. *(Starfish popup is now a short tease only.)*
-- **Chapter 10:** Return to Cortez dock — emotional homecoming before the journal beat.
-- **Chapter 11:** Father's unfinished journal reveals three destinations.
-- **Chapters 12–14:** Arrival narrations — "someday finally arrived" at each journal location.
-- **Epilogue:** Father and Halley together at the pond; greatest catch was never a fish.
+- **Chapter 9:** Full Starfish reunion — medallion origin, release, comet vs father theme; Starfish wants Halley to follow. *(Starfish popup is a short tease only.)*
+- **Chapter 10:** Cortez — patience. Father’s skill was earned one quiet cast at a time.
+- **Chapter 11:** Starfish opens the path through three more shores ending at the hidden lagoon from father’s stories (not an invented cove).
+- **Chapter 12:** Bayou — courage. Remarkable places lie past where most turn back.
+- **Chapter 13:** Congo — determination. Foreshadow the 1703 explorer journal and proof the creatures were real.
+- **Chapter 14:** Starfall Lagoon — truth. Father’s stories were memories; Starfish returns home; Halley’s greatest discovery is his father.
+- **Epilogue:** Keep original “One More Cast” pond closer — home, father, greatest catch was never a fish. Do not restate 1607 / pirate lore here.
 
 ---
 
-## Short beats — replace in `JOURNEY_COMPLETE_BEATS` (`storyChapters.js`)
+## Prologue — replace in `prologue.js` → `PROLOGUE_STORY_PARAGRAPHS`
+
+**Do not change.** Opening scroll stays the original Born Under the Comet mystery (birth, medallion, Crescent Pond call). Past history is discovered in play.
 
 Play on **first successful catch** at each post-Starfish location (unlocks the next destination).
 
 | Key | When | Should say |
 |-----|------|------------|
-| `louisiana_bayou` | First catch at Louisiana Bayou | Halley fulfilled the bayou promise; unlocks Congo River |
-| `congo_river` | First catch at Congo River | Halley carried his father's dream; unlocks CrazyCatch Cove |
-| `crazycatch_cove` | First catch at CrazyCatch Cove | Halley found the invented cove; optional celebration beat |
+| `louisiana_bayou` | First catch at Louisiana Bayou | Courage found; unlocks Congo River |
+| `congo_river` | First catch at Congo River | Determination proven; unlocks Starfall Lagoon |
+| `crazycatch_cove` | First catch at Starfall Lagoon | Finale celebration — stories were true *(key kept for saves)* |
 
 Each entry: `halleyLine` (cat bark) + `banner` (top notification).
 
@@ -61,7 +67,7 @@ Each entry: `halleyLine` (cat bark) + `banner` (top notification).
 |----------|------|------------|
 | `STARFISH_FIRST_CATCH_NARRATION` | First Starfish catch popup body | Short reunion tease only — full story is Chapter 9 |
 | `STARFISH_FIRST_CATCH_QUOTE` | Popup quote block | One emotional Halley line |
-| `STARFISH_GUIDE_DESTINATIONS_*` | Popup destination list | Four currents: Cortez + three journal trips |
+| `STARFISH_GUIDE_DESTINATIONS_*` | Popup destination list | Four currents: Cortez, Bayou, Congo, Starfall Lagoon |
 
 ---
 
@@ -88,15 +94,16 @@ One father-themed line per relic when it surfaces (shown in relic popup before c
 
 ## Prologue — replace in `prologue.js` → `PROLOGUE_STORY_PARAGRAPHS`
 
-Scroll text on new game entry (Born Under the Comet).
+**Do not change.** Opening scroll stays the original Born Under the Comet mystery (birth, medallion, Crescent Pond call). Past history is discovered in play.
 
 ---
 
 ## Story flow (runtime)
 
 ```
-Prologue → Ch.1–7 (relics) → [Travel] Celestial → Ch.8 → First cast beat → Starfish → Ch.9
-  → [Travel] Cortez → Ch.10 → Tarpon → Ch.11 → [Travel] Bayou → Ch.12 → catch → Congo → Ch.13 → catch → Cove → Ch.14 → Epilogue
+Prologue (birth) → Ch.1–7 (relics) → [Travel] Celestial → Ch.8 → First cast beat → Starfish → Ch.9
+  → [Travel] Cortez → Ch.10 → Tarpon → Ch.11
+  → [Travel] Bayou → Ch.12 → catch → Congo → Ch.13 → catch → Starfall Lagoon → Ch.14 → Epilogue
 ```
 
 **Travel buttons** on chapter modals now call `executeLocationTravel()` to the next location when offered.

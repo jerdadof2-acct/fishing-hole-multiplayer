@@ -11,14 +11,14 @@ export const STARFISH_GUIDE_DESTINATIONS_BODY =
 
 /** Post-Starfish destinations the Starfish reveals after the reunion. */
 export const STARFISH_GUIDE_DESTINATIONS_OPEN = [
-    { name: 'Cortez Backwaters', label: 'Return home — tell your father' },
-    { name: 'Louisiana Bayou', label: 'An unfinished page in his journal' },
-    { name: 'Congo River', label: 'Coming soon — his greatest fishing dream' },
-    { name: 'CrazyCatch Cove', label: 'Coming soon — a story that became real' }
+    { name: 'Cortez Backwaters', label: 'Patience — where his father learned the tides' },
+    { name: 'Louisiana Bayou', label: 'Courage — past the point most turn back' },
+    { name: 'Congo River', label: 'Coming soon — determination on the great river' },
+    { name: 'Starfall Lagoon', label: 'Coming soon — where his father\'s stories began' }
 ];
 
 export const STARFISH_GUIDE_COMING_SOON =
-    'Congo River and CrazyCatch Cove are coming in a future update.';
+    'Congo River and Starfall Lagoon are coming in a future update.';
 
 export const STARFISH_FIRST_CATCH_QUOTE =
     "The comet may have started this journey.\n\nBut you're the reason I was ready for it.";

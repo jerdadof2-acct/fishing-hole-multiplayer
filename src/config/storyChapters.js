@@ -139,8 +139,8 @@ export const JOURNEY_COMPLETE_BEATS = {
         banner: 'Congo River — dream carried home.'
     },
     crazycatch_cove: {
-        halleyLine: 'You invented this place to make me laugh. I\'m still laughing.',
-        banner: 'CrazyCatch Cove — story made real.'
+        halleyLine: 'Your stories were memories, Dad. I found where they live.',
+        banner: 'Starfall Lagoon — the stories were true.'
     }
 };
 
@@ -176,7 +176,9 @@ export const POST_STARFISH_CHAPTERS = {
             'The fragment carried the light of the comet — and every lesson, laugh, and quiet moment shared beside the water.',
             'The medallion had shown Halley where to go. His father had taught him how to get there.',
             'When Halley released the Starfish, he was not surrendering the greatest catch of his life.',
-            'He was honoring the fisherman his father had raised him to become.'
+            'He was honoring the fisherman his father had raised him to become.',
+            'The Starfish did not speak — yet Halley understood exactly what it wanted.',
+            'It wanted him to follow.'
         ],
         halleyLine: 'The comet may have started this journey. But you\'re the reason I was ready for it.',
         fatherLine: null
@@ -185,25 +187,24 @@ export const POST_STARFISH_CHAPTERS = {
         id: 'chapter_10_cortez',
         title: 'Cortez Backwaters',
         narration: [
-            'The first current brought Halley back to Cortez Backwaters.',
-            'These were the waters where his father had taught him how to read a tide, repair a reel, and release a fish that deserved to swim another day.',
-            'Halley had crossed the world searching for the meaning of the medallion.',
-            'But the answer was waiting beside the same old dock.'
+            'The Starfish first led Halley to Cortez Backwaters — the waters where his father had learned to fish.',
+            'The tides changed constantly. Fish held close to the mangroves. Success depended on careful observation.',
+            'Halley remembered: fishing was never about casting the most times. It was about noticing what the water was trying to tell you.',
+            'Here he began to understand that his father had not simply been born a gifted fisherman.',
+            'He had earned his skill one quiet cast at a time — and passed that patience on to his son.'
         ],
         fatherLine: 'The stone was never the miracle, Halley. You were.',
-        halleyLine: 'I thought you gave me a piece of the comet. What you really gave me was a lifetime.'
+        halleyLine: 'Patience. That\'s what you were teaching me all those years on the dock.'
     },
     chapter_11_journal: {
         id: 'chapter_11_journal',
-        title: 'The Unfinished Journal',
+        title: 'The Path Ahead',
         narration: [
-            'Inside his father\'s old fishing journal were three unfinished adventures.',
-            'A bayou of cypress trees and hidden channels.',
-            'A mighty river in the heart of Africa.',
-            'And a ridiculous cove his father had invented to make a young kitten laugh.',
-            'The three remaining golden currents pointed toward the same places.',
-            'The Starfish had listened to the memories within the medallion.',
-            'Now it was opening the waters Halley and his father had once dreamed of exploring together.'
+            'The Starfish did not lead Halley straight to the end of the journey.',
+            'Three more shores still waited — a bayou of courage, a mighty river of determination,',
+            'and a hidden lagoon from his father\'s stories, the place Halley had once believed was only imagination.',
+            'The Starfish could show him the direction.',
+            'Only Halley could complete the journey.'
         ],
         fatherLine: 'Looks like our old fishing stories still have a few chapters left.',
         unlocksLocationMessage: 'Louisiana Bayou opens in the journal.',
@@ -213,34 +214,37 @@ export const POST_STARFISH_CHAPTERS = {
         id: 'chapter_12_bayou',
         title: 'Louisiana Bayou',
         narration: [
-            'Halley and his father had talked about fishing here for years.',
-            'They had always said they would come someday.',
-            'Halley\'s friend Henry grew up on these bayous — cypress shadows, muddy banks, and fish that look prehistoric.',
-            'As Halley opened the journal beneath the hanging moss, he smiled.',
-            'Someday had finally arrived.'
+            'Unlike Cortez, the bayou felt dangerous and unpredictable.',
+            'Alligators moved beneath the surface. Fog settled over narrow waterways.',
+            'Halley could easily have turned back.',
+            'Instead he trusted the Starfish and continued deeper — remembering his father\'s belief',
+            'that the most remarkable places were often beyond the point where most people became afraid.'
         ],
-        halleyLine: 'This one\'s for both of us, Dad.'
+        halleyLine: 'Courage. You never let fear decide for you, Dad. Neither will I.'
     },
     chapter_13_congo: {
         id: 'chapter_13_congo',
         title: 'Congo River',
         narration: [
-            'No destination filled more pages of his father\'s journal.',
-            'Halley had once believed that adventures belonged only to the person who took them.',
-            'Now he understood that a dream could be shared.',
-            'His father had imagined this river. Halley would carry that dream the rest of the way.'
+            'The Congo was vast, powerful, and untamed.',
+            'At times the Starfish disappeared from sight. For the first time, Halley had to continue without always seeing his guide.',
+            'Deep within the river country waited proof he did not yet know he needed —',
+            'an old explorer\'s journal, and sketches of creatures from his father\'s impossible stories.',
+            'Determination would carry him the rest of the way.'
         ],
-        halleyLine: 'I wish you could see it through my eyes. Maybe, in a way, you can.'
+        halleyLine: 'Even when I can\'t see the path, I\'ll keep going. Just like you taught me.'
     },
     chapter_14_crazycatch: {
         id: 'chapter_14_crazycatch',
-        title: 'CrazyCatch Cove',
+        title: 'Starfall Lagoon',
         narration: [
-            'The final page of the journal did not contain a real map.',
-            'It showed a place Halley\'s father had invented when Halley was a kitten.',
-            'Some places are discovered by explorers. Others are created by the stories we love enough to remember.'
+            'Beyond a narrow passage between towering cliffs lay a lagoon forgotten by the world.',
+            'Turquoise water glowed with soft celestial light. An ancient wreck rested below. Tiny fish moved like stars through a night sky.',
+            'Every creature his father had described was real.',
+            'Halley finally understood — years before he was born, his father had found this place and chosen to protect its secret.',
+            'What Halley had mistaken for imaginative stories had been his father\'s way of keeping the wonder alive.'
         ],
-        halleyLine: 'You made this place for me a long time ago, Dad. The Starfish just helped me find it.'
+        halleyLine: 'You knew I\'d find it someday, didn\'t you, Dad?'
     },
     epilogue: {
         id: 'epilogue',

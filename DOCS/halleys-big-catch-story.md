@@ -1,16 +1,18 @@
 ## Halley’s Big Catch Story Bible
 
-**Central truth:** The comet gave Halley a mystery; his father gave that mystery meaning. The Starfish reunion is the midpoint — not the end. After it, Halley returns to his father and completes three unfinished journal adventures: **Louisiana Bayou**, **Congo River**, and **CrazyCatch Cove**.
+**Framing rule:** The player-facing story begins when Halley is born. Ancient world history (1607 impact, pirates, explorers) is canon he **discovers during the game** — never opening dump text.
+
+**Central truth:** The comet gave Halley a mystery; his father gave that mystery meaning. The Starfish reunion is the midpoint — not the end. The Starfish then guides Halley through four final shores: **Cortez Backwaters** (patience), **Louisiana Bayou** (courage), **Congo River** (determination), and **Starfall Lagoon** (truth / homecoming).
 
 **Runtime implementation:** `src/config/storyChapters.js`, `src/config/relicProgression.js`, `src/storyProgress.js`, `src/ui.js`
 
 **Narration placeholders:** `DOCS/story-narration-placeholders.md` — lists every beat, config key, and what final copy should cover.
 
-**Story flow (2026):** Prologue → Chapters 1–7 (sequential relics) → Celestial Depths (Ch.8 on arrival) → Starfish reunion (Ch.9) → Cortez homecoming (Ch.10) → Tarpon/journal (Ch.11) → Louisiana Bayou (Ch.12) → Congo (Ch.13) → CrazyCatch Cove (Ch.14) → Epilogue. Journal destinations unlock on first catch; arrival chapters play when you travel there.
+**Story flow (2026):** Prologue (Halley’s birth) → Chapters 1–7 (sequential relics) → Celestial Depths (Ch.8 on arrival) → Starfish reunion (Ch.9) → Cortez (Ch.10) → Tarpon / path forward (Ch.11) → Louisiana Bayou (Ch.12) → Congo (Ch.13) → Starfall Lagoon (Ch.14) → Epilogue. Journal destinations unlock on first catch; arrival chapters play when you travel there.
 
 **Relic progression:** Sequential — one relic at a time, minimum ~15 successful catches before discovery (never on first cast), rising odds, guaranteed by catch ~32 depending on tier. Medallion clues at catches 8 / 13 / 20 / 26. Misses do not count.
 
-**Early location unlocks:** Story order matches the location list — Crescent Pond → Sandy Shoals (Lv 2) → Coral Kingdoms (Lv 3) → … → Celestial Depths → post-Starfish journal locations. Chapter travel buttons only appear when the destination is on the map.
+**Early location unlocks:** Story order matches the location list — Crescent Pond → Sandy Shoals (Lv 2) → Coral Kingdoms (Lv 3) → … → Celestial Depths → post-Starfish destinations. Chapter travel buttons only appear when the destination is on the map.
 
 ### Title Card
 
@@ -18,93 +20,179 @@
 ✨ Halley’s Big Catch ✨
 ```
 
-### Prologue — Born Under the Comet
+---
 
-On the night a small kitten was born, Halley’s Comet crossed the sky.
+## Player Story — Begins at Halley’s Birth
 
-As it passed overhead, glowing fragments broke away and scattered across the world. One of them landed in his family’s yard.
+### Prologue — Born Under the Comet (1986)
 
-His father named him Halley after the comet and later placed the fragment inside a medallion he made for his son.
+On the night a small orange kitten was born, Halley’s Comet crossed the sky.
 
-For years, the stone gave off only a faint blue glow, and Halley thought of it as little more than a treasured gift from his father.
+His father looked toward the brilliant comet and smiled.
 
-Then one quiet morning at Crescent Pond, the medallion began to pulse.
+“I think I’ll call you Halley.”
 
-The water grew still. A strange warmth spread across Halley’s chest, and he felt something distant stirring far beneath the surface.
+That same night, another small fragment broke away from the comet and landed in his father’s yard. The following morning, Halley’s father discovered the unusual blue stone. He carefully shaped it and placed it inside a medallion.
 
-Something mysterious was calling to him from the deep.
+Years later, sitting with young Halley on a dock after a day of fishing, his father held out the medallion and gave it to him.
 
-And for the first time, the medallion seemed to know the way.
+It became Halley’s most treasured possession.
 
-> **Gameplay tie-in:** Halley’s chest medallion is a comet fragment in a faint always-on blue glow; the pulse at Crescent Pond is the story beat that begins the player’s journey (see `MEDALLION_GEM_OFFSET` / comet gem in `src/cat.js`).
+> **Gameplay tie-in:** Halley’s chest medallion is a comet fragment in a faint always-on blue glow (see `MEDALLION_GEM_OFFSET` / comet gem in `src/cat.js`).
 
-### Chapter 1 — The Call of the Horizon
+### His Father’s Stories
 
-Halley never felt bound to land. While other cats napped by fires or chased mice, he watched light dance across the water’s surface, feeling the ocean calling to him. When he was old enough, he built his first boat, **The Shooting Star**, from scrap planks and determination. With rod and reel in paw, he set out to chase horizons — one tide, one cast, one story at a time.
+Halley grew up fishing beside his father.
 
-### Chapter 2 — The Great Journey
+During the quiet spaces between casts, his father told him stories about places he had visited and fish no one else had ever seen — a fish whose fins flowed like pirate banners; a pufferfish like living glass; a wrasse marked with every phase of the moon; a grouper whose fins moved like butterfly wings; an octopus that collected shining objects from shipwrecks.
 
-Halley’s travels spanned tranquil ponds, roaring seas, jungle rivers, coral kingdoms, frozen fjords, desert lagoons, storm-lashed bays, and forgotten reefs. Every destination held a new wonder, a powerful fish, and a whispered secret about the night of the comet. In each region Halley uncovered a relic — artifacts etched with messages that felt familiar, like fragments of a forgotten puzzle.
+Halley loved those stories.
 
-### Chapter 3 — Hidden Relics of the Sea
+As he grew older, he assumed his father had invented them to make their fishing trips more exciting.
+
+### The Call to Adventure
+
+One quiet morning, Halley was fishing alone at Crescent Pond when the medallion suddenly began to glow.
+
+A warmth spread through him. He felt something calling from far away.
+
+There were no words and no clear instructions. He simply knew that he needed to begin searching.
+
+That moment started Halley’s journey across the world.
+
+### The Ten Relics
+
+As Halley explored new fishing locations, the medallion led him toward ten mysterious relics:
 
 | # | Location | Hidden Item | Message | Meaning |
 | --- | --- | --- | --- | --- |
-| 1 | Crescent Pond (Halley’s Home Pond) | Weathered Fishing Bobber | “The smallest ripples remember where they began.” | Halley’s nostalgic connection to his childhood; the spark that began his love for fishing. |
-| 2 | Sandy Shoals | Driftwood Compass | “The sea never forgets its course — only those who stop listening.” | Unseen forces guide Halley toward his destiny. |
-| 3 | Coral Kingdoms | Sunken Treasure Chest | “Not all that glitters is gold. Some treasures remember your name.” | Foreshadows that the true treasure, the Starfish, is alive and aware. |
-| 4 | Amazon Depths | Message in a Bottle | “The stars once fell, and the sea still whispers their names.” | Direct reference to the comet that birthed both Halley and the Starfish. |
-| 5 | Craggy Coast | Broken Harpoon | “The hunter becomes the seeker when he lowers his spear.” | Halley shifts from chasing trophies to seeking meaning. |
-| 6 | Frozen Fjords | Frozen Pocket Watch | “Even time can sleep beneath the ice… but not forever.” | Time stands still for what lies waiting in the depths. |
-| 7 | Desert Lagoon | Half-Buried Telescope | “Look to the stars — the same light that guides the waves guides you.” | The comet’s light still leads the way. |
-| 8 | Stormbreaker Bay | Torn Map Fragment | “The path forward isn’t drawn in ink — it’s carried in the current.” | The ocean’s rhythm is Halley’s only map. |
-| 9 | Forgotten Reefs | Coral Pendant (Comet-shaped) | “Two lights were born as one — one of the sky, one of the sea.” | Confirms the bond between Halley and the Starfish of Eternity. |
-| 10 | Twilight Trench | Luminescent Shell | “The ocean remembers every spark. Follow its glow — it remembers you.” | The final message; the Starfish remembers Halley and awaits the reunion. |
+| 1 | Crescent Pond | Weathered Fishing Bobber | “The smallest ripples remember where they began.” | Childhood and the spark of fishing. |
+| 2 | Sandy Shoals | Driftwood Compass | “The sea never forgets its course — only those who stop listening.” | Unseen forces guide him. |
+| 3 | Coral Kingdoms | Sunken Treasure Chest | “Not all that glitters is gold. Some treasures remember your name.” | The true treasure is alive. |
+| 4 | Amazon Depths | Message in a Bottle | “The stars once fell, and the sea still whispers their names.” | Comet and Starfish. |
+| 5 | Craggy Coast | Broken Harpoon | “The hunter becomes the seeker when he lowers his spear.” | From trophies to meaning. |
+| 6 | Frozen Fjords | Frozen Pocket Watch | “Even time can sleep beneath the ice… but not forever.” | What waits beneath still wakes. |
+| 7 | Desert Lagoon | Half-Buried Telescope | “Look to the stars — the same light that guides the waves guides you.” | The comet still leads. |
+| 8 | Stormbreaker Bay | Torn Map Fragment | “The path forward isn’t drawn in ink — it’s carried in the current.” | The ocean is the map. |
+| 9 | Forgotten Reefs | Coral Pendant | “Two lights were born as one — one of the sky, one of the sea.” | Halley and the Starfish. |
+| 10 | Twilight Trench | Luminescent Shell | “The ocean remembers every spark. Follow its glow — it remembers you.” | The Starfish awaits. |
 
-### Chapter 4 — The Starlight Lure
+Each relic carried a tiny shard of comet crystal. Whenever Halley recovered another, the fragment inside his medallion glowed more strongly.
 
-When Halley assembled all ten relics aboard The Shooting Star, each shimmered with traces of comet light. Placed together, they fused into a luminous, swirling bait forged from starlight. Halley named it the **Starlight Lure**, a fragment of the sky calling to something deep below.
+### The Starlight Lure
 
-> **Halley’s Logbook:** “Ten pieces of a puzzle I didn’t even know I was solving… Looks like I’ve just built the light that started it all.”
+After gathering all ten relics, Halley discovered the tiny comet crystals hidden within them. Guided by an understanding he could not explain, he forged:
 
-### Chapter 5 — The Celestial Depths
+**The Starlight Lure.**
 
-With the Starlight Lure complete, Halley returned to sea beneath the same stars that marked his birth. The ocean stilled, glowing faintly as constellations mirrored across the water. He cast the lure, no bobber required, and the sea itself illuminated — a radiant halo spreading beneath the surface. The line drew tight with a deliberate, gentle weight as the stars overhead aligned into the image of a starfish. From the depths emerged the **Starfish of Eternity**, immense, radiant, and ancient, surrounded by golden light.
+It shimmered with the same celestial light as the medallion — and led him to the **Celestial Depths**.
 
-### Chapter 6 — The Reunion
+### Celestial Depths — Midpoint Reunion
 
-There was no struggle. The line pulsed softly, a heartbeat shared between Halley and the Starfish. Meeting its glowing eyes, Halley understood: this was recognition, not conquest. The Starfish spoke within his mind, reminding him that the light he sought was always within. Halley lowered his rod as the ocean brightened, wrapping them in golden radiance. The wanderer and the watcher, both born of the comet, were reunited.
+At Celestial Depths, Halley cast the Starlight Lure. The Starfish of Eternity rose toward it — not for food, but because it recognized the comet’s energy.
 
-### Epilogue — The Eternal Tide
+The Starfish did not speak. Yet Halley understood: it wanted him to follow.
 
-Dawn revealed The Shooting Star drifting on tranquil water. The Starfish had vanished beneath the waves, yet the ocean still glowed as if it remembered. Halley gazed toward the horizon, knowing the greatest catch was never a fish at all, but the part of himself he had forgotten he was searching for.
+The reunion is the midpoint. The final journey still lies ahead.
 
-> **Halley’s Logbook:** “The greatest catch was never a fish at all. It was the part of me I’d forgotten I was looking for.”
+> **Final Moment (Voiceover):** “I’ve spent my life chasing wonders… and all along, one of them was chasing me.”
 
-### The Celestial Depths (Hidden Region)
+---
 
-**Unlock Condition:** Collect all ten hidden relics and decipher the Luminescent Shell’s constellation. At night, align the stars with glowing points upon the sea to reveal a spiral descent into the Celestial Depths — the ocean inviting Halley home.
+## The Final Journey — Four Destinations
 
-**Atmosphere:** A sea like no other, dark as the sky with twinkling water that mirrors constellations. Bioluminescent fish drift like living stardust. Coral formations resemble star maps. Ambient sound shifts from gentle waves to a calm, resonant heartbeat. As Halley descends, his lantern fades and only the Starfish’s golden aura remains.
+The Starfish does not lead Halley straight to the hidden lagoon. First it guides him through three places that reveal his father’s life and test the lessons Halley learned from him.
 
-**Discovery Sequence:** At the abyssal basin, a stone plateau etched with star-shaped markings awaits. The Starfish of Eternity rests at its center, its glow pulsing with the ocean. Currents spiral, starlight rains upward, and the world slows as Halley reaches out.
+### Cortez Backwaters — Patience (Complete)
 
-**Final Moment (Voiceover):** “I’ve spent my life chasing wonders… and all along, one of them was chasing me.”
+Where his father spent younger years learning to fish. Calm but demanding tides; success depends on careful observation.
 
-### Implementation Notes — Celestial Depths Update (Nov 11, 2025)
+**Truth:** His father’s skill was earned one quiet cast at a time.
 
-- **Starlight Water & Particles:** The Celestial Depths now use a near-black water body with twinkling particle fields that drift like constellations. The surface glow intensifies whenever the Starlight Lure is cast, echoing the narrative description of fishing atop the night sky.
-- **Starlight Lure Visuals:** Casting the Starlight Lure replaces the bobber with a comet-bright halo that ignites immediately on hook, expands during the fight, and erupts threefold as the Starfish approaches the stern of the boat.
-- **Exclusive Catch:** Only the **Starfish of Eternity** can be hooked in the Celestial Depths. Other species are excluded so the encounter always aligns with the story’s climax.
-- **First Catch Celebration:** The first reunion with the Starfish locks the water in full radiance for a four-and-a-half-second celebration. Halley’s animation, the glow, and the bespoke popup (“Let Go and Watch It Return to the Deep”) are all synchronized to give the moment the gravity of a finale.
-- **Lore-Driven Rewards:** Catching the Starfish grants no coins, weight records, or experience. Instead, it serves as a narrative trigger (future updates will use it to unlock globe-spanning destinations). The experience is about recognition, not loot.
-- **Repeat Visits:** After the first reunion, catching the Starfish again still triggers the starlit aura and a recycled advice popup, reminding players that the Starfish remains a guide rather than a trophy.
+### Louisiana Bayou — Courage (Complete)
 
-### First-Time Entrance Sequence
+Dangerous and unpredictable — alligators, fog, unfamiliar sounds. Halley could turn back; instead he trusts the Starfish and goes deeper.
 
-Before gameplay begins, new players see a cinematic scrolling prologue (movie-credit style) accompanied by an eventual voiceover.
+**Truth:** His father’s adventures were possible because he respected danger without letting fear control him.
 
-**Canonical scroll text (2026-06):**
+### Congo River — Determination (Coming)
+
+Vast, powerful, untamed. At times the Starfish disappears from sight; Halley must continue without always seeing his guide.
+
+Deep within the Congo, Halley discovers a weathered explorer’s journal dated **1703**, with sketches of creatures from his father’s stories and a final entry swearing a hidden lagoon is real.
+
+**Truth:** The impossible fish had existed for centuries. The journey is no longer about whether the stories were true — it is about finding where they live.
+
+### Starfall Lagoon — Truth / Homecoming (Coming)
+
+After the Congo, the Starfish guides Halley through a narrow passage between towering cliffs into a lagoon forgotten by the world.
+
+Turquoise water with a soft celestial glow. An ancient pirate shipwreck. Broken docks and the remains of a hideout. Beneath it all, the great comet fragment from 1607 still rests.
+
+Every creature his father described is real: Pirate Bannerfish, Butterfly Grouper, Glass Puffer, Moonstripe Wrasse, Treasurekeeper Octopus — and tiny glowing starfish schools filling the water with moving light.
+
+Halley understands: years before he was born, his father found this place and chose to protect its secret — sharing memories as stories beside the dock instead of a map.
+
+The Starfish returns to the reef where it survived the impact centuries earlier. Halley releases it. The medallion pulses one final time.
+
+> “You knew I’d find it someday, didn’t you, Dad?”
+
+### Final Narration (Epilogue Intent)
+
+When I was little, I thought Dad was telling me impossible stories.
+
+Now I know he was sharing his memories.
+
+The greatest treasure was never hidden in a pirate chest.
+
+It was in every lesson, every story and every quiet day we spent together.
+
+One cast at a time, Dad had been preparing me for the greatest adventure of my life.
+
+And now, his stories are mine to carry forward.
+
+---
+
+## What the Three Lessons Mean
+
+| Location | Lesson | Why the Starfish led him there |
+| --- | --- | --- |
+| Cortez Backwaters | Patience | Father’s skill was earned, not given |
+| Louisiana Bayou | Courage | Respect danger; do not let fear decide |
+| Congo River | Determination | Keep going even when the guide is unseen |
+| Starfall Lagoon | Truth | The stories were memories — and home |
+
+The Starfish can show Halley the direction. Only Halley can complete the journey.
+
+---
+
+## World History (Discovered in Play)
+
+*Do not put this in the prologue. Halley learns it through Congo’s journal, Starfall Lagoon, and understanding his father’s stories.*
+
+### 1607 — The Night the Sea Changed
+
+Halley’s Comet crossed the sky. A massive fragment crashed into a secluded tropical lagoon. The shockwave killed nearly every living creature except one small sea star that absorbed the comet’s energy and became the **Starfish of Eternity**. The larger fragment remained buried; over centuries, extraordinary life returned to the lagoon.
+
+### Pirates and the Hidden Lagoon
+
+Decades later, pirates found the lagoon, guarded its location, and built a hideout. Time reclaimed it. Only legends remained — dismissed by the world.
+
+### 1703 — The Explorer’s Journal
+
+Found by Halley in the Congo: sketches of the lagoon’s creatures and a sworn account of a place beyond the charts.
+
+### Father’s Prior Visit
+
+Years before Halley was born, his father found Starfall Lagoon and kept its secret — passing wonder to his son as “impossible” fishing stories.
+
+---
+
+## Prologue Scroll (In-Game Entry)
+
+**Locked:** The opening prologue stays the original birth/medallion mystery. Do not add 1607, pirates, or Starfall Lagoon here — players discover the past as they play.
+
+Canonical scroll text (`PROLOGUE_STORY_PARAGRAPHS` in `src/config/prologue.js`):
 
 > On the night a small kitten was born, Halley’s Comet crossed the sky.  
 > As it passed overhead, glowing fragments broke away and scattered across the world. One of them landed in his family’s yard.  
@@ -115,19 +203,23 @@ Before gameplay begins, new players see a cinematic scrolling prologue (movie-cr
 > Something mysterious was calling to him from the deep.  
 > And for the first time, the medallion seemed to know the way.
 
-As the narration ends, the entrance screen transitions to the main title featuring Halleycat and the Halley’s Big Catch logo.
+**Epilogue (end of game):** Keep the original “One More Cast” pond closer after Chapter 14. Starfall’s truth lands in Ch.14; the epilogue returns home without restating the lore dump.
 
-**Implementation note:** `PROLOGUE_STORY_PARAGRAPHS_NEXT` in `src/config/prologue.js` holds this text for the in-game scroll. Swap it into `PROLOGUE_STORY_PARAGRAPHS` and bump `PROLOGUE_GAME_VERSION` when the intro voiceover is re-recorded to match.
+---
+
+## Celestial Depths — Implementation Notes
+
+- Starlight water & particles; Starlight Lure halo; exclusive Starfish catch; first-catch celebration; narrative rewards (no coins/XP); repeat visits keep the Starfish as a guide, not a trophy.
 
 ### Core Themes
 
-- Wonder over conquest — fishing as an act of curiosity and connection.
-- Destiny intertwined with cosmic events — Halley and the Starfish born from the same comet.
-- Memory and belonging — the ocean remembers every spark, guiding Halley home.
+- Wonder over conquest — fishing as curiosity and connection.
+- Destiny intertwined with cosmic events — Halley and the Starfish share the comet’s light.
+- Memory and belonging — father taught the path; the Starfish showed the direction.
+- Discovery over exposition — ancient lore is earned in play.
 
 ### Future Expansion Hooks
 
-- Region-specific fish and fantasy species tailored to each body of water.  
-- Additional logbook entries detailing Halley’s personal reflections.  
-- Seasonal events aligning with celestial phenomena.
-
+- Starfall Lagoon scenery, signature species, and Starfish return-home beat.
+- Congo explorer-camp discovery sequence.
+- Additional logbook entries for each final-shore lesson.

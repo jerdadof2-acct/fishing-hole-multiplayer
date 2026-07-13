@@ -1,10 +1,17 @@
 ## Expansion Location Roadmap
 
+### Implemented
+
+Story locations that are finished in-game:
+
+- **Cortez Backwaters** — Gulf Coast Florida inshore estuary; mangroves, docks, dolphin visitor, and the legendary Silver King tarpon. [Design brief](./future-locations/cortez-backwaters.md)
+- **Louisiana Bayou** — Cypress backwaters with gator, dragonflies, swamp flies, and the bayou fish lineup Henry’s waters inspired.
+
+Remaining post-Starfish destinations still ahead: **Congo River** (determination) and **Starfall Lagoon** (truth / homecoming). [Starfall brief](./future-locations/starfall-lagoon.md)
+
 ### Detailed Design Briefs
 
-Planned locations with full specs live in [future-locations/](./future-locations/README.md).
-
-- **Cortez Backwaters** — Gulf Coast Florida inshore estuary; mangroves, docks, and the legendary Silver King tarpon. [Design brief](./future-locations/cortez-backwaters.md)
+Location briefs and status live in [future-locations/](./future-locations/README.md).
 
 ### Real-World Inspired Packs
 
@@ -53,4 +60,3 @@ Planned locations with full specs live in [future-locations/](./future-locations
 ---
 
 Each pack adds weather/time variants, gear specializations, and mini-quests so players learn new mechanics while their core skills still carry forward.
-

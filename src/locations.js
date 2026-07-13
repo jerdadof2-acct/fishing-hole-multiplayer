@@ -9,7 +9,7 @@ export const CORAL_KINGDOMS_NAME = 'Coral Kingdoms';
 export const CORTEZ_BACKWATERS_NAME = 'Cortez Backwaters';
 export const LOUISIANA_BAYOU_NAME = 'Louisiana Bayou';
 export const CONGO_RIVER_NAME = 'Congo River';
-export const CRAZYCATCH_COVE_NAME = 'CrazyCatch Cove';
+export const CRAZYCATCH_COVE_NAME = 'Starfall Lagoon';
 export const CRAGGY_COAST_NAME = 'Craggy Coast';
 export const STORMBREAKER_BAY_NAME = 'Stormbreaker Bay';
 export const FORGOTTEN_REEFS_NAME = 'Forgotten Reefs';
@@ -258,9 +258,9 @@ export class Locations {
                 fish: [34, 35, 36, 48, 52],
                 cost: 0,
                 unlockLevel: 99,
-                description: 'A hidden cove his father invented in stories when Halley was a kitten — impossible fish, ridiculous names, and laughter when nothing was biting. The Starfish remembered.',
+                description: 'A forgotten tropical lagoon beyond the charts — celestial glow, an ancient wreck, and every wondrous creature his father once described. The Starfish remembered the way home.',
                 briefTheme: 'crazycatch-cove',
-                tagline: 'Where imagination became real',
+                tagline: 'Where his father\'s stories began',
                 waterBodyType: 'OCEAN',
                 platformType: 'LARGE_BOAT',
                 requiresPostStarfishGuide: true,

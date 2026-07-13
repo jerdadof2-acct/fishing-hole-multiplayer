@@ -2,7 +2,7 @@
  * Remap saved location indices when the world map order changes.
  * v1 = layout before Amazon premium move (Jul 2026).
  * v2 = Coral second, Amazon premium (Jul 2026).
- * v3 = Louisiana Bayou, Congo River, CrazyCatch Cove (Jul 2026).
+ * v3 = Louisiana Bayou, Congo River, Starfall Lagoon (display; internal CrazyCatch keys) (Jul 2026).
  * v4 = Story unlock order — Sandy Shoals before Coral Kingdoms, relic indices 0–9 sequential (Jul 2026).
  */
 
