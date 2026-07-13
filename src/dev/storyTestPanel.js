@@ -11,6 +11,8 @@ import {
     setDevFaceCameraEnabled
 } from './devFaceCamera.js';
 import { DEV_GEM_OFFSET_STORAGE_KEY } from './devGemOffset.js';
+import { forceSpawnCortezDolphin } from '../effects/cortezDolphin.js';
+import { CORTEZ_BACKWATERS_NAME } from '../locations.js';
 
 function getAmazonLocationIndex(locations) {
     const list = locations?.locations ?? [];
@@ -88,6 +90,7 @@ export function initStoryTestPanel(game) {
         <button type="button" data-action="forge">Show forge popup</button>
         <button type="button" data-action="celestial">Go to Celestial Depths</button>
         <button type="button" data-action="cortez">Go to Cortez Backwaters</button>
+        <button type="button" data-action="spawn-dolphin">Spawn dolphin</button>
         <button type="button" data-action="bayou">Go to Louisiana Bayou</button>
         <button type="button" data-action="congo">Go to Congo River</button>
         <button type="button" data-action="congo-portrait">Congo portrait pan (face Halley)</button>
@@ -221,6 +224,29 @@ export function initStoryTestPanel(game) {
             const copyText = `[${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)}]`;
             navigator.clipboard?.writeText?.(copyText)?.catch(() => {});
             ui.showBannerNotification?.(`Gem offset: ${copyText}`, '#93c5fd', 5000);
+            return;
+        }
+
+        if (action === 'spawn-dolphin') {
+            const atCortez = game.locations?.getCurrentLocation()?.name === CORTEZ_BACKWATERS_NAME;
+            if (!atCortez) {
+                grantStarfishCaught(player, game.fishCollection);
+                jumpToLocation(game, CORTEZ_BACKWATERS_LOCATION_INDEX);
+            }
+            const spawned = forceSpawnCortezDolphin(game.cortezDolphin);
+            if (spawned) {
+                ui.showBannerNotification?.(
+                    'Dolphin spawned — watch the flats in front of the dock.',
+                    '#86efac',
+                    3200
+                );
+            } else {
+                ui.showBannerNotification?.(
+                    'Could not spawn dolphin — Cortez scenery not ready.',
+                    '#fca5a5',
+                    3200
+                );
+            }
             return;
         }
 

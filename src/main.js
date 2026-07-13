@@ -104,6 +104,11 @@ import {
     createCortezDockWaterEffects,
     syncCortezDockWaterVisibility
 } from './effects/dockLappingWater.js';
+import {
+    createCortezDolphin,
+    syncCortezDolphinVisibility,
+    updateCortezDolphin
+} from './effects/cortezDolphin.js';
 
 export class Game {
     constructor(options = {}) {
@@ -161,6 +166,7 @@ export class Game {
         this.crescentPondSky = null;
         this.crescentPondVegetation = null;
         this.cortezMangroves = null;
+        this.cortezDolphin = null;
         this.bayouCypress = null;
         this.bayouExtras = null;
         this.bayouWaterShadows = null;
@@ -662,6 +668,14 @@ export class Game {
             );
             syncCortezDockWaterVisibility(
                 this.cortezDockWater,
+                currentLocation.name === CORTEZ_BACKWATERS_NAME
+            );
+
+            this.cortezDolphin = createCortezDolphin(this.scene.scene, {
+                waterLevel: this.water?.waterY ?? 0
+            });
+            syncCortezDolphinVisibility(
+                this.cortezDolphin,
                 currentLocation.name === CORTEZ_BACKWATERS_NAME
             );
 
@@ -1296,6 +1310,16 @@ export class Game {
                     false
                 );
             }
+        }
+
+        if (this.cortezDolphin && isCortez) {
+            updateCortezDolphin(
+                this.cortezDolphin,
+                this.scene.clock.getElapsedTime(),
+                delta,
+                isCortez,
+                { water: this.water }
+            );
         }
 
         if (this.bayouCypress && this._bayouModules) {
@@ -2464,6 +2488,10 @@ export class Game {
         );
         syncCortezDockWaterVisibility(
             this.cortezDockWater,
+            location.name === CORTEZ_BACKWATERS_NAME
+        );
+        syncCortezDolphinVisibility(
+            this.cortezDolphin,
             location.name === CORTEZ_BACKWATERS_NAME
         );
         this.applyLocationEnvironment(location);
