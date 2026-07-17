@@ -22,6 +22,7 @@ export const CONGO_RIVER_NAME = 'Congo River';
 export const CRAZYCATCH_COVE_NAME = 'Starfall Lagoon';
 
 export const TARPON_FISH_ID = 44;
+export const TREASUREKEEPER_OCTOPUS_FISH_ID = 71;
 
 export function hasCaughtStarfish(player) {
     return player?.isFishUnlocked?.(STARFISH_ID) === true;

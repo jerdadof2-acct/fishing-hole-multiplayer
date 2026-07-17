@@ -99,6 +99,7 @@ export function initStoryTestPanel(game) {
         <button type="button" data-action="congo">Go to Congo River</button>
         <button type="button" data-action="congo-portrait">Congo portrait pan (face Halley)</button>
         <button type="button" data-action="starfall">Go to Starfall Lagoon</button>
+        <button type="button" data-action="end-credits">Show end credits</button>
         <button type="button" data-action="reset-starfish">Reset Starfish (first catch)</button>
         <div class="story-test-panel-section">Amazon Depths</div>
         <button type="button" data-action="spawn-anaconda">Spawn anaconda shadow</button>
@@ -192,6 +193,11 @@ export function initStoryTestPanel(game) {
                 '#7dd3fc',
                 4200
             );
+            return;
+        }
+
+        if (action === 'end-credits') {
+            ui.showEndCreditsScreen?.();
             return;
         }
 

@@ -142,8 +142,8 @@ export const JOURNEY_COMPLETE_BEATS = {
         banner: 'Congo River — dream carried home.'
     },
     crazycatch_cove: {
-        halleyLine: 'Your stories were memories, Dad. I found where they live.',
-        banner: 'Starfall Lagoon — the stories were true.'
+        halleyLine: 'The Treasurekeeper kept the gold. You kept the stories. I finally understand both.',
+        banner: 'Starfall Lagoon — the greatest treasure was never in the chest.'
     }
 };
 
@@ -252,11 +252,28 @@ export const POST_STARFISH_CHAPTERS = {
         narration: [
             'Beyond a narrow passage between towering cliffs lay a lagoon forgotten by the world.',
             'Turquoise water glowed with soft celestial light. An ancient wreck rested below. Tiny fish moved like stars through a night sky.',
-            'Every creature his father had described was real.',
+            'Every creature his father had described was real — bannerfish trailing comet-light, glass puffers, moon-marked wrasse, butterfly fins that scattered the glow.',
             'Halley finally understood — years before he was born, his father had found this place and chosen to protect its secret.',
-            'What Halley had mistaken for imaginative stories had been his father\'s way of keeping the wonder alive.'
+            'What Halley had mistaken for imaginative stories had been his father\'s way of keeping the wonder alive.',
+            'Somewhere among the wrecks, the last of those stories still waited — a keeper of pirate gold, and of something far more precious.'
         ],
         halleyLine: 'You knew I\'d find it someday, didn\'t you, Dad?'
+    },
+    chapter_15_treasurekeeper: {
+        id: 'chapter_15_treasurekeeper',
+        title: 'The Greatest Treasure',
+        narration: [
+            'When the Treasurekeeper rose from the wreck, coins and gems spilled like fallen stars — the pirate fortune of a forgotten age.',
+            'Halley felt the medallion warm against his chest. The Starfish drifted near, as if it had guided him to this final page all along.',
+            'Patience from Cortez. Courage through the bayou. Endurance on the Congo. Each shore had been a lesson his father once lived — and then taught beside the dock.',
+            'The octopus held the gold. His father had held the truth.',
+            'The greatest treasure was never hidden in a pirate chest.',
+            'It was every quiet cast, every story told as if it were only a dream, and every hour shared upon the water.',
+            'One cast at a time, his father had prepared him for this adventure.',
+            'And now those stories were Halley\'s to carry forward.'
+        ],
+        fatherLine: 'You found more than gold, Halley.',
+        halleyLine: 'I found what you were really giving me all those years.'
     },
     epilogue: {
         id: 'epilogue',
@@ -271,7 +288,8 @@ export const POST_STARFISH_CHAPTERS = {
             'And in the end, that was the greatest catch of all.'
         ],
         fatherLine: 'Think anything\'s biting?',
-        halleyLine: 'Does it matter?'
+        halleyLine: 'Does it matter?',
+        unlocksLocationMessage: 'The credits await — then keep fishing, or begin the tale again.'
     }
 };
 

@@ -18,14 +18,14 @@ Warm turquoise water with a soft celestial glow. Ancient pirate wreckage. Coral-
 
 ## Signature creatures (from father’s stories)
 
-| Creature | Notes |
-| --- | --- |
-| Pirate Bannerfish | Ribbon-like fins with tiny comet crystals; guides schools through reefs |
-| Butterfly Grouper | Broad translucent fins that scatter light |
-| Glass Puffer | Nearly transparent; crystalline spines |
-| Moonstripe Wrasse | Marked with every lunar phase; current phase glows |
-| Treasurekeeper Octopus | Collects coins, pearls, and shining objects from wrecks |
-| Tiny starfish schools | Faint comet-glow points of light throughout the lagoon |
+| Creature | Rarity | Notes |
+| --- | --- | --- |
+| Pirate Bannerfish | Common | Ribbon-like fins with tiny comet crystals; guides schools through reefs |
+| Glass Puffer | Common | Nearly transparent; crystalline spines |
+| Moonstripe Wrasse | Uncommon | Marked with every lunar phase; current phase glows |
+| Butterfly Grouper | Rare | Broad translucent fins that scatter light |
+| Treasurekeeper Octopus | Legendary | Collects coins, pearls, and shining objects from wrecks; elusive after cast + catalog gates |
+| Tiny starfish schools | Ambient | Faint comet-glow points of light throughout the lagoon |
 
 ## Story beats
 

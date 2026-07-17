@@ -20,7 +20,8 @@ Replace placeholder copy below when final narrations are ready. Each section lis
 | **12 — Louisiana Bayou (Courage)** | First arrival at Louisiana Bayou | `POST_STARFISH_CHAPTERS.chapter_12_bayou` |
 | **13 — Congo River (Determination)** | First arrival at Congo River | `POST_STARFISH_CHAPTERS.chapter_13_congo` |
 | **14 — Starfall Lagoon** | First arrival at Starfall Lagoon | `POST_STARFISH_CHAPTERS.chapter_14_crazycatch` *(internal id kept for saves)* |
-| **Epilogue** | After Chapter 14 modal closes | `POST_STARFISH_CHAPTERS.epilogue` |
+| **15 — The Greatest Treasure** | First Treasurekeeper Octopus catch at Starfall | `POST_STARFISH_CHAPTERS.chapter_15_treasurekeeper` |
+| **Epilogue** | After Chapter 15 modal closes | `POST_STARFISH_CHAPTERS.epilogue` |
 
 ### Intent per chapter (for your rewrites)
 
@@ -30,7 +31,8 @@ Replace placeholder copy below when final narrations are ready. Each section lis
 - **Chapter 11:** Starfish opens the path through three more shores ending at the hidden lagoon from father’s stories (not an invented cove).
 - **Chapter 12:** Bayou — courage. Remarkable places lie past where most turn back.
 - **Chapter 13:** Congo — determination. Foreshadow the 1703 explorer journal and proof the creatures were real.
-- **Chapter 14:** Starfall Lagoon — truth. Father’s stories were memories; Starfish returns home; Halley’s greatest discovery is his father.
+- **Chapter 14:** Starfall Lagoon arrival — truth dawns; father’s stories were memories; foreshadow the Treasurekeeper among the wrecks.
+- **Chapter 15:** Treasurekeeper Octopus catch — patience / courage / endurance resolve; pirate gold vs father’s true gift; stories become Halley’s to carry.
 - **Epilogue:** Keep original “One More Cast” pond closer — home, father, greatest catch was never a fish. Do not restate 1607 / pirate lore here.
 
 ---
@@ -45,7 +47,7 @@ Play on **first successful catch** at each post-Starfish location (unlocks the n
 |-----|------|------------|
 | `louisiana_bayou` | First catch at Louisiana Bayou | Courage found; unlocks Congo River |
 | `congo_river` | First catch at Congo River | Determination proven; unlocks Starfall Lagoon |
-| `crazycatch_cove` | First catch at Starfall Lagoon | Finale celebration — stories were true *(key kept for saves)* |
+| `crazycatch_cove` | First Treasurekeeper Octopus catch at Starfall | Finale — greatest treasure was never in the chest |
 
 Each entry: `halleyLine` (cat bark) + `banner` (top notification).
 

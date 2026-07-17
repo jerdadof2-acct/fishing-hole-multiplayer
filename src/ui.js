@@ -12,6 +12,7 @@ import {
 } from './locations.js';
 import {
     TARPON_FISH_ID,
+    TREASUREKEEPER_OCTOPUS_FISH_ID,
     LOUISIANA_BAYOU_LOCATION_INDEX,
     CONGO_RIVER_LOCATION_INDEX,
     CRAZYCATCH_COVE_LOCATION_INDEX,
@@ -830,8 +831,11 @@ export class UI {
                 onComplete: isFinale
                     ? () => {
                         window.setTimeout(() => {
-                            this.showStoryChapterModal(POST_STARFISH_CHAPTERS.epilogue);
-                        }, 600);
+                            this.game?.showCatBark?.(
+                                'The wrecks are still holding something, Dad. I can feel it.',
+                                3200
+                            );
+                        }, 400);
                     }
                     : undefined
             });
@@ -4037,9 +4041,16 @@ export class UI {
             card.classList.add('story-chapter-card--illustrated');
         }
 
+        const isFinaleChoice = options.finaleChoices === true;
+        const actionsHtml = isFinaleChoice
+            ? `<button type="button" class="story-chapter-btn story-chapter-btn--primary" data-action="keep-playing">Keep Playing</button>
+                <button type="button" class="story-chapter-btn story-chapter-btn--danger" data-action="restart-story">Start Story Over</button>`
+            : `${options.showKeepFishing ? '<button type="button" class="story-chapter-btn story-chapter-btn--secondary" data-action="stay">Keep Fishing Here</button>' : ''}
+                <button type="button" class="story-chapter-btn story-chapter-btn--primary" data-action="close">${options.primaryLabel || 'Continue'}</button>`;
+
         card.innerHTML = `
             <div class="story-chapter-scroll">
-                <p class="story-chapter-eyebrow">Chapter</p>
+                <p class="story-chapter-eyebrow">${isFinaleChoice ? 'Journey Complete' : 'Chapter'}</p>
                 <h2 class="story-chapter-title">${chapter.title}</h2>
                 ${imageHtml}
                 <div class="story-chapter-body">${narration}</div>
@@ -4048,8 +4059,7 @@ export class UI {
                 ${unlockNoteHtml}
             </div>
             <div class="story-chapter-actions">
-                ${options.showKeepFishing ? '<button type="button" class="story-chapter-btn story-chapter-btn--secondary" data-action="stay">Keep Fishing Here</button>' : ''}
-                <button type="button" class="story-chapter-btn story-chapter-btn--primary" data-action="close">${options.primaryLabel || 'Continue'}</button>
+                ${actionsHtml}
             </div>
         `;
 
@@ -4092,18 +4102,209 @@ export class UI {
             }
         };
 
-        card.querySelector('[data-action="close"]')?.addEventListener('click', () => {
-            finish(typeof options.travelLocationIndex === 'number');
-        });
-        card.querySelector('[data-action="stay"]')?.addEventListener('click', () => finish(false));
-        overlay.addEventListener('click', (event) => {
-            if (event.target === overlay) {
+        if (isFinaleChoice) {
+            card.querySelector('[data-action="keep-playing"]')?.addEventListener('click', () => {
                 finish(false);
-            }
-        });
+                window.setTimeout(() => {
+                    this.game?.showCatBark?.(
+                        'One more cast never hurt anybody.',
+                        2800
+                    );
+                }, 400);
+            });
+            card.querySelector('[data-action="restart-story"]')?.addEventListener('click', () => {
+                this.showEpilogueRestartConfirmation({
+                    onConfirm: async () => {
+                        overlay.remove();
+                        card.remove();
+                        await this.resetAllProgress();
+                        try {
+                            await replayStoryPrologue();
+                        } catch (error) {
+                            console.error('[UI] Story restart prologue failed:', error);
+                        }
+                    }
+                });
+            });
+            // Backdrop click = keep playing (do not trap the player)
+            overlay.addEventListener('click', (event) => {
+                if (event.target === overlay) {
+                    finish(false);
+                }
+            });
+        } else {
+            card.querySelector('[data-action="close"]')?.addEventListener('click', () => {
+                finish(typeof options.travelLocationIndex === 'number');
+            });
+            card.querySelector('[data-action="stay"]')?.addEventListener('click', () => finish(false));
+            overlay.addEventListener('click', (event) => {
+                if (event.target === overlay) {
+                    finish(false);
+                }
+            });
+        }
 
         window.requestAnimationFrame(() => {
             overlay.classList.add('visible');
+        });
+    }
+
+    /**
+     * Confirm starting the whole story over from the epilogue choice.
+     * @param {{ onConfirm: () => Promise<void>|void }} options
+     */
+    showEpilogueRestartConfirmation(options = {}) {
+        document.getElementById('epilogue-restart-overlay')?.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'epilogue-restart-overlay';
+        overlay.className = 'reset-confirmation-overlay';
+        overlay.innerHTML = `
+            <div class="reset-confirmation-dialog" role="dialog" aria-modal="true" aria-labelledby="epilogue-restart-heading">
+                <div class="reset-confirmation-title">Start Over?</div>
+                <div id="epilogue-restart-heading" class="reset-confirmation-heading">Begin the story from the beginning?</div>
+                <div class="reset-confirmation-copy">
+                    This resets all progress — levels, collection, relics, and shores — then plays Halley's tale from the start.<br><br>
+                    <strong>Your current adventure will be erased.</strong>
+                </div>
+                <div class="reset-confirmation-actions">
+                    <button type="button" id="epilogue-restart-cancel" class="reset-cancel-btn">Keep Playing</button>
+                    <button type="button" id="epilogue-restart-confirm" class="reset-confirm-btn">Start Story Over</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        const closeOverlay = () => {
+            if (overlay.dataset.closing === '1') {
+                return;
+            }
+            overlay.dataset.closing = '1';
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.25s ease';
+            window.setTimeout(() => overlay.remove(), 260);
+        };
+
+        const confirmBtn = overlay.querySelector('#epilogue-restart-confirm');
+        const cancelBtn = overlay.querySelector('#epilogue-restart-cancel');
+
+        confirmBtn?.addEventListener('click', async () => {
+            confirmBtn.disabled = true;
+            if (cancelBtn) cancelBtn.disabled = true;
+            confirmBtn.textContent = 'Starting over…';
+            try {
+                await options.onConfirm?.();
+                closeOverlay();
+            } catch (error) {
+                console.error('[UI] Epilogue story restart failed:', error);
+                confirmBtn.disabled = false;
+                if (cancelBtn) cancelBtn.disabled = false;
+                confirmBtn.textContent = 'Start Story Over';
+                this.showToast({
+                    type: 'error',
+                    title: 'Could not restart',
+                    body: error?.message || 'Try again from Settings if needed.'
+                });
+            }
+        });
+
+        cancelBtn?.addEventListener('click', closeOverlay);
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) {
+                closeOverlay();
+            }
+        });
+    }
+
+    /** Full-screen end credits with finale art and Keep Playing / Start Over. */
+    showEndCreditsScreen() {
+        if (typeof document === 'undefined') {
+            return;
+        }
+
+        document.getElementById('end-credits-overlay')?.remove();
+
+        import('./config/endCredits.js').then((credits) => {
+            const {
+                END_CREDITS_IMAGE,
+                END_CREDITS_IMAGE_FALLBACK,
+                END_CREDITS_TITLE,
+                END_CREDITS_SUBTITLE,
+                END_CREDIT_BLOCKS,
+                END_CREDITS_CLOSING_LINE
+            } = credits;
+
+            const overlay = document.createElement('div');
+            overlay.id = 'end-credits-overlay';
+            overlay.className = 'end-credits-overlay';
+            overlay.setAttribute('role', 'dialog');
+            overlay.setAttribute('aria-modal', 'true');
+            overlay.setAttribute('aria-label', 'End credits');
+
+            const blocksHtml = END_CREDIT_BLOCKS.map((block) => `
+                <div class="end-credits-block">
+                    <p class="end-credits-block-label">${block.label}</p>
+                    ${block.lines.map((line) => `<p class="end-credits-block-line">${line}</p>`).join('')}
+                </div>
+            `).join('');
+
+            overlay.innerHTML = `
+                <div class="end-credits-art-wrap">
+                    <img
+                        class="end-credits-art"
+                        src="${END_CREDITS_IMAGE}"
+                        alt="Halley on The Shooting Star holding the Starfish of Eternity under a starry sky"
+                        decoding="async"
+                        onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${END_CREDITS_IMAGE_FALLBACK}';}"
+                    >
+                    <div class="end-credits-art-veil"></div>
+                </div>
+                <div class="end-credits-scroll">
+                    <div class="end-credits-inner">
+                        <p class="end-credits-eyebrow">The End</p>
+                        <h2 class="end-credits-title">${END_CREDITS_TITLE}</h2>
+                        <p class="end-credits-subtitle">${END_CREDITS_SUBTITLE}</p>
+                        ${blocksHtml}
+                        <p class="end-credits-closing">${END_CREDITS_CLOSING_LINE}</p>
+                    </div>
+                </div>
+                <div class="end-credits-actions">
+                    <button type="button" class="story-chapter-btn story-chapter-btn--primary" data-action="keep-playing">Keep Playing</button>
+                    <button type="button" class="story-chapter-btn story-chapter-btn--danger" data-action="restart-story">Start Story Over</button>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+            window.requestAnimationFrame(() => overlay.classList.add('visible'));
+
+            const closeCredits = () => {
+                overlay.classList.remove('visible');
+                window.setTimeout(() => overlay.remove(), 320);
+            };
+
+            overlay.querySelector('[data-action="keep-playing"]')?.addEventListener('click', () => {
+                closeCredits();
+                window.setTimeout(() => {
+                    this.game?.showCatBark?.('One more cast never hurt anybody.', 2800);
+                }, 400);
+            });
+
+            overlay.querySelector('[data-action="restart-story"]')?.addEventListener('click', () => {
+                this.showEpilogueRestartConfirmation({
+                    onConfirm: async () => {
+                        closeCredits();
+                        await this.resetAllProgress();
+                        try {
+                            await replayStoryPrologue();
+                        } catch (error) {
+                            console.error('[UI] Story restart prologue failed:', error);
+                        }
+                    }
+                });
+            });
+        }).catch((error) => {
+            console.error('[UI] Failed to load end credits:', error);
+            this.game?.showCatBark?.('One more cast never hurt anybody.', 2800);
         });
     }
 
@@ -4518,7 +4719,6 @@ export class UI {
                         );
                     }, 1800);
                 } else if (newlyOpened.includes(CRAZYCATCH_COVE_LOCATION_INDEX)) {
-                    this.player.crazyCatchCoveComplete = true;
                     window.setTimeout(() => {
                         this.showBannerNotification(
                             'Starfall Lagoon opens — the greatest treasure of them all.',
@@ -4561,6 +4761,43 @@ export class UI {
             const isFirstCatch = this.fishCollection.unlockFish(fishId);
             this.player.unlockFish?.(fishId);
             checkPostStarfishCatalogUnlocks();
+
+            if (
+                isFirstCatch
+                && fishId === TREASUREKEEPER_OCTOPUS_FISH_ID
+                && currentLocation?.name === CRAZYCATCH_COVE_NAME
+                && !hasCompletedChapter(this.player, 'chapter_15_treasurekeeper')
+            ) {
+                this.player.crazyCatchCoveComplete = true;
+                window.setTimeout(() => {
+                    this.showBannerNotification(
+                        JOURNEY_COMPLETE_BEATS.crazycatch_cove.banner,
+                        '#fcd34d',
+                        4800
+                    );
+                    this.game?.showCatBark?.(
+                        JOURNEY_COMPLETE_BEATS.crazycatch_cove.halleyLine,
+                        3600
+                    );
+                }, 1800);
+                window.setTimeout(() => {
+                    this.showStoryChapterModal(POST_STARFISH_CHAPTERS.chapter_15_treasurekeeper, {
+                        primaryLabel: 'Continue',
+                        onComplete: () => {
+                            window.setTimeout(() => {
+                                this.showStoryChapterModal(POST_STARFISH_CHAPTERS.epilogue, {
+                                    primaryLabel: 'Continue',
+                                    onComplete: () => {
+                                        window.setTimeout(() => {
+                                            this.showEndCreditsScreen();
+                                        }, 500);
+                                    }
+                                });
+                            }, 700);
+                        }
+                    });
+                }, 5600);
+            }
             
             // Add to player catch tracking (returns unlocks if leveled up)
             const newUnlocks = this.player.addCatch({
@@ -5490,6 +5727,21 @@ export class UI {
             this.player.top10BiggestFish = [];
             this.player.caughtFish = {};
             this.player.caughtFishCollection = {};
+            this.player.hiddenRelicsCollected = [];
+            this.player.starlightLureCrafted = false;
+            this.player.relicLocationProgress = {};
+            this.player.storyChaptersCompleted = [];
+            this.player.fatherJournalReceived = false;
+            this.player.louisianaBayouComplete = false;
+            this.player.congoRiverComplete = false;
+            this.player.crazyCatchCoveComplete = false;
+            this.player.celestialFirstCastNarrationSeen = false;
+            this.player.pendingStoryTravelIndex = null;
+            this.player.locationCastCounts = {};
+            this.player.elusiveLegendaryRevealed = [];
+            this.player.relicCastAttempts = {};
+            this.player.hasSeenGameplayOnboarding = false;
+            this.player.currentLocationIndex = 0;
             this.player.energy = MAX_ENERGY;
             this.player.maxEnergy = MAX_ENERGY;
             this.player.lastEnergyRegenAt = Date.now();

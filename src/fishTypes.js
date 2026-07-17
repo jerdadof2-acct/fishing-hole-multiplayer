@@ -92,7 +92,14 @@ export const FishTypes = [
     { id: 63, name: 'Nile Perch', rarity: 'Uncommon', minWeight: 5.0, maxWeight: 35.0, recordWeight: 180.0, value: 72, experience: 26, season: 'All' },
     { id: 64, name: 'African Lungfish', rarity: 'Rare', minWeight: 10.0, maxWeight: 40.0, recordWeight: 75.0, value: 145, experience: 44, season: 'All' },
     { id: 65, name: 'Goliath Tigerfish', rarity: 'Legendary', minWeight: 25.0, maxWeight: 90.0, recordWeight: 110.0, value: 1900, experience: 98, season: 'All' },
-    { id: 66, name: 'Electric Catfish', rarity: 'Common', minWeight: 1.0, maxWeight: 6.0, recordWeight: 12.0, value: 26, experience: 13, season: 'All' }
+    { id: 66, name: 'Electric Catfish', rarity: 'Common', minWeight: 1.0, maxWeight: 6.0, recordWeight: 12.0, value: 26, experience: 13, season: 'All' },
+
+    // Starfall Lagoon — father's story creatures (67-71)
+    { id: 67, name: 'Pirate Bannerfish', rarity: 'Common', minWeight: 0.8, maxWeight: 4.5, recordWeight: 7.0, value: 42, experience: 16, season: 'All' },
+    { id: 68, name: 'Glass Puffer', rarity: 'Common', minWeight: 1.0, maxWeight: 6.0, recordWeight: 9.5, value: 48, experience: 18, season: 'All' },
+    { id: 69, name: 'Moonstripe Wrasse', rarity: 'Uncommon', minWeight: 2.0, maxWeight: 12.0, recordWeight: 18.0, value: 95, experience: 28, season: 'All' },
+    { id: 70, name: 'Butterfly Grouper', rarity: 'Rare', minWeight: 8.0, maxWeight: 35.0, recordWeight: 55.0, value: 220, experience: 48, season: 'All' },
+    { id: 71, name: 'Treasurekeeper Octopus', rarity: 'Legendary', minWeight: 15.0, maxWeight: 70.0, recordWeight: 120.0, value: 2200, experience: 110, season: 'All' }
 ];
 
 // Fish facts database
@@ -155,7 +162,12 @@ export const FishFacts = {
     'Nile Perch': { fact: 'Deep-bodied river predator that lurks along green banks and surges after bait in muddy water.', fun: 'Looks calm until your reel screams!', real: 'Lates niloticus thrives in African rivers and lakes and can exceed 200 pounds.' },
     'African Lungfish': { fact: 'Prehistoric survivor that gulps air at the surface and burrows when the river drops.', fun: 'Swam with dinosaurs and still refuses to evolve!', real: 'Protopterus species can estivate in mud cocoons during dry seasons.' },
     'Goliath Tigerfish': { fact: 'The Congo\'s apex river hunter — teeth like knives and strikes that feel like a freight train.', fun: 'The fish his father\'s journal only drew in pencil!', real: 'Hydrocynus goliath can exceed 100 pounds and is one of Africa\'s most prized trophies.' },
-    'Electric Catfish': { fact: 'Mud-brown lurker that hunts by touch and shock in murky Congo backwaters.', fun: 'Zaps prey and your nerves — handle with care!', real: 'Malapterurus electricus can produce hundreds of volts to stun prey in dark water.' }
+    'Electric Catfish': { fact: 'Mud-brown lurker that hunts by touch and shock in murky Congo backwaters.', fun: 'Zaps prey and your nerves — handle with care!', real: 'Malapterurus electricus can produce hundreds of volts to stun prey in dark water.' },
+    'Pirate Bannerfish': { fact: 'Ribbon fins trailed with tiny comet crystals — it guides glowing schools through Starfall\'s reefs.', fun: 'Looks like a pirate flag learned to swim!', real: 'Inspired by bannerfish, reimagined as a living comet-wake from Halley\'s father\'s stories.' },
+    'Glass Puffer': { fact: 'Nearly transparent body with crystalline spines — a living lantern of starlight and soft inner glow.', fun: 'See-through, puffed up, and somehow still mysterious!', real: 'A Starfall wonder from the stories — glass-clear skin that shows the light it carries inside.' },
+    'Moonstripe Wrasse': { fact: 'Marked with every lunar phase along its flank; the current moon glows brighter than the rest.', fun: 'A walking calendar of the night sky — with fins!', real: 'Father said the wrasse always knew which moon was rising, even under the cliffs.' },
+    'Butterfly Grouper': { fact: 'Broad translucent fins scatter lagoon light like butterfly wings over a starry body.', fun: 'Part reef giant, part stained-glass window!', real: 'One of the creatures his father swore he\'d seen only once — and never forgot.' },
+    'Treasurekeeper Octopus': { fact: 'Guardian of the pirate wrecks — coils around chests, coins, and shining relics lost for centuries.', fun: 'Eight arms, one vault, zero sharing!', real: 'The legendary treasurekeeper of Starfall Lagoon — every coin it keeps is a story it refuses to forget.' }
 };
 
 /**

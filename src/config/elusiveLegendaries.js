@@ -7,6 +7,7 @@
 export const ELUSIVE_CORTEZ_LOCATION_INDEX = 11;
 export const ELUSIVE_BAYOU_LOCATION_INDEX = 12;
 export const ELUSIVE_CONGO_LOCATION_INDEX = 13;
+export const ELUSIVE_STARFALL_LOCATION_INDEX = 14;
 
 /** @typedef {{ locationIndex: number, fishId: number, castsRequired: number, name: string, locationName: string, revealBanner: string, revealBark: string }} ElusiveLegendaryGate */
 
@@ -38,6 +39,15 @@ export const ELUSIVE_LEGENDARY_GATES = [
         locationName: 'Congo River',
         revealBanner: 'The great current hides a hunter with knives for teeth…',
         revealBark: 'This is the fish from your journal sketches. It’s here.'
+    },
+    {
+        locationIndex: ELUSIVE_STARFALL_LOCATION_INDEX,
+        fishId: 71, // Treasurekeeper Octopus
+        castsRequired: 40,
+        name: 'Treasurekeeper Octopus',
+        locationName: 'Starfall Lagoon',
+        revealBanner: 'Gold glints among the wrecks… the Treasurekeeper may finally take the bait.',
+        revealBark: 'Dad’s stories were true. The treasurekeeper is real.'
     }
 ];
 

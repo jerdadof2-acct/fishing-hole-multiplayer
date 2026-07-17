@@ -256,7 +256,7 @@ export class Locations {
             {
                 name: CRAZYCATCH_COVE_NAME,
                 difficulty: 'Legendary',
-                fish: [34, 35, 36, 48, 52],
+                fish: [67, 68, 69, 70, 71],
                 cost: 0,
                 unlockLevel: 99,
                 description: 'A forgotten tropical lagoon beyond the charts — crystal-blue water, an ancient wreck, and every wondrous creature his father once described. The Starfish remembered the way home.',
@@ -267,11 +267,11 @@ export class Locations {
                 requiresPostStarfishGuide: true,
                 comingSoon: true,
                 fishSpawnWeights: {
-                    34: 22,
-                    35: 22,
-                    36: 22,
-                    48: 18,
-                    52: 16
+                    67: 30, // Pirate Bannerfish
+                    68: 28, // Glass Puffer
+                    69: 22, // Moonstripe Wrasse
+                    70: 12, // Butterfly Grouper
+                    71: 1  // Treasurekeeper Octopus — elusive legendary
                 }
             }
         ];
