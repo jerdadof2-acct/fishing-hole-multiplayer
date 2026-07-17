@@ -40,9 +40,10 @@ import {
     SoftOceanAmbience,
     StormbreakerBayAmbience,
     StarfallLagoonAmbience,
+    FrozenFjordsAmbience,
     pauseAllLoopingAmbiences,
     resumeAllLoopingAmbiences
-} from './audio/locationMusic.js?v=20260717-soft-ocean';
+} from './audio/locationMusic.js?v=20260717-fjord-coral';
 import { VOICEOVER_TAP_COOLDOWN_MS, VOICEOVER_ANACONDA_COOLDOWN_MS } from './config/voiceover.js';
 
 /** How close the snake must pass Halley's look point (world XZ) to trigger a bark. */
@@ -150,6 +151,7 @@ export class Game {
         this.louisianaBayouAmbience = new LouisianaBayouAmbience();
         this.congoRiverAmbience = new CongoRiverAmbience();
         this.starfallLagoonAmbience = new StarfallLagoonAmbience();
+        this.frozenFjordsAmbience = new FrozenFjordsAmbience();
         
         // Gameplay systems
         this.player = null;
@@ -1060,6 +1062,7 @@ export class Game {
         this.louisianaBayouAmbience?.resumeAfterGesture?.();
         this.congoRiverAmbience?.resumeAfterGesture?.();
         this.starfallLagoonAmbience?.resumeAfterGesture?.();
+        this.frozenFjordsAmbience?.resumeAfterGesture?.();
         if (isDevFaceCameraEnabled() || this._devCongoPortraitPreview) {
             return;
         }
@@ -2308,12 +2311,14 @@ export class Game {
         const playCortez = location?.name === CORTEZ_BACKWATERS_NAME;
         const playSandyShoals = location?.name === SANDY_SHOALS_NAME;
         const playSoftOcean = location?.name === TWILIGHT_TRENCH_NAME
-            || location?.name === FORGOTTEN_REEFS_NAME;
+            || location?.name === FORGOTTEN_REEFS_NAME
+            || location?.name === CORAL_KINGDOMS_NAME;
         const playCraggy = location?.name === CRAGGY_COAST_NAME;
         const playStormbreaker = location?.name === STORMBREAKER_BAY_NAME;
         const playLouisianaBayou = location?.name === LOUISIANA_BAYOU_NAME;
         const playCongoRiver = location?.name === CONGO_RIVER_NAME;
         const playStarfall = location?.name === CRAZYCATCH_COVE_NAME;
+        const playFrozenFjords = location?.name === FROZEN_FJORDS_NAME;
 
         const stopAllExcept = (keep) => {
             if (keep !== 'celestial') this.celestialMusic?.stop();
@@ -2327,6 +2332,7 @@ export class Game {
             if (keep !== 'bayou') this.louisianaBayouAmbience?.stop();
             if (keep !== 'congo') this.congoRiverAmbience?.stop();
             if (keep !== 'starfall') this.starfallLagoonAmbience?.stop();
+            if (keep !== 'fjords') this.frozenFjordsAmbience?.stop();
         };
 
         if (playCelestial) {
@@ -2386,6 +2392,12 @@ export class Game {
         if (playStarfall) {
             stopAllExcept('starfall');
             this.starfallLagoonAmbience?.start();
+            return;
+        }
+
+        if (playFrozenFjords) {
+            stopAllExcept('fjords');
+            this.frozenFjordsAmbience?.start();
             return;
         }
 

@@ -43,6 +43,12 @@ export const CRAGGY_COAST_AMBIENCE_URL =
     '/src/audio/soundreality-wind-blowing-457954.mp3';
 export const CRAGGY_COAST_AMBIENCE_VOLUME = 0.32;
 
+/** Frozen Fjords — cracking ice under cold wind. */
+export const FROZEN_FJORDS_ICE_AMBIENCE_URL =
+    '/src/audio/freesound_community-ice-break-14765.mp3';
+export const FROZEN_FJORDS_ICE_AMBIENCE_VOLUME = 0.26;
+export const FROZEN_FJORDS_WIND_AMBIENCE_VOLUME = CRAGGY_COAST_AMBIENCE_VOLUME;
+
 export const LOUISIANA_BAYOU_AMBIENCE_URL =
     '/src/audio/dbsound-mosquito-and-fly-buzz-over-swamp-252287.mp3';
 export const LOUISIANA_BAYOU_AMBIENCE_VOLUME = 0.24;
@@ -399,6 +405,45 @@ export class StormbreakerBayAmbience {
     resumeFromBackground() {
         this.wind.resumeFromBackground();
         this.surf.resumeFromBackground();
+    }
+}
+
+/** Frozen Fjords — ice break layered with Craggy Coast wind. */
+export class FrozenFjordsAmbience {
+    constructor() {
+        this.ice = new LoopingLocationAmbience({
+            resolveSource: () => FROZEN_FJORDS_ICE_AMBIENCE_URL,
+            peakVolume: FROZEN_FJORDS_ICE_AMBIENCE_VOLUME
+        });
+        this.wind = new LoopingLocationAmbience({
+            resolveSource: () => CRAGGY_COAST_AMBIENCE_URL,
+            peakVolume: FROZEN_FJORDS_WIND_AMBIENCE_VOLUME
+        });
+    }
+
+    start() {
+        this.ice.start();
+        this.wind.start();
+    }
+
+    stop() {
+        this.ice.stop();
+        this.wind.stop();
+    }
+
+    resumeAfterGesture() {
+        this.ice.resumeAfterGesture();
+        this.wind.resumeAfterGesture();
+    }
+
+    pauseImmediate() {
+        this.ice.pauseImmediate();
+        this.wind.pauseImmediate();
+    }
+
+    resumeFromBackground() {
+        this.ice.resumeFromBackground();
+        this.wind.resumeFromBackground();
     }
 }
 
