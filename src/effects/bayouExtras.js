@@ -2439,15 +2439,33 @@ function beginGatorStartle(data, gator, bobberX, bobberZ, hooks = {}) {
 
     const gx = gator.position.x;
     const gz = gator.position.z;
-    let dx = gx - bobberX;
-    let dz = gz - bobberZ;
-    const len = Math.hypot(dx, dz) || 1;
-    const fleeSpeed = data.speed * 1.2;
+    const dx = gx - bobberX;
+    const dz = gz - bobberZ;
+    const fleeSpeed = data.speed * 1.45;
+    const fleeYaw = Math.atan2(-dz, dx);
+
+    /*
+     * A startled alligator forcefully bends and whips its body toward
+     * safety before accelerating. Turning partway immediately prevents
+     * the gator from sliding sideways during the escape.
+     */
+    gator.rotation.y = lerpAngle(
+        gator.rotation.y,
+        fleeYaw,
+        0.65
+    );
+
+    data.forwardSpeed = fleeSpeed;
+
+    data.turnDemand = shortestAngleDiff(
+        gator.rotation.y,
+        fleeYaw
+    );
 
     data.velocity.set(
-        (dx / len) * fleeSpeed,
+        Math.cos(gator.rotation.y) * fleeSpeed,
         0,
-        (dz / len) * fleeSpeed
+        -Math.sin(gator.rotation.y) * fleeSpeed
     );
 
     const snoutPos = getGatorSnoutWorldPosition(gator, _gatorSnoutScratch);
@@ -2538,25 +2556,44 @@ const GATOR_TAIL_ATTACH_X =
     GATOR_PELVIS_LEN -
     GATOR_TAIL_ROOT_LEN;
 
-/**
- * Bayou gator swim — slow hip-led serpentine + soft whole-body turn arcs.
- * Amplitudes are per-joint; the parented chain stacks toward the tip.
+/*
+ * Natural alligator swimming:
+ * - Chest remains comparatively steady.
+ * - Hips begin the power stroke.
+ * - The wave grows toward the tail tip.
+ * - Frequency is measured in complete cycles per second.
  */
-const GATOR_SWIM_FREQUENCY_MIN = 0.32;
-const GATOR_SWIM_FREQUENCY_MAX = 0.42;
-const GATOR_SWIM_FREQ_DRIVE_MIN = 0.78;
-const GATOR_SWIM_FREQ_DRIVE_MAX = 0.95;
-const GATOR_SWIM_TRAVEL_LAG = 3.85;
-const GATOR_SWIM_CHEST_AMP = 0.028;
-const GATOR_SWIM_ABDOMEN_AMP = 0.055;
-const GATOR_SWIM_PELVIS_AMP = 0.078;
-const GATOR_SWIM_TAIL_ROOT_AMP = 0.095;
-const GATOR_SWIM_TAIL_AMP_BASE = 0.09;
-const GATOR_SWIM_TAIL_AMP_TIP = 0.34;
-const GATOR_SWIM_TURN_BEND_MIN = 0.55;
-const GATOR_SWIM_TURN_BEND_MAX = 0.92;
-const GATOR_SWIM_TURN_BIAS_GAIN = 0.95;
-const GATOR_SWIM_TURN_BIAS_CLAMP = 0.48;
+const GATOR_SWIM_FREQUENCY_MIN = 0.34;
+const GATOR_SWIM_FREQUENCY_MAX = 0.46;
+
+const GATOR_SWIM_FREQ_DRIVE_MIN = 0.7;
+const GATOR_SWIM_FREQ_DRIVE_MAX = 1.25;
+
+const GATOR_SWIM_TRAVEL_LAG = 2.9;
+
+const GATOR_SWIM_CHEST_AMP = 0.012;
+const GATOR_SWIM_ABDOMEN_AMP = 0.032;
+const GATOR_SWIM_PELVIS_AMP = 0.062;
+const GATOR_SWIM_TAIL_ROOT_AMP = 0.09;
+
+const GATOR_SWIM_TAIL_AMP_BASE = 0.065;
+const GATOR_SWIM_TAIL_AMP_TIP = 0.22;
+
+const GATOR_SWIM_TURN_BEND_MIN = 0.32;
+const GATOR_SWIM_TURN_BEND_MAX = 0.58;
+const GATOR_SWIM_TURN_BIAS_GAIN = 0.9;
+const GATOR_SWIM_TURN_BIAS_CLAMP = 0.44;
+
+/*
+ * Locomotion controls.
+ * The gator now moves forward through its own body heading rather than
+ * being dragged sideways toward a world-space target.
+ */
+const GATOR_TURN_RATE_MIN = 0.34;
+const GATOR_TURN_RATE_MAX = 0.72;
+const GATOR_STARTLE_TURN_RATE = 2.25;
+const GATOR_FORWARD_RESPONSE = 1.05;
+const GATOR_LATERAL_DRAG = 4.2;
 const GATOR_HEADUP_DURATION_MIN = 4.5;
 const GATOR_HEADUP_DURATION_MAX = 8;
 const GATOR_HEADUP_RISE_MIN = -0.14;
@@ -3823,6 +3860,16 @@ function createBayouGator(random) {
         ),
 
         smoothedTurnBias: 0,
+
+        // Current steering demand used to bend the torso and tail into turns.
+        turnDemand: 0,
+
+        // Forward speed along the direction the gator is actually facing.
+        forwardSpeed: 0,
+
+        // Integrated tail phase prevents animation jumps when speed changes.
+        swimPhase: random() * Math.PI * 2,
+
         swimLegTime: THREE.MathUtils.lerp(6, 12, random()),
 
         patrolRadiusX: THREE.MathUtils.lerp(12, 20, random()),
@@ -4099,36 +4146,148 @@ function updateGator(
         }
     }
 
-    const inverseDistance =
-        1 / Math.max(distance, 0.0001);
+    const holdingPosition =
+        isGatorHoldingPosition(data);
 
     const modeSpeed =
-        isGatorHoldingPosition(data)
+        holdingPosition
             ? 0
             : data.mode === 'startled'
-                ? 0.95
+                ? 1.45
                 : data.mode === 'submerged'
                     ? 0.58
-                    : data.mode === 'leave'
-                        ? 0.62
-                        : 0.52;
+                    : data.mode === 'cruise'
+                        ? 0.72
+                        : data.mode === 'leave'
+                            ? 0.82
+                            : data.mode === 'rise'
+                                ? 0.28
+                                : 0.52;
+
+    const desiredYaw =
+        distance > 0.001
+            ? Math.atan2(-dz, dx)
+            : gator.rotation.y;
+
+    const yawError =
+        holdingPosition
+            ? 0
+            : shortestAngleDiff(
+                gator.rotation.y,
+                desiredYaw
+            );
+
+    data.turnDemand = yawError;
+
+    data.forwardSpeed ??= Math.hypot(
+        data.velocity.x,
+        data.velocity.z
+    );
+
+    /*
+     * Real animals slow before making a hard turn. This prevents the
+     * sideways, boat-like drifting that happens when velocity and body
+     * heading are controlled independently.
+     */
+    const turnSeverity =
+        THREE.MathUtils.clamp(
+            Math.abs(yawError) / (Math.PI * 0.65),
+            0,
+            1
+        );
+
+    const turnSpeedScale =
+        data.mode === 'startled'
+            ? THREE.MathUtils.lerp(
+                1,
+                0.82,
+                turnSeverity
+            )
+            : THREE.MathUtils.lerp(
+                1,
+                0.58,
+                turnSeverity
+            );
+
+    const targetForwardSpeed =
+        data.speed *
+        modeSpeed *
+        turnSpeedScale;
+
+    const speedResponse =
+        holdingPosition
+            ? 4.8
+            : data.mode === 'startled'
+                ? 5.5
+                : GATOR_FORWARD_RESPONSE;
+
+    data.forwardSpeed +=
+        (
+            targetForwardSpeed -
+            data.forwardSpeed
+        ) *
+        (
+            1 -
+            Math.exp(-speedResponse * delta)
+        );
+
+    /*
+     * Rotate the animal first. Translation will then follow the direction
+     * the snout and body are facing.
+     */
+    if (
+        !holdingPosition &&
+        distance > 0.001
+    ) {
+        const speedRatio =
+            THREE.MathUtils.clamp(
+                data.forwardSpeed /
+                    Math.max(data.speed, 0.001),
+                0,
+                1
+            );
+
+        const turnRate =
+            data.mode === 'startled'
+                ? GATOR_STARTLE_TURN_RATE
+                : THREE.MathUtils.lerp(
+                    GATOR_TURN_RATE_MIN,
+                    GATOR_TURN_RATE_MAX,
+                    speedRatio
+                );
+
+        const maxYawStep =
+            turnRate * delta;
+
+        gator.rotation.y +=
+            THREE.MathUtils.clamp(
+                yawError,
+                -maxYawStep,
+                maxYawStep
+            );
+    }
+
+    const forwardX =
+        Math.cos(gator.rotation.y);
+
+    const forwardZ =
+        -Math.sin(gator.rotation.y);
 
     const desiredVX =
-        dx *
-        inverseDistance *
-        data.speed *
-        modeSpeed;
+        forwardX * data.forwardSpeed;
 
     const desiredVZ =
-        dz *
-        inverseDistance *
-        data.speed *
-        modeSpeed;
+        forwardZ * data.forwardSpeed;
 
-    const steering =
+    const velocityResponse =
+        data.mode === 'startled'
+            ? 6
+            : 3.2;
+
+    const velocityFollow =
         1 -
         Math.exp(
-            -data.turnSharpness * delta
+            -velocityResponse * delta
         );
 
     data.velocity.x +=
@@ -4136,19 +4295,19 @@ function updateGator(
             desiredVX -
             data.velocity.x
         ) *
-        steering;
+        velocityFollow;
 
     data.velocity.z +=
         (
             desiredVZ -
             data.velocity.z
         ) *
-        steering;
+        velocityFollow;
 
-    if (isGatorHoldingPosition(data)) {
+    if (holdingPosition) {
         const braking =
             1 -
-            Math.exp(-4.5 * delta);
+            Math.exp(-4.8 * delta);
 
         data.velocity.x *=
             1 - braking;
@@ -4156,9 +4315,48 @@ function updateGator(
         data.velocity.z *=
             1 - braking;
     } else {
-        applyGatorObstacleSteering(gator, data, delta);
-        applyGatorViewBoundarySteering(gator, data, delta);
+        applyGatorObstacleSteering(
+            gator,
+            data,
+            delta
+        );
+
+        applyGatorViewBoundarySteering(
+            gator,
+            data,
+            delta
+        );
     }
+
+    /*
+     * Remove lateral skating. A small amount remains temporarily so the
+     * obstacle avoidance does not feel completely rigid.
+     */
+    const rightX =
+        Math.sin(gator.rotation.y);
+
+    const rightZ =
+        Math.cos(gator.rotation.y);
+
+    const lateralSpeed =
+        data.velocity.x * rightX +
+        data.velocity.z * rightZ;
+
+    const lateralDamping =
+        1 -
+        Math.exp(
+            -GATOR_LATERAL_DRAG * delta
+        );
+
+    data.velocity.x -=
+        rightX *
+        lateralSpeed *
+        lateralDamping;
+
+    data.velocity.z -=
+        rightZ *
+        lateralSpeed *
+        lateralDamping;
 
     const swimSpeed =
         Math.hypot(
@@ -4182,12 +4380,32 @@ function updateGator(
             drive
         );
 
+    /*
+     * Integrate the phase instead of multiplying elapsed time by a
+     * changing frequency. This prevents the tail from jumping whenever
+     * the gator accelerates or slows down.
+     */
+    const strokeMultiplier =
+        data.mode === 'startled'
+            ? 1.9
+            : 1;
+
+    data.swimPhase =
+        (
+            (data.swimPhase ?? data.phase) +
+            frequency *
+                strokeMultiplier *
+                Math.PI *
+                2 *
+                delta
+        ) %
+        (Math.PI * 2);
+
     const phase =
-        elapsedTime * frequency +
-        data.phase;
+        data.swimPhase;
 
     const activeDrive =
-        isGatorHoldingPosition(data)
+        holdingPosition
             ? data.mode === 'headup'
                 ? 0.12
                 : 0.08
@@ -4209,39 +4427,40 @@ function updateGator(
                         drive
                     );
 
-    let smoothedTurnBias = data.smoothedTurnBias ?? 0;
+    let smoothedTurnBias =
+        data.smoothedTurnBias ?? 0;
 
-    if (
+    const turnTarget =
         swimSpeed > 0.02 &&
-        !isGatorHoldingPosition(data)
-    ) {
-        const desiredYaw = Math.atan2(
-            -data.velocity.z,
-            data.velocity.x
-        );
-        const yawError = shortestAngleDiff(
-            gator.rotation.y,
-            desiredYaw
-        );
-        // Stronger bias so the spine arcs into the turn instead of staying rigid.
-        const turnTarget = THREE.MathUtils.clamp(
-            yawError * GATOR_SWIM_TURN_BIAS_GAIN,
-            -GATOR_SWIM_TURN_BIAS_CLAMP,
-            GATOR_SWIM_TURN_BIAS_CLAMP
-        );
-        const turnSmooth =
-            1 - Math.exp(-2.8 * delta);
+        !holdingPosition
+            ? THREE.MathUtils.clamp(
+                (data.turnDemand ?? 0) *
+                    GATOR_SWIM_TURN_BIAS_GAIN,
+                -GATOR_SWIM_TURN_BIAS_CLAMP,
+                GATOR_SWIM_TURN_BIAS_CLAMP
+            )
+            : 0;
 
-        smoothedTurnBias +=
-            (turnTarget - smoothedTurnBias) * turnSmooth;
-    } else {
-        const turnDecay =
-            1 - Math.exp(-3.2 * delta);
+    const turnSmooth =
+        1 -
+        Math.exp(
+            -(
+                Math.abs(turnTarget) > 0.03
+                    ? 4.2
+                    : 3.2
+            ) *
+            delta
+        );
 
-        smoothedTurnBias *= 1 - turnDecay;
-    }
+    smoothedTurnBias +=
+        (
+            turnTarget -
+            smoothedTurnBias
+        ) *
+        turnSmooth;
 
-    data.smoothedTurnBias = smoothedTurnBias;
+    data.smoothedTurnBias =
+        smoothedTurnBias;
 
     // Slow traveling S-curve: hips lead, tip follows — lazy alligator undulation.
     const wavePhase = phase;
@@ -4584,7 +4803,7 @@ function updateGator(
             Math.abs(Math.cos(phase)),
             2
         ) *
-        0.1 *
+        0.055 *
         drive;
 
     gator.position.x +=
@@ -4623,31 +4842,7 @@ function updateGator(
             ? 0.003
             : 0.006);
 
-    if (
-        data.velocity.lengthSq() >
-        0.00005 &&
-        !isGatorHoldingPosition(data)
-    ) {
-        const targetYaw =
-            Math.atan2(
-                -data.velocity.z,
-                data.velocity.x
-            );
-
-        const turnFollow =
-            1 -
-            Math.exp(
-                -data.yawTurnRate *
-                delta
-            );
-
-        gator.rotation.y =
-            lerpAngle(
-                gator.rotation.y,
-                targetYaw,
-                turnFollow
-            );
-    }
+    // Root yaw is handled by the forward-swimming locomotion above.
 
     const floatPitchTarget = getGatorFloatPitchTarget(data.mode);
     const floatPitchFollow =
