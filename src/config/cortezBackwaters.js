@@ -1,7 +1,3 @@
-/** Cortez Backwaters — post-Starfish hidden Gulf Coast location. */
-
-import { STARFISH_ID } from './starfishEncounter.js';
-
 export const CORTEZ_BACKWATERS_LOCATION_INDEX = 11;
 
 /** Weighted spawn table for Cortez species (see DOCS/future-locations/cortez-backwaters.md). */
@@ -11,11 +7,12 @@ export const CORTEZ_FISH_SPAWN_WEIGHTS = {
     41: 18, // Sheepshead
     42: 12, // Redfish
     43: 8,  // Snook
-    44: 3   // Tarpon — Silver King of Cortez
+    44: 1   // Tarpon — Silver King of Cortez (elusive)
 };
 
+/** Cortez opens after the Starfish memory chapter, not merely catching the Starfish. */
 export function canAccessCortezBackwaters(player) {
-    return player?.isFishUnlocked?.(STARFISH_ID) === true;
+    return Boolean(player?.storyChaptersCompleted?.includes?.('chapter_9_starfish'));
 }
 
 export function pickCortezFishId(random = Math.random) {

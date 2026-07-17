@@ -3921,6 +3921,28 @@ body.energy-blocked #location-picker-btn {
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.48);
 }
 
+.story-chapter-card--illustrated {
+    width: min(94vw, 560px);
+}
+
+.story-chapter-figure {
+    margin: 4px 0 16px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(147, 197, 253, 0.35);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.story-chapter-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: min(42vh, 320px);
+    object-fit: cover;
+    object-position: center;
+}
+
 .story-chapter-scroll {
     flex: 1 1 auto;
     min-height: 0;
@@ -4009,6 +4031,14 @@ body.energy-blocked #location-picker-btn {
         width: 100%;
         max-height: min(76vh, calc(100dvh - 12px));
         border-radius: 14px;
+    }
+
+    .story-chapter-card--illustrated {
+        width: 100%;
+    }
+
+    .story-chapter-image {
+        max-height: min(32vh, 220px);
     }
 
     .story-chapter-scroll {

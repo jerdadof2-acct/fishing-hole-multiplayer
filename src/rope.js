@@ -292,9 +292,18 @@ export class FishingRope {
                         last.pos.z = last.prev.z + velXZ.z;
                     }
                     
-                    // Project Y to surface
+                    // Project Y to surface (or Starlight sink depth at Celestial Depths)
                     const waterHeight = this.water.getWaterHeight(last.pos.x, last.pos.z);
-                    last.pos.y = waterHeight + 0.12;
+                    if (
+                        this.bobber.userData?.starlightSink &&
+                        !this.bobber.userData?.isHooked
+                    ) {
+                        const sinkDepth =
+                            this.bobber.userData.starlightSinkDepth ?? 0;
+                        last.pos.y = waterHeight - sinkDepth;
+                    } else {
+                        last.pos.y = waterHeight + 0.12;
+                    }
                 }
             }
         }
@@ -407,6 +416,41 @@ export class FishingRope {
             this.bobber.userData.waterLevel = waterHeight;
             
             if (!isHooked) {
+                // Celestial Starlight Lure: sink below the surface after splash.
+                // Gated by bobber.userData.starlightSink so other locations are untouched.
+                if (this.bobber.userData.starlightSink) {
+                    const freeze = this.bobber.userData.freeze ?? 0;
+                    const targetDepth =
+                        this.bobber.userData.starlightSinkTarget ?? 2.85;
+                    const sinkSpeed =
+                        this.bobber.userData.starlightSinkSpeed ?? 0.48;
+                    let depth = this.bobber.userData.starlightSinkDepth ?? 0;
+
+                    if (this.bobber.userData.starlightSinkFrameTime === undefined) {
+                        this.bobber.userData.starlightSinkFrameTime = t;
+                    }
+                    const deltaTime = Math.max(
+                        0,
+                        Math.min(0.05, t - this.bobber.userData.starlightSinkFrameTime)
+                    );
+                    this.bobber.userData.starlightSinkFrameTime = t;
+
+                    if (freeze <= 0) {
+                        depth = Math.min(targetDepth, depth + deltaTime * sinkSpeed);
+                        this.bobber.userData.starlightSinkDepth = depth;
+                    }
+
+                    const settle = depth / Math.max(targetDepth, 0.001);
+                    const bobble = Math.sin(t * 1.4) * 0.035 * settle;
+                    this.bobber.position.y = waterHeight - depth + bobble;
+
+                    // Keep rope end with the sunk lure so the line reads correctly.
+                    const last = this.rope[this.rope.length - 1];
+                    if (last) {
+                        last.pos.y = this.bobber.position.y;
+                        last.prev.y = this.bobber.position.y;
+                    }
+                } else {
                 // Idle bounce - more pronounced floating animation with partial submersion
                 // t is elapsedTime from clock, so we can use it directly
                 const bounceTime1 = t * 2.7; // Primary bounce
@@ -425,8 +469,23 @@ export class FishingRope {
                 const totalY = baseY + combinedBounce + pullDown * 0.3; // Add gentle pull-down effect
                 
                 this.bobber.position.y = totalY;
+                }
             } else {
                 // When hooked: check for active tug first, then apply base submerged position
+                // Starfish ascension rises from the deep with the glowing lure (Celestial only).
+                if (this.bobber.userData.starlightAscension) {
+                    const targetDepth =
+                        this.bobber.userData.starlightSinkTarget ?? 2.85;
+                    const progress = Math.max(
+                        0,
+                        this.bobber.userData.starlightAscensionProgress ?? 0
+                    );
+                    const riseT = Math.min(1, progress);
+                    const eased = 1 - Math.pow(1 - riseT, 1.65);
+                    const depth = targetDepth * (1 - eased);
+                    const bobble = Math.sin(t * 1.8) * 0.05 * (0.25 + riseT);
+                    this.bobber.position.y = waterHeight - depth + bobble;
+                } else {
                 // If tug is active, blend tug position with base position for smooth pop effect
                 let tugOffset = 0;
                 if (this.bobber.userData.tugActive && this.bobber.userData.tugTime > 0) {
@@ -567,6 +626,7 @@ export class FishingRope {
                 
                 // Combine base submerged position with tug offset and jitter for sporadic movement
                 this.bobber.position.y = waterHeight - baseSubmerge + resurfaceAmount + tugOffset + randomDepthJitter;
+                }
             }
         }
         

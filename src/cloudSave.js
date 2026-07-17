@@ -184,6 +184,21 @@ export function mergeStoryProgressIntoSave(targetSave, sourceSave) {
         };
     }
 
+    if (source.locationCastCounts && typeof source.locationCastCounts === 'object') {
+        const merged = { ...(target.locationCastCounts || {}) };
+        for (const [key, value] of Object.entries(source.locationCastCounts)) {
+            const a = Number(merged[key]) || 0;
+            const b = Number(value) || 0;
+            merged[key] = Math.max(a, b);
+        }
+        target.locationCastCounts = merged;
+    }
+
+    target.elusiveLegendaryRevealed = unionArray(
+        target.elusiveLegendaryRevealed,
+        source.elusiveLegendaryRevealed
+    );
+
     target.starlightLureCrafted =
         target.starlightLureCrafted === true || source.starlightLureCrafted === true;
     target.fatherJournalReceived =

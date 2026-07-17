@@ -14,9 +14,9 @@ import {
     CONGO_RIVER_LOCATION_INDEX,
     CRAZYCATCH_COVE_LOCATION_INDEX,
     hasCaughtStarfish,
+    hasCaughtAllLocationFish,
     isComingSoonLocationIndex
 } from './config/storyLocations.js';
-import { STARFISH_ID } from './config/starfishEncounter.js';
 
 export { STORY_RELIC_SEQUENCE } from './config/relicProgression.js';
 
@@ -291,14 +291,28 @@ export function getPendingArrivalChapter(player, locationIndex) {
     }
 
     if (locationIndex === CORTEZ_BACKWATERS_LOCATION_INDEX) {
-        return player.isFishUnlocked?.(STARFISH_ID) ? chapter : null;
+        return hasCompletedChapter(player, 'chapter_9_starfish') ? chapter : null;
     }
 
     if (locationIndex === LOUISIANA_BAYOU_LOCATION_INDEX) {
-        return hasCaughtStarfish(player) ? chapter : null;
+        return player.locationUnlocks?.includes?.(LOUISIANA_BAYOU_LOCATION_INDEX)
+            ? chapter
+            : null;
     }
 
-    if (isComingSoonLocationIndex(locationIndex)) {
+    if (locationIndex === CONGO_RIVER_LOCATION_INDEX) {
+        return player.locationUnlocks?.includes?.(CONGO_RIVER_LOCATION_INDEX)
+            ? chapter
+            : null;
+    }
+
+    if (locationIndex === CRAZYCATCH_COVE_LOCATION_INDEX) {
+        return player.locationUnlocks?.includes?.(CRAZYCATCH_COVE_LOCATION_INDEX)
+            ? chapter
+            : null;
+    }
+
+    if (isComingSoonLocationIndex(locationIndex, player)) {
         return null;
     }
 
@@ -347,6 +361,18 @@ export function resolveChapterTravelOffer(player, chapter, locations) {
         return { travelLocationIndex, travelLockedNote: null, pendingTravelLocationIndex: null };
     }
 
+    /*
+     * Chapters that unlock a destination on close (e.g. Starfish memory → Cortez)
+     * should still show the travel button; unlock applies when the chapter completes.
+     */
+    if (chapter.unlocksLocationIndex === travelLocationIndex) {
+        return {
+            travelLocationIndex,
+            travelLockedNote: null,
+            pendingTravelLocationIndex: travelLocationIndex
+        };
+    }
+
     if (player.level < requiredLevel) {
         return {
             travelLocationIndex: null,
@@ -378,11 +404,46 @@ export function notifyPendingStoryTravelUnlock(player, locations) {
     return name;
 }
 
+/**
+ * Older saves unlocked Cortez on Starfish catch (before the Chapter 9 gate).
+ * If they already progressed into those shores, mark the memory chapter done
+ * so they are not soft-locked when syncing unlocks.
+ */
+function migrateLegacyStarfishMemoryChapter(player, locations) {
+    if (!player || hasCompletedChapter(player, 'chapter_9_starfish')) {
+        return;
+    }
+    if (!hasCaughtStarfish(player)) {
+        return;
+    }
+
+    const postShoreIndices = [
+        CORTEZ_BACKWATERS_LOCATION_INDEX,
+        LOUISIANA_BAYOU_LOCATION_INDEX,
+        CONGO_RIVER_LOCATION_INDEX,
+        CRAZYCATCH_COVE_LOCATION_INDEX
+    ];
+    const onPostShore = postShoreIndices.includes(player.currentLocationIndex);
+    const cortezFish = locations?.[CORTEZ_BACKWATERS_LOCATION_INDEX]?.fish;
+    const hasCortezCatalogProgress = Array.isArray(cortezFish)
+        && cortezFish.some((fishId) => player.isFishUnlocked?.(fishId) === true);
+    const hasLaterFlags = player.louisianaBayouComplete === true
+        || player.congoRiverComplete === true
+        || player.crazyCatchCoveComplete === true
+        || player.fatherJournalReceived === true;
+
+    if (onPostShore || hasCortezCatalogProgress || hasLaterFlags) {
+        markChapterComplete(player, 'chapter_9_starfish');
+    }
+}
+
 /** Reconcile level + story gates into locationUnlocks. */
 export function reconcileStoryLocationUnlocks(player, locations) {
     if (!player || !locations) {
         return [];
     }
+
+    migrateLegacyStarfishMemoryChapter(player, locations);
 
     const storyAvailable = getStoryAvailableLocationIndices(player);
     const unlocked = new Set();
@@ -408,14 +469,31 @@ export function reconcileStoryLocationUnlocks(player, locations) {
         unlocked.add(CELESTIAL_DEPTHS_LOCATION_INDEX);
     }
 
-    if (hasCaughtStarfish(player)) {
+    /*
+     * Post-Starfish journal chain:
+     * Chapter 9 memory → Cortez
+     * Complete Cortez catalog → Bayou
+     * Complete Bayou catalog → Congo
+     * Complete Congo catalog → Starfall Lagoon
+     */
+    if (hasCompletedChapter(player, 'chapter_9_starfish')) {
         unlocked.add(CORTEZ_BACKWATERS_LOCATION_INDEX);
+    }
+
+    const cortezLocation = locations[CORTEZ_BACKWATERS_LOCATION_INDEX];
+    const bayouLocation = locations[LOUISIANA_BAYOU_LOCATION_INDEX];
+    const congoLocation = locations[CONGO_RIVER_LOCATION_INDEX];
+
+    if (hasCaughtAllLocationFish(player, cortezLocation)) {
         unlocked.add(LOUISIANA_BAYOU_LOCATION_INDEX);
     }
 
-    // Journal chain: first catch at the Bayou opens the Congo River (see DOCS/halleys-big-catch-story.md).
-    if (hasCaughtStarfish(player) && player.louisianaBayouComplete === true) {
+    if (hasCaughtAllLocationFish(player, bayouLocation)) {
         unlocked.add(CONGO_RIVER_LOCATION_INDEX);
+    }
+
+    if (hasCaughtAllLocationFish(player, congoLocation)) {
+        unlocked.add(CRAZYCATCH_COVE_LOCATION_INDEX);
     }
 
     return [...unlocked].sort((a, b) => a - b);
@@ -431,12 +509,15 @@ export function canTravelToStoryLocation(player, locationIndex, locations) {
         return player.canAccessCelestialDepths?.() === true;
     }
 
-    if (isComingSoonLocationIndex(locationIndex) || location.comingSoon) {
+    if (
+        (isComingSoonLocationIndex(locationIndex, player) || location.comingSoon)
+        && !player.locationUnlocks?.includes?.(locationIndex)
+    ) {
         return false;
     }
 
-    if (location.requiresStarfishCatch) {
-        return hasCaughtStarfish(player);
+    if (location.requiresStarfishCatch || location.requiresPostStarfishGuide) {
+        return player.locationUnlocks?.includes?.(locationIndex) === true;
     }
 
     if (!isStoryLocationAvailable(player, locationIndex)) {

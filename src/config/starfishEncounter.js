@@ -3,35 +3,36 @@
 export const STARFISH_ID = 33;
 export const STARLIGHT_LURE_BAIT_NAME = 'Starlight Lure';
 
-export const STARFISH_GUIDE_DESTINATIONS_HEADLINE =
-    'The Starfish opened the path — your father gave it meaning.';
-
-export const STARFISH_GUIDE_DESTINATIONS_BODY =
-    'Two golden currents are open now — Cortez Backwaters and Louisiana Bayou. Two more adventures from your father\'s journal are still on the horizon.';
-
-/** Post-Starfish destinations the Starfish reveals after the reunion. */
-export const STARFISH_GUIDE_DESTINATIONS_OPEN = [
-    { name: 'Cortez Backwaters', label: 'Patience — where his father learned the tides' },
-    { name: 'Louisiana Bayou', label: 'Courage — past the point most turn back' },
-    { name: 'Congo River', label: 'Coming soon — determination on the great river' },
-    { name: 'Starfall Lagoon', label: 'Coming soon — where his father\'s stories began' }
-];
-
-export const STARFISH_GUIDE_COMING_SOON =
-    'Congo River and Starfall Lagoon are coming in a future update.';
-
-export const STARFISH_FIRST_CATCH_QUOTE =
-    "The comet may have started this journey.\n\nBut you're the reason I was ready for it.";
-
 export const STARFISH_FIRST_CATCH_NARRATION = [
     'The line pulsed once — a heartbeat shared between Halley and something ancient beneath the stars.',
     'Golden currents spread across the water, pointing toward shores he knew and shores he had only dreamed about.',
     '',
-    'The reunion is only beginning. What comes next belongs in his heart.'
+    'Three trials wait beyond this light — patience, courage, and endurance.',
+    'And past them all, the greatest treasure of them all: Starfall Lagoon.'
 ].join('\n');
 
 export const STARFISH_FIRST_CATCH_BANNER =
-    'Cortez Backwaters and Louisiana Bayou await — more journal journeys are coming soon.';
+    'Three shores await — then Starfall Lagoon, the greatest treasure of them all.';
+
+export const STARFISH_GUIDE_DESTINATIONS_HEADLINE =
+    'Three trials. One treasure beyond them.';
+
+export const STARFISH_GUIDE_DESTINATIONS_BODY =
+    'The Starfish charts a path worthy of his father\'s teachings — patience in Cortez Backwaters, courage in Louisiana Bayou, endurance on the Congo River. Fill each shore\'s catalog to open the next — and Starfall Lagoon will open like the final page of every story his father ever told.';
+
+/** Post-Starfish destinations the Starfish reveals after the reunion. */
+export const STARFISH_GUIDE_DESTINATIONS_OPEN = [
+    { name: 'Cortez Backwaters', label: 'Patience — where his father learned the tides' },
+    { name: 'Louisiana Bayou', label: 'Courage — opens when the Cortez catalog is complete' },
+    { name: 'Congo River', label: 'Endurance — opens when the Bayou catalog is complete' },
+    { name: 'Starfall Lagoon', label: 'The greatest treasure — opens when the Congo catalog is complete' }
+];
+
+export const STARFISH_GUIDE_COMING_SOON =
+    'Only Starfall Lagoon still waits beyond the horizon — it opens when the Congo catalog is complete.';
+
+export const STARFISH_FIRST_CATCH_QUOTE =
+    "The comet may have started this journey.\n\nBut you're the reason I was ready for it.";
 
 /** Starfish only at Celestial Depths once the full relic quest is complete. */
 export function canSpawnStarfish(location, player) {

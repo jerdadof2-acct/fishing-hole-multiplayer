@@ -14,6 +14,7 @@ import {
     applyTwilightTrenchWater,
     applyLakeDefaultWaves,
     applyLouisianaBayouWater,
+    applyStarfallLagoonWater,
     applyCongoRiverWater,
     CONGO_RIVER_FLOW_DIRECTION,
     CONGO_RIVER_WATER
@@ -37,6 +38,14 @@ import {
     updateCongoRiverLakeBed,
     resetCongoRiverLakeBedScroll
 } from './effects/congoRiverBanks.js';
+import {
+    applyStarfallWaterLook,
+    STARFALL_BED_OFFSET
+} from './effects/starfallLagoonScenery.js';
+import {
+    SUN_DIRECTIONAL_POSITION,
+    SUN_DIRECTIONAL_TARGET
+} from './scene/sunShadowDirection.js';
 import {
     createAmbientSplashRings,
     createCausticsLayer,
@@ -127,6 +136,7 @@ export class Water2Lake {
         this._coralReefLocationEnabled = false;
         this._cortezBackwatersEnabled = false;
         this._louisianaBayouEnabled = false;
+        this._starfallLagoonEnabled = false;
         this._congoRiverEnabled = false;
         this.boatSternWake = null;
         this._boatWakePlatform = null;
@@ -227,6 +237,107 @@ export class Water2Lake {
         return texture;
     }
 
+    /** Pretty deep-blue daytime sky for Starfall Lagoon surface reflections. */
+    createStarfallSkyTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+
+        /*
+         * Zenith is a rich deep blue; horizon softens
+         * toward a lighter lagoon sky.
+         */
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#1a5aaa');
+        gradient.addColorStop(0.28, '#2f7fc8');
+        gradient.addColorStop(0.62, '#54a8e0');
+        gradient.addColorStop(1, '#a8daf5');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        for (let i = 0; i < 14; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height * 0.55;
+            const radius = 28 + Math.random() * 80;
+            const cloudGrad = ctx.createRadialGradient(x, y, 0, x, y, radius);
+            cloudGrad.addColorStop(0, 'rgba(220, 245, 255, 0.5)');
+            cloudGrad.addColorStop(0.45, 'rgba(140, 200, 245, 0.22)');
+            cloudGrad.addColorStop(1, 'rgba(40, 110, 180, 0)');
+            ctx.fillStyle = cloudGrad;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        const horizon = ctx.createLinearGradient(0, canvas.height * 0.58, 0, canvas.height);
+        horizon.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        horizon.addColorStop(1, 'rgba(210, 238, 255, 0.34)');
+        ctx.fillStyle = horizon;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        /*
+         * Place the sun using the same direction as Halley's
+         * key light / shadow, and the same UV mapping as the
+         * water shader sampleSky().
+         */
+        const sunDir = new THREE.Vector3()
+            .subVectors(
+                SUN_DIRECTIONAL_POSITION,
+                SUN_DIRECTIONAL_TARGET
+            )
+            .normalize();
+
+        const phi = Math.atan2(sunDir.z, sunDir.x);
+        const theta = Math.asin(
+            THREE.MathUtils.clamp(sunDir.y, -1, 1)
+        );
+        const u = phi * 0.15915494 + 0.5;
+        const v = theta * 0.31830988 + 0.5;
+        const sunX = ((((u % 1) + 1) % 1)) * canvas.width;
+        const sunY = (1 - ((((v % 1) + 1) % 1))) * canvas.height;
+
+        const corona = ctx.createRadialGradient(
+            sunX,
+            sunY,
+            0,
+            sunX,
+            sunY,
+            78
+        );
+        corona.addColorStop(0, 'rgba(255, 248, 220, 1)');
+        corona.addColorStop(0.18, 'rgba(255, 230, 140, 0.95)');
+        corona.addColorStop(0.42, 'rgba(255, 190, 80, 0.55)');
+        corona.addColorStop(0.72, 'rgba(120, 180, 255, 0.18)');
+        corona.addColorStop(1, 'rgba(40, 100, 200, 0)');
+        ctx.fillStyle = corona;
+        ctx.beginPath();
+        ctx.arc(sunX, sunY, 78, 0, Math.PI * 2);
+        ctx.fill();
+
+        const core = ctx.createRadialGradient(
+            sunX,
+            sunY,
+            0,
+            sunX,
+            sunY,
+            18
+        );
+        core.addColorStop(0, 'rgba(255, 255, 255, 1)');
+        core.addColorStop(0.45, 'rgba(255, 244, 190, 1)');
+        core.addColorStop(1, 'rgba(255, 210, 90, 0)');
+        ctx.fillStyle = core;
+        ctx.beginPath();
+        ctx.arc(sunX, sunY, 18, 0, Math.PI * 2);
+        ctx.fill();
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.needsUpdate = true;
+        return texture;
+    }
+
     /** Deep cobalt sky for Forgotten Reefs reflections (not grey/white). */
     createDeepReefCloudTexture() {
         const canvas = document.createElement('canvas');
@@ -310,6 +421,7 @@ export class Water2Lake {
         const useStorm = this._stormbreakerBayEnabled && this.waterBodyType === 'OCEAN';
         const useDeepReef = this._forgottenReefsEnabled && this.waterBodyType === 'OCEAN';
         const useMoonlight = this._twilightTrenchEnabled && this.waterBodyType === 'OCEAN';
+        const useStarfall = this._starfallLagoonEnabled && this.waterBodyType === 'LAKE';
         if (useStorm) {
             if (!this.stormCloudTexture) {
                 this.stormCloudTexture = this.createStormCloudTexture();
@@ -334,8 +446,21 @@ export class Water2Lake {
             if (material.uniforms.uHasEnvMap) {
                 material.uniforms.uHasEnvMap.value = 0;
             }
+        } else if (useStarfall) {
+            if (this.starfallSkyTexture) {
+                this.starfallSkyTexture.dispose();
+                this.starfallSkyTexture = null;
+            }
+            this.starfallSkyTexture = this.createStarfallSkyTexture();
+            material.uniforms.uCloudTexture.value = this.starfallSkyTexture;
+            if (material.uniforms.uHasEnvMap) {
+                material.uniforms.uHasEnvMap.value = 0;
+            }
         } else if (this.defaultCloudTexture) {
             material.uniforms.uCloudTexture.value = this.defaultCloudTexture;
+            if (material.uniforms.uHasEnvMap) {
+                material.uniforms.uHasEnvMap.value = this.envMap ? 1 : 0;
+            }
             if (material.uniforms.uFresnelScale) {
                 material.uniforms.uFresnelScale.value = 1.0;
             }
@@ -951,6 +1076,9 @@ export class Water2Lake {
             applyCoralKingdomsWaterColors(material);
         } else if (this._cortezBackwatersEnabled && this.waterBodyType === 'LAKE') {
             applyCortezBackwatersWaterColors(material);
+        } else if (this._starfallLagoonEnabled && this.waterBodyType === 'LAKE') {
+            applyStarfallLagoonWater(material);
+            applyStarfallWaterLook(material);
         } else if (this._louisianaBayouEnabled && this.waterBodyType === 'LAKE') {
             applyLouisianaBayouWater(material);
         } else if (this._congoRiverEnabled && this.waterBodyType === 'RIVER') {
@@ -1030,6 +1158,20 @@ export class Water2Lake {
     setLouisianaBayouEnabled(enabled) {
         this._louisianaBayouEnabled = enabled === true;
         this._syncLakeBedDecorVisibility();
+        this._applyLocationWaterOverrides();
+    }
+
+    /**
+     * Starfall Lagoon — crystal-blue clear lagoon with rocky bed read-through.
+     * @param {boolean} enabled
+     */
+    setStarfallLagoonEnabled(enabled) {
+        this._starfallLagoonEnabled = enabled === true;
+        this._syncCoralKingdomsBed();
+        this._syncLocationReflectionTexture();
+        if (!enabled && this.mesh?.material?.uniforms?.uShallowBedMix) {
+            this.mesh.material.uniforms.uShallowBedMix.value = 0;
+        }
         this._applyLocationWaterOverrides();
     }
 
@@ -1155,8 +1297,13 @@ export class Water2Lake {
     _syncCoralKingdomsBed() {
         const reef = this._coralReefLocationEnabled && this.waterBodyType === 'LAKE';
         const cortez = this._cortezBackwatersEnabled && this.waterBodyType === 'LAKE';
+        const starfall = this._starfallLagoonEnabled && this.waterBodyType === 'LAKE';
         const craggy = this._craggyCoastEnabled && this.waterBodyType === 'LAKE';
-        const bedY = (reef || cortez) ? this.waterY - REEF_BED_OFFSET : this.waterY - this._defaultLakeBedY;
+        const bedY = (reef || cortez)
+            ? this.waterY - REEF_BED_OFFSET
+            : starfall
+                ? this.waterY - STARFALL_BED_OFFSET
+                : this.waterY - this._defaultLakeBedY;
 
         if (this.lakeBedGround) {
             this.lakeBedGround.position.y = bedY;
@@ -1181,6 +1328,30 @@ export class Water2Lake {
                 mat.roughnessMap = null;
                 mat.color.set(0xe8f4fc);
                 mat.roughness = 0.94;
+            } else if (starfall) {
+                if (this.craggyRockBedColor) {
+                    const bedRepeat = 14;
+                    for (const tex of [
+                        this.craggyRockBedColor,
+                        this.craggyRockBedNormal,
+                        this.craggyRockBedRough
+                    ]) {
+                        if (!tex) continue;
+                        tex.repeat.set(bedRepeat, bedRepeat);
+                        tex.center.set(0.5, 0.5);
+                        tex.rotation = 0.22;
+                        tex.offset.set(0.08, 0.19);
+                    }
+                    mat.map = this.craggyRockBedColor;
+                    mat.normalMap = this.craggyRockBedNormal || null;
+                    mat.roughnessMap = this.craggyRockBedRough || null;
+                } else {
+                    mat.map = null;
+                    mat.normalMap = null;
+                    mat.roughnessMap = null;
+                }
+                mat.color.set(0x6a7580);
+                mat.roughness = 0.96;
             } else if (craggy && this.craggyRockBedColor) {
                 const bedRepeat = 20;
                 const rot = 0.17;
@@ -1228,6 +1399,10 @@ export class Water2Lake {
                 this.causticsLayer.visible = true;
                 this.causticsLayer.position.y = bedY + 0.04;
                 setCausticsLayerMode(this.causticsLayer, 'reef');
+            } else if (starfall) {
+                this.causticsLayer.visible = true;
+                this.causticsLayer.position.y = bedY + 0.06;
+                setCausticsLayerMode(this.causticsLayer, 'default');
             } else {
                 this.causticsLayer.visible = this.waterBodyType !== 'FJORD';
                 this.causticsLayer.position.y = this.waterY - this._defaultCausticsY;
@@ -1241,7 +1416,7 @@ export class Water2Lake {
             if (u.uLakeBed && this.sandBedMap && this.pebbleBedMap) {
                 if (reef || cortez) {
                     u.uLakeBed.value = this.sandBedMap;
-                } else if (craggy && this.craggyRockBedColor) {
+                } else if ((craggy || starfall) && this.craggyRockBedColor) {
                     u.uLakeBed.value = this.craggyRockBedColor;
                 } else {
                     u.uLakeBed.value = this.pebbleBedMap;
@@ -1254,6 +1429,9 @@ export class Water2Lake {
                 applyCoralKingdomsWaterColors(waterMat);
             } else if (cortez) {
                 applyCortezBackwatersWaterColors(waterMat);
+            } else if (starfall) {
+                applyStarfallLagoonWater(waterMat);
+                applyStarfallWaterLook(waterMat);
             } else if (craggy) {
                 applyLakeWaterColors(waterMat, this.waterBodyConfig);
                 applyCraggyCoastWaterWaves(waterMat);
@@ -1318,6 +1496,9 @@ export class Water2Lake {
                 applyCoralKingdomsWaterColors(material);
             } else if (type === 'LAKE' && this._cortezBackwatersEnabled) {
                 applyCortezBackwatersWaterColors(material);
+            } else if (type === 'LAKE' && this._starfallLagoonEnabled) {
+                applyStarfallLagoonWater(material);
+                applyStarfallWaterLook(material);
             } else if (type === 'LAKE' && this._louisianaBayouEnabled) {
                 applyLouisianaBayouWater(material);
             }

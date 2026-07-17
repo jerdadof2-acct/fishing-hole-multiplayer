@@ -15,6 +15,7 @@ import { STARFISH_LANDING_REEL_RATE } from './config/starfishEncounter.js';
 import { BobberWake } from './effects/bobberWake.js';
 import { LOUISIANA_BAYOU_NAME } from './locations.js';
 import { tryStartleBayouGatorFromBobber } from './effects/bayouExtras.js';
+import { getElusiveLegendaryGate } from './config/elusiveLegendaries.js';
 
 // Apply tug visual to bobber when fish pulls
 export function applyTug(bobber, intensity = 1.0, sfx = null, scene = null) {
@@ -93,13 +94,20 @@ export class Fishing {
             zMin: -LAKE_SIZE / 2 + 12,
             zMax: LAKE_SIZE / 2 - 12
         };
-        // Celestial Depths visual state
+        // Celestial Depths — Starlight Lure visual state (does not affect other locations)
         this.starlightActive = false;
-        this.starlightGlowGroup = null;
-        this.starlightBase = null;
-        this.starlightCore = null;
-        this.starlightSprite = null;
+        this.starlightLureGroup = null;
+        this.starlightCoreSprite = null;
+        this.starlightGlowSprite = null;
+        this.starlightGem = null;
+        this.starlightPointLight = null;
+        this.starlightSparkles = null;
+        this.starlightSparkleTexture = null;
         this.starlightPulse = 0;
+        this.starlightAscension = null;
+        this.starlightAscensionAura = null;
+        this.starlightAscensionBloom = null;
+        this.starlightCatchAnchor = null;
         this.bobberHaloGroup = null;
         this.bobberHaloRing = null;
         this.bobberHaloSprite = null;
@@ -229,56 +237,258 @@ export class Fishing {
         return texture;
     }
 
+    createStarlightSparkleTexture() {
+        if (this.starlightSparkleTexture) {
+            return this.starlightSparkleTexture;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 128;
+        canvas.height = 128;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, 128, 128);
+
+        const centerGlow = ctx.createRadialGradient(64, 64, 0, 64, 64, 34);
+        centerGlow.addColorStop(0, 'rgba(255, 255, 255, 1)');
+        centerGlow.addColorStop(0.12, 'rgba(150, 235, 255, 0.98)');
+        centerGlow.addColorStop(0.38, 'rgba(35, 160, 255, 0.55)');
+        centerGlow.addColorStop(1, 'rgba(0, 80, 255, 0)');
+        ctx.fillStyle = centerGlow;
+        ctx.fillRect(0, 0, 128, 128);
+
+        const verticalRay = ctx.createLinearGradient(0, 0, 0, 128);
+        verticalRay.addColorStop(0, 'rgba(40, 155, 255, 0)');
+        verticalRay.addColorStop(0.42, 'rgba(95, 210, 255, 0.18)');
+        verticalRay.addColorStop(0.5, 'rgba(220, 250, 255, 0.95)');
+        verticalRay.addColorStop(0.58, 'rgba(95, 210, 255, 0.18)');
+        verticalRay.addColorStop(1, 'rgba(40, 155, 255, 0)');
+        ctx.fillStyle = verticalRay;
+        ctx.fillRect(60, 8, 8, 112);
+
+        const horizontalRay = ctx.createLinearGradient(0, 0, 128, 0);
+        horizontalRay.addColorStop(0, 'rgba(40, 155, 255, 0)');
+        horizontalRay.addColorStop(0.42, 'rgba(95, 210, 255, 0.18)');
+        horizontalRay.addColorStop(0.5, 'rgba(220, 250, 255, 0.95)');
+        horizontalRay.addColorStop(0.58, 'rgba(95, 210, 255, 0.18)');
+        horizontalRay.addColorStop(1, 'rgba(40, 155, 255, 0)');
+        ctx.fillStyle = horizontalRay;
+        ctx.fillRect(8, 60, 112, 8);
+
+        const diag = ctx.createRadialGradient(64, 64, 0, 64, 64, 48);
+        diag.addColorStop(0, 'rgba(180, 240, 255, 0.35)');
+        diag.addColorStop(0.45, 'rgba(80, 190, 255, 0.08)');
+        diag.addColorStop(1, 'rgba(0, 80, 255, 0)');
+        ctx.save();
+        ctx.translate(64, 64);
+        ctx.rotate(Math.PI / 4);
+        ctx.fillStyle = diag;
+        ctx.fillRect(-4, -50, 8, 100);
+        ctx.fillRect(-50, -4, 100, 8);
+        ctx.restore();
+
+        this.starlightSparkleTexture = new THREE.CanvasTexture(canvas);
+        this.starlightSparkleTexture.needsUpdate = true;
+        return this.starlightSparkleTexture;
+    }
+
     ensureStarlightEffect() {
-        if (this.starlightGlowGroup) {
+        if (!this.bobber) {
             return;
         }
 
-        this.starlightGlowGroup = new THREE.Group();
-        this.starlightGlowGroup.visible = false;
-        this.starlightGlowGroup.renderOrder = 1003;
+        // Rebuild when visual recipe changes so hot-reload / revisit picks up brighter lure.
+        const visualVersion = 3;
+        if (
+            this.starlightLureGroup &&
+            this.starlightLureGroup.userData?.visualVersion === visualVersion
+        ) {
+            return;
+        }
 
-        const baseTexture = this.createRadialTexture('rgba(120, 190, 255, 0.8)', 'rgba(10, 20, 40, 0)');
-        const baseMaterial = new THREE.MeshBasicMaterial({
-            map: baseTexture,
+        if (this.starlightLureGroup) {
+            this.bobber.remove(this.starlightLureGroup);
+            this.starlightLureGroup.traverse((obj) => {
+                if (obj.geometry) {
+                    obj.geometry.dispose();
+                }
+                if (obj.material) {
+                    if (Array.isArray(obj.material)) {
+                        obj.material.forEach((m) => m.dispose?.());
+                    } else {
+                        obj.material.dispose?.();
+                    }
+                }
+            });
+            this.starlightLureGroup = null;
+            this.starlightCoreSprite = null;
+            this.starlightGlowSprite = null;
+            this.starlightGem = null;
+            this.starlightSparkles = null;
+            this.starlightAscensionAura = null;
+            this.starlightAscensionBloom = null;
+        }
+
+        this.starlightLureGroup = new THREE.Group();
+        this.starlightLureGroup.name = 'StarlightLure';
+        this.starlightLureGroup.visible = false;
+        this.starlightLureGroup.renderOrder = 1003;
+        this.starlightLureGroup.userData.visualVersion = visualVersion;
+
+        /*
+         * Faceted gem body — small but intensely emissive so it
+         * reads as crystal even when the sparkles are between flashes.
+         */
+        const gemMaterial = new THREE.MeshStandardMaterial({
+            color: 0x8cefff,
+            emissive: 0x1ab0ff,
+            emissiveIntensity: 12,
+            roughness: 0.08,
+            metalness: 0.15,
+            flatShading: true,
+            toneMapped: false,
             transparent: true,
-            opacity: 0,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false,
-            side: THREE.DoubleSide
+            opacity: 0.95
         });
-        this.starlightBase = new THREE.Mesh(new THREE.CircleGeometry(3.4, 64), baseMaterial);
-        this.starlightBase.rotation.x = -Math.PI / 2;
-        this.starlightGlowGroup.add(this.starlightBase);
+        this.starlightGem = new THREE.Mesh(
+            new THREE.OctahedronGeometry(0.07, 0),
+            gemMaterial
+        );
+        this.starlightGem.rotation.set(0.4, 0.7, 0.15);
+        this.starlightGem.renderOrder = 1005;
+        this.starlightLureGroup.add(this.starlightGem);
 
-        const coreTexture = this.createRadialTexture('rgba(255, 255, 255, 1)', 'rgba(120, 200, 255, 0)');
-        const coreMaterial = new THREE.MeshBasicMaterial({
-            map: coreTexture,
-            transparent: true,
-            opacity: 0,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false,
-            side: THREE.DoubleSide
-        });
-        this.starlightCore = new THREE.Mesh(new THREE.CircleGeometry(0.85, 48), coreMaterial);
-        this.starlightCore.rotation.x = -Math.PI / 2;
-        this.starlightGlowGroup.add(this.starlightCore);
+        const softGlowMap = this.createRadialTexture(
+            'rgba(140, 230, 255, 1)',
+            'rgba(10, 60, 120, 0)'
+        );
+        this.starlightGlowSprite = new THREE.Sprite(
+            new THREE.SpriteMaterial({
+                map: softGlowMap,
+                color: 0x6ae0ff,
+                transparent: true,
+                opacity: 0.78,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                depthTest: false,
+                toneMapped: false
+            })
+        );
+        this.starlightGlowSprite.scale.set(1.15, 1.15, 1);
+        this.starlightGlowSprite.renderOrder = 1002;
+        this.starlightLureGroup.add(this.starlightGlowSprite);
 
-        const spriteTexture = this.createRadialTexture('rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)');
-        const spriteMaterial = new THREE.SpriteMaterial({
-            map: spriteTexture,
-            color: 0xffffff,
-            transparent: true,
-            opacity: 0.9,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false
-        });
-        this.starlightSprite = new THREE.Sprite(spriteMaterial);
-        this.starlightSprite.scale.set(1.5, 1.5, 1.5);
-        this.starlightSprite.position.set(0, 0.8, 0);
-        this.starlightGlowGroup.add(this.starlightSprite);
+        const coreMap = this.createRadialTexture(
+            'rgba(255, 255, 255, 1)',
+            'rgba(80, 200, 255, 0)'
+        );
+        this.starlightCoreSprite = new THREE.Sprite(
+            new THREE.SpriteMaterial({
+                map: coreMap,
+                color: 0xd8f8ff,
+                transparent: true,
+                opacity: 1,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                depthTest: false,
+                toneMapped: false
+            })
+        );
+        this.starlightCoreSprite.scale.set(0.42, 0.42, 1);
+        this.starlightCoreSprite.renderOrder = 1003;
+        this.starlightLureGroup.add(this.starlightCoreSprite);
 
-        this.sceneRef.scene.add(this.starlightGlowGroup);
+        const sparkleTexture = this.createStarlightSparkleTexture();
+        const sparkleData = [
+            { size: 0.72, phase: 0.0, speed: 2.4, strength: 1.0, color: 0xffffff, offset: [0.02, 0.03, 0.01] },
+            { size: 0.58, phase: 1.1, speed: 3.2, strength: 0.98, color: 0xc8f6ff, offset: [-0.03, 0.01, 0.02] },
+            { size: 0.52, phase: 2.2, speed: 3.8, strength: 0.95, color: 0x7ae8ff, offset: [0.025, -0.02, -0.02] },
+            { size: 0.48, phase: 3.4, speed: 4.1, strength: 0.92, color: 0xa8f0ff, offset: [-0.02, -0.025, 0.015] },
+            { size: 0.44, phase: 4.5, speed: 3.5, strength: 0.9, color: 0x5ad8ff, offset: [0.01, 0.02, -0.03] },
+            { size: 0.4, phase: 5.6, speed: 4.6, strength: 0.88, color: 0xe0fbff, offset: [-0.015, 0.015, 0.025] },
+            { size: 0.36, phase: 0.7, speed: 5.0, strength: 0.85, color: 0x8deaff, offset: [0.03, -0.01, 0.01] },
+            { size: 0.34, phase: 2.9, speed: 4.4, strength: 0.84, color: 0xb8f4ff, offset: [-0.025, 0.02, -0.015] }
+        ];
+
+        this.starlightSparkles = [];
+        for (let i = 0; i < sparkleData.length; i++) {
+            const data = sparkleData[i];
+            const sparkle = new THREE.Sprite(
+                new THREE.SpriteMaterial({
+                    map: sparkleTexture,
+                    color: data.color,
+                    transparent: true,
+                    opacity: 0.55,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    depthTest: false,
+                    toneMapped: false
+                })
+            );
+            sparkle.scale.setScalar(data.size);
+            sparkle.position.set(
+                data.offset[0],
+                data.offset[1],
+                data.offset[2]
+            );
+            sparkle.userData.baseSize = data.size;
+            sparkle.userData.phase = data.phase;
+            sparkle.userData.speed = data.speed;
+            sparkle.userData.strength = data.strength;
+            sparkle.material.rotation = i * 0.55;
+            sparkle.renderOrder = 1004;
+            this.starlightLureGroup.add(sparkle);
+            this.starlightSparkles.push(sparkle);
+        }
+
+        /*
+         * Tiny point light so the gem lights the water around it.
+         */
+        this.starlightPointLight = new THREE.PointLight(0x66e0ff, 2.8, 4.5, 2);
+        this.starlightPointLight.position.set(0, 0, 0);
+        this.starlightLureGroup.add(this.starlightPointLight);
+
+        /*
+         * Huge soft auras — hidden until Starfish hook-set ascension.
+         */
+        const ascensionMap = this.createRadialTexture(
+            'rgba(160, 235, 255, 1)',
+            'rgba(20, 80, 160, 0)'
+        );
+        this.starlightAscensionAura = new THREE.Sprite(
+            new THREE.SpriteMaterial({
+                map: ascensionMap,
+                color: 0x7ae8ff,
+                transparent: true,
+                opacity: 0,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                depthTest: false,
+                toneMapped: false
+            })
+        );
+        this.starlightAscensionAura.scale.set(1, 1, 1);
+        this.starlightAscensionAura.visible = false;
+        this.starlightAscensionAura.renderOrder = 1001;
+        this.starlightLureGroup.add(this.starlightAscensionAura);
+
+        this.starlightAscensionBloom = new THREE.Sprite(
+            new THREE.SpriteMaterial({
+                map: ascensionMap,
+                color: 0xd8f8ff,
+                transparent: true,
+                opacity: 0,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                depthTest: false,
+                toneMapped: false
+            })
+        );
+        this.starlightAscensionBloom.scale.set(1, 1, 1);
+        this.starlightAscensionBloom.visible = false;
+        this.starlightAscensionBloom.renderOrder = 1002;
+        this.starlightLureGroup.add(this.starlightAscensionBloom);
+
+        this.bobber.add(this.starlightLureGroup);
     }
 
     shouldUseStarlightMode() {
@@ -286,24 +496,117 @@ export class Fishing {
         return location?.waterBodyType === 'CELESTIAL';
     }
 
+    isStarlightLureFullySunk() {
+        if (!this.starlightActive || !this.bobber?.userData?.starlightSink) {
+            return true;
+        }
+        const target = this.bobber.userData.starlightSinkTarget ?? 2.85;
+        const depth = this.bobber.userData.starlightSinkDepth ?? 0;
+        return depth >= target - 0.04;
+    }
+
+    beginStarlightAscension() {
+        this.ensureStarlightEffect();
+        this.starlightAscension = {
+            active: true,
+            progress: 0
+        };
+        if (this.bobber?.userData) {
+            this.bobber.userData.starlightAscension = true;
+            this.bobber.userData.starlightAscensionProgress = 0;
+            this.bobber.userData.starlightBiteFlash = false;
+        }
+        if (this.starlightAscensionAura) {
+            this.starlightAscensionAura.visible = true;
+        }
+        if (this.starlightAscensionBloom) {
+            this.starlightAscensionBloom.visible = true;
+        }
+        if (this.starlightLureGroup) {
+            this.starlightLureGroup.visible = true;
+        }
+        if (this.bobber) {
+            this.bobber.visible = true;
+        }
+    }
+
+    endStarlightAscension() {
+        this.starlightAscension = null;
+        this.starlightCatchAnchor = null;
+        if (this.bobber?.userData) {
+            this.bobber.userData.starlightAscension = false;
+            this.bobber.userData.starlightAscensionProgress = 0;
+            this.bobber.userData.starlightBiteFlash = false;
+        }
+        if (this.starlightAscensionAura) {
+            this.starlightAscensionAura.visible = false;
+            this.starlightAscensionAura.material.opacity = 0;
+        }
+        if (this.starlightAscensionBloom) {
+            this.starlightAscensionBloom.visible = false;
+            this.starlightAscensionBloom.material.opacity = 0;
+        }
+        if (this.starlightPointLight) {
+            this.starlightPointLight.distance = 4.5;
+        }
+    }
+
+    /**
+     * Freeze the Starlight glow at the water spot where the Starfish
+     * was landed — do not drag it back onto the boat with the bobber.
+     */
+    pinStarlightCatchGlow() {
+        if (!this.bobber || !this.water) {
+            return;
+        }
+        if (!this.starlightCatchAnchor) {
+            this.starlightCatchAnchor = this.bobber.position.clone();
+        }
+        const waterHeight = this.water.getWaterHeight(
+            this.starlightCatchAnchor.x,
+            this.starlightCatchAnchor.z
+        );
+        this.starlightCatchAnchor.y = waterHeight + 0.1;
+        this.bobber.position.copy(this.starlightCatchAnchor);
+        this.bobber.visible = true;
+        this.bobber.userData.floating = false;
+        if (this.starlightLureGroup) {
+            this.starlightLureGroup.visible = true;
+        }
+    }
+
+    resetStarlightSinkState() {
+        if (!this.bobber?.userData) {
+            return;
+        }
+        this.bobber.userData.starlightSinkDepth = 0;
+        this.bobber.userData.starlightSinkFrameTime = undefined;
+        // Deep enough to read as vanishing into the depths.
+        this.bobber.userData.starlightSinkTarget = 2.85;
+        this.bobber.userData.starlightSinkSpeed = 0.48;
+        this.bobber.userData.starlightBiteFlash = false;
+        this.endStarlightAscension();
+    }
+
     beginStarfishFirstCatchCelebration(options = {}) {
         const duration = Math.max(0, options.duration ?? 4.5);
-        const scale = options.scale ?? 3.2;
-        const sprite = options.sprite ?? 2.8;
+        const scale = options.scale ?? 9;
+        const sprite = options.sprite ?? 7;
         this.starfishCelebration = {
             active: true,
             timer: 0,
             duration,
             scale,
             sprite,
-            baseOpacity: options.baseOpacity ?? 0.98,
-            coreOpacity: options.coreOpacity ?? 1.0,
-            spriteOpacity: options.spriteOpacity ?? 1.0,
-            opacityBoost: options.opacityBoost ?? 2.3
+            baseOpacity: options.baseOpacity ?? 0.72,
+            coreOpacity: options.coreOpacity ?? 0.85,
+            spriteOpacity: options.spriteOpacity ?? 0.8,
+            opacityBoost: options.opacityBoost ?? 1.55
         };
         this.pendingCelebrateDuration = options.catDuration ?? duration;
-        if (this.starlightGlowGroup) {
-            this.starlightGlowGroup.visible = true;
+        this.pinStarlightCatchGlow();
+        if (this.starlightLureGroup) {
+            this.starlightLureGroup.visible = true;
         }
     }
 
@@ -395,6 +698,30 @@ export class Fishing {
             return;
         }
 
+        /*
+         * Starfish catch glow stays at the land spot in the water.
+         * Normal catches still tuck the bobber beside the cat.
+         */
+        const holdStarlightGlow = this.starlightActive
+            && (
+                this.starfishCelebration?.active === true
+                || this.starlightAscension?.active === true
+                || fishInstance?._gentleReunion === true
+            );
+
+        if (holdStarlightGlow) {
+            this.pinStarlightCatchGlow();
+            this.clearBobberWaitFlags();
+            if (this.fishingLine) {
+                this.fishingLine.visible = false;
+            }
+            if (this.rope?.lineMesh) {
+                this.rope.lineMesh.visible = true;
+            }
+            this.settleLineAfterCatch();
+            return;
+        }
+
         if (this.bobber && this.cat) {
             const catPos = this.cat.getSavedPosition?.() || this.cat.getModel()?.position;
             if (catPos) {
@@ -428,6 +755,10 @@ export class Fishing {
         if (shouldEnable && !this.starlightActive) {
             this.ensureStarlightEffect();
             this.starlightActive = true;
+            if (this.bobber?.userData) {
+                this.bobber.userData.starlightSink = true;
+                this.resetStarlightSinkState();
+            }
             if (this.bobber?.material) {
                 this.bobber.material.transparent = true;
                 this.bobber.material.opacity = 0;
@@ -439,10 +770,17 @@ export class Fishing {
             if (this.bobberHaloGroup) {
                 this.bobberHaloGroup.visible = false;
             }
+            if (this.starlightLureGroup) {
+                this.starlightLureGroup.visible = true;
+            }
         } else if (!shouldEnable && this.starlightActive) {
             this.starlightActive = false;
-            if (this.starlightGlowGroup) {
-                this.starlightGlowGroup.visible = false;
+            if (this.bobber?.userData) {
+                this.bobber.userData.starlightSink = false;
+                this.resetStarlightSinkState();
+            }
+            if (this.starlightLureGroup) {
+                this.starlightLureGroup.visible = false;
             }
             if (this.bobber?.material && this.defaultBobberAppearance) {
                 this.bobber.material.transparent = this.defaultBobberAppearance.transparent;
@@ -459,9 +797,9 @@ export class Fishing {
     }
 
     updateStarlightEffect(delta) {
-        if (!this.starlightGlowGroup || !this.starlightActive) {
-            if (this.starlightGlowGroup && this.starlightGlowGroup.visible) {
-                this.starlightGlowGroup.visible = false;
+        if (!this.starlightLureGroup || !this.starlightActive) {
+            if (this.starlightLureGroup && this.starlightLureGroup.visible) {
+                this.starlightLureGroup.visible = false;
             }
             return;
         }
@@ -471,81 +809,285 @@ export class Fishing {
         const fishState = fishInstance?.state || null;
         const isFighting = this.fishOnLine && fishState === 'HOOKED_FIGHT';
         const isLanding = this.fishOnLine && fishState === 'LANDING';
+        const isInFlight = this.isCasting === true;
 
-        if (!this.starlightGlowGroup.visible) {
-            this.starlightGlowGroup.visible = true;
+        /*
+         * Keep the gem lure visible for the whole cast arc — not only
+         * after splash. Parent bobber must also stay visible or sprites hide.
+         */
+        if (isInFlight && this.bobber && !this.bobber.visible) {
+            this.bobber.visible = true;
         }
 
-        const scaleMultiplier = celebration
-            ? celebration.scale
-            : isLanding
-                ? 3.0
-                : isFighting
-                    ? (fishInstance?._gentleReunion ? 1.15 : 1.6)
-                    : 1.0;
+        const showLure = this.bobber?.visible === true
+            || celebration?.active === true
+            || isInFlight
+            || this.starlightAscension?.active === true;
 
-        const opacityBoost = celebration
-            ? celebration.opacityBoost
-            : isLanding
-                ? 1.9
-                : isFighting
-                    ? (fishInstance?._gentleReunion ? 1.05 : 1.3)
-                    : 1.0;
+        this.starlightLureGroup.visible = showLure;
+        if (!showLure) {
+            return;
+        }
 
-        const spriteMultiplier = celebration
-            ? celebration.sprite
-            : isLanding
-                ? 2.2
-                : isFighting
-                    ? 1.35
-                    : 1.0;
+        // Keep post-catch glow locked to the land spot while celebrating.
+        if (
+            this.starlightCatchAnchor &&
+            (
+                this.starfishCelebration?.active === true
+                || (
+                    this.starlightAscension?.active === true
+                    && fishState === 'LANDED'
+                )
+            )
+        ) {
+            this.pinStarlightCatchGlow();
+        }
 
-        const spriteOpacityBoost = celebration
-            ? celebration.spriteOpacity
-            : isLanding
-                ? 1.6
-                : isFighting
-                    ? 1.2
-                    : 1.0;
+        const isAscension = this.starlightAscension?.active === true
+            && (isFighting || isLanding || celebration || fishState === 'LANDED');
+        const isGentleFight = isFighting && fishInstance?._gentleReunion;
+        const isBiteFlash = this.bobber?.userData?.starlightBiteFlash === true
+            && !this.fishOnLine;
 
-        const sourcePos = this.bobber?.position ?? this.castEnd ?? this.castStart ?? new THREE.Vector3();
-        const targetPos = sourcePos.clone();
-        targetPos.y = this.water?.waterY != null ? this.water.waterY + 0.015 : targetPos.y;
-        this.starlightGlowGroup.position.copy(targetPos);
+        /*
+         * Ascension progress: deep → surface during the Starfish reunion fight,
+         * then keeps climbing through landing.
+         */
+        let ascensionProgress = 0;
+        if (isAscension || isGentleFight || isLanding) {
+            if (isLanding) {
+                const fightDone = 1;
+                const landT = THREE.MathUtils.clamp(
+                    (fishInstance?._landingElapsed ?? 0) / 8,
+                    0,
+                    1
+                );
+                ascensionProgress = fightDone + landT * 0.55;
+            } else if (fishInstance?._fightDur > 0) {
+                ascensionProgress = THREE.MathUtils.clamp(
+                    (fishInstance._fightT ?? 0) / fishInstance._fightDur,
+                    0,
+                    1
+                );
+            }
+            if (this.starlightAscension) {
+                this.starlightAscension.progress = ascensionProgress;
+            }
+            if (this.bobber?.userData) {
+                this.bobber.userData.starlightAscensionProgress = ascensionProgress;
+            }
+        }
+
+        const riseEase = 1 - Math.pow(
+            1 - THREE.MathUtils.clamp(ascensionProgress, 0, 1),
+            1.35
+        );
+
+        let scaleMultiplier = 1.0;
+        let opacityBoost = 1.0;
+
+        if (celebration) {
+            scaleMultiplier = celebration.scale;
+            opacityBoost = celebration.opacityBoost;
+        } else if (isAscension || isGentleFight || (isLanding && this.starlightAscension?.active)) {
+            // Starts larger than the lure and grows as it rises (toned for readability).
+            scaleMultiplier = THREE.MathUtils.lerp(2.8, 11, riseEase);
+            if (isLanding) {
+                scaleMultiplier = THREE.MathUtils.lerp(11, 13.5, Math.min(1, ascensionProgress - 1));
+            }
+            opacityBoost = THREE.MathUtils.lerp(1.25, 1.85, riseEase);
+        } else if (isBiteFlash) {
+            scaleMultiplier = 2.2;
+            opacityBoost = 1.45;
+        } else if (isLanding) {
+            scaleMultiplier = 1.45;
+            opacityBoost = 1.2;
+        } else if (isFighting) {
+            scaleMultiplier = 1.2;
+            opacityBoost = 1.1;
+        } else if (isInFlight) {
+            scaleMultiplier = 1.35;
+            opacityBoost = 1.45;
+        }
+
+        /*
+         * As the lure sinks, dim sparkle/glow so it feels like it is
+         * fading into the dark water — full bright on cast, bite flash,
+         * and Starfish ascension.
+         */
+        const sinkTarget = this.bobber?.userData?.starlightSinkTarget ?? 2.85;
+        const sinkDepth = this.bobber?.userData?.starlightSinkDepth ?? 0;
+        let depthFade = 1;
+        if (
+            !isInFlight &&
+            !celebration &&
+            !isFighting &&
+            !isLanding &&
+            !isBiteFlash &&
+            !this.starlightAscension?.active &&
+            this.bobber?.userData?.starlightSink
+        ) {
+            const sinkT = THREE.MathUtils.clamp(sinkDepth / sinkTarget, 0, 1);
+            depthFade = Math.pow(1 - sinkT, 1.45);
+            depthFade = THREE.MathUtils.clamp(depthFade, 0.03, 1);
+        }
 
         this.starlightPulse += delta;
-        const basePulse = celebration
-            ? celebration.baseOpacity
-            : (0.55 + Math.sin(this.starlightPulse * 1.6) * 0.25) * opacityBoost;
-        const corePulse = celebration
-            ? celebration.coreOpacity
-            : (0.7 + Math.sin(this.starlightPulse * 2.4 + 0.7) * 0.2) * opacityBoost;
-        const spritePulse = celebration
-            ? celebration.spriteOpacity
-            : (0.6 + Math.sin(this.starlightPulse * 2.1 + 2.2) * 0.25) * spriteOpacityBoost;
+        const hugePulse = isAscension || isGentleFight || isLanding
+            ? (1 + Math.sin(this.starlightPulse * 2.4) * 0.08)
+            : 1;
 
-        if (this.starlightBase?.material) {
-            this.starlightBase.material.opacity = THREE.MathUtils.clamp(basePulse, 0, 1);
-            const scale = celebration
-                ? scaleMultiplier
-                : scaleMultiplier * (1.0 + Math.sin(this.starlightPulse * 1.2) * 0.08);
-            this.starlightBase.scale.set(scale, scale, scale);
+        /*
+         * Soft haze used to wash out the gem sparkles on the rise.
+         * Keep a faint halo, push brightness into the sparkles instead.
+         */
+        const softGlowWeight = (isAscension || isGentleFight)
+            ? THREE.MathUtils.lerp(0.55, 0.28, riseEase)
+            : celebration
+                ? 0.35
+                : 1;
+
+        if (this.starlightAscensionAura?.material) {
+            if (isAscension || isGentleFight || (isLanding && this.starlightAscension?.active)) {
+                this.starlightAscensionAura.visible = true;
+                const auraOpacity = THREE.MathUtils.clamp(
+                    (0.1 + riseEase * 0.12) * hugePulse * softGlowWeight,
+                    0.06,
+                    0.28
+                );
+                this.starlightAscensionAura.material.opacity = auraOpacity;
+                const auraScale =
+                    THREE.MathUtils.lerp(2.4, 10, riseEase) * hugePulse;
+                this.starlightAscensionAura.scale.set(auraScale, auraScale, 1);
+            } else if (this.starlightAscensionAura.visible) {
+                this.starlightAscensionAura.material.opacity = 0;
+                this.starlightAscensionAura.visible = false;
+            }
         }
 
-        if (this.starlightCore?.material) {
-            this.starlightCore.material.opacity = THREE.MathUtils.clamp(corePulse, 0, 1);
-            const coreScale = celebration
-                ? scaleMultiplier
-                : scaleMultiplier * (0.9 + Math.sin(this.starlightPulse * 3.0) * 0.06);
-            this.starlightCore.scale.set(coreScale, coreScale, coreScale);
+        if (this.starlightAscensionBloom?.material) {
+            if (isAscension || isGentleFight || (isLanding && this.starlightAscension?.active)) {
+                this.starlightAscensionBloom.visible = true;
+                const bloomOpacity = THREE.MathUtils.clamp(
+                    (0.12 + riseEase * 0.14) * hugePulse * softGlowWeight,
+                    0.06,
+                    0.32
+                );
+                this.starlightAscensionBloom.material.opacity = bloomOpacity;
+                const bloomScale =
+                    THREE.MathUtils.lerp(1.2, 5.5, riseEase) *
+                    (1 + Math.sin(this.starlightPulse * 3.1 + 0.8) * 0.06);
+                this.starlightAscensionBloom.scale.set(bloomScale, bloomScale, 1);
+            } else if (this.starlightAscensionBloom.visible) {
+                this.starlightAscensionBloom.material.opacity = 0;
+                this.starlightAscensionBloom.visible = false;
+            }
         }
 
-        if (this.starlightSprite?.material) {
-            this.starlightSprite.material.opacity = THREE.MathUtils.clamp(spritePulse, 0.25, 1.0);
-            const spriteScale = celebration
-                ? spriteMultiplier
-                : spriteMultiplier * (1.3 + Math.sin(this.starlightPulse * 1.8) * 0.1);
-            this.starlightSprite.scale.set(spriteScale, spriteScale, spriteScale);
+        if (this.starlightGem?.material) {
+            this.starlightGem.material.emissiveIntensity =
+                ((isInFlight || isAscension ? 12 : 10) +
+                Math.sin(this.starlightPulse * 2.2) * 2.8 * opacityBoost) *
+                depthFade *
+                (isAscension ? THREE.MathUtils.lerp(1.0, 1.5, riseEase) : 1);
+            this.starlightGem.material.opacity = THREE.MathUtils.clamp(
+                0.95 * depthFade,
+                0.02,
+                1
+            );
+            this.starlightGem.rotation.y += delta * (isInFlight || isAscension ? 2.4 : 1.4);
+            this.starlightGem.rotation.x += delta * (isInFlight || isAscension ? 1.1 : 0.55);
+            const gemPulse = 1 + Math.sin(this.starlightPulse * 3.1) * 0.08;
+            this.starlightGem.scale.setScalar(
+                scaleMultiplier * gemPulse * (0.55 + 0.45 * depthFade) * (isAscension ? 0.28 : 1)
+            );
+        }
+
+        if (this.starlightPointLight) {
+            this.starlightPointLight.intensity =
+                ((isInFlight ? 3.6 : isAscension ? THREE.MathUtils.lerp(2.4, 4.5, riseEase) : 2.4) +
+                Math.sin(this.starlightPulse * 2.0) * 0.45) *
+                opacityBoost *
+                depthFade;
+            this.starlightPointLight.distance = isAscension
+                ? THREE.MathUtils.lerp(5, 12, riseEase)
+                : 4.5;
+        }
+
+        if (this.starlightGlowSprite?.material) {
+            const glowPulse = celebration
+                ? celebration.baseOpacity * 0.55
+                : (0.72 + Math.sin(this.starlightPulse * 1.7) * 0.14) *
+                    opacityBoost *
+                    softGlowWeight;
+            this.starlightGlowSprite.material.opacity = THREE.MathUtils.clamp(
+                glowPulse * depthFade,
+                0,
+                0.55
+            );
+            const glowScale =
+                1.15 *
+                (isAscension ? Math.min(scaleMultiplier, 4.5) : scaleMultiplier) *
+                (1 + Math.sin(this.starlightPulse * 1.3) * 0.08) *
+                (0.5 + 0.5 * depthFade) *
+                softGlowWeight;
+            this.starlightGlowSprite.scale.set(glowScale, glowScale, 1);
+        }
+
+        if (this.starlightCoreSprite?.material) {
+            const corePulse = celebration
+                ? celebration.coreOpacity * 0.65
+                : (0.95 + Math.sin(this.starlightPulse * 2.6 + 0.5) * 0.05) *
+                    opacityBoost *
+                    softGlowWeight;
+            this.starlightCoreSprite.material.opacity = THREE.MathUtils.clamp(
+                corePulse * depthFade,
+                0,
+                0.7
+            );
+            const coreScale =
+                0.42 *
+                (isAscension ? Math.min(scaleMultiplier, 3.2) : scaleMultiplier) *
+                (1 + Math.sin(this.starlightPulse * 2.8) * 0.1) *
+                (0.45 + 0.55 * depthFade);
+            this.starlightCoreSprite.scale.set(coreScale, coreScale, 1);
+        }
+
+        if (this.starlightSparkles?.length) {
+            for (let i = 0; i < this.starlightSparkles.length; i++) {
+                const sparkle = this.starlightSparkles[i];
+                const sparkleWave =
+                    0.5 +
+                    0.5 *
+                    Math.sin(
+                        this.starlightPulse * sparkle.userData.speed +
+                        sparkle.userData.phase
+                    );
+                // Softer power + higher floor = sparkles stay readable over haze
+                const flare = Math.pow(sparkleWave, isAscension ? 1.8 : 3);
+                const strength = sparkle.userData.strength * opacityBoost;
+                const sparkleBase = isAscension || celebration ? 0.58 : 0.42;
+
+                sparkle.material.opacity = THREE.MathUtils.clamp(
+                    (sparkleBase + flare * 1.15 * strength) * depthFade,
+                    isAscension ? 0.35 : 0,
+                    1
+                );
+
+                const sparkleScale =
+                    sparkle.userData.baseSize *
+                    (isAscension
+                        ? THREE.MathUtils.lerp(3.2, 7.5, riseEase)
+                        : scaleMultiplier) *
+                    (0.9 + flare * 1.85) *
+                    (0.4 + 0.6 * depthFade) *
+                    (isAscension ? THREE.MathUtils.lerp(1.4, 2.6, riseEase) : 1);
+
+                sparkle.scale.setScalar(sparkleScale);
+                sparkle.material.rotation =
+                    i * 0.55 +
+                    this.starlightPulse * (i % 2 === 0 ? 0.35 : -0.28);
+            }
         }
     }
     
@@ -939,10 +1481,13 @@ export class Fishing {
         this.isCasting = true;
         this.castT = 0;
         this.clearBobberWaitFlags();
+        this.resetStarlightSinkState();
         this.updateStarlightMode();
         // One Throw per cast — ensureThrowAnimation gates restarts that caused twitching.
         this.cat?.resetThrowCastGate?.();
         this.cat?.ensureThrowAnimation?.();
+
+        this.recordJournalShoreCast();
         
         // Set rope states
         if (this.rope) {
@@ -972,13 +1517,39 @@ export class Fishing {
             }
         }
         
-        // Position bobber at start
+        // Position bobber at start — Starlight Lure stays visible for the full flight arc
         this.bobber.position.copy(this.castStart);
-        this.bobber.visible = false;
+        this.bobber.visible = this.starlightActive === true;
+        if (this.starlightLureGroup && this.starlightActive) {
+            this.starlightLureGroup.visible = true;
+        }
         if (this.fishingLine) this.fishingLine.visible = false;
         
         // Animate rod casting
         this.animateCast();
+    }
+
+    /** Track casts at Cortez / Bayou / Congo for elusive legendary gates. */
+    recordJournalShoreCast() {
+        const player = this.game?.player || this.sceneRef?.player || null;
+        const locations = this.game?.locations || this.sceneRef?.locations || null;
+        if (!player?.recordLocationCast || !locations?.getCurrentLocationIndex) {
+            return;
+        }
+        const locationIndex = locations.getCurrentLocationIndex();
+        const location = locations.getCurrentLocation?.() || null;
+        if (!getElusiveLegendaryGate(location, locationIndex)) {
+            return;
+        }
+        const revealed = player.recordLocationCast(locationIndex, location);
+        if (!revealed) {
+            return;
+        }
+        const ui = this.game?.ui || this.sceneRef?.ui || null;
+        window.setTimeout(() => {
+            ui?.showBannerNotification?.(revealed.revealBanner, '#fcd34d', 4800);
+            this.game?.showCatBark?.(revealed.revealBark, 3200);
+        }, 900);
     }
 
     animateCast() {
@@ -1088,6 +1659,7 @@ export class Fishing {
             this.starfishCelebration.timer += delta;
             if (this.starfishCelebration.timer >= this.starfishCelebration.duration) {
                 this.starfishCelebration.active = false;
+                this.endStarlightAscension();
             }
         }
         // Update rod tip world position (GLB cat: tip tracks animated rod each frame)
@@ -1122,10 +1694,11 @@ export class Fishing {
                     const forwardT = (rodT - 0.3) / 0.4;
                     targetObj.rotation.x = -Math.sin(forwardT * Math.PI) * 0.8;
                     
-                    // Show bobber when rod swings forward
+                    // Show bobber when rod swings forward (Starlight Lure is already visible from cast start)
                     if (rodT >= 0.4 && !this.bobber.visible) {
                         this.bobber.visible = true;
-                        // Only show rope line, not old fishing line
+                    }
+                    if (rodT >= 0.4 || this.starlightActive) {
                         if (this.rope && this.rope.lineMesh) {
                             this.rope.lineMesh.visible = true;
                         }
@@ -1222,7 +1795,11 @@ export class Fishing {
                 
                 // Set floating state
                 this.bobber.userData.floating = true;
-                
+                if (this.starlightActive) {
+                    this.resetStarlightSinkState();
+                    this.bobber.userData.starlightSink = true;
+                }
+
                 // Bobber landing — soft ripple + cast splash sound
                 if (this.splash) {
                     this.splash.triggerRipple(this.bobber.position);
@@ -1673,20 +2250,37 @@ export class Fishing {
                     this.clampToCastBounds(this.bobber.position);
                 }
                 
-                // Pin to surface height
+                // Pin to surface height (Starlight Lure sinks at Celestial Depths only)
                 const waterHeight = this.water.getWaterHeight(
                     this.bobber.position.x,
                     this.bobber.position.z
                 );
-                this.bobber.position.y = waterHeight + 0.12;
-                
-                // Idle bobber wake - periodic gentle ripples
-                this.idleWakeTimer += delta;
-                if (this.idleWakeTimer >= this.idleWakeInterval) {
-                    if (this.water && this.water.mesh && this.water.mesh.splashAt) {
-                        this.water.mesh.splashAt(this.bobber.position.x, this.bobber.position.z);
+
+                if (this.bobber.userData.starlightSink && this.starlightActive) {
+                    const freeze = this.bobber.userData.freeze ?? 0;
+                    const targetDepth =
+                        this.bobber.userData.starlightSinkTarget ?? 2.85;
+                    const sinkSpeed =
+                        this.bobber.userData.starlightSinkSpeed ?? 0.48;
+                    let depth = this.bobber.userData.starlightSinkDepth ?? 0;
+                    if (freeze <= 0) {
+                        depth = Math.min(targetDepth, depth + delta * sinkSpeed);
+                        this.bobber.userData.starlightSinkDepth = depth;
                     }
-                    this.idleWakeTimer = 0;
+                    const settle = depth / targetDepth;
+                    const bobble = Math.sin(time * 1.4) * 0.035 * settle;
+                    this.bobber.position.y = waterHeight - depth + bobble;
+                } else {
+                    this.bobber.position.y = waterHeight + 0.12;
+
+                    // Idle bobber wake - periodic gentle ripples
+                    this.idleWakeTimer += delta;
+                    if (this.idleWakeTimer >= this.idleWakeInterval) {
+                        if (this.water && this.water.mesh && this.water.mesh.splashAt) {
+                            this.water.mesh.splashAt(this.bobber.position.x, this.bobber.position.z);
+                        }
+                        this.idleWakeTimer = 0;
+                    }
                 }
             }
             

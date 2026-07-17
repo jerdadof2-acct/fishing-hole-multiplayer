@@ -209,7 +209,7 @@ export class Locations {
                     41: 18,
                     42: 12,
                     43: 8,
-                    44: 3
+                    44: 1
                 }
             },
             {
@@ -223,13 +223,13 @@ export class Locations {
                 tagline: 'An old promise, finally kept',
                 waterBodyType: 'LAKE',
                 platformType: 'SMALL_BOAT',
-                requiresStarfishCatch: true,
+                requiresPostStarfishGuide: true,
                 fishSpawnWeights: {
                     57: 30,
                     58: 28,
                     59: 22,
                     60: 12,
-                    61: 3
+                    61: 1
                 }
             },
             {
@@ -244,12 +244,13 @@ export class Locations {
                 waterBodyType: 'RIVER',
                 platformType: 'LARGE_BOAT',
                 requiresPostStarfishGuide: true,
+                // Playable once the Louisiana Bayou catalog is complete (not Coming Soon).
                 fishSpawnWeights: {
                     62: 30,
                     66: 28,
                     63: 22,
                     64: 12,
-                    65: 4
+                    65: 1
                 }
             },
             {
@@ -258,10 +259,10 @@ export class Locations {
                 fish: [34, 35, 36, 48, 52],
                 cost: 0,
                 unlockLevel: 99,
-                description: 'A forgotten tropical lagoon beyond the charts — celestial glow, an ancient wreck, and every wondrous creature his father once described. The Starfish remembered the way home.',
+                description: 'A forgotten tropical lagoon beyond the charts — crystal-blue water, an ancient wreck, and every wondrous creature his father once described. The Starfish remembered the way home.',
                 briefTheme: 'crazycatch-cove',
                 tagline: 'Where his father\'s stories began',
-                waterBodyType: 'OCEAN',
+                waterBodyType: 'LAKE',
                 platformType: 'LARGE_BOAT',
                 requiresPostStarfishGuide: true,
                 comingSoon: true,

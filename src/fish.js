@@ -10,6 +10,7 @@ import {
     isStarfishReunionEncounter,
     resolveLocationFishIds
 } from './config/starfishEncounter.js';
+import { applyElusiveLegendaryPoolFilter } from './config/elusiveLegendaries.js';
 import { debugLog } from './config/debug.js';
 import { getCatchSplashDuration } from './splash.js';
 
@@ -166,7 +167,12 @@ export class Fish {
             
             if (locations) {
                 currentLocation = locations.getCurrentLocation();
-                availableFishIds = resolveLocationFishIds(currentLocation, player);
+                availableFishIds = applyElusiveLegendaryPoolFilter(
+                    resolveLocationFishIds(currentLocation, player),
+                    currentLocation,
+                    player,
+                    locations.getCurrentLocationIndex?.() ?? -1
+                );
             }
             
             if (availableFishIds.length === 0) {
@@ -839,7 +845,12 @@ export class Fish {
             
             if (locations) {
                 currentLocation = locations.getCurrentLocation();
-                availableFishIds = resolveLocationFishIds(currentLocation, player);
+                availableFishIds = applyElusiveLegendaryPoolFilter(
+                    resolveLocationFishIds(currentLocation, player),
+                    currentLocation,
+                    player,
+                    locations.getCurrentLocationIndex?.() ?? -1
+                );
             }
             debugLog('[FISH] spawnFish selecting fish - location:', currentLocation?.name, 'ids:', availableFishIds);
             

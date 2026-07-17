@@ -1,7 +1,11 @@
 import { CELESTIAL_DEPTHS_LOCATION_INDEX, HIDDEN_RELICS } from '../config/hiddenRelics.js';
 import { CORTEZ_BACKWATERS_LOCATION_INDEX } from '../config/cortezBackwaters.js';
-import { LOUISIANA_BAYOU_LOCATION_INDEX, CONGO_RIVER_LOCATION_INDEX } from '../config/storyLocations.js';
-import { CONGO_RIVER_NAME } from '../locations.js';
+import {
+    LOUISIANA_BAYOU_LOCATION_INDEX,
+    CONGO_RIVER_LOCATION_INDEX,
+    CRAZYCATCH_COVE_LOCATION_INDEX
+} from '../config/storyLocations.js';
+import { CONGO_RIVER_NAME, CRAZYCATCH_COVE_NAME } from '../locations.js';
 import { STARFISH_ID } from '../config/starfishEncounter.js';
 import { collectHiddenRelic } from '../hiddenRelics.js';
 import { AMAZON_DEPTHS_NAME } from '../locations.js';
@@ -94,6 +98,7 @@ export function initStoryTestPanel(game) {
         <button type="button" data-action="bayou">Go to Louisiana Bayou</button>
         <button type="button" data-action="congo">Go to Congo River</button>
         <button type="button" data-action="congo-portrait">Congo portrait pan (face Halley)</button>
+        <button type="button" data-action="starfall">Go to Starfall Lagoon</button>
         <button type="button" data-action="reset-starfish">Reset Starfish (first catch)</button>
         <div class="story-test-panel-section">Amazon Depths</div>
         <button type="button" data-action="spawn-anaconda">Spawn anaconda shadow</button>
@@ -174,6 +179,19 @@ export function initStoryTestPanel(game) {
             player.save({ skipSync: true });
             jumpToLocation(game, CONGO_RIVER_LOCATION_INDEX);
             ui.showBannerNotification?.('Congo River — green river flowing downstream from the big boat.', '#86efac', 4200);
+            return;
+        }
+
+        if (action === 'starfall') {
+            grantStarfishCaught(player, game.fishCollection);
+            player.fatherJournalReceived = true;
+            player.save({ skipSync: true });
+            jumpToLocation(game, CRAZYCATCH_COVE_LOCATION_INDEX);
+            ui.showBannerNotification?.(
+                `${CRAZYCATCH_COVE_NAME} — crystal lagoon preview from The Shooting Star.`,
+                '#7dd3fc',
+                4200
+            );
             return;
         }
 

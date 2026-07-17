@@ -3,7 +3,7 @@ import { ACHIEVEMENTS, evaluateAchievements as evaluateAchievementDefs, getAchie
 import { replayStoryPrologue } from './prologue.js';
 import { STARLIGHT_LURE_IMAGE, isStarlightLureBait } from './config/hiddenRelics.js';
 import { isCelestialStarfishHook, STARFISH_FIRST_CATCH_BANNER, STARFISH_FIRST_CATCH_NARRATION, STARFISH_FIRST_CATCH_QUOTE, STARFISH_GUIDE_COMING_SOON, STARFISH_GUIDE_DESTINATIONS_HEADLINE, STARFISH_GUIDE_DESTINATIONS_BODY, STARFISH_GUIDE_DESTINATIONS_OPEN } from './config/starfishEncounter.js';
-import { canAccessCortezBackwaters, CORTEZ_BACKWATERS_LOCATION_INDEX } from './config/cortezBackwaters.js';
+import { CORTEZ_BACKWATERS_LOCATION_INDEX } from './config/cortezBackwaters.js';
 import {
     CONGO_RIVER_NAME,
     CORTEZ_BACKWATERS_NAME,
@@ -23,7 +23,8 @@ import {
     getPendingArrivalChapter,
     getChapterTravelLocationIndex,
     resolveChapterTravelOffer,
-    notifyPendingStoryTravelUnlock
+    notifyPendingStoryTravelUnlock,
+    hasCompletedChapter
 } from './storyProgress.js';
 import { POST_STARFISH_CHAPTERS, JOURNEY_COMPLETE_BEATS, CELESTIAL_FIRST_CAST_NARRATION } from './config/storyChapters.js';
 import { getFishImagePaths, getRelicImagePaths } from './utils/imageAssets.js';
@@ -3164,7 +3165,7 @@ export class UI {
         this.refreshLocationUnlocks();
 
         locations.forEach((location, index) => {
-            const isComingSoon = isComingSoonLocation(location);
+            const isComingSoon = isComingSoonLocation(location, this.player);
             const isUnlocked = this.player.locationUnlocks.includes(index);
             if (!isUnlocked && !isComingSoon && !hasPrivilegedAccess(this.player)) {
                 return;
@@ -3274,7 +3275,7 @@ export class UI {
         const currentLocationIndex = this.game.locations.getCurrentLocationIndex();
 
         locations.forEach((location, index) => {
-            const isComingSoon = isComingSoonLocation(location);
+            const isComingSoon = isComingSoonLocation(location, this.player);
             const isUnlocked = this.player.locationUnlocks.includes(index);
             if (!isUnlocked && !isComingSoon && !hasPrivilegedAccess(this.player)) {
                 return;
@@ -3360,7 +3361,7 @@ export class UI {
             return;
         }
 
-        if (isComingSoonLocation(location) && !hasPrivilegedAccess(this.player)) {
+        if (isComingSoonLocation(location, this.player) && !hasPrivilegedAccess(this.player)) {
             this.showToast({
                 type: 'info',
                 title: 'Coming Soon',
@@ -3370,11 +3371,21 @@ export class UI {
             return;
         }
 
-        if (location.requiresStarfishCatch && !hasPrivilegedAccess(this.player) && !canAccessCortezBackwaters(this.player)) {
+        if (location.requiresStarfishCatch && !hasPrivilegedAccess(this.player) && !this.player.locationUnlocks.includes(locationIndex)) {
             this.showToast({
                 type: 'error',
-                title: 'Location locked',
-                body: 'Catch the Starfish of Eternity at the Celestial Depths to unlock Cortez Backwaters and Louisiana Bayou.'
+                title: 'Journal shore locked',
+                body: 'Finish the Starfish memory chapter — then fill each catalog to open the next shore.'
+            });
+            this.syncLocationSelectorValue();
+            return;
+        }
+
+        if (location.requiresPostStarfishGuide && !hasPrivilegedAccess(this.player) && !this.player.locationUnlocks.includes(locationIndex)) {
+            this.showToast({
+                type: 'error',
+                title: 'Journal shore locked',
+                body: 'Catch every fish at the previous shore to open this destination.'
             });
             this.syncLocationSelectorValue();
             return;
@@ -3544,8 +3555,12 @@ export class UI {
             clearTimeout(this.biteDelayTimer);
             this.biteDelayTimer = null;
         }
+        if (this._celestialBitePollId) {
+            clearTimeout(this._celestialBitePollId);
+            this._celestialBitePollId = null;
+        }
     }
-    
+
     startBiteDetection() {
         if (!this.player || !this.game?.locations) {
             console.warn('[UI] Player or locations not available for bite detection');
@@ -3557,68 +3572,125 @@ export class UI {
             console.warn('[UI] Bite detection blocked — Celestial Depths is locked');
             return;
         }
-        
+
+        /*
+         * Starfish only answers once the Starlight Lure has sunk
+         * all the way to its resting depth.
+         */
+        if (currentLocation?.waterBodyType === 'CELESTIAL') {
+            this.startCelestialStarfishBiteDetection();
+            return;
+        }
+
         const castButton = document.getElementById('cast-button');
-        
+
         // Import bite detection
         import('./biteDetection.js').then(({ calculateBiteTiming, getReactionTimeWindow }) => {
             this.clearBiteDelayTimer();
             const { min, max } = calculateBiteTiming();
             const biteTime = min + Math.random() * (max - min);
-            
+
             console.log(`[UI] Fish will bite in ${(biteTime / 1000).toFixed(1)}s`);
-            
+
             this.waitingForBite = true;
             castButton.disabled = false;
             castButton.setAttribute('aria-disabled', 'true');
-            
+
             this.biteDelayTimer = setTimeout(async () => {
                 this.biteDelayTimer = null;
                 if (!this.waitingForBite) return;
 
-                const currentLocation = this.game.locations.getCurrentLocation();
-
-                try {
-                    const { rollStoryRelicDiscovery } = await import('./hiddenRelics.js');
-                    const locationIndex = this.game.locations.getCurrentLocationIndex();
-                    const relic = rollStoryRelicDiscovery(
-                        this.player,
-                        currentLocation?.name,
-                        locationIndex
-                    );
-
-                    if (relic) {
-                        console.log('[UI] Relic discovery at', currentLocation?.name, '→', relic.id);
-                        this.handleRelicDiscovery(relic);
-                        return;
-                    }
-                } catch (error) {
-                    console.warn('[UI] Relic discovery check failed:', error);
-                }
-                
-                // Fish strikes!
-                this.resetWaitingSpamTracking();
-                this.biteStrikeTime = Date.now();
-                this.handleFishBite();
-                
-                // Auto-fail if player doesn't react in time
-                let reactionWindow = getReactionTimeWindow();
-                if (currentLocation?.waterBodyType === 'CELESTIAL') {
-                    reactionWindow = Math.max(reactionWindow, 8000);
-                    console.log('[UI] Celestial Depths reaction window extended to', reactionWindow, 'ms');
-                }
-                this.autoFailTimer = setTimeout(() => {
-                    if (!this.hookSetSuccess && this.biteStrikeTime) {
-                        this.handleMiss('Too slow! Fish got away!');
-                    }
-                }, reactionWindow);
-                
+                await this.triggerScheduledBite(getReactionTimeWindow);
             }, biteTime);
         }).catch(error => {
             console.error('[UI] Failed to load bite detection:', error);
             // Fallback: hook immediately
             this.handleFishBite();
         });
+    }
+
+    startCelestialStarfishBiteDetection() {
+        const castButton = document.getElementById('cast-button');
+        this.clearBiteDelayTimer();
+        this.waitingForBite = true;
+        if (castButton) {
+            castButton.disabled = false;
+            castButton.setAttribute('aria-disabled', 'true');
+        }
+
+        console.log('[UI] Celestial Depths — waiting for Starlight Lure to reach depth before bite');
+
+        const pollForDepth = () => {
+            this._celestialBitePollId = null;
+            if (!this.waitingForBite) {
+                return;
+            }
+
+            if (!this.fishing?.isStarlightLureFullySunk?.()) {
+                this._celestialBitePollId = setTimeout(pollForDepth, 120);
+                return;
+            }
+
+            import('./biteDetection.js').then(({ getReactionTimeWindow }) => {
+                if (!this.waitingForBite) {
+                    return;
+                }
+                // Brief settle after the lure reaches the deep.
+                const settleMs = 700 + Math.random() * 1600;
+                console.log(
+                    `[UI] Starlight Lure at depth — Starfish bite in ${(settleMs / 1000).toFixed(1)}s`
+                );
+                this.biteDelayTimer = setTimeout(async () => {
+                    this.biteDelayTimer = null;
+                    if (!this.waitingForBite) return;
+                    await this.triggerScheduledBite(getReactionTimeWindow);
+                }, settleMs);
+            }).catch((error) => {
+                console.error('[UI] Failed to load bite detection for Celestial:', error);
+                this.handleFishBite();
+            });
+        };
+
+        this._celestialBitePollId = setTimeout(pollForDepth, 120);
+    }
+
+    async triggerScheduledBite(getReactionTimeWindow) {
+        const currentLocation = this.game.locations.getCurrentLocation();
+
+        try {
+            const { rollStoryRelicDiscovery } = await import('./hiddenRelics.js');
+            const locationIndex = this.game.locations.getCurrentLocationIndex();
+            const relic = rollStoryRelicDiscovery(
+                this.player,
+                currentLocation?.name,
+                locationIndex
+            );
+
+            if (relic) {
+                console.log('[UI] Relic discovery at', currentLocation?.name, '→', relic.id);
+                this.handleRelicDiscovery(relic);
+                return;
+            }
+        } catch (error) {
+            console.warn('[UI] Relic discovery check failed:', error);
+        }
+
+        // Fish strikes!
+        this.resetWaitingSpamTracking();
+        this.biteStrikeTime = Date.now();
+        this.handleFishBite();
+
+        // Auto-fail if player doesn't react in time
+        let reactionWindow = getReactionTimeWindow();
+        if (currentLocation?.waterBodyType === 'CELESTIAL') {
+            reactionWindow = Math.max(reactionWindow, 8000);
+            console.log('[UI] Celestial Depths reaction window extended to', reactionWindow, 'ms');
+        }
+        this.autoFailTimer = setTimeout(() => {
+            if (!this.hookSetSuccess && this.biteStrikeTime) {
+                this.handleMiss('Too slow! Fish got away!');
+            }
+        }, reactionWindow);
     }
     
     handleRelicDiscovery(relic) {
@@ -3946,10 +4018,30 @@ export class UI {
             ? `<p class="story-chapter-unlock">${unlockNote}</p>`
             : '';
 
+        const imageSrc = chapter.image || options.image || '';
+        const imageFallback = chapter.imageFallback || options.imageFallback || imageSrc;
+        const imageAlt = chapter.imageAlt || options.imageAlt || chapter.title || 'Story illustration';
+        const imageHtml = imageSrc
+            ? `<figure class="story-chapter-figure">
+                <img
+                    class="story-chapter-image"
+                    src="${imageSrc}"
+                    alt="${imageAlt}"
+                    decoding="async"
+                    onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${imageFallback}';}"
+                >
+               </figure>`
+            : '';
+
+        if (imageSrc) {
+            card.classList.add('story-chapter-card--illustrated');
+        }
+
         card.innerHTML = `
             <div class="story-chapter-scroll">
                 <p class="story-chapter-eyebrow">Chapter</p>
                 <h2 class="story-chapter-title">${chapter.title}</h2>
+                ${imageHtml}
                 <div class="story-chapter-body">${narration}</div>
                 ${halleyLine}
                 ${fatherLine}
@@ -3967,16 +4059,36 @@ export class UI {
         const finish = (shouldTravel = false) => {
             overlay.remove();
             card.remove();
+
+            const runFinish = () => {
+                this.player?.syncStoryUnlocks?.();
+                this.updateLocationSelector?.();
+                options.onComplete?.();
+
+                const travelIndex = typeof options.travelLocationIndex === 'number'
+                    ? options.travelLocationIndex
+                    : (typeof chapter.unlocksLocationIndex === 'number'
+                        ? chapter.unlocksLocationIndex
+                        : null);
+
+                if (
+                    shouldTravel
+                    && travelIndex != null
+                    && this.player?.locationUnlocks?.includes?.(travelIndex)
+                ) {
+                    window.setTimeout(() => {
+                        this.executeLocationTravel(travelIndex, { skipArrivalChapter: false });
+                    }, 400);
+                }
+            };
+
             if (chapter.id && this.player) {
                 import('./hiddenRelics.js').then(({ markChapterComplete }) => {
                     markChapterComplete(this.player, chapter.id);
-                });
-            }
-            options.onComplete?.();
-            if (shouldTravel && typeof options.travelLocationIndex === 'number') {
-                window.setTimeout(() => {
-                    this.executeLocationTravel(options.travelLocationIndex, { skipArrivalChapter: false });
-                }, 400);
+                    runFinish();
+                }).catch(() => runFinish());
+            } else {
+                runFinish();
             }
         };
 
@@ -4069,6 +4181,11 @@ export class UI {
             this.fishing.bobber.userData.biteStrikeTime =
                 this.fishing.sceneRef?.clock?.elapsedTime || Date.now() / 1000;
 
+            // Deep Starlight flash so the faded lure wakes up for SET HOOK
+            if (this.fishing.starlightActive) {
+                this.fishing.bobber.userData.starlightBiteFlash = true;
+            }
+
             // Ripple visuals only
             if (this.fishing.splash && this.fishing.bobber) {
                 this.fishing.splash.triggerRipple(this.fishing.bobber.position);
@@ -4153,6 +4270,7 @@ export class UI {
                         this.fishing.setFishOnLine(true);
                         this.fishing.isReeling = true;
                         if (starfishReunion) {
+                            this.fishing.beginStarlightAscension?.();
                             this.fishing.cat?.playIdle?.();
                             this.showBannerNotification?.(
                                 'The line breathes with a steady, shared pulse…',
@@ -4230,6 +4348,7 @@ export class UI {
         if (this.fishing) {
             this.fishing.isCasting = false;
             this.fishing.isReeling = false;
+            this.fishing.endStarlightAscension?.();
             this.fishing.setFishOnLine(false);
             if (this.fishing.bobber) {
                 this.fishing.bobber.visible = false;
@@ -4363,6 +4482,66 @@ export class UI {
             }
 
             const locationIndex = this.game?.locations?.getCurrentLocationIndex?.() ?? -1;
+            const unlocksBefore = new Set(this.player.locationUnlocks || []);
+
+            // Catalog unlocks for the next journal shore happen after unlockFish below.
+            const checkPostStarfishCatalogUnlocks = () => {
+                this.player.syncStoryUnlocks();
+                this.updateLocationSelector?.();
+                const unlocksAfter = this.player.locationUnlocks || [];
+                const newlyOpened = unlocksAfter.filter((index) => !unlocksBefore.has(index));
+
+                if (newlyOpened.includes(LOUISIANA_BAYOU_LOCATION_INDEX)) {
+                    this.player.louisianaBayouComplete = true;
+                    window.setTimeout(() => {
+                        this.showBannerNotification(
+                            'Louisiana Bayou opens — courage waits beyond the mangroves.',
+                            '#86efac',
+                            4200
+                        );
+                        this.game?.showCatBark?.(
+                            'Every fish in Cortez… Now the bayou, Dad. Just like we promised.',
+                            3200
+                        );
+                    }, 1800);
+                } else if (newlyOpened.includes(CONGO_RIVER_LOCATION_INDEX)) {
+                    this.player.congoRiverComplete = true;
+                    window.setTimeout(() => {
+                        this.showBannerNotification(
+                            'Congo River opens — endurance on the greatest current.',
+                            '#86efac',
+                            4200
+                        );
+                        this.game?.showCatBark?.(
+                            'The bayou catalog is full. The Congo is calling.',
+                            3000
+                        );
+                    }, 1800);
+                } else if (newlyOpened.includes(CRAZYCATCH_COVE_LOCATION_INDEX)) {
+                    this.player.crazyCatchCoveComplete = true;
+                    window.setTimeout(() => {
+                        this.showBannerNotification(
+                            'Starfall Lagoon opens — the greatest treasure of them all.',
+                            '#fcd34d',
+                            4800
+                        );
+                        this.game?.showCatBark?.(
+                            'I found the way to your stories, Dad.',
+                            3200
+                        );
+                    }, 1800);
+                }
+
+                const shoreIndex = this.game?.locations?.getCurrentLocationIndex?.() ?? locationIndex;
+                const shore = this.game?.locations?.getCurrentLocation?.() || currentLocation;
+                const revealed = this.player.maybeRevealElusiveLegendary?.(shoreIndex, shore);
+                if (revealed) {
+                    window.setTimeout(() => {
+                        this.showBannerNotification(revealed.revealBanner, '#fcd34d', 4800);
+                        this.game?.showCatBark?.(revealed.revealBark, 3200);
+                    }, 2200);
+                }
+            };
 
             if (
                 fishId === TARPON_FISH_ID
@@ -4373,47 +4552,15 @@ export class UI {
                 this.player.syncStoryUnlocks();
                 window.setTimeout(() => {
                     this.showStoryChapterWithTravelOffer(POST_STARFISH_CHAPTERS.chapter_11_journal, {
-                        primaryLabel: 'Travel to Louisiana Bayou'
+                        primaryLabel: 'Continue'
                     });
                 }, 5200);
-            } else if (
-                locationIndex === LOUISIANA_BAYOU_LOCATION_INDEX
-                && !this.player.louisianaBayouComplete
-            ) {
-                this.player.louisianaBayouComplete = true;
-                this.player.syncStoryUnlocks();
-                const beat = JOURNEY_COMPLETE_BEATS.louisiana_bayou;
-                window.setTimeout(() => {
-                    this.showBannerNotification(beat.banner, '#86efac', 3600);
-                    this.game?.showCatBark?.(beat.halleyLine, 3000);
-                }, 4200);
-            } else if (
-                locationIndex === CONGO_RIVER_LOCATION_INDEX
-                && !this.player.congoRiverComplete
-            ) {
-                this.player.congoRiverComplete = true;
-                this.player.syncStoryUnlocks();
-                const beat = JOURNEY_COMPLETE_BEATS.congo_river;
-                window.setTimeout(() => {
-                    this.showBannerNotification(beat.banner, '#86efac', 3600);
-                    this.game?.showCatBark?.(beat.halleyLine, 3000);
-                }, 4200);
-            } else if (
-                locationIndex === CRAZYCATCH_COVE_LOCATION_INDEX
-                && !this.player.crazyCatchCoveComplete
-            ) {
-                this.player.crazyCatchCoveComplete = true;
-                this.player.syncStoryUnlocks();
-                const beat = JOURNEY_COMPLETE_BEATS.crazycatch_cove;
-                window.setTimeout(() => {
-                    this.showBannerNotification(beat.banner, '#fcd34d', 3600);
-                    this.game?.showCatBark?.(beat.halleyLine, 3000);
-                }, 4200);
             }
             
             // Check if first catch of this fish
             const isFirstCatch = this.fishCollection.unlockFish(fishId);
             this.player.unlockFish?.(fishId);
+            checkPostStarfishCatalogUnlocks();
             
             // Add to player catch tracking (returns unlocks if leveled up)
             const newUnlocks = this.player.addCatch({
@@ -4533,13 +4680,15 @@ export class UI {
                 this.fishing.beginStarfishFirstCatchCelebration({
                     duration: 4.5,
                     catDuration: 4.5,
-                    scale: 3.4,
-                    sprite: 3.0,
-                    baseOpacity: 0.98,
-                    coreOpacity: 1.0,
-                    spriteOpacity: 1.0,
-                    opacityBoost: 2.4
+                    scale: 8,
+                    sprite: 10,
+                    baseOpacity: 0.42,
+                    coreOpacity: 0.55,
+                    spriteOpacity: 0.9,
+                    opacityBoost: 1.7
                 });
+            } else {
+                this.fishing?.endStarlightAscension?.();
             }
 
             const starfishPopupDelay = isFirstStarfishCatch ? 4500 : 1900;
@@ -4762,7 +4911,7 @@ export class UI {
                         this.pendingAchievementCheck = false;
                         this.evaluateAchievements('catch');
                     }
-                    if (isFirstStarfishCatch) {
+                    if (!hasCompletedChapter(this.player, 'chapter_9_starfish')) {
                         window.setTimeout(() => {
                             this.showStoryChapterWithTravelOffer(POST_STARFISH_CHAPTERS.chapter_9_starfish, {
                                 primaryLabel: 'Return to Cortez Backwaters'

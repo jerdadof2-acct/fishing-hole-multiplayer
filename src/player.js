@@ -15,9 +15,14 @@ import {
 import { CORTEZ_BACKWATERS_LOCATION_INDEX } from './config/cortezBackwaters.js';
 import {
     LOUISIANA_BAYOU_LOCATION_INDEX,
+    CONGO_RIVER_LOCATION_INDEX,
+    CRAZYCATCH_COVE_LOCATION_INDEX,
     isComingSoonLocationIndex
 } from './config/storyLocations.js';
-import { STARFISH_ID } from './config/starfishEncounter.js';
+import {
+    canSpawnElusiveLegendary,
+    getElusiveLegendaryGate
+} from './config/elusiveLegendaries.js';
 import { LOCATION_LAYOUT_VERSION, migrateLocationSaveData } from './locationMigration.js';
 import { Locations } from './locations.js';
 import { reconcileStoryLocationUnlocks } from './storyProgress.js';
@@ -152,6 +157,10 @@ export class Player {
         this.celestialFirstCastNarrationSeen = false;
         /** Location index from a story chapter when level blocked travel */
         this.pendingStoryTravelIndex = null;
+        /** @type {Record<string, number>} casts per location index (journal legendary gates) */
+        this.locationCastCounts = {};
+        /** @type {string[]} elusive legendary gate ids already announced */
+        this.elusiveLegendaryRevealed = [];
         /** @type {Record<string, number>} legacy pity tracker */
         this.relicCastAttempts = {};
 
@@ -512,6 +521,8 @@ export class Player {
                 crazyCatchCoveComplete: this.crazyCatchCoveComplete,
                 celestialFirstCastNarrationSeen: this.celestialFirstCastNarrationSeen,
                 pendingStoryTravelIndex: this.pendingStoryTravelIndex,
+                locationCastCounts: this.locationCastCounts,
+                elusiveLegendaryRevealed: this.elusiveLegendaryRevealed,
                 relicCastAttempts: this.relicCastAttempts,
                 hasSeenGameplayOnboarding: this.hasSeenGameplayOnboarding === true,
                 energy: this.energy,
@@ -767,6 +778,12 @@ export class Player {
                 this.pendingStoryTravelIndex = Number.isInteger(playerData.pendingStoryTravelIndex)
                     ? playerData.pendingStoryTravelIndex
                     : null;
+                this.locationCastCounts = playerData.locationCastCounts && typeof playerData.locationCastCounts === 'object'
+                    ? playerData.locationCastCounts
+                    : {};
+                this.elusiveLegendaryRevealed = Array.isArray(playerData.elusiveLegendaryRevealed)
+                    ? playerData.elusiveLegendaryRevealed
+                    : [];
                 this.relicCastAttempts = playerData.relicCastAttempts && typeof playerData.relicCastAttempts === 'object'
                     ? playerData.relicCastAttempts
                     : {};
@@ -871,6 +888,60 @@ export class Player {
         this.save({ skipSync: true });
     }
 
+    getLocationCastCount(locationIndex) {
+        if (!this.locationCastCounts || typeof this.locationCastCounts !== 'object') {
+            return 0;
+        }
+        const value = this.locationCastCounts[String(locationIndex)]
+            ?? this.locationCastCounts[locationIndex];
+        return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+    }
+
+    /**
+     * Count a cast at a journal shore. Returns the elusive legendary gate
+     * the first time it becomes spawnable (for a one-shot reveal banner).
+     * @param {number} locationIndex
+     * @param {{ fish?: number[], name?: string }|null} [location]
+     * @returns {import('./config/elusiveLegendaries.js').ElusiveLegendaryGate|null}
+     */
+    recordLocationCast(locationIndex, location = null) {
+        if (!Number.isInteger(locationIndex) || locationIndex < 0) {
+            return null;
+        }
+        if (!this.locationCastCounts || typeof this.locationCastCounts !== 'object') {
+            this.locationCastCounts = {};
+        }
+        const key = String(locationIndex);
+        this.locationCastCounts[key] = this.getLocationCastCount(locationIndex) + 1;
+        this.save({ skipSync: true });
+        return this.maybeRevealElusiveLegendary(locationIndex, location);
+    }
+
+    /**
+     * One-shot reveal when cast + catalog gates first both pass.
+     * @param {number} locationIndex
+     * @param {{ fish?: number[], name?: string }|null} [location]
+     * @returns {import('./config/elusiveLegendaries.js').ElusiveLegendaryGate|null}
+     */
+    maybeRevealElusiveLegendary(locationIndex, location = null) {
+        const gate = getElusiveLegendaryGate(location, locationIndex);
+        if (!gate) {
+            return null;
+        }
+        if (!Array.isArray(this.elusiveLegendaryRevealed)) {
+            this.elusiveLegendaryRevealed = [];
+        }
+        if (this.elusiveLegendaryRevealed.includes(gate.name)) {
+            return null;
+        }
+        if (!canSpawnElusiveLegendary(this, location, gate, locationIndex)) {
+            return null;
+        }
+        this.elusiveLegendaryRevealed.push(gate.name);
+        this.save({ skipSync: true });
+        return gate;
+    }
+
     unlockStarlightLure() {
         if (!this.tackleUnlocks?.baits) return;
         if (!this.tackleUnlocks.baits.includes(STARLIGHT_LURE_BAIT_ID)) {
@@ -911,14 +982,18 @@ export class Player {
 
         const cortezIdx = CORTEZ_BACKWATERS_LOCATION_INDEX;
         if (
-            (this.currentLocationIndex === cortezIdx
-                || this.currentLocationIndex === LOUISIANA_BAYOU_LOCATION_INDEX)
-            && !this.isFishUnlocked(STARFISH_ID)
+            (
+                this.currentLocationIndex === cortezIdx
+                || this.currentLocationIndex === LOUISIANA_BAYOU_LOCATION_INDEX
+                || this.currentLocationIndex === CONGO_RIVER_LOCATION_INDEX
+                || this.currentLocationIndex === CRAZYCATCH_COVE_LOCATION_INDEX
+            )
+            && !this.locationUnlocks.includes(this.currentLocationIndex)
         ) {
             this.currentLocationIndex = this.locationUnlocks[0] ?? 0;
         }
 
-        if (isComingSoonLocationIndex(this.currentLocationIndex)) {
+        if (isComingSoonLocationIndex(this.currentLocationIndex, this)) {
             this.currentLocationIndex = this.locationUnlocks[0] ?? 0;
         }
 

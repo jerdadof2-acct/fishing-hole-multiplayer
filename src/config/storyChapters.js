@@ -18,7 +18,10 @@ import {
  *   halleyLine?: string,
  *   fatherLine?: string,
  *   unlocksLocationMessage?: string,
- *   unlocksLocationIndex?: number
+ *   unlocksLocationIndex?: number,
+ *   image?: string,
+ *   imageFallback?: string,
+ *   imageAlt?: string
  * }} StoryChapter */
 
 /** @type {StoryChapter[]} */
@@ -178,10 +181,19 @@ export const POST_STARFISH_CHAPTERS = {
             'When Halley released the Starfish, he was not surrendering the greatest catch of his life.',
             'He was honoring the fisherman his father had raised him to become.',
             'The Starfish did not speak — yet Halley understood exactly what it wanted.',
-            'It wanted him to follow.'
+            'It wanted him to follow.',
+            'Ahead lay three shores that would test everything his father had taught him —',
+            'patience in the quiet currents, courage where fear waits in the fog, and endurance across waters that never grow small.',
+            'And beyond those trials, shining like a secret kept for a lifetime, waited the greatest treasure of them all:',
+            'Starfall Lagoon — the place where his father\'s impossible stories were born, and where Halley\'s own legend would finally begin.'
         ],
+        image: 'assets/images/halley-medallion-memory.webp',
+        imageFallback: 'assets/images/halley-medallion-memory.png',
+        imageAlt: 'Halley’s father giving him the glowing medallion on the dock at sunset',
         halleyLine: 'The comet may have started this journey. But you\'re the reason I was ready for it.',
-        fatherLine: null
+        fatherLine: null,
+        unlocksLocationMessage: 'Cortez Backwaters opens — the first shore on the path to Starfall Lagoon.',
+        unlocksLocationIndex: CORTEZ_BACKWATERS_LOCATION_INDEX
     },
     chapter_10_cortez: {
         id: 'chapter_10_cortez',
@@ -201,14 +213,14 @@ export const POST_STARFISH_CHAPTERS = {
         title: 'The Path Ahead',
         narration: [
             'The Starfish did not lead Halley straight to the end of the journey.',
-            'Three more shores still waited — a bayou of courage, a mighty river of determination,',
+            'Three more shores still waited — a bayou of courage, a mighty river of endurance,',
             'and a hidden lagoon from his father\'s stories, the place Halley had once believed was only imagination.',
+            'Each shore would open only when Halley had gathered every fish from the waters before it.',
             'The Starfish could show him the direction.',
             'Only Halley could complete the journey.'
         ],
         fatherLine: 'Looks like our old fishing stories still have a few chapters left.',
-        unlocksLocationMessage: 'Louisiana Bayou opens in the journal.',
-        unlocksLocationIndex: LOUISIANA_BAYOU_LOCATION_INDEX
+        unlocksLocationMessage: 'Fill the Cortez catalog — Louisiana Bayou opens when every fish there is caught.'
     },
     chapter_12_bayou: {
         id: 'chapter_12_bayou',

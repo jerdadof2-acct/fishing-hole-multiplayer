@@ -576,6 +576,89 @@ export function applyCortezBackwatersWaterColors(material) {
     );
 }
 
+/**
+ * Starfall Lagoon — crystal turquoise with a light deep-blue sky sheen.
+ */
+export const STARFALL_LAGOON_WATER_DEEP_HEX = 0x0a6f78;
+export const STARFALL_LAGOON_WATER_SHALLOW_HEX = 0x1aa6ad;
+export const STARFALL_LAGOON_WATER_FOG_HEX = 0x168f9c;
+
+export const STARFALL_LAGOON_WATER = {
+    deepColor: new THREE.Color(STARFALL_LAGOON_WATER_DEEP_HEX),
+    shallowColor: new THREE.Color(STARFALL_LAGOON_WATER_SHALLOW_HEX),
+    fogColor: new THREE.Color(STARFALL_LAGOON_WATER_FOG_HEX),
+    fogDepth: 10.0,
+    fogIntensity: 0.16,
+    turbidity: 0.02,
+    absorption: 0.18,
+    opacity: 0.62,
+    sparkleStrength: 0.16,
+    envIntensity: 0.52,
+    fresnelScale: 0.88,
+    waveScale: 0.55,
+    waveSpeed: 0.45,
+    waveAmplitude: 0.012,
+    rippleAmp: 0.02,
+    windScroll1: new THREE.Vector2(0.008, 0.004),
+    windScroll2: new THREE.Vector2(-0.005, 0.006)
+};
+
+/** Re-apply Starfall Lagoon crystal-blue low-reflection water. */
+export function applyStarfallLagoonWater(material) {
+    if (!material?.uniforms) {
+        return;
+    }
+    const w = STARFALL_LAGOON_WATER;
+    const u = material.uniforms;
+    u.uColorDeep.value.copy(w.deepColor);
+    u.uColorShallow.value.copy(w.shallowColor);
+    u.uFogColor.value.copy(w.fogColor);
+    u.uAbsorption.value = w.absorption;
+    u.uTurbidity.value = w.turbidity;
+    u.uOpacity.value = w.opacity;
+    u.uFogIntensity.value = w.fogIntensity;
+    u.uFogDepth.value = w.fogDepth;
+    if (u.uSparkleStrength) {
+        u.uSparkleStrength.value = w.sparkleStrength;
+    }
+    if (u.uFlatWater) {
+        u.uFlatWater.value = 0.0;
+    }
+    if (u.uOpaqueDeep) {
+        u.uOpaqueDeep.value = 0.0;
+    }
+    if (u.uHasLakeBed) {
+        u.uHasLakeBed.value = 1.0;
+    }
+    if (u.uEnvIntensity) {
+        u.uEnvIntensity.value = w.envIntensity;
+    }
+    if (u.uFresnelScale) {
+        u.uFresnelScale.value = w.fresnelScale;
+    }
+    if (u.uShallowBedMix) {
+        u.uShallowBedMix.value = 0.35;
+    }
+    if (u.waveScale) {
+        u.waveScale.value = w.waveScale;
+    }
+    if (u.waveSpeed) {
+        u.waveSpeed.value = w.waveSpeed;
+    }
+    if (u.waveAmplitude) {
+        u.waveAmplitude.value = w.waveAmplitude;
+    }
+    if (u.rippleAmp) {
+        u.rippleAmp.value = w.rippleAmp;
+    }
+    if (u.windScroll1) {
+        u.windScroll1.value.copy(w.windScroll1);
+    }
+    if (u.windScroll2) {
+        u.windScroll2.value.copy(w.windScroll2);
+    }
+}
+
 /** Re-apply locked Coral Kingdoms bay water to live shader uniforms. */
 export function applyCoralKingdomsWaterColors(material) {
     applyShallowBayWaterColors(

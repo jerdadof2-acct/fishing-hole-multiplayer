@@ -1,8 +1,10 @@
 # Starfall Lagoon — Location Design Brief
 
-**Status:** Planned (finale destination after Congo River)  
+**Status:** In progress (preview via Dev panel → Go to Starfall Lagoon)  
 **Display name:** Starfall Lagoon  
 **Internal id (saves):** still keyed as CrazyCatch Cove / `chapter_14_crazycatch` until a migration pass
+
+**Current preview:** crystal-blue low-reflection water, LARGE_BOAT (The Shooting Star), rocky bed, wrecks, comet-fragment glow, swimming glow-fish lights.
 
 ## Overview
 

@@ -5,7 +5,7 @@ import { Water2Lake } from './water2.js?v=20250625-anaconda-bark2';
 import { Grass } from './grass.js';
 import { Dock } from './dock.js';
 import { Platform } from './platform.js';
-import { Locations, AMAZON_DEPTHS_NAME, FROZEN_FJORDS_NAME, CORAL_KINGDOMS_NAME, CORTEZ_BACKWATERS_NAME, LOUISIANA_BAYOU_NAME, CONGO_RIVER_NAME, CRAGGY_COAST_NAME, STORMBREAKER_BAY_NAME, FORGOTTEN_REEFS_NAME, TWILIGHT_TRENCH_NAME, DESERT_LAGOON_NAME, SANDY_SHOALS_NAME } from './locations.js';
+import { Locations, AMAZON_DEPTHS_NAME, FROZEN_FJORDS_NAME, CORAL_KINGDOMS_NAME, CORTEZ_BACKWATERS_NAME, LOUISIANA_BAYOU_NAME, CONGO_RIVER_NAME, CRAZYCATCH_COVE_NAME, CRAGGY_COAST_NAME, STORMBREAKER_BAY_NAME, FORGOTTEN_REEFS_NAME, TWILIGHT_TRENCH_NAME, DESERT_LAGOON_NAME, SANDY_SHOALS_NAME } from './locations.js';
 import {
     SUN_SHADOW_ORTHO_BAYOU,
     SUN_SHADOW_ORTHO_DEFAULT
@@ -16,7 +16,6 @@ import {
     isDevFaceCameraEnabled
 } from './dev/devFaceCamera.js';
 import { scheduleInstallPromptWhenIdle } from './pwaInstall.js';
-import { canAccessCortezBackwaters } from './config/cortezBackwaters.js';
 import { hasPrivilegedAccess } from './admin/adminAuth.js';
 import { debugLog } from './config/debug.js';
 import { Fishing } from './fishing.js';
@@ -109,6 +108,12 @@ import {
     syncCortezDolphinVisibility,
     updateCortezDolphin
 } from './effects/cortezDolphin.js';
+import {
+    createStarfallLagoonScenery,
+    syncStarfallLagoonSceneryVisibility,
+    updateStarfallLagoonScenery,
+    applyStarfallWaterLook
+} from './effects/starfallLagoonScenery.js';
 
 export class Game {
     constructor(options = {}) {
@@ -167,6 +172,7 @@ export class Game {
         this.crescentPondVegetation = null;
         this.cortezMangroves = null;
         this.cortezDolphin = null;
+        this.starfallLagoonScenery = null;
         this.bayouCypress = null;
         this.bayouExtras = null;
         this.bayouWaterShadows = null;
@@ -590,6 +596,10 @@ export class Game {
             this.water.setCoralReefEnabled(this.locations.getCurrentLocation()?.name === CORAL_KINGDOMS_NAME);
             this.water.setCortezBackwatersEnabled(this.locations.getCurrentLocation()?.name === CORTEZ_BACKWATERS_NAME);
             this.water.setLouisianaBayouEnabled(this.locations.getCurrentLocation()?.name === LOUISIANA_BAYOU_NAME);
+            this.water.setStarfallLagoonEnabled(this.locations.getCurrentLocation()?.name === CRAZYCATCH_COVE_NAME);
+            if (this.locations.getCurrentLocation()?.name === CRAZYCATCH_COVE_NAME && this.water?.mesh?.material) {
+                applyStarfallWaterLook(this.water.mesh.material);
+            }
             this.water.setCongoRiverEnabled(this.locations.getCurrentLocation()?.name === CONGO_RIVER_NAME);
             this.water.setCraggyCoastEnabled(this.locations.getCurrentLocation()?.name === CRAGGY_COAST_NAME);
             this.water.setStormbreakerBayEnabled(this.locations.getCurrentLocation()?.name === STORMBREAKER_BAY_NAME);
@@ -677,6 +687,14 @@ export class Game {
             syncCortezDolphinVisibility(
                 this.cortezDolphin,
                 currentLocation.name === CORTEZ_BACKWATERS_NAME
+            );
+
+            this.starfallLagoonScenery = createStarfallLagoonScenery(this.scene.scene, {
+                waterLevel: this.water?.waterY ?? 0
+            });
+            syncStarfallLagoonSceneryVisibility(
+                this.starfallLagoonScenery,
+                currentLocation.name === CRAZYCATCH_COVE_NAME
             );
 
             loadingProgress.update(58, `Building ${currentLocation.name}...`);
@@ -1319,6 +1337,17 @@ export class Game {
                 delta,
                 isCortez,
                 { water: this.water }
+            );
+        }
+
+        const isStarfall =
+            this.locations?.getCurrentLocation()?.name === CRAZYCATCH_COVE_NAME;
+        if (this.starfallLagoonScenery && isStarfall) {
+            updateStarfallLagoonScenery(
+                this.starfallLagoonScenery,
+                this.scene.clock.getElapsedTime(),
+                delta,
+                isStarfall
             );
         }
 
@@ -2022,6 +2051,27 @@ export class Game {
                     color: 0xd8f5e8
                 }
             },
+            STARFALL: {
+                scene: {
+                    background: 0x3a8fd0,
+                    fogColor: 0x6eb4dc,
+                    fogNear: 38,
+                    fogFar: 200,
+                    hemisphereSkyColor: 0x9ad0f0,
+                    hemisphereGroundColor: 0x2a6a8a,
+                    hemisphereIntensity: 0.78,
+                    directionalColor: 0xfff4d8,
+                    directionalIntensity: 0.78,
+                    ambientColor: 0x8ec8e8,
+                    ambientIntensity: 0.4,
+                    rimIntensity: 0.07
+                },
+                waterParticles: {
+                    ...defaultParticleSettings,
+                    opacity: 0.28,
+                    color: 0xc8f0ff
+                }
+            },
             BAYOU: {
                 scene: {
                     fogColor: 0x5a6e58,
@@ -2138,6 +2188,8 @@ export class Game {
             ? 'CORAL'
             : location.name === CORTEZ_BACKWATERS_NAME
                 ? 'CORTEZ'
+                : location.name === CRAZYCATCH_COVE_NAME
+                    ? 'STARFALL'
                 : location.name === LOUISIANA_BAYOU_NAME
                     ? 'BAYOU'
                     : location.name === CONGO_RIVER_NAME
@@ -2151,6 +2203,7 @@ export class Game {
                             : waterType;
         const profile = profiles[profileKey] || profiles.DEFAULT;
         const skipHdriSky = location.name === STORMBREAKER_BAY_NAME
+            || location.name === CRAZYCATCH_COVE_NAME
             || isMoonlightLocation;
 
         if (this.scene?.setEnvironment) {
@@ -2401,13 +2454,23 @@ export class Game {
             return false;
         }
 
-        if (location.comingSoon && !hasPrivilegedAccess(this.player)) {
+        const targetIndex = this.locations?.locations?.indexOf?.(location) ?? -1;
+
+        if (
+            location.comingSoon
+            && !hasPrivilegedAccess(this.player)
+            && !this.player?.locationUnlocks?.includes?.(targetIndex)
+        ) {
             console.warn('[LOCATION SWITCH] Location not available yet:', location.name);
             return false;
         }
 
-        if (location.requiresStarfishCatch && !hasPrivilegedAccess(this.player) && !canAccessCortezBackwaters(this.player)) {
-            console.warn('[LOCATION SWITCH] Post-Starfish location locked — catch the Starfish of Eternity first');
+        if (
+            (location.requiresStarfishCatch || location.requiresPostStarfishGuide)
+            && !hasPrivilegedAccess(this.player)
+            && !this.player?.locationUnlocks?.includes?.(targetIndex)
+        ) {
+            console.warn('[LOCATION SWITCH] Post-Starfish location locked — finish the prior journal shores first');
             return false;
         }
         
@@ -2427,6 +2490,10 @@ export class Game {
         this.water.setCoralReefEnabled(location.name === CORAL_KINGDOMS_NAME);
         this.water.setCortezBackwatersEnabled(location.name === CORTEZ_BACKWATERS_NAME);
         this.water.setLouisianaBayouEnabled(location.name === LOUISIANA_BAYOU_NAME);
+        this.water.setStarfallLagoonEnabled(location.name === CRAZYCATCH_COVE_NAME);
+        if (location.name === CRAZYCATCH_COVE_NAME && this.water?.mesh?.material) {
+            applyStarfallWaterLook(this.water.mesh.material);
+        }
         this.water.setCongoRiverEnabled(location.name === CONGO_RIVER_NAME);
         this.water.setCraggyCoastEnabled(location.name === CRAGGY_COAST_NAME);
         this.water.setStormbreakerBayEnabled(location.name === STORMBREAKER_BAY_NAME);
@@ -2493,6 +2560,10 @@ export class Game {
         syncCortezDolphinVisibility(
             this.cortezDolphin,
             location.name === CORTEZ_BACKWATERS_NAME
+        );
+        syncStarfallLagoonSceneryVisibility(
+            this.starfallLagoonScenery,
+            location.name === CRAZYCATCH_COVE_NAME
         );
         this.applyLocationEnvironment(location);
         this.applyCelestialBaitPreference(location);

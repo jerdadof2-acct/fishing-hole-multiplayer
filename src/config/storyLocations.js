@@ -27,10 +27,44 @@ export function hasCaughtStarfish(player) {
     return player?.isFishUnlocked?.(STARFISH_ID) === true;
 }
 
-export function isComingSoonLocationIndex(locationIndex) {
-    return locationIndex === CRAZYCATCH_COVE_LOCATION_INDEX;
+/**
+ * True when every fish assigned to this location is in the player's catalog.
+ * @param {import('../player.js').Player|null|undefined} player
+ * @param {{ fish?: number[] }|null|undefined} location
+ */
+export function hasCaughtAllLocationFish(player, location) {
+    const fishIds = location?.fish;
+    if (!player || !Array.isArray(fishIds) || fishIds.length === 0) {
+        return false;
+    }
+    return fishIds.every((fishId) => player.isFishUnlocked?.(fishId) === true);
 }
 
-export function isComingSoonLocation(location) {
-    return location?.comingSoon === true;
+/**
+ * Only Starfall Lagoon uses the Coming Soon label.
+ * Congo River (and every other shore) is playable once unlocked.
+ */
+export function isComingSoonLocationIndex(locationIndex, player = null) {
+    if (locationIndex !== CRAZYCATCH_COVE_LOCATION_INDEX) {
+        return false;
+    }
+    if (player && Array.isArray(player.locationUnlocks)
+        && player.locationUnlocks.includes(CRAZYCATCH_COVE_LOCATION_INDEX)) {
+        return false;
+    }
+    return true;
+}
+
+export function isComingSoonLocation(location, player = null) {
+    if (!location?.comingSoon || location.name !== CRAZYCATCH_COVE_NAME) {
+        return false;
+    }
+    if (
+        player
+        && Array.isArray(player.locationUnlocks)
+        && player.locationUnlocks.includes(CRAZYCATCH_COVE_LOCATION_INDEX)
+    ) {
+        return false;
+    }
+    return true;
 }
