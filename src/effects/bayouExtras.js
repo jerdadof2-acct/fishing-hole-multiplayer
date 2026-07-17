@@ -2539,22 +2539,24 @@ const GATOR_TAIL_ATTACH_X =
     GATOR_TAIL_ROOT_LEN;
 
 /**
- * Locked motion profile — lifelike bayou swim / head-up as of Jul 2026.
- * Prefer mesh/shape work over changing these unless behavior regresses.
+ * Bayou gator swim — slow hip-led serpentine + soft whole-body turn arcs.
+ * Amplitudes are per-joint; the parented chain stacks toward the tip.
  */
-const GATOR_SWIM_FREQUENCY_MIN = 0.55;
-const GATOR_SWIM_FREQUENCY_MAX = 0.68;
-const GATOR_SWIM_FREQ_DRIVE_MIN = 0.72;
-const GATOR_SWIM_FREQ_DRIVE_MAX = 0.92;
-const GATOR_SWIM_TRAVEL_LAG = 3.15;
-const GATOR_SWIM_CHEST_AMP = 0.012;
-const GATOR_SWIM_ABDOMEN_AMP = 0.024;
-const GATOR_SWIM_PELVIS_AMP = 0.032;
-const GATOR_SWIM_TAIL_ROOT_AMP = 0.04;
-const GATOR_SWIM_TAIL_AMP_BASE = 0.045;
-const GATOR_SWIM_TAIL_AMP_TIP = 0.2;
-const GATOR_SWIM_TURN_BEND_MIN = 0.2;
-const GATOR_SWIM_TURN_BEND_MAX = 0.36;
+const GATOR_SWIM_FREQUENCY_MIN = 0.32;
+const GATOR_SWIM_FREQUENCY_MAX = 0.42;
+const GATOR_SWIM_FREQ_DRIVE_MIN = 0.78;
+const GATOR_SWIM_FREQ_DRIVE_MAX = 0.95;
+const GATOR_SWIM_TRAVEL_LAG = 3.85;
+const GATOR_SWIM_CHEST_AMP = 0.028;
+const GATOR_SWIM_ABDOMEN_AMP = 0.055;
+const GATOR_SWIM_PELVIS_AMP = 0.078;
+const GATOR_SWIM_TAIL_ROOT_AMP = 0.095;
+const GATOR_SWIM_TAIL_AMP_BASE = 0.09;
+const GATOR_SWIM_TAIL_AMP_TIP = 0.34;
+const GATOR_SWIM_TURN_BEND_MIN = 0.55;
+const GATOR_SWIM_TURN_BEND_MAX = 0.92;
+const GATOR_SWIM_TURN_BIAS_GAIN = 0.95;
+const GATOR_SWIM_TURN_BIAS_CLAMP = 0.48;
 const GATOR_HEADUP_DURATION_MIN = 4.5;
 const GATOR_HEADUP_DURATION_MAX = 8;
 const GATOR_HEADUP_RISE_MIN = -0.14;
@@ -3813,7 +3815,7 @@ function createBayouGator(random) {
 
         speed: THREE.MathUtils.lerp(0.72, 0.96, random()),
         turnSharpness: THREE.MathUtils.lerp(0.18, 0.28, random()),
-        yawTurnRate: THREE.MathUtils.lerp(0.24, 0.34, random()),
+        yawTurnRate: THREE.MathUtils.lerp(0.16, 0.24, random()),
         swimFrequency: THREE.MathUtils.lerp(
             GATOR_SWIM_FREQUENCY_MIN,
             GATOR_SWIM_FREQUENCY_MAX,
@@ -4202,8 +4204,8 @@ function updateGator(
                         drive
                     )
                     : THREE.MathUtils.lerp(
-                        0.36,
-                        0.7,
+                        0.48,
+                        0.82,
                         drive
                     );
 
@@ -4221,31 +4223,32 @@ function updateGator(
             gator.rotation.y,
             desiredYaw
         );
+        // Stronger bias so the spine arcs into the turn instead of staying rigid.
         const turnTarget = THREE.MathUtils.clamp(
-            yawError * 0.45,
-            -0.22,
-            0.22
+            yawError * GATOR_SWIM_TURN_BIAS_GAIN,
+            -GATOR_SWIM_TURN_BIAS_CLAMP,
+            GATOR_SWIM_TURN_BIAS_CLAMP
         );
         const turnSmooth =
-            1 - Math.exp(-3.6 * delta);
+            1 - Math.exp(-2.8 * delta);
 
         smoothedTurnBias +=
             (turnTarget - smoothedTurnBias) * turnSmooth;
     } else {
         const turnDecay =
-            1 - Math.exp(-4 * delta);
+            1 - Math.exp(-3.2 * delta);
 
         smoothedTurnBias *= 1 - turnDecay;
     }
 
     data.smoothedTurnBias = smoothedTurnBias;
 
-    // Slow traveling S-curve: hips lead, tip follows — snake undulation, not a whip.
+    // Slow traveling S-curve: hips lead, tip follows — lazy alligator undulation.
     const wavePhase = phase;
     const travelLag = GATOR_SWIM_TRAVEL_LAG;
 
-    const headTurnLead = smoothedTurnBias * 0.5;
-    // Soft arc into the turn (additive on top of the wave — does not clamp serpentine).
+    const headTurnLead = smoothedTurnBias * 0.62;
+    // Soft C-curve into the turn (additive on top of the wave).
     // Aft bones use the opposite local sign because the chain runs down -X.
     const turnBend =
         -smoothedTurnBias *
@@ -4259,29 +4262,29 @@ function updateGator(
         Math.sin(wavePhase) *
             GATOR_SWIM_CHEST_AMP *
             activeDrive +
-        turnBend * 0.1;
+        turnBend * 0.22;
 
     const abdomenYaw =
-        Math.sin(wavePhase - travelLag * 0.16) *
+        Math.sin(wavePhase - travelLag * 0.18) *
             GATOR_SWIM_ABDOMEN_AMP *
             activeDrive +
-        turnBend * 0.28;
+        turnBend * 0.42;
 
     const pelvisYaw =
-        Math.sin(wavePhase - travelLag * 0.28) *
+        Math.sin(wavePhase - travelLag * 0.32) *
             GATOR_SWIM_PELVIS_AMP *
             activeDrive +
-        turnBend * 0.48;
+        turnBend * 0.68;
 
     const tailRootYaw =
-        Math.sin(wavePhase - travelLag * 0.4) *
+        Math.sin(wavePhase - travelLag * 0.46) *
             GATOR_SWIM_TAIL_ROOT_AMP *
             activeDrive +
-        turnBend * 0.62;
+        turnBend * 0.88;
 
     const bodyFollow =
         1 -
-        Math.exp(-3.8 * delta);
+        Math.exp(-4.6 * delta);
 
     data.chestBone.rotation.y +=
         (
@@ -4347,16 +4350,17 @@ function updateGator(
             THREE.MathUtils.lerp(
                 GATOR_SWIM_TAIL_AMP_BASE,
                 GATOR_SWIM_TAIL_AMP_TIP,
-                Math.pow(t, 1.2)
+                Math.pow(t, 1.05)
             ) *
             activeDrive;
 
         const targetYaw =
             Math.sin(wavePhase - lag) * amplitude +
-            turnBend * THREE.MathUtils.lerp(0.55, 0.9, Math.pow(t, 1.1));
+            turnBend * THREE.MathUtils.lerp(0.72, 1.15, Math.pow(t, 1.05));
 
+        // Tip follows a touch slower so the S-curve flows instead of locking stiff.
         const followSpeed =
-            THREE.MathUtils.lerp(5.2, 3.4, Math.pow(t, 1.05));
+            THREE.MathUtils.lerp(5.8, 2.8, Math.pow(t, 1.05));
 
         const follow =
             1 -
@@ -4371,14 +4375,21 @@ function updateGator(
             ) *
             follow;
 
+        // Soft vertical flex — reads as water drag, not a flat hinge.
+        const flexZ =
+            Math.sin(wavePhase - lag * 0.85 + 0.4) *
+            amplitude *
+            0.12 *
+            (0.35 + t * 0.65);
+
         tailBones[i].rotation.z +=
             (
-                0 -
+                flexZ -
                 tailBones[i].rotation.z
             ) *
             (
                 1 -
-                Math.exp(-3 * delta)
+                Math.exp(-3.4 * delta)
             );
     }
 
