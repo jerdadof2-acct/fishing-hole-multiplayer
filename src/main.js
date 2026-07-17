@@ -37,11 +37,12 @@ import {
     LouisianaBayouAmbience,
     CongoRiverAmbience,
     SandyShoalsAmbience,
+    SoftOceanAmbience,
     StormbreakerBayAmbience,
     StarfallLagoonAmbience,
     pauseAllLoopingAmbiences,
     resumeAllLoopingAmbiences
-} from './audio/locationMusic.js?v=20260717-starfall-ambience';
+} from './audio/locationMusic.js?v=20260717-soft-ocean';
 import { VOICEOVER_TAP_COOLDOWN_MS, VOICEOVER_ANACONDA_COOLDOWN_MS } from './config/voiceover.js';
 
 /** How close the snake must pass Halley's look point (world XZ) to trigger a bark. */
@@ -143,6 +144,7 @@ export class Game {
         this.crescentPondAmbience = new CrescentPondAmbience();
         this.cortezAmbience = new CortezBackwatersAmbience();
         this.sandyShoalsAmbience = new SandyShoalsAmbience();
+        this.softOceanAmbience = new SoftOceanAmbience();
         this.craggyCoastAmbience = new CraggyCoastAmbience();
         this.stormbreakerBayAmbience = new StormbreakerBayAmbience();
         this.louisianaBayouAmbience = new LouisianaBayouAmbience();
@@ -1052,6 +1054,7 @@ export class Game {
         this.crescentPondAmbience?.resumeAfterGesture?.();
         this.cortezAmbience?.resumeAfterGesture?.();
         this.sandyShoalsAmbience?.resumeAfterGesture?.();
+        this.softOceanAmbience?.resumeAfterGesture?.();
         this.craggyCoastAmbience?.resumeAfterGesture?.();
         this.stormbreakerBayAmbience?.resumeAfterGesture?.();
         this.louisianaBayouAmbience?.resumeAfterGesture?.();
@@ -2304,6 +2307,8 @@ export class Game {
         const playCrescentPond = location?.name === CRESCENT_POND_NAME;
         const playCortez = location?.name === CORTEZ_BACKWATERS_NAME;
         const playSandyShoals = location?.name === SANDY_SHOALS_NAME;
+        const playSoftOcean = location?.name === TWILIGHT_TRENCH_NAME
+            || location?.name === FORGOTTEN_REEFS_NAME;
         const playCraggy = location?.name === CRAGGY_COAST_NAME;
         const playStormbreaker = location?.name === STORMBREAKER_BAY_NAME;
         const playLouisianaBayou = location?.name === LOUISIANA_BAYOU_NAME;
@@ -2316,6 +2321,7 @@ export class Game {
             if (keep !== 'crescent') this.crescentPondAmbience?.stop();
             if (keep !== 'cortez') this.cortezAmbience?.stop();
             if (keep !== 'sandy') this.sandyShoalsAmbience?.stop();
+            if (keep !== 'softOcean') this.softOceanAmbience?.stop();
             if (keep !== 'craggy') this.craggyCoastAmbience?.stop();
             if (keep !== 'stormbreaker') this.stormbreakerBayAmbience?.stop();
             if (keep !== 'bayou') this.louisianaBayouAmbience?.stop();
@@ -2344,6 +2350,12 @@ export class Game {
         if (playSandyShoals) {
             stopAllExcept('sandy');
             this.sandyShoalsAmbience?.start();
+            return;
+        }
+
+        if (playSoftOcean) {
+            stopAllExcept('softOcean');
+            this.softOceanAmbience?.start();
             return;
         }
 

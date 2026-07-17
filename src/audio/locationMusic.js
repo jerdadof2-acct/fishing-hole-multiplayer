@@ -34,6 +34,11 @@ export const SANDY_SHOALS_AMBIENCE_URL = CORTEZ_BACKWATERS_AMBIENCE_URL;
 /** Offshore on The Shooting Star — same shore sounds, quieter and farther away. */
 export const SANDY_SHOALS_AMBIENCE_VOLUME = 0.15;
 
+/** Soft rock-beach ocean (no gulls) — Twilight Trench & Forgotten Reefs. */
+export const SOFT_OCEAN_AMBIENCE_URL =
+    '/src/audio/u_m17uwtnjmh-soft-ocean-waves-on-a-rock-beach-sound-190882.mp3';
+export const SOFT_OCEAN_AMBIENCE_VOLUME = 0.18;
+
 export const CRAGGY_COAST_AMBIENCE_URL =
     '/src/audio/soundreality-wind-blowing-457954.mp3';
 export const CRAGGY_COAST_AMBIENCE_VOLUME = 0.32;
@@ -46,9 +51,9 @@ export const LOUISIANA_BAYOU_AMBIENCE_VOLUME = 0.24;
 export const CONGO_RIVER_AMBIENCE_URL = AMAZON_DEPTHS_AMBIENCE_URL;
 export const CONGO_RIVER_AMBIENCE_VOLUME = 0.42;
 
-/** Starfall Lagoon — celestial bed under quiet offshore ocean. */
+/** Starfall Lagoon — celestial bed under quiet soft ocean (no gulls). */
 export const STARFALL_LAGOON_MUSIC_VOLUME = 0.28;
-export const STARFALL_LAGOON_OCEAN_VOLUME = SANDY_SHOALS_AMBIENCE_VOLUME;
+export const STARFALL_LAGOON_OCEAN_VOLUME = SOFT_OCEAN_AMBIENCE_VOLUME;
 
 export class LoopingLocationAmbience {
     /**
@@ -322,6 +327,15 @@ export class SandyShoalsAmbience extends LoopingLocationAmbience {
     }
 }
 
+export class SoftOceanAmbience extends LoopingLocationAmbience {
+    constructor() {
+        super({
+            resolveSource: () => SOFT_OCEAN_AMBIENCE_URL,
+            peakVolume: SOFT_OCEAN_AMBIENCE_VOLUME
+        });
+    }
+}
+
 export class CraggyCoastAmbience extends LoopingLocationAmbience {
     constructor() {
         super({
@@ -388,7 +402,7 @@ export class StormbreakerBayAmbience {
     }
 }
 
-/** Starfall Lagoon — Celestial Depths music layered with Sandy Shoals ocean. */
+/** Starfall Lagoon — Celestial Depths music layered with soft ocean waves. */
 export class StarfallLagoonAmbience {
     constructor() {
         this.music = new LoopingLocationAmbience({
@@ -396,7 +410,7 @@ export class StarfallLagoonAmbience {
             peakVolume: STARFALL_LAGOON_MUSIC_VOLUME
         });
         this.ocean = new LoopingLocationAmbience({
-            resolveSource: () => SANDY_SHOALS_AMBIENCE_URL,
+            resolveSource: () => SOFT_OCEAN_AMBIENCE_URL,
             peakVolume: STARFALL_LAGOON_OCEAN_VOLUME
         });
     }
