@@ -46,6 +46,10 @@ export const LOUISIANA_BAYOU_AMBIENCE_VOLUME = 0.24;
 export const CONGO_RIVER_AMBIENCE_URL = AMAZON_DEPTHS_AMBIENCE_URL;
 export const CONGO_RIVER_AMBIENCE_VOLUME = 0.42;
 
+/** Starfall Lagoon — celestial bed under quiet offshore ocean. */
+export const STARFALL_LAGOON_MUSIC_VOLUME = 0.28;
+export const STARFALL_LAGOON_OCEAN_VOLUME = SANDY_SHOALS_AMBIENCE_VOLUME;
+
 export class LoopingLocationAmbience {
     /**
      * @param {{ resolveSource: () => string, peakVolume: number }} options
@@ -381,5 +385,44 @@ export class StormbreakerBayAmbience {
     resumeFromBackground() {
         this.wind.resumeFromBackground();
         this.surf.resumeFromBackground();
+    }
+}
+
+/** Starfall Lagoon — Celestial Depths music layered with Sandy Shoals ocean. */
+export class StarfallLagoonAmbience {
+    constructor() {
+        this.music = new LoopingLocationAmbience({
+            resolveSource: () => getPrologueMusicSource() ?? PROLOGUE_MUSIC_URL,
+            peakVolume: STARFALL_LAGOON_MUSIC_VOLUME
+        });
+        this.ocean = new LoopingLocationAmbience({
+            resolveSource: () => SANDY_SHOALS_AMBIENCE_URL,
+            peakVolume: STARFALL_LAGOON_OCEAN_VOLUME
+        });
+    }
+
+    start() {
+        this.music.start();
+        this.ocean.start();
+    }
+
+    stop() {
+        this.music.stop();
+        this.ocean.stop();
+    }
+
+    resumeAfterGesture() {
+        this.music.resumeAfterGesture();
+        this.ocean.resumeAfterGesture();
+    }
+
+    pauseImmediate() {
+        this.music.pauseImmediate();
+        this.ocean.pauseImmediate();
+    }
+
+    resumeFromBackground() {
+        this.music.resumeFromBackground();
+        this.ocean.resumeFromBackground();
     }
 }

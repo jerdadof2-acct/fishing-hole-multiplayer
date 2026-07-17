@@ -38,9 +38,10 @@ import {
     CongoRiverAmbience,
     SandyShoalsAmbience,
     StormbreakerBayAmbience,
+    StarfallLagoonAmbience,
     pauseAllLoopingAmbiences,
     resumeAllLoopingAmbiences
-} from './audio/locationMusic.js?v=20260707-congo-ambience';
+} from './audio/locationMusic.js?v=20260717-starfall-ambience';
 import { VOICEOVER_TAP_COOLDOWN_MS, VOICEOVER_ANACONDA_COOLDOWN_MS } from './config/voiceover.js';
 
 /** How close the snake must pass Halley's look point (world XZ) to trigger a bark. */
@@ -146,6 +147,7 @@ export class Game {
         this.stormbreakerBayAmbience = new StormbreakerBayAmbience();
         this.louisianaBayouAmbience = new LouisianaBayouAmbience();
         this.congoRiverAmbience = new CongoRiverAmbience();
+        this.starfallLagoonAmbience = new StarfallLagoonAmbience();
         
         // Gameplay systems
         this.player = null;
@@ -1054,6 +1056,7 @@ export class Game {
         this.stormbreakerBayAmbience?.resumeAfterGesture?.();
         this.louisianaBayouAmbience?.resumeAfterGesture?.();
         this.congoRiverAmbience?.resumeAfterGesture?.();
+        this.starfallLagoonAmbience?.resumeAfterGesture?.();
         if (isDevFaceCameraEnabled() || this._devCongoPortraitPreview) {
             return;
         }
@@ -2305,133 +2308,82 @@ export class Game {
         const playStormbreaker = location?.name === STORMBREAKER_BAY_NAME;
         const playLouisianaBayou = location?.name === LOUISIANA_BAYOU_NAME;
         const playCongoRiver = location?.name === CONGO_RIVER_NAME;
+        const playStarfall = location?.name === CRAZYCATCH_COVE_NAME;
+
+        const stopAllExcept = (keep) => {
+            if (keep !== 'celestial') this.celestialMusic?.stop();
+            if (keep !== 'amazon') this.amazonAmbience?.stop();
+            if (keep !== 'crescent') this.crescentPondAmbience?.stop();
+            if (keep !== 'cortez') this.cortezAmbience?.stop();
+            if (keep !== 'sandy') this.sandyShoalsAmbience?.stop();
+            if (keep !== 'craggy') this.craggyCoastAmbience?.stop();
+            if (keep !== 'stormbreaker') this.stormbreakerBayAmbience?.stop();
+            if (keep !== 'bayou') this.louisianaBayouAmbience?.stop();
+            if (keep !== 'congo') this.congoRiverAmbience?.stop();
+            if (keep !== 'starfall') this.starfallLagoonAmbience?.stop();
+        };
 
         if (playCelestial) {
-            this.amazonAmbience?.stop();
-            this.crescentPondAmbience?.stop();
-            this.cortezAmbience?.stop();
-            this.sandyShoalsAmbience?.stop();
-            this.craggyCoastAmbience?.stop();
-            this.stormbreakerBayAmbience?.stop();
-            this.louisianaBayouAmbience?.stop();
-            this.congoRiverAmbience?.stop();
+            stopAllExcept('celestial');
             this.celestialMusic?.start();
             return;
         }
 
         if (playAmazon) {
-            this.celestialMusic?.stop();
-            this.crescentPondAmbience?.stop();
-            this.cortezAmbience?.stop();
-            this.sandyShoalsAmbience?.stop();
-            this.craggyCoastAmbience?.stop();
-            this.stormbreakerBayAmbience?.stop();
-            this.louisianaBayouAmbience?.stop();
-            this.congoRiverAmbience?.stop();
+            stopAllExcept('amazon');
             this.amazonAmbience?.start();
             return;
         }
 
         if (playCortez) {
-            this.celestialMusic?.stop();
-            this.amazonAmbience?.stop();
-            this.crescentPondAmbience?.stop();
-            this.sandyShoalsAmbience?.stop();
-            this.craggyCoastAmbience?.stop();
-            this.stormbreakerBayAmbience?.stop();
-            this.louisianaBayouAmbience?.stop();
-            this.congoRiverAmbience?.stop();
+            stopAllExcept('cortez');
             this.cortezAmbience?.start();
             return;
         }
 
         if (playSandyShoals) {
-            this.celestialMusic?.stop();
-            this.amazonAmbience?.stop();
-            this.crescentPondAmbience?.stop();
-            this.cortezAmbience?.stop();
-            this.craggyCoastAmbience?.stop();
-            this.stormbreakerBayAmbience?.stop();
-            this.louisianaBayouAmbience?.stop();
-            this.congoRiverAmbience?.stop();
+            stopAllExcept('sandy');
             this.sandyShoalsAmbience?.start();
             return;
         }
 
         if (playCraggy) {
-            this.celestialMusic?.stop();
-            this.amazonAmbience?.stop();
-            this.crescentPondAmbience?.stop();
-            this.cortezAmbience?.stop();
-            this.sandyShoalsAmbience?.stop();
-            this.stormbreakerBayAmbience?.stop();
-            this.louisianaBayouAmbience?.stop();
-            this.congoRiverAmbience?.stop();
+            stopAllExcept('craggy');
             this.craggyCoastAmbience?.start();
             return;
         }
 
         if (playStormbreaker) {
-            this.celestialMusic?.stop();
-            this.amazonAmbience?.stop();
-            this.crescentPondAmbience?.stop();
-            this.cortezAmbience?.stop();
-            this.sandyShoalsAmbience?.stop();
-            this.craggyCoastAmbience?.stop();
-            this.louisianaBayouAmbience?.stop();
-            this.congoRiverAmbience?.stop();
+            stopAllExcept('stormbreaker');
             this.stormbreakerBayAmbience?.start();
             return;
         }
 
         if (playLouisianaBayou) {
-            this.celestialMusic?.stop();
-            this.amazonAmbience?.stop();
-            this.crescentPondAmbience?.stop();
-            this.cortezAmbience?.stop();
-            this.sandyShoalsAmbience?.stop();
-            this.craggyCoastAmbience?.stop();
-            this.stormbreakerBayAmbience?.stop();
-            this.congoRiverAmbience?.stop();
+            stopAllExcept('bayou');
             this.louisianaBayouAmbience?.start();
             return;
         }
 
         if (playCongoRiver) {
-            this.celestialMusic?.stop();
-            this.amazonAmbience?.stop();
-            this.crescentPondAmbience?.stop();
-            this.cortezAmbience?.stop();
-            this.sandyShoalsAmbience?.stop();
-            this.craggyCoastAmbience?.stop();
-            this.stormbreakerBayAmbience?.stop();
-            this.louisianaBayouAmbience?.stop();
+            stopAllExcept('congo');
             this.congoRiverAmbience?.start();
             return;
         }
 
+        if (playStarfall) {
+            stopAllExcept('starfall');
+            this.starfallLagoonAmbience?.start();
+            return;
+        }
+
         if (playCrescentPond) {
-            this.celestialMusic?.stop();
-            this.amazonAmbience?.stop();
-            this.cortezAmbience?.stop();
-            this.sandyShoalsAmbience?.stop();
-            this.craggyCoastAmbience?.stop();
-            this.stormbreakerBayAmbience?.stop();
-            this.louisianaBayouAmbience?.stop();
-            this.congoRiverAmbience?.stop();
+            stopAllExcept('crescent');
             this.crescentPondAmbience?.start();
             return;
         }
 
-        this.celestialMusic?.stop();
-        this.amazonAmbience?.stop();
-        this.crescentPondAmbience?.stop();
-        this.cortezAmbience?.stop();
-        this.sandyShoalsAmbience?.stop();
-        this.craggyCoastAmbience?.stop();
-        this.stormbreakerBayAmbience?.stop();
-        this.louisianaBayouAmbience?.stop();
-        this.congoRiverAmbience?.stop();
+        stopAllExcept(null);
     }
     
     /**
