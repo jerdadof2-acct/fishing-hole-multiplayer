@@ -2430,42 +2430,81 @@ function pickGatorFleeTargetFromBobber(data, gator, bobberX, bobberZ) {
 
 function beginGatorStartle(data, gator, bobberX, bobberZ, hooks = {}) {
     data.mode = 'startled';
-    data.modeTime = THREE.MathUtils.lerp(2.2, 3.8, data.random());
+    data.modeTime = THREE.MathUtils.lerp(2.6, 4.2, data.random());
     data.targetRise = THREE.MathUtils.lerp(-0.3, -0.24, data.random());
-    data.startleFlinchTime = 0.42;
+    data.startleFlinchTime = 0.55;
     data.swimLegTime = null;
-
-    pickGatorFleeTargetFromBobber(data, gator, bobberX, bobberZ);
 
     const gx = gator.position.x;
     const gz = gator.position.z;
-    const dx = gx - bobberX;
-    const dz = gz - bobberZ;
-    const fleeSpeed = data.speed * 1.45;
-    const fleeYaw = Math.atan2(-dz, dx);
+    const heading = gator.rotation.y;
+
+    const toThreatX = bobberX - gx;
+    const toThreatZ = bobberZ - gz;
+    const threatDist = Math.hypot(toThreatX, toThreatZ);
+
+    const forwardX = Math.cos(heading);
+    const forwardZ = -Math.sin(heading);
+    const rightX = Math.sin(heading);
+    const rightZ = Math.cos(heading);
 
     /*
-     * A startled alligator forcefully bends and whips its body toward
-     * safety before accelerating. Turning partway immediately prevents
-     * the gator from sliding sideways during the escape.
+     * A nose tap sits ahead of the body center. Fleeing "away from the
+     * threat point" then points backward and used to whip the gator around.
+     * Instead, bank away from whichever side was touched and swim forward.
      */
-    gator.rotation.y = lerpAngle(
-        gator.rotation.y,
-        fleeYaw,
-        0.65
+    const side =
+        threatDist > 0.08
+            ? toThreatX * rightX + toThreatZ * rightZ
+            : data.random() < 0.5
+                ? 1
+                : -1;
+    const turnSign = side >= 0 ? -1 : 1;
+    const closeThreat = threatDist < 2.8;
+    const turnAway =
+        turnSign *
+        (closeThreat
+            ? THREE.MathUtils.lerp(0.65, 1.05, data.random())
+            : THREE.MathUtils.lerp(0.4, 0.75, data.random()));
+
+    const fleeYaw = heading + turnAway;
+    const fleeFx = Math.cos(fleeYaw);
+    const fleeFz = -Math.sin(fleeYaw);
+    const fleeDist = THREE.MathUtils.lerp(9, 15, data.random());
+
+    let fled = false;
+    for (let scale = 1; scale >= 0.35; scale -= 0.15) {
+        const tx = gx + fleeFx * fleeDist * scale;
+        const tz = gz + fleeFz * fleeDist * scale;
+
+        if (isValidGatorSwimPoint(tx, tz, data)) {
+            data.target.set(tx, data.baseWaterY, tz);
+            fled = true;
+            break;
+        }
+    }
+
+    if (!fled) {
+        pickGatorFleeTargetFromBobber(data, gator, bobberX, bobberZ);
+    }
+
+    // No instant root snap — let startle turn rate curve him into the escape.
+    data.turnDemand = shortestAngleDiff(heading, fleeYaw);
+
+    const currentSpeed = Math.hypot(
+        data.velocity.x,
+        data.velocity.z
+    );
+    data.forwardSpeed = Math.max(
+        currentSpeed,
+        data.speed * 0.4
     );
 
-    data.forwardSpeed = fleeSpeed;
-
-    data.turnDemand = shortestAngleDiff(
-        gator.rotation.y,
-        fleeYaw
-    );
-
+    // Keep thrust on the current heading so the flinch isn't a sideways launch.
     data.velocity.set(
-        Math.cos(gator.rotation.y) * fleeSpeed,
+        forwardX * data.forwardSpeed,
         0,
-        -Math.sin(gator.rotation.y) * fleeSpeed
+        forwardZ * data.forwardSpeed
     );
 
     const snoutPos = getGatorSnoutWorldPosition(gator, _gatorSnoutScratch);
@@ -2591,7 +2630,7 @@ const GATOR_SWIM_TURN_BIAS_CLAMP = 0.44;
  */
 const GATOR_TURN_RATE_MIN = 0.34;
 const GATOR_TURN_RATE_MAX = 0.72;
-const GATOR_STARTLE_TURN_RATE = 2.25;
+const GATOR_STARTLE_TURN_RATE = 1.35;
 const GATOR_FORWARD_RESPONSE = 1.05;
 const GATOR_LATERAL_DRAG = 4.2;
 const GATOR_HEADUP_DURATION_MIN = 4.5;
@@ -4218,7 +4257,7 @@ function updateGator(
         holdingPosition
             ? 4.8
             : data.mode === 'startled'
-                ? 5.5
+                ? 3.4
                 : GATOR_FORWARD_RESPONSE;
 
     data.forwardSpeed +=
@@ -4717,7 +4756,7 @@ function updateGator(
 
         const flinchBlend =
             THREE.MathUtils.clamp(
-                data.startleFlinchTime / 0.42,
+                data.startleFlinchTime / 0.55,
                 0,
                 1
             );
