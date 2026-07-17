@@ -43,7 +43,7 @@ import {
     FrozenFjordsAmbience,
     pauseAllLoopingAmbiences,
     resumeAllLoopingAmbiences
-} from './audio/locationMusic.js?v=20260717-fjord-coral';
+} from './audio/locationMusic.js?v=20260717-desert-lagoon';
 import { VOICEOVER_TAP_COOLDOWN_MS, VOICEOVER_ANACONDA_COOLDOWN_MS } from './config/voiceover.js';
 
 /** How close the snake must pass Halley's look point (world XZ) to trigger a bark. */
@@ -2307,7 +2307,8 @@ export class Game {
         const playCelestial = location?.waterBodyType === 'CELESTIAL'
             && this.player?.canAccessCelestialDepths?.() === true;
         const playAmazon = location?.name === AMAZON_DEPTHS_NAME;
-        const playCrescentPond = location?.name === CRESCENT_POND_NAME;
+        const playCrescentPond = location?.name === CRESCENT_POND_NAME
+            || location?.name === DESERT_LAGOON_NAME;
         const playCortez = location?.name === CORTEZ_BACKWATERS_NAME;
         const playSandyShoals = location?.name === SANDY_SHOALS_NAME;
         const playSoftOcean = location?.name === TWILIGHT_TRENCH_NAME

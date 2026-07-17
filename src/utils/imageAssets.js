@@ -4,9 +4,11 @@
 
 export function getFishImagePaths(fishName) {
     if (fishName === 'Starfish of Eternity') {
+        // Cache-bust: SW is cache-first for images; bump when starfish art changes.
+        const bust = '?v=20260717b';
         return {
-            primary: 'assets/images/StarfishofEternity.webp',
-            fallback: 'assets/images/StarfishofEternity.jpg'
+            primary: `assets/images/StarfishofEternity.webp${bust}`,
+            fallback: `assets/images/StarfishofEternity.png${bust}`
         };
     }
     const base = `assets/images/${fishName}`;
