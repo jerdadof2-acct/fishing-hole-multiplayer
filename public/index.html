@@ -35,6 +35,16 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Halley's Big Catch">
+
+    <!-- On-device debug console for phones: open the game with ?debug=1 -->
+    <script>
+        if (new URLSearchParams(location.search).get('debug') === '1') {
+            const erudaScript = document.createElement('script');
+            erudaScript.src = 'https://cdn.jsdelivr.net/npm/eruda@3/eruda.min.js';
+            erudaScript.onload = () => window.eruda && window.eruda.init();
+            document.head.appendChild(erudaScript);
+        }
+    </script>
     
     <style>
         * {

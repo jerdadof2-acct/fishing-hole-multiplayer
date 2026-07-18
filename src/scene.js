@@ -32,6 +32,18 @@ const GPU_MAX_AUTO_RELOADS = 2;
 const GPU_RESTORE_WAIT_MS = 5000;
 
 export function isGpuSafeMode() {
+    // ?gpusafe=1 forces safe mode from the very first load (before any crash),
+    // ?gpusafe=0 clears it. Useful when a device can't survive the full load.
+    try {
+        const param = new URLSearchParams(window.location.search).get('gpusafe');
+        if (param === '1') {
+            sessionStorage.setItem(GPU_SAFE_MODE_KEY, '1');
+        } else if (param === '0') {
+            sessionStorage.removeItem(GPU_SAFE_MODE_KEY);
+        }
+    } catch {
+        // Fall through to the stored flag.
+    }
     try {
         return sessionStorage.getItem(GPU_SAFE_MODE_KEY) === '1';
     } catch {
