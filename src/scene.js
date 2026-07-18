@@ -59,6 +59,36 @@ function markGpuSafeMode() {
     }
 }
 
+/**
+ * Known-fragile GPU drivers that OOM-kill WebGL under the game's full load.
+ * Currently: Android 17's PowerVR driver 25.3 (Pixel 10 family) — it resets
+ * the context during scene texture upload. Probe a throwaway 1px context and
+ * check the driver string; when a fixed driver ships, the match stops firing.
+ */
+function detectFragileGpu() {
+    try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1;
+        canvas.height = 1;
+        const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+        if (!gl) {
+            // Can't even make a probe context — treat as fragile.
+            return true;
+        }
+        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+        const rendererString = String(
+            debugInfo
+                ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
+                : gl.getParameter(gl.RENDERER) || ''
+        );
+        gl.getExtension('WEBGL_lose_context')?.loseContext();
+
+        return /PowerVR/i.test(rendererString) && /build 25\.3/i.test(rendererString);
+    } catch {
+        return false;
+    }
+}
+
 function getGpuReloadCount() {
     try {
         return Number(sessionStorage.getItem(GPU_RELOAD_COUNT_KEY)) || 0;
@@ -213,7 +243,21 @@ export class Scene {
 
         const isMobile = typeof navigator !== 'undefined'
             && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        const safeMode = isGpuSafeMode();
+        let safeMode = isGpuSafeMode();
+        let forcedFullQuality = false;
+        try {
+            // ?gpusafe=0 explicitly opts out of the driver auto-detection too,
+            // so full quality can be re-tested after a driver update.
+            forcedFullQuality =
+                new URLSearchParams(window.location.search).get('gpusafe') === '0';
+        } catch {
+            // Ignore.
+        }
+        if (!safeMode && !forcedFullQuality && detectFragileGpu()) {
+            console.warn('[SCENE] Fragile GPU driver detected — enabling safe mode.');
+            markGpuSafeMode();
+            safeMode = true;
+        }
         if (safeMode) {
             console.warn('[SCENE] GPU safe mode active: reduced resolution and shadows.');
         }
