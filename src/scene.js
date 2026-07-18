@@ -31,7 +31,7 @@ const GPU_RELOAD_COUNT_KEY = 'halley-gpu-reload-count';
 const GPU_MAX_AUTO_RELOADS = 2;
 const GPU_RESTORE_WAIT_MS = 5000;
 
-function isGpuSafeMode() {
+export function isGpuSafeMode() {
     try {
         return sessionStorage.getItem(GPU_SAFE_MODE_KEY) === '1';
     } catch {
@@ -211,22 +211,42 @@ export class Scene {
             this.directionalLight.shadow.mapSize.set(shadowMapSize, shadowMapSize);
         }
 
-        // Create renderer
-        let renderer;
-        try {
-            renderer = new THREE.WebGLRenderer({
-                antialias: !isMobile,
-                alpha: false,
-                powerPreference: isMobile ? 'default' : 'high-performance',
-                failIfMajorPerformanceCaveat: false
-            });
-        } catch (error) {
-            console.error('[SCENE] WebGL renderer failed:', error);
+        // Create renderer. Right after a GPU crash the browser can refuse new
+        // WebGL contexts for a few seconds while its GPU process restarts, so
+        // retry with growing delays before declaring failure.
+        const rendererOptions = {
+            antialias: !isMobile && !safeMode,
+            alpha: false,
+            powerPreference: safeMode ? 'low-power' : (isMobile ? 'default' : 'high-performance'),
+            failIfMajorPerformanceCaveat: false
+        };
+
+        let renderer = null;
+        const retryDelaysMs = [0, 1500, 3000, 5000];
+        for (let attempt = 0; attempt < retryDelaysMs.length; attempt++) {
+            if (retryDelaysMs[attempt] > 0) {
+                showGpuOverlay('Waiting for graphics to restart…');
+                await new Promise((resolve) => setTimeout(resolve, retryDelaysMs[attempt]));
+            }
+            try {
+                renderer = new THREE.WebGLRenderer(rendererOptions);
+                break;
+            } catch (error) {
+                console.error(
+                    `[SCENE] WebGL renderer failed (attempt ${attempt + 1}/${retryDelaysMs.length}):`,
+                    error
+                );
+            }
+        }
+        hideGpuOverlay();
+
+        if (!renderer) {
             // Context creation usually fails because the browser blocked WebGL
             // after GPU crashes — not because the hardware lacks support.
+            markGpuSafeMode();
             throw new Error(
-                'Graphics failed to start. Close other apps and browser tabs, then reload the page. '
-                + 'If it keeps happening, restart your browser or device.'
+                'Graphics failed to start. Fully close the browser (swipe it away), '
+                + 'reopen it, and try again. If it keeps happening, restart your device.'
             );
         }
         this.renderer = renderer;
@@ -234,8 +254,13 @@ export class Scene {
         this.renderer.setSize(width, height, false);
         const pixelRatioCap = safeMode ? 1 : (isMobile ? 1.5 : 2);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, pixelRatioCap));
-        this.renderer.shadowMap.enabled = true;
+        // Safe mode drops shadows entirely — shadow maps are a large fixed
+        // GPU allocation and the first thing to cut when the driver is OOMing.
+        this.renderer.shadowMap.enabled = !safeMode;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        if (safeMode && this.directionalLight) {
+            this.directionalLight.castShadow = false;
+        }
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 1.1;

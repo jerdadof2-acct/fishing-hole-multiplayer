@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+import { isGpuSafeMode } from '../scene.js';
 
 /**
  * Load a CC0 HDRI (Poly Haven) and build a PMREM environment map for reflections.
@@ -9,6 +10,13 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
  */
 export async function loadSkyEnvironment(renderer, options = {}) {
     if (!renderer) return null;
+
+    // GPU safe mode (after a driver crash): skip the HDRI + PMREM cubemap,
+    // one of the biggest single GPU allocations. The color sky fallback is fine.
+    if (isGpuSafeMode()) {
+        console.warn('[environment] GPU safe mode — skipping HDRI environment.');
+        return null;
+    }
 
     const isMobile = options.mobile ?? (
         typeof navigator !== 'undefined'
