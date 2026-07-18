@@ -37,15 +37,18 @@ export function isGpuSafeMode() {
     try {
         const param = new URLSearchParams(window.location.search).get('gpusafe');
         if (param === '1') {
-            sessionStorage.setItem(GPU_SAFE_MODE_KEY, '1');
+            localStorage.setItem(GPU_SAFE_MODE_KEY, '1');
         } else if (param === '0') {
-            sessionStorage.removeItem(GPU_SAFE_MODE_KEY);
+            localStorage.removeItem(GPU_SAFE_MODE_KEY);
         }
     } catch {
         // Fall through to the stored flag.
     }
     try {
-        return sessionStorage.getItem(GPU_SAFE_MODE_KEY) === '1';
+        // localStorage (not session): one GPU crash must flip every future
+        // launch to safe mode, or each new tab re-crashes at full quality and
+        // re-triggers the browser's sitewide 3D block.
+        return localStorage.getItem(GPU_SAFE_MODE_KEY) === '1';
     } catch {
         return false;
     }
@@ -53,19 +56,28 @@ export function isGpuSafeMode() {
 
 function markGpuSafeMode() {
     try {
-        sessionStorage.setItem(GPU_SAFE_MODE_KEY, '1');
+        localStorage.setItem(GPU_SAFE_MODE_KEY, '1');
     } catch {
         // Storage unavailable — safe mode simply won't persist.
     }
 }
 
 /**
- * Known-fragile GPU drivers that OOM-kill WebGL under the game's full load.
- * Currently: Android 17's PowerVR driver 25.3 (Pixel 10 family) — it resets
- * the context during scene texture upload. Probe a throwaway 1px context and
- * check the driver string; when a fixed driver ships, the match stops firing.
+ * Known-fragile GPUs that OOM-kill WebGL under the game's full load.
+ * Currently: PowerVR/Imagination GPUs on Android (Pixel 10 family) — the
+ * Android 17 driver resets the context during scene texture upload.
+ * Chrome hides the driver build number from sites, so we can't target the
+ * broken 25.3 driver precisely; when possible we narrow by Android version
+ * via client hints (Android < 17 shipped the driver that worked fine).
  */
-function detectFragileGpu() {
+async function detectFragileGpu() {
+    const isAndroid = typeof navigator !== 'undefined'
+        && /Android/i.test(navigator.userAgent);
+    if (!isAndroid) {
+        return false;
+    }
+
+    let rendererString = '';
     try {
         const canvas = document.createElement('canvas');
         canvas.width = 1;
@@ -76,17 +88,33 @@ function detectFragileGpu() {
             return true;
         }
         const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-        const rendererString = String(
+        rendererString = String(
             debugInfo
                 ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
                 : gl.getParameter(gl.RENDERER) || ''
         );
         gl.getExtension('WEBGL_lose_context')?.loseContext();
-
-        return /PowerVR/i.test(rendererString) && /build 25\.3/i.test(rendererString);
     } catch {
         return false;
     }
+
+    if (!/PowerVR|Imagination/i.test(rendererString)) {
+        return false;
+    }
+
+    // Narrow to Android 17+ when client hints are available (the UA string is
+    // frozen at "Android 10" on modern Chrome, so it can't tell us).
+    try {
+        const hints = await navigator.userAgentData?.getHighEntropyValues?.(['platformVersion']);
+        const major = parseInt(String(hints?.platformVersion ?? '').split('.')[0], 10);
+        if (Number.isFinite(major) && major > 0 && major < 17) {
+            return false;
+        }
+    } catch {
+        // No client hints — stay conservative and treat PowerVR as fragile.
+    }
+
+    return true;
 }
 
 function getGpuReloadCount() {
@@ -253,7 +281,7 @@ export class Scene {
         } catch {
             // Ignore.
         }
-        if (!safeMode && !forcedFullQuality && detectFragileGpu()) {
+        if (!safeMode && !forcedFullQuality && await detectFragileGpu()) {
             console.warn('[SCENE] Fragile GPU driver detected — enabling safe mode.');
             markGpuSafeMode();
             safeMode = true;
