@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Halley's Big Catch — a cozy 3D fishing adventure. Cast your line with Halley the cat, catch 40+ fish across 15 locations, uncover hidden relics, and compete with friends.">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,6 +15,8 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
     <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preload" as="image" href="assets/images/loading-poster.webp" fetchpriority="high">
     <link rel="stylesheet" href="css/styles.css?v=20260703-mobile-overlay-fix">
 
     <script>
@@ -27,17 +30,21 @@
 <body>
     <div id="game-container">
         <div id="loading" class="loading-screen" aria-live="polite" aria-busy="true">
-            <img
-                class="loading-poster"
-                src="assets/images/loading-poster.png"
-                alt="Halley's Big Catch — Cast your line. Catch adventure."
-                width="473"
-                height="1024"
-                decoding="async"
-            />
+            <picture>
+                <source srcset="assets/images/loading-poster.webp" type="image/webp">
+                <img
+                    class="loading-poster"
+                    src="assets/images/loading-poster.png"
+                    alt="Halley's Big Catch — Cast your line. Catch adventure."
+                    width="473"
+                    height="1024"
+                    decoding="async"
+                    fetchpriority="high"
+                />
+            </picture>
             <div class="loading-overlay">
                 <p id="loading-message" class="loading-message">Loading...</p>
-                <div class="loading-bar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div class="loading-bar-track" role="progressbar" aria-label="Game loading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                     <div id="loading-bar-fill" class="loading-bar-fill"></div>
                 </div>
                 <p id="loading-percent" class="loading-percent">0%</p>
@@ -473,7 +480,7 @@
     <script type="importmap">
     {
         "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js",
             "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
         }
     }
