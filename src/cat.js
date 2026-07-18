@@ -31,6 +31,69 @@ function resolveMedallionGemOffset() {
     return loadDevGemOffset(MEDALLION_GEM_OFFSET);
 }
 const MEDALLION_CHEST_BONE_NAMES = ['mixamorig:Spine2', 'Spine2'];
+
+/**
+ * Bold four-point star sprite for the medallion twinkle — solid white star
+ * silhouette with a bright core and a soft blue halo behind it.
+ */
+function createMedallionStarTexture(size = 128) {
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    const c = size / 2;
+
+    const halo = ctx.createRadialGradient(c, c, 0, c, c, c);
+    halo.addColorStop(0, 'rgba(190, 230, 255, 0.5)');
+    halo.addColorStop(0.4, 'rgba(90, 180, 255, 0.18)');
+    halo.addColorStop(1, 'rgba(40, 120, 255, 0)');
+    ctx.fillStyle = halo;
+    ctx.fillRect(0, 0, size, size);
+
+    /** Filled 4-point star: long outer points with a chunky waist. */
+    const drawStar = (outer, inner, rotation = 0) => {
+        ctx.save();
+        ctx.translate(c, c);
+        ctx.rotate(rotation);
+        ctx.beginPath();
+        for (let i = 0; i < 8; i++) {
+            const angle = (i * Math.PI) / 4 - Math.PI / 2;
+            const radius = i % 2 === 0 ? outer : inner;
+            const x = Math.cos(angle) * radius;
+            const y = Math.sin(angle) * radius;
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    };
+
+    // Soft blue under-star for glow bleed, then a crisp white star on top.
+    ctx.fillStyle = 'rgba(120, 200, 255, 0.65)';
+    drawStar(c * 0.98, c * 0.3);
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
+    drawStar(c * 0.88, c * 0.24);
+
+    // Small diagonal accent star behind the core for extra sparkle.
+    ctx.fillStyle = 'rgba(220, 245, 255, 0.75)';
+    drawStar(c * 0.4, c * 0.12, Math.PI / 4);
+
+    const core = ctx.createRadialGradient(c, c, 0, c, c, size * 0.16);
+    core.addColorStop(0, 'rgba(255, 255, 255, 1)');
+    core.addColorStop(0.6, 'rgba(225, 245, 255, 0.9)');
+    core.addColorStop(1, 'rgba(150, 210, 255, 0)');
+    ctx.fillStyle = core;
+    ctx.fillRect(0, 0, size, size);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+}
 // Lake-facing rotation: see CAT_FACING_Y in src/config/idlePortrait.js (locked).
 
 const RIG_HELPER_MESH_NAMES = new Set(['Plane', 'Circle', 'Cube']);
@@ -508,6 +571,31 @@ export class Cat {
         gem.receiveShadow = false;
         chestBone.add(gem);
 
+        // Star-shaped twinkle inside the disc (child of the gem — inherits placement).
+        const starTexture = createMedallionStarTexture();
+        const starMaterial = new THREE.MeshBasicMaterial({
+            map: starTexture,
+            transparent: true,
+            opacity: 0.95,
+            blending: THREE.AdditiveBlending,
+            depthTest: true,
+            depthWrite: false,
+            side: THREE.FrontSide,
+            toneMapped: false
+        });
+
+        const star = new THREE.Mesh(
+            new THREE.PlaneGeometry(0.085, 0.085),
+            starMaterial
+        );
+        star.name = 'CometMedallionStar';
+        // Just in front of the flattened disc face (radius 0.046 × z-scale 0.3).
+        star.position.set(0, 0, 0.017);
+        star.castShadow = false;
+        star.receiveShadow = false;
+        star.renderOrder = HALLEY_RENDER_ORDER + 1;
+        gem.add(star);
+
         const light = new THREE.PointLight(0x2aaaff, 0.7, 0.55, 2);
         light.position.set(0, 0, MEDALLION_GEM_LIGHT_Z);
         gem.add(light);
@@ -516,6 +604,8 @@ export class Cat {
             mode: 'gem',
             gem,
             material: gemMaterial,
+            star,
+            starMaterial,
             light,
             baseScale: gem.scale.clone(),
             attractionStrength: 0
@@ -587,6 +677,23 @@ export class Cat {
                 fx.baseScale.y * scale,
                 fx.baseScale.z * scale
             );
+
+            if (fx.star) {
+                // Twinkle: slow breathing brightness with occasional sharp glints.
+                const breathe = 0.5 + 0.5 * Math.sin(time * 2.3 + 0.7);
+                const glintWave = Math.sin(time * 0.9);
+                const glint = Math.pow(Math.max(glintWave, 0), 6);
+
+                fx.starMaterial.opacity =
+                    0.55 + breathe * 0.25 + glint * 0.2 + attraction * 0.2;
+
+                const starScale =
+                    0.8 + breathe * 0.14 + glint * 0.45 + attraction * 0.3;
+                fx.star.scale.setScalar(starScale);
+
+                // Slight slow rotation so the rays catch differently as he moves.
+                fx.star.rotation.z = Math.sin(time * 0.5) * 0.35;
+            }
 
             if (fx.light) {
                 fx.light.intensity = 0.45 + pulse * 0.5 + attraction * 1.1;
