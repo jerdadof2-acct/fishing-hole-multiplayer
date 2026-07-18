@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { AnimationMixer } from 'three';
+import { createGltfLoader } from './loaders/createGltfLoader.js';
 import {
     CAT_FACING_Y,
     PORTRAIT_CAT_TURN_RADIANS,
@@ -349,7 +349,8 @@ export class Cat {
                 reject(new Error('Cat model download timed out — check your connection and refresh.'));
             }, timeoutMs);
 
-            const loader = new GLTFLoader();
+            const renderer = this.scene?.renderer || null;
+            const loader = createGltfLoader(renderer);
             loader.load(
                 CAT_MODEL_URL,
                 (gltf) => {

@@ -58,6 +58,9 @@ import { loadingProgress, removeLoadingOverlay } from './loadingProgress.js';
 import { dismissAllGameplayObscurers, warnAboutUnmanagedAdsenseUnits } from './gameplayObscurers.js';
 import { shouldGameResume } from './backgroundPause.js';
 import { collectGalleryImageUrls, warmImageCache } from './utils/imageAssets.js';
+import { perfMonitor } from './perf/perfMonitor.js';
+import { startLocationPackDownload, startGalleryPackDownload } from './assetPack.js';
+import { disposeObject3D, LocationSceneryCache } from './perf/disposeObject3D.js';
 import { showAdBanner } from './ads.js';
 import { bindViewportSync, getGameViewportSize, syncViewportShell, runMobileLayoutBurst } from './viewport.js';
 import {
@@ -192,6 +195,10 @@ export class Game {
         this._congoSceneryReady = false;
         this._congoSceneryLoading = null;
         this.desertLagoonPalms = null;
+        /** Keep at most 2 heavy location scenery graphs resident. */
+        this._locationSceneryCache = new LocationSceneryCache(2);
+        this._recentLocationNames = [];
+        this._bobberTrackPos = new THREE.Vector3();
         if (this.deferReveal) {
             document.getElementById('game-container')?.classList.add('pre-entry');
         }
@@ -232,7 +239,7 @@ export class Game {
 
         runMobileLayoutBurst(() => this.scene?.onWindowResize?.());
 
-        this.startGalleryImageWarmup();
+        // Gallery images warm only when the player opens Collection — not at boot.
         this.setupActivityTracking();
         this.setupCatTap();
         if (this.locations) {
@@ -845,10 +852,12 @@ export class Game {
                     console.warn('Failed to load reel sound:', error);
                     return null;
                 }),
-                this.sfx.load("tug", "/assets/audio/tug.wav").catch(() => {
-                    console.warn('tug.wav not found, sounds will be disabled');
-                    return null;
-                }),
+                this.sfx.load("tug", "/assets/audio/tug.mp3")
+                    .catch(() => this.sfx.load("tug", "/assets/audio/tug.wav"))
+                    .catch(() => {
+                        console.warn('tug audio not found, tug sounds will be disabled');
+                        return null;
+                    }),
                 this.sfx.load("mouse_click", "/src/audio/mouse-click-7-411633.mp3").catch(() => {
                     console.warn('mouse-click-7-411633.mp3 not found, sounds will be disabled');
                     return null;
@@ -934,20 +943,41 @@ export class Game {
         }
     }
 
-    startGalleryImageWarmup() {
-        if (this._galleryWarmupStarted) return;
+    /**
+     * Warm collection/gallery images only when the player is about to view them.
+     * Avoids competing with gameplay bandwidth at boot.
+     */
+    startGalleryImageWarmup({ force = false } = {}) {
+        if (this._galleryWarmupStarted && !force) {
+            return;
+        }
         this._galleryWarmupStarted = true;
 
         const run = () => {
+            // Skip on constrained networks / data-saver.
+            try {
+                const conn = navigator.connection;
+                if (conn?.saveData || /^(slow-2g|2g)$/i.test(conn?.effectiveType || '')) {
+                    console.info('[IMAGES] Gallery warmup skipped (save-data / slow network)');
+                    return;
+                }
+            } catch {
+                // Ignore.
+            }
+
+            void startGalleryPackDownload().catch((error) => {
+                console.warn('[IMAGES] Gallery pack prefetch failed:', error);
+            });
+
             collectGalleryImageUrls()
-                .then((urls) => warmImageCache(urls, { batchSize: 5, gapMs: 120 }))
+                .then((urls) => warmImageCache(urls, { batchSize: 4, gapMs: 180 }))
                 .catch((error) => console.warn('[IMAGES] Gallery warmup skipped:', error));
         };
 
         if (typeof requestIdleCallback === 'function') {
-            requestIdleCallback(run, { timeout: 6000 });
+            requestIdleCallback(run, { timeout: 8000 });
         } else {
-            setTimeout(run, 1500);
+            setTimeout(run, 400);
         }
     }
 
@@ -1039,6 +1069,62 @@ export class Game {
         }
         this._animateLoopActive = true;
         this.animate();
+    }
+
+    /**
+     * Frame-time based pixel ratio: preserve quality when stable, ease down
+     * under sustained load, and restore when headroom returns. Never used as
+     * a permanent quality cut — safe mode still owns the hard mobile floor.
+     */
+    _updateAdaptivePixelRatio(delta) {
+        const renderer = this.scene?.renderer;
+        if (!renderer || typeof navigator === 'undefined') {
+            return;
+        }
+
+        // GPU safe mode already pins DPR — leave it alone.
+        try {
+            if (sessionStorage.getItem('halley-gpu-safe-mode') === '1'
+                || localStorage.getItem('halley-gpu-safe-mode') === '1') {
+                return;
+            }
+        } catch {
+            // Ignore.
+        }
+
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const maxDpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2);
+        const minDpr = isMobile ? 1 : 1.25;
+        this._adaptiveDpr = this._adaptiveDpr ?? renderer.getPixelRatio();
+        this._frameBudgetAcc = (this._frameBudgetAcc || 0) + delta;
+        this._slowFrameAcc = (this._slowFrameAcc || 0);
+
+        // Approximate last frame cost via delta (clamped).
+        if (delta > 0.028) {
+            this._slowFrameAcc += 1;
+        } else if (delta < 0.018) {
+            this._slowFrameAcc = Math.max(0, this._slowFrameAcc - 0.5);
+        }
+
+        if (this._frameBudgetAcc < 1.2) {
+            return;
+        }
+        this._frameBudgetAcc = 0;
+
+        let next = this._adaptiveDpr;
+        if (this._slowFrameAcc >= 8) {
+            next = Math.max(minDpr, this._adaptiveDpr - 0.15);
+            this._slowFrameAcc = 4;
+        } else if (this._slowFrameAcc <= 1) {
+            next = Math.min(maxDpr, this._adaptiveDpr + 0.1);
+        }
+
+        if (Math.abs(next - this._adaptiveDpr) >= 0.05) {
+            this._adaptiveDpr = next;
+            renderer.setPixelRatio(next);
+            this.scene?.onWindowResize?.();
+            perfMonitor.note('adaptive-dpr', { dpr: next });
+        }
     }
 
     stopAnimationLoop() {
@@ -1248,7 +1334,25 @@ export class Game {
             return;
         }
 
+        perfMonitor.recordFrame();
         const delta = this.scene.clock.getDelta();
+        const currentLocName = this.locations?.getCurrentLocation()?.name;
+        const isCrescent = currentLocName === CRESCENT_POND_NAME
+            || isCrescentPondLocation(this.locations);
+        const isCortez = currentLocName === CORTEZ_BACKWATERS_NAME;
+        const isBayou = currentLocName === LOUISIANA_BAYOU_NAME;
+        const isCongo = currentLocName === CONGO_RIVER_NAME;
+        const isStarfall = currentLocName === CRAZYCATCH_COVE_NAME;
+
+        // Adaptive DPR: lower under sustained load, restore when headroom returns.
+        this._updateAdaptivePixelRatio?.(delta);
+
+        // Sample GPU stats ~2×/sec for budgets.
+        this._perfSampleAcc = (this._perfSampleAcc || 0) + delta;
+        if (this._perfSampleAcc >= 0.5) {
+            this._perfSampleAcc = 0;
+            perfMonitor.sampleRenderer(this.scene?.renderer);
+        }
         
         // Update water with new tick method (includes ripple animation)
         // Use scene.camera (THREE.Camera) instead of this.camera (Camera class)
@@ -1262,11 +1366,11 @@ export class Game {
             this.water.update(delta);
         }
 
-        if (this.cortezDockWater?.visible) {
+        if (isCortez && this.cortezDockWater?.visible) {
             this.cortezDockWater.userData.update?.(delta);
         }
 
-        if (this.desertLagoonPalms?.visible) {
+        if (currentLocName === DESERT_LAGOON_NAME && this.desertLagoonPalms?.visible) {
             updatePalmBaseRipples(
                 this.desertLagoonPalms,
                 this.water?.time ?? 0
@@ -1275,8 +1379,8 @@ export class Game {
 
         this.checkAnacondaInFrontOfCat();
         
-        // Update grass (wind sway)
-        if (this.grass) {
+        // Update grass only when visible / relevant (skip inactive location work).
+        if (this.grass && (isCrescent || !currentLocName)) {
             this.grass.update(delta);
         }
         
@@ -1300,20 +1404,14 @@ export class Game {
             || this._devCongoPortraitPreview
             || scoldBlend > 0.001;
 
-        updateCrescentPondFarShore(
-            this.crescentFarShore,
-            portraitBlend,
-            isCrescentPondLocation(this.locations)
-        );
-
-        updateCrescentPondSky(this.crescentPondSky, delta, portraitBlend);
-
-        const isCortez =
-            this.locations?.getCurrentLocation()?.name === CORTEZ_BACKWATERS_NAME;
-        const isBayou =
-            this.locations?.getCurrentLocation()?.name === LOUISIANA_BAYOU_NAME;
-        const isCongo =
-            this.locations?.getCurrentLocation()?.name === CONGO_RIVER_NAME;
+        if (isCrescent) {
+            updateCrescentPondFarShore(
+                this.crescentFarShore,
+                portraitBlend,
+                true
+            );
+            updateCrescentPondSky(this.crescentPondSky, delta, portraitBlend);
+        }
 
         if (this.cortezMangroves) {
             if (isCortez && this.scene?.camera && this.cat) {
@@ -1349,8 +1447,6 @@ export class Game {
             );
         }
 
-        const isStarfall =
-            this.locations?.getCurrentLocation()?.name === CRAZYCATCH_COVE_NAME;
         if (this.starfallLagoonScenery && isStarfall) {
             updateStarfallLagoonScenery(
                 this.starfallLagoonScenery,
@@ -1385,20 +1481,34 @@ export class Game {
         }
 
         if (this.bayouExtras && this._bayouModules && this.scene?.clock) {
-            this._bayouModules.updateBayouExtras(
-                this.bayouExtras,
-                this.scene.clock.getElapsedTime(),
-                isBayou,
-                {
-                    cat: this.cat
-                }
-            );
+            if (isBayou) {
+                this._bayouNeedsHideCleanup = true;
+                this._bayouModules.updateBayouExtras(
+                    this.bayouExtras,
+                    this.scene.clock.getElapsedTime(),
+                    true,
+                    {
+                        cat: this.cat
+                    }
+                );
+            } else if (this._bayouNeedsHideCleanup) {
+                // One-shot cleanup so perched dragonflies detach when leaving.
+                this._bayouModules.updateBayouExtras(
+                    this.bayouExtras,
+                    this.scene.clock.getElapsedTime(),
+                    false,
+                    { cat: this.cat }
+                );
+                this._bayouNeedsHideCleanup = false;
+            }
         }
 
-        this._bayouModules?.updateBayouWaterShadows(
-            this.bayouWaterShadows,
-            isBayou
-        );
+        if (isBayou) {
+            this._bayouModules?.updateBayouWaterShadows(
+                this.bayouWaterShadows,
+                true
+            );
+        }
 
         if (this.congoRiverBanks && isCongo) {
             this._congoBanksModule?.updateCongoRiverBanks(
@@ -1440,7 +1550,7 @@ export class Game {
                     !this.fishing?.isReeling &&
                     fishState !== 'LANDING'
                 ) {
-                    bobberPos = this.fishing.bobber.position.clone();
+                    bobberPos = this._bobberTrackPos.copy(this.fishing.bobber.position);
                 }
                 
                 // Sequence starts immediately when cast button is clicked (isCasting = true)
@@ -1894,6 +2004,18 @@ export class Game {
             );
 
             this._bayouSceneryReady = true;
+            this._bayouSceneryLoading = null;
+
+            this._locationSceneryCache?.remember(LOUISIANA_BAYOU_NAME, this.bayouExtras, () => {
+                disposeObject3D(this.bayouCypress);
+                disposeObject3D(this.bayouExtras);
+                disposeObject3D(this.bayouWaterShadows);
+                this.bayouCypress = null;
+                this.bayouExtras = null;
+                this.bayouWaterShadows = null;
+                this._bayouSceneryReady = false;
+                this._bayouSceneryLoading = null;
+            });
 
             const isBayou =
                 this.locations?.getCurrentLocation()?.name ===
@@ -1955,6 +2077,16 @@ export class Game {
                 { waterLevel }
             );
             this._congoSceneryReady = true;
+            this._congoSceneryLoading = null;
+
+            this._locationSceneryCache?.remember(CONGO_RIVER_NAME, this.congoRiverBanks, () => {
+                disposeObject3D(this.congoRiverBanks);
+                disposeObject3D(this.congoRiverBackdrop);
+                this.congoRiverBanks = null;
+                this.congoRiverBackdrop = null;
+                this._congoSceneryReady = false;
+                this._congoSceneryLoading = null;
+            });
 
             const isCongo =
                 this.locations?.getCurrentLocation()?.name === CONGO_RIVER_NAME;
@@ -2452,6 +2584,10 @@ export class Game {
         }
         
         debugLog('[LOCATION SWITCH] Switching to:', location.name, 'Water type:', location.waterBodyType, 'Platform:', location.platformType);
+        perfMonitor.markLocationChange(location.name);
+        void startLocationPackDownload(location.name).catch((error) => {
+            console.warn('[LOCATION SWITCH] Location pack prefetch failed:', error);
+        });
 
         if (
             location.name !== CONGO_RIVER_NAME &&
@@ -2459,6 +2595,13 @@ export class Game {
         ) {
             this.clearDevCongoPortraitPreview();
         }
+
+        // Track recent locations and dispose scenery older than the LRU window.
+        this._recentLocationNames = [
+            location.name,
+            ...this._recentLocationNames.filter((name) => name !== location.name)
+        ].slice(0, 2);
+        this._locationSceneryCache?.retainOnly(this._recentLocationNames);
         
         // Update current location
         this.locations.setCurrentLocation(locationIndex);

@@ -7,19 +7,21 @@ import {
     PROLOGUE_SPLASH_PACK
 } from './config/prologue.js';
 
-const CACHE_NAME = 'halleys-big-catch-media-v17';
+const CACHE_NAME = 'halleys-big-catch-media-v35';
 const PROLOGUE_STORAGE_KEY = 'kittyCreekProloguePackVersion';
 const FULL_STORAGE_KEY = 'kittyCreekAssetPackVersion';
-const DOWNLOAD_CONCURRENCY = 6;
+const DOWNLOAD_CONCURRENCY = 4;
 const FETCH_TIMEOUT_MS = 20000;
 const AUDIO_READY_TIMEOUT_MS = 45000;
 const DEFERRED_START_DELAY_MS = 4000;
 
 let manifestCache = null;
 let deferredPromise = null;
+let galleryPackPromise = null;
 let prologuePackPromise = null;
 let prologuePackResult = null;
 let prologuePackMode = null;
+const locationPackPromises = new Map();
 
 function toAbsoluteUrl(path) {
     if (!path) {
@@ -57,6 +59,37 @@ function getDeferredUrls(manifest) {
     }
     const prologueUrls = new Set(PROLOGUE_FULL_PACK.map((item) => toAbsoluteUrl(item.path)));
     return (manifest.urls || []).filter((url) => !prologueUrls.has(url));
+}
+
+/**
+ * Resolve preferred-format URL groups from the manifest.
+ * Default groups: core + shared + starting location. Gallery is opt-in.
+ */
+function resolveGroupUrls(manifest, groups = ['core', 'shared']) {
+    const groupMap = manifest.groups && typeof manifest.groups === 'object'
+        ? manifest.groups
+        : null;
+
+    if (!groupMap) {
+        // Legacy manifests: fall back to non-gallery deferred URLs.
+        return getDeferredUrls(manifest).filter((url) => !/\/assets\/images\//i.test(url));
+    }
+
+    const urls = [];
+    for (const name of groups) {
+        const list = groupMap[name];
+        if (Array.isArray(list)) {
+            urls.push(...list);
+        }
+    }
+    return [...new Set(urls.map(toAbsoluteUrl))];
+}
+
+function locationGroupName(locationName) {
+    if (!locationName) {
+        return null;
+    }
+    return `location:${locationName}`;
 }
 
 export function getCachedPackVersion() {
@@ -347,12 +380,20 @@ async function cacheUrlsParallel(cache, urls, { onProgress, label = 'Downloading
 }
 
 /**
- * Download lake / gameplay assets in the background after the prologue starts.
+ * Download selected asset groups in the background after the prologue starts.
+ * Prefer core + current location over the entire media library.
+ *
+ * options.groups — array of group names (default: core + shared + Crescent Pond)
+ * options.fullOffline — if true, download groups.offlineFull (install pack)
  */
 export function startDeferredPackDownload(options = {}) {
     const silent = options.silent === true;
     const onProgress = options.onProgress ?? (() => {});
     const delayMs = options.delayMs ?? DEFERRED_START_DELAY_MS;
+    const groups = Array.isArray(options.groups) && options.groups.length
+        ? options.groups
+        : ['core', 'shared', 'location:Crescent Pond'];
+    const fullOffline = options.fullOffline === true;
 
     if (deferredPromise) {
         return deferredPromise;
@@ -361,6 +402,17 @@ export function startDeferredPackDownload(options = {}) {
     deferredPromise = (async () => {
         if (delayMs > 0) {
             await new Promise((resolve) => window.setTimeout(resolve, delayMs));
+        }
+
+        // Respect data-saver / slow networks — skip opportunistic background packs.
+        try {
+            const conn = navigator.connection;
+            if (!fullOffline && (conn?.saveData || /^(slow-2g|2g)$/i.test(conn?.effectiveType || ''))) {
+                console.info('[ASSET PACK] Deferred download skipped (save-data / slow network)');
+                return { skipped: true, reason: 'save-data' };
+            }
+        } catch {
+            // Ignore.
         }
 
         let manifest;
@@ -372,11 +424,16 @@ export function startDeferredPackDownload(options = {}) {
         }
 
         const version = manifest.version || 'unknown';
-        const allUrls = Array.isArray(manifest.urls) ? manifest.urls : [];
-        const deferredUrls = getDeferredUrls(manifest);
+        const deferredUrls = fullOffline
+            ? resolveGroupUrls(manifest, ['offlineFull'])
+            : resolveGroupUrls(manifest, groups);
 
-        if (await isFullPackCached(version, allUrls)) {
-            return { cached: true, version, count: deferredUrls.length };
+        if (!deferredUrls.length) {
+            return { skipped: true, reason: 'empty-groups' };
+        }
+
+        if (await isFullPackCached(version, deferredUrls)) {
+            return { cached: true, version, count: deferredUrls.length, groups };
         }
 
         const cache = await openCache();
@@ -389,18 +446,106 @@ export function startDeferredPackDownload(options = {}) {
             onProgress: silent ? undefined : onProgress
         });
 
-        markFullPackReady(version);
-
-        if (!silent) {
-            console.log(`[ASSET PACK] Background cache done (${deferredUrls.length} files, ${result.failed} failed)`);
+        // Only mark the "full" pack ready when the offlineFull group was requested.
+        if (fullOffline) {
+            markFullPackReady(version);
         }
 
-        return { version, count: deferredUrls.length, ...result };
+        if (!silent) {
+            console.log(
+                `[ASSET PACK] Background cache done (${deferredUrls.length} files, ` +
+                `${result.failed} failed, groups: ${groups.join(', ')})`
+            );
+        }
+
+        return { version, count: deferredUrls.length, groups, ...result };
     })().finally(() => {
         deferredPromise = null;
     });
 
     return deferredPromise;
+}
+
+/** Prefetch preferred-format assets for a fishing location. */
+export function startLocationPackDownload(locationName) {
+    const group = locationGroupName(locationName);
+    if (!group) {
+        return Promise.resolve({ skipped: true });
+    }
+
+    if (locationPackPromises.has(group)) {
+        return locationPackPromises.get(group);
+    }
+
+    const promise = (async () => {
+        let manifest;
+        try {
+            manifest = await loadManifest();
+        } catch (error) {
+            console.warn('[ASSET PACK] Location manifest load failed:', error);
+            return { skipped: true };
+        }
+
+        const urls = resolveGroupUrls(manifest, [group]);
+        if (!urls.length) {
+            return { skipped: true, reason: 'no-location-assets', group };
+        }
+
+        const cache = await openCache();
+        if (!cache) {
+            return { skipped: true };
+        }
+
+        const result = await cacheUrlsParallel(cache, urls, {
+            label: `Caching ${locationName}`,
+            onProgress: undefined
+        });
+
+        return { group, count: urls.length, ...result };
+    })().finally(() => {
+        locationPackPromises.delete(group);
+    });
+
+    locationPackPromises.set(group, promise);
+    return promise;
+}
+
+/** Prefetch collection gallery WebPs (call when Collection opens). */
+export function startGalleryPackDownload() {
+    if (galleryPackPromise) {
+        return galleryPackPromise;
+    }
+
+    galleryPackPromise = (async () => {
+        let manifest;
+        try {
+            manifest = await loadManifest();
+        } catch (error) {
+            console.warn('[ASSET PACK] Gallery manifest load failed:', error);
+            return { skipped: true };
+        }
+
+        const urls = resolveGroupUrls(manifest, ['gallery']);
+        if (!urls.length) {
+            return { skipped: true, reason: 'no-gallery' };
+        }
+
+        const cache = await openCache();
+        if (!cache) {
+            return { skipped: true };
+        }
+
+        const result = await cacheUrlsParallel(cache, urls, {
+            label: 'Caching collection',
+            onProgress: undefined
+        });
+
+        return { count: urls.length, ...result };
+    })().finally(() => {
+        galleryPackPromise = null;
+    });
+
+    return galleryPackPromise;
 }
 
 /** @deprecated Use ensureProloguePack + startDeferredPackDownload */

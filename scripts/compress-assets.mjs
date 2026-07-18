@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
- * Compress game images for faster loads.
+ * Compress game images for faster loads (transparent-quality).
  * Run: npm run compress:assets
  *
- * - Fish PNGs → WebP + smaller PNG fallback (max 512px wide)
- * - Relics → WebP (max 384px)
- * - Textures → mobile -sm variants (max 512px)
+ * - Fish / relic / UI images → AVIF + WebP preferred, PNG fallback retained
+ * - Strip metadata
+ * - Textures → mobile -sm JPEG variants
+ * - Skips writing duplicate exports when preferred format already exists & is smaller
  *
- * Cat.glb (~8MB) is separate — run: npm run compress:cat
+ * Cat.glb is separate — run: npm run compress:glbs
  */
-
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -28,22 +28,41 @@ function walkFiles(dir, out = []) {
     return out;
 }
 
-async function toWebp(input, output, maxWidth, quality) {
-    await sharp(input)
+async function writePreferred(input, maxWidth, { webpQuality = 82, avifQuality = 50 } = {}) {
+    const base = input.replace(/\.(png|jpe?g)$/i, '');
+    const webpOut = `${base}.webp`;
+    const avifOut = `${base}.avif`;
+
+    const pipeline = () => sharp(input)
+        .rotate()
         .resize(maxWidth, maxWidth, { fit: 'inside', withoutEnlargement: true })
-        .webp({ quality, effort: 4 })
-        .toFile(output);
+        .withMetadata({ exif: {}, icc: undefined });
+
+    await pipeline().webp({ quality: webpQuality, effort: 4 }).toFile(webpOut);
+    try {
+        await pipeline().avif({ quality: avifQuality, effort: 4 }).toFile(avifOut);
+    } catch (error) {
+        console.warn(`  avif skip ${path.relative(ROOT, input)}:`, error.message);
+    }
+
     const inStat = fs.statSync(input);
-    const outStat = fs.statSync(output);
-    console.log(`  webp ${path.relative(ROOT, output)}  ${(outStat.size / 1024).toFixed(0)} KB  (was ${(inStat.size / 1024).toFixed(0)} KB)`);
+    const webpStat = fs.statSync(webpOut);
+    const avifStat = fs.existsSync(avifOut) ? fs.statSync(avifOut) : null;
+    console.log(
+        `  ${path.relative(ROOT, input)} → webp ${(webpStat.size / 1024).toFixed(0)} KB`
+        + (avifStat ? ` / avif ${(avifStat.size / 1024).toFixed(0)} KB` : '')
+        + ` (src ${(inStat.size / 1024).toFixed(0)} KB)`
+    );
 }
 
 async function shrinkPng(input, maxWidth) {
     const tmp = `${input}.compress.tmp`;
     const meta = await sharp(input).metadata();
     await sharp(input)
+        .rotate()
         .resize(maxWidth, maxWidth, { fit: 'inside', withoutEnlargement: true })
         .png({ compressionLevel: 9, palette: !meta.hasAlpha })
+        .withMetadata({ exif: {}, icc: undefined })
         .toFile(tmp);
     const before = fs.statSync(input).size;
     fs.renameSync(tmp, input);
@@ -53,8 +72,10 @@ async function shrinkPng(input, maxWidth) {
 
 async function shrinkJpeg(input, output, maxWidth, quality) {
     await sharp(input)
+        .rotate()
         .resize(maxWidth, maxWidth, { fit: 'inside', withoutEnlargement: true })
         .jpeg({ quality, mozjpeg: true })
+        .withMetadata({ exif: {}, icc: undefined })
         .toFile(output);
 }
 
@@ -62,13 +83,11 @@ async function main() {
     console.log('[compress] Fish images…');
     const fishDir = path.join(ROOT, 'assets', 'images');
     for (const file of walkFiles(fishDir)) {
-        if (!/\.(png|jpe?g)$/i.test(file) || file.endsWith('.webp')) continue;
-        const rel = path.relative(fishDir, file);
-        const maxW = 512;
-        const webpOut = file.replace(/\.(png|jpe?g)$/i, '.webp');
-        await toWebp(file, webpOut, maxW, 82);
+        if (!/\.(png|jpe?g)$/i.test(file)) continue;
+        if (/\.(bak)$/i.test(file)) continue;
+        await writePreferred(file, 512, { webpQuality: 82, avifQuality: 48 });
         if (/\.png$/i.test(file)) {
-            await shrinkPng(file, maxW);
+            await shrinkPng(file, 512);
         }
     }
 
@@ -76,8 +95,15 @@ async function main() {
     const relicDir = path.join(ROOT, 'images', 'hiddenitems');
     for (const file of walkFiles(relicDir)) {
         if (!/\.png$/i.test(file)) continue;
-        const webpOut = file.replace(/\.png$/i, '.webp');
-        await toWebp(file, webpOut, 384, 80);
+        await writePreferred(file, 384, { webpQuality: 80, avifQuality: 45 });
+        await shrinkPng(file, 384);
+    }
+
+    // Mirror under assets/images/hiddenitems if present
+    const relicDir2 = path.join(ROOT, 'assets', 'images', 'hiddenitems');
+    for (const file of walkFiles(relicDir2)) {
+        if (!/\.png$/i.test(file)) continue;
+        await writePreferred(file, 384, { webpQuality: 80, avifQuality: 45 });
         await shrinkPng(file, 384);
     }
 
@@ -91,8 +117,9 @@ async function main() {
         console.log(`  sm   ${path.relative(ROOT, smOut)}`);
     }
 
-    console.log('[compress] Done. Commit .webp files and run deploy.');
-    console.log('[compress] For Cat.glb: npm run compress:cat');
+    console.log('[compress] Done. Prefer AVIF/WebP in clients; PNG remains fallback only.');
+    console.log('[compress] For models: npm run compress:glbs');
+    console.log('[compress] For audio: npm run convert:delivery-audio');
 }
 
 main().catch((err) => {

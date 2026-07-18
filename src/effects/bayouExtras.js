@@ -5353,6 +5353,8 @@ export function updateBayouExtras(group, elapsedTime, isBayou, context = {}) {
                 dragonfly.userData.mode = 'rest';
             }
         }
+        // Skip per-frame wing/flight work while the bayou is inactive.
+        return;
     }
 
     for (const dragonfly of dragonflies) {

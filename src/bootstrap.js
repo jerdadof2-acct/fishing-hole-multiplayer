@@ -2,6 +2,7 @@ import Game from './main.js?v=20260705-congo-banks';
 import { api } from './api.js';
 import { ensureProloguePack, prefetchProloguePack, startDeferredPackDownload } from './assetPack.js';
 import { loadingProgress } from './loadingProgress.js';
+import { perfMonitor } from './perf/perfMonitor.js';
 import {
     markPrologueSeenForVersion,
     playStoryPrologue,
@@ -78,6 +79,7 @@ async function startOfflineGame(reason) {
 }
 
 async function launchGame(gameOptions) {
+    perfMonitor.mark('launch-start');
     const playFullPrologue = shouldPlayStoryPrologue();
     const playReturnSplash = shouldShowReturnSplash();
     const needsPreEntry = playFullPrologue || playReturnSplash;
@@ -105,7 +107,12 @@ async function launchGame(gameOptions) {
         loadingProgress.update(18, 'Starting the lake...');
     }
 
-    startDeferredPackDownload({ silent: true, delayMs: 5000 });
+    // Prefer location/core packs over downloading every gallery/fallback asset.
+    startDeferredPackDownload({
+        silent: true,
+        delayMs: 5000,
+        groups: ['core', 'location:Crescent Pond']
+    });
 
     const modal = document.getElementById('username-modal');
     const pinModal = document.getElementById('save-pin-setup-modal');
@@ -132,6 +139,7 @@ async function launchGame(gameOptions) {
         markPrologueSeenForVersion();
         loadingProgress.suppress(false);
         game.reveal();
+        perfMonitor.markFirstPlayable();
         registerServiceWorker();
         return game;
     }
@@ -145,11 +153,13 @@ async function launchGame(gameOptions) {
         });
         loadingProgress.suppress(false);
         game.reveal();
+        perfMonitor.markFirstPlayable();
         registerServiceWorker();
         return game;
     }
 
     await game.ready;
+    perfMonitor.markFirstPlayable();
     registerServiceWorker();
     return game;
 }

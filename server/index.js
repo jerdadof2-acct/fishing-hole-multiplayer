@@ -8,6 +8,7 @@ import express from 'express';
 import compression from 'compression';
 import { Pool } from 'pg';
 import cors from 'cors';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
@@ -26,12 +27,63 @@ import {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const ROOT_DIR = path.join(__dirname, '..');
+const DIST_DIR = path.join(ROOT_DIR, 'dist');
+const HAS_DIST = fs.existsSync(path.join(DIST_DIR, 'index.html'));
 
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
+
+/**
+ * Cache policy:
+ * - HTML + service worker + asset-manifest → revalidate
+ * - Content-hashed /assets/js|css → immutable 1y
+ * - Media (images/audio/glb/hdr) → long-lived, revalidate quietly
+ * - Raw /src modules in production when dist is active → short cache only as fallback
+ */
+function applyStaticCacheHeaders(res, filePath) {
+    const normalized = filePath.replace(/\\/g, '/');
+
+    if (
+        normalized.endsWith('.html')
+        || normalized.endsWith('/service-worker.js')
+        || normalized.endsWith('/asset-manifest.json')
+        || normalized.endsWith('/sw-precache.json')
+        || normalized.endsWith('/build-meta.json')
+        || normalized.endsWith('/manifest.json')
+    ) {
+        res.setHeader('Cache-Control', 'no-cache');
+        return;
+    }
+
+    if (
+        /\/assets\/js\/[^/]+\.[a-f0-9]{8,}\.js$/i.test(normalized)
+        || /\/assets\/css\/[^/]+\.[a-f0-9]{8,}\.css$/i.test(normalized)
+        || /\/assets\/js\/chunk-[^/]+\.js$/i.test(normalized)
+        || /\/assets\/js\/bootstrap-[^/]+\.js$/i.test(normalized)
+        || /\/assets\/css\/styles-[^/]+\.css$/i.test(normalized)
+    ) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        return;
+    }
+
+    if (/\.(png|jpe?g|webp|avif|gif|mp3|ogg|opus|m4a|wav|glb|hdr|ktx2|woff2?)$/i.test(normalized)) {
+        res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
+        return;
+    }
+
+    if (normalized.includes('/src/')) {
+        // Prefer hashed dist bundles in production; keep src fresh when used for local/dev.
+        if (HAS_DIST && NODE_ENV === 'production') {
+            res.setHeader('Cache-Control', 'public, max-age=300');
+        } else {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        }
+    }
+}
 
 function getDatabaseSsl(connectionString) {
     if (!connectionString) return false;
@@ -55,19 +107,29 @@ app.use(cors({
 app.use(express.json());
 app.use(compression());
 
-// Serve static files (game files) — avoid stale HTML/JS on mobile browsers
-app.use(express.static(path.join(__dirname, '..'), {
-    setHeaders(res, filePath) {
-        const normalized = filePath.replace(/\\/g, '/');
-        if (
-            normalized.endsWith('.html')
-            || normalized.includes('/src/')
-            || normalized.endsWith('/service-worker.js')
-        ) {
-            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-        }
-    }
+// Prefer hashed production build when present (immutable JS/CSS).
+if (HAS_DIST) {
+    console.log('[SERVER] Serving production dist/ overlay (hashed app shell)');
+    app.use(express.static(DIST_DIR, {
+        setHeaders: applyStaticCacheHeaders,
+        index: false
+    }));
+}
+
+// Serve static files (game media + fallback HTML/src)
+app.use(express.static(ROOT_DIR, {
+    setHeaders: applyStaticCacheHeaders,
+    index: false
 }));
+
+// SPA-style index: prefer dist build, else repo root index.html
+app.get(['/', '/index.html'], (req, res) => {
+    const distIndex = path.join(DIST_DIR, 'index.html');
+    const rootIndex = path.join(ROOT_DIR, 'index.html');
+    const file = HAS_DIST && fs.existsSync(distIndex) ? distIndex : rootIndex;
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(file);
+});
 
 // Helper: Generate friend code (6-8 alphanumeric, uppercase)
 function generateFriendCode() {

@@ -2,8 +2,17 @@ import * as THREE from 'three';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { isGpuSafeMode } from '../scene.js';
 
+/** Session cache — avoid re-decoding HDR + rebuilding PMREM on location revisits. */
+const envCache = new Map();
+
 /**
- * Load a CC0 HDRI (Poly Haven) and build a PMREM environment map for reflections.
+ * Prefer a prefiltered LDR environment when present (offline bake),
+ * otherwise decode HDR once per path and cache the PMREM result.
+ *
+ * Place optional asset at:
+ *   /assets/textures/hdri/kloppenheim_06_1k.env.jpg  (equirect LDR)
+ * to skip HDR decode on weak devices.
+ *
  * @param {THREE.WebGLRenderer} renderer
  * @param {{ mobile?: boolean }} [options]
  * @returns {Promise<{ envMap: THREE.Texture } | null>}
@@ -26,24 +35,63 @@ export async function loadSkyEnvironment(renderer, options = {}) {
     const hdrPath = isMobile
         ? '/assets/textures/hdri/kloppenheim_06_1k.hdr'
         : '/assets/textures/hdri/kloppenheim_06_2k.hdr';
+    const prefilteredPath = hdrPath.replace(/\.hdr$/i, '.env.jpg');
+
+    const cacheKey = `${hdrPath}|dpr=${renderer.getPixelRatio?.() ?? 1}`;
+    if (envCache.has(cacheKey)) {
+        return envCache.get(cacheKey);
+    }
+
+    const pending = (async () => {
+        try {
+            // Optional offline-prefiltered equirect — cheaper decode, still PMREM'd once.
+            const prefiltered = await tryLoadPrefilteredEquirect(prefilteredPath);
+            const sourceTex = prefiltered || await loadHdr(hdrPath);
+
+            const pmrem = new THREE.PMREMGenerator(renderer);
+            pmrem.compileEquirectangularShader();
+            const envMap = pmrem.fromEquirectangular(sourceTex).texture;
+            envMap.colorSpace = THREE.LinearSRGBColorSpace;
+
+            sourceTex.dispose();
+            pmrem.dispose();
+
+            return { envMap };
+        } catch (err) {
+            console.warn('[environment] HDRI load failed, using default sky:', err);
+            return null;
+        }
+    })();
+
+    envCache.set(cacheKey, pending);
+    return pending;
+}
+
+async function loadHdr(hdrPath) {
+    const loader = new RGBELoader();
+    const hdr = await loader.loadAsync(hdrPath);
+    hdr.mapping = THREE.EquirectangularReflectionMapping;
+    return hdr;
+}
+
+async function tryLoadPrefilteredEquirect(path) {
+    try {
+        const res = await fetch(path, { method: 'HEAD' });
+        if (!res.ok) {
+            return null;
+        }
+    } catch {
+        return null;
+    }
 
     try {
-        const loader = new RGBELoader();
-        const hdr = await loader.loadAsync(hdrPath);
-        hdr.mapping = THREE.EquirectangularReflectionMapping;
-
-        const pmrem = new THREE.PMREMGenerator(renderer);
-        pmrem.compileEquirectangularShader();
-        const envMap = pmrem.fromEquirectangular(hdr).texture;
-        envMap.colorSpace = THREE.LinearSRGBColorSpace;
-
-        hdr.dispose();
-        pmrem.dispose();
-
-        // envMap is a cube map — safe to use for both IBL and scene.background (same target).
-        return { envMap };
-    } catch (err) {
-        console.warn('[environment] HDRI load failed, using default sky:', err);
+        const loader = new THREE.TextureLoader();
+        const tex = await loader.loadAsync(path);
+        tex.mapping = THREE.EquirectangularReflectionMapping;
+        tex.colorSpace = THREE.SRGBColorSpace;
+        console.info('[environment] Using prefiltered LDR environment:', path);
+        return tex;
+    } catch {
         return null;
     }
 }

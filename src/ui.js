@@ -1119,6 +1119,8 @@ export class UI {
         } else if (tab === 'inventory') {
             gameArea?.classList.add('hidden');
             this.openModal('inventory-modal');
+            // Warm gallery assets only when the player opens Collection.
+            this.game?.startGalleryImageWarmup?.();
             this.renderInventory('collection'); // Default to collection
         } else if (tab === 'friends') {
             gameArea?.classList.add('hidden');
