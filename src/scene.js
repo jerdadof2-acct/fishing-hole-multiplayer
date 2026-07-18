@@ -19,6 +19,84 @@ function applyCanvasLayout(canvasEl) {
     canvasEl.style.border = '0';
 }
 
+/*
+ * GPU crash recovery.
+ * Some devices (e.g. Pixel/PowerVR on new Android drivers) kill the WebGL
+ * context under memory pressure. Without handling, the canvas goes white
+ * forever. We remember the crash in sessionStorage and reboot into a
+ * reduced-memory "safe mode" (lower resolution, smaller shadows).
+ */
+const GPU_SAFE_MODE_KEY = 'halley-gpu-safe-mode';
+const GPU_RELOAD_COUNT_KEY = 'halley-gpu-reload-count';
+const GPU_MAX_AUTO_RELOADS = 2;
+const GPU_RESTORE_WAIT_MS = 5000;
+
+function isGpuSafeMode() {
+    try {
+        return sessionStorage.getItem(GPU_SAFE_MODE_KEY) === '1';
+    } catch {
+        return false;
+    }
+}
+
+function markGpuSafeMode() {
+    try {
+        sessionStorage.setItem(GPU_SAFE_MODE_KEY, '1');
+    } catch {
+        // Storage unavailable — safe mode simply won't persist.
+    }
+}
+
+function getGpuReloadCount() {
+    try {
+        return Number(sessionStorage.getItem(GPU_RELOAD_COUNT_KEY)) || 0;
+    } catch {
+        return 0;
+    }
+}
+
+function bumpGpuReloadCount() {
+    try {
+        sessionStorage.setItem(GPU_RELOAD_COUNT_KEY, String(getGpuReloadCount() + 1));
+    } catch {
+        // Ignore — worst case we allow an extra reload.
+    }
+}
+
+function showGpuOverlay(message, { tapToReload = false } = {}) {
+    let overlay = document.getElementById('gpu-recovery-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'gpu-recovery-overlay';
+        overlay.style.cssText = [
+            'position:fixed',
+            'inset:0',
+            'z-index:99999',
+            'display:flex',
+            'align-items:center',
+            'justify-content:center',
+            'text-align:center',
+            'padding:24px',
+            'background:rgba(8, 20, 34, 0.92)',
+            'color:#eaf6ff',
+            'font-family:inherit',
+            'font-size:16px',
+            'line-height:1.5'
+        ].join(';');
+        document.body.appendChild(overlay);
+    }
+    overlay.textContent = message;
+    if (tapToReload) {
+        overlay.style.cursor = 'pointer';
+        overlay.addEventListener('click', () => window.location.reload(), { once: true });
+    }
+    return overlay;
+}
+
+function hideGpuOverlay() {
+    document.getElementById('gpu-recovery-overlay')?.remove();
+}
+
 export class Scene {
     constructor() {
         this.scene = null;
@@ -123,7 +201,12 @@ export class Scene {
 
         const isMobile = typeof navigator !== 'undefined'
             && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        const shadowMapSize = isMobile ? 1024 : 2048;
+        const safeMode = isGpuSafeMode();
+        if (safeMode) {
+            console.warn('[SCENE] GPU safe mode active: reduced resolution and shadows.');
+        }
+
+        const shadowMapSize = safeMode ? 512 : (isMobile ? 1024 : 2048);
         if (this.directionalLight?.shadow?.mapSize) {
             this.directionalLight.shadow.mapSize.set(shadowMapSize, shadowMapSize);
         }
@@ -139,12 +222,18 @@ export class Scene {
             });
         } catch (error) {
             console.error('[SCENE] WebGL renderer failed:', error);
-            throw new Error('This device does not support WebGL. Try updating your browser.');
+            // Context creation usually fails because the browser blocked WebGL
+            // after GPU crashes — not because the hardware lacks support.
+            throw new Error(
+                'Graphics failed to start. Close other apps and browser tabs, then reload the page. '
+                + 'If it keeps happening, restart your browser or device.'
+            );
         }
         this.renderer = renderer;
         this.renderer.setClearColor(0x87ceeb, 1);
         this.renderer.setSize(width, height, false);
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2));
+        const pixelRatioCap = safeMode ? 1 : (isMobile ? 1.5 : 2);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, pixelRatioCap));
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -158,7 +247,61 @@ export class Scene {
         container.prepend(this.renderer.domElement);
         applyCanvasLayout(this.renderer.domElement);
 
+        this._bindContextLossRecovery();
+
         bindViewportSync(() => this.onWindowResize());
+    }
+
+    /**
+     * Recover from GPU driver resets (white screen). If the browser restores
+     * the context we resume in place; otherwise we reload once into safe mode.
+     */
+    _bindContextLossRecovery() {
+        const canvas = this.renderer.domElement;
+
+        // If we survive a minute of play, allow future crashes fresh reloads.
+        setTimeout(() => {
+            try {
+                sessionStorage.removeItem(GPU_RELOAD_COUNT_KEY);
+            } catch {
+                // Ignore storage failures.
+            }
+        }, 60000);
+
+        canvas.addEventListener('webglcontextlost', (event) => {
+            // preventDefault tells the browser we want a restore attempt.
+            event.preventDefault();
+            console.error('[SCENE] WebGL context lost.');
+            this.contextLost = true;
+
+            showGpuOverlay('Graphics hiccup — recovering…');
+
+            this._restoreTimer = setTimeout(() => {
+                if (!this.contextLost) {
+                    return;
+                }
+                // No restore came. Reload into safe mode (lower GPU memory),
+                // but stop auto-reloading if that isn't fixing it.
+                markGpuSafeMode();
+                if (getGpuReloadCount() < GPU_MAX_AUTO_RELOADS) {
+                    bumpGpuReloadCount();
+                    window.location.reload();
+                } else {
+                    showGpuOverlay(
+                        'Graphics keep crashing on this device. Close other apps and tabs, '
+                        + 'then tap here to try again.',
+                        { tapToReload: true }
+                    );
+                }
+            }, GPU_RESTORE_WAIT_MS);
+        });
+
+        canvas.addEventListener('webglcontextrestored', () => {
+            console.warn('[SCENE] WebGL context restored.');
+            this.contextLost = false;
+            clearTimeout(this._restoreTimer);
+            hideGpuOverlay();
+        });
     }
 
     onWindowResize() {
@@ -169,6 +312,9 @@ export class Scene {
     }
 
     render() {
+        if (this.contextLost) {
+            return;
+        }
         if (this.renderer && this.scene && this.camera) {
             this.renderer.render(this.scene, this.camera);
         }
