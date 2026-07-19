@@ -1411,6 +1411,10 @@ export class Game {
                 true
             );
             updateCrescentPondSky(this.crescentPondSky, delta, portraitBlend);
+        } else if (this.crescentFarShore?.visible) {
+            // One-shot hide when leaving Crescent Pond (visibility was
+            // previously maintained by the per-frame update above).
+            updateCrescentPondFarShore(this.crescentFarShore, portraitBlend, false);
         }
 
         if (this.cortezMangroves) {
@@ -2632,6 +2636,11 @@ export class Game {
                 this.water?.waterY ?? 0
             );
         }
+        updateCrescentPondFarShore(
+            this.crescentFarShore,
+            0,
+            location.name === CRESCENT_POND_NAME
+        );
         syncCrescentPondSkyVisibility(
             this.crescentPondSky,
             location.name === CRESCENT_POND_NAME
