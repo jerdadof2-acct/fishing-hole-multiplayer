@@ -1,13 +1,14 @@
 {
   "version": "20260718-efficiency-1",
-  "generatedAt": "2026-07-18T23:33:11.732Z",
-  "count": 189,
-  "bootCount": 2,
-  "deferredCount": 188,
+  "generatedAt": "2026-07-19T00:06:29.731Z",
+  "count": 190,
+  "bootCount": 3,
+  "deferredCount": 187,
   "strategy": "preferred-format-groups",
   "boot": [
     "/images/prologue-background.png",
-    "/assets/images/loading-poster.png"
+    "/assets/images/loading-poster.avif",
+    "/assets/images/loading-poster.webp"
   ],
   "deferred": [
     "/",
@@ -118,7 +119,6 @@
     "/assets/images/hiddenitems/starlightlure.webp",
     "/assets/images/hiddenitems/sunkentreasure.webp",
     "/assets/images/hiddenitems/weatheredbobber.webp",
-    "/assets/images/loading-poster.webp",
     "/assets/images/shooting-star-deck-logo.webp",
     "/assets/textures/caustics_loop-sm.jpg",
     "/assets/textures/dockWood-sm.jpg",
@@ -202,7 +202,8 @@
   "groups": {
     "boot": [
       "/images/prologue-background.png",
-      "/assets/images/loading-poster.png"
+      "/assets/images/loading-poster.avif",
+      "/assets/images/loading-poster.webp"
     ],
     "core": [
       "/",
@@ -313,7 +314,6 @@
       "/assets/images/hiddenitems/starlightlure.webp",
       "/assets/images/hiddenitems/sunkentreasure.webp",
       "/assets/images/hiddenitems/weatheredbobber.webp",
-      "/assets/images/loading-poster.webp",
       "/assets/images/shooting-star-deck-logo.webp",
       "/images/hiddenitems/brokenharpoon.webp",
       "/images/hiddenitems/buriedtelescope.webp",
@@ -496,6 +496,7 @@
       "/assets/images/hiddenitems/starlightlure.webp",
       "/assets/images/hiddenitems/sunkentreasure.webp",
       "/assets/images/hiddenitems/weatheredbobber.webp",
+      "/assets/images/loading-poster.avif",
       "/assets/images/loading-poster.webp",
       "/assets/images/shooting-star-deck-logo.webp",
       "/assets/textures/caustics_loop-sm.jpg",
@@ -722,6 +723,7 @@
     "/assets/images/hiddenitems/starlightlure.webp",
     "/assets/images/hiddenitems/sunkentreasure.webp",
     "/assets/images/hiddenitems/weatheredbobber.webp",
+    "/assets/images/loading-poster.avif",
     "/assets/images/loading-poster.webp",
     "/assets/images/shooting-star-deck-logo.webp",
     "/assets/textures/caustics_loop-sm.jpg",

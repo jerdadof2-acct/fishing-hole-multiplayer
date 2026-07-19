@@ -16,7 +16,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
     <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link rel="preload" as="image" href="assets/images/loading-poster.webp" fetchpriority="high">
+    <link rel="preload" as="image" href="assets/images/loading-poster.avif" type="image/avif" fetchpriority="high">
     <link rel="stylesheet" href="css/styles.css?v=20260703-mobile-overlay-fix">
 
     <script>
@@ -31,6 +31,7 @@
     <div id="game-container">
         <div id="loading" class="loading-screen" aria-live="polite" aria-busy="true">
             <picture>
+                <source srcset="assets/images/loading-poster.avif" type="image/avif">
                 <source srcset="assets/images/loading-poster.webp" type="image/webp">
                 <img
                     class="loading-poster"

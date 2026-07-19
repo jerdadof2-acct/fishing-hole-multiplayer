@@ -21,7 +21,8 @@ const BOOT_ASSETS = [
     '/manifest.json',
     '/css/styles.css',
     '/images/prologue-background.png',
-    '/assets/images/loading-poster.png',
+    '/assets/images/loading-poster.avif',
+    '/assets/images/loading-poster.webp',
     '/assets/icons/icon-192.png',
     '/assets/icons/icon-512.png'
 ];

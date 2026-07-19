@@ -1785,7 +1785,7 @@ body.game-ready #story-prologue.hidden {
     padding: 12px 16px;
     border-radius: 10px;
     border: none;
-    background: #4a90e2;
+    background: #2866a8;
     color: #ffffff;
     font-size: 16px;
     font-weight: 600;
@@ -1794,7 +1794,7 @@ body.game-ready #story-prologue.hidden {
 }
 
 .username-submit:hover:not(:disabled) {
-    background: #6aa8ff;
+    background: #1f568f;
 }
 
 .username-submit:disabled {

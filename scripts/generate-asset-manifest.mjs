@@ -22,7 +22,8 @@ export const PACK_VERSION = '20260718-efficiency-1';
 /** Prologue-only — story background + title poster; audio streams when the story plays. */
 const BOOT_URLS = [
     '/images/prologue-background.png',
-    '/assets/images/loading-poster.png'
+    '/assets/images/loading-poster.avif',
+    '/assets/images/loading-poster.webp'
 ];
 
 const CORE_CANDIDATES = [

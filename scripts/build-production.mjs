@@ -3,7 +3,8 @@
  * Production build: minify/tree-shake local modules with esbuild,
  * content-hash JS/CSS, write dist/ for immutable caching.
  *
- * three / three/addons stay on the CDN import map (external).
+ * Three.js and addons are bundled so esbuild can tree-shake unused exports
+ * and production/offline startup has no CDN dependency.
  *
  * Run: npm run build
  */
@@ -72,7 +73,6 @@ async function buildJs() {
         entryNames: 'bootstrap-[hash]',
         chunkNames: 'chunk-[name]-[hash]',
         assetNames: 'asset-[name]-[hash]',
-        external: ['three', 'three/*'],
         plugins: [stripQueryPlugin],
         logLevel: 'info',
         legalComments: 'none'
@@ -92,10 +92,16 @@ async function buildJs() {
     };
 }
 
-function buildCss() {
+async function buildCss() {
     ensureDir(ASSETS_CSS);
     const cssPath = path.join(ROOT, 'css', 'styles.css');
-    const css = fs.readFileSync(cssPath);
+    const source = fs.readFileSync(cssPath, 'utf8');
+    const transformed = await esbuild.transform(source, {
+        loader: 'css',
+        minify: true,
+        legalComments: 'none'
+    });
+    const css = Buffer.from(transformed.code);
     const hash = hashBuffer(css);
     const outName = `styles-${hash}.css`;
     const outPath = path.join(ASSETS_CSS, outName);
@@ -108,14 +114,37 @@ function buildCss() {
 
 function writeIndexHtml({ bootstrapUrl, cssUrl }) {
     const srcHtml = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+    const criticalCss = [
+        '*{box-sizing:border-box;margin:0;padding:0}',
+        'html,body{width:100%;height:100%;overflow:hidden}',
+        'body{background:#0a0a18;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}',
+        '#game-container{position:fixed;inset:0;width:100%;height:100%;overflow:hidden}',
+        '.loading-screen{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:500;overflow:hidden;background:#0a0a18}',
+        '.loading-screen picture{position:absolute;inset:0;width:100%;height:100%}',
+        '.loading-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top}',
+        '.loading-overlay{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:24px 20px 28px;text-align:center;background:linear-gradient(180deg,rgba(10,10,24,0),rgba(10,10,24,.72) 35%,rgba(10,10,24,.96))}',
+        '.loading-message{font-size:.98rem;color:rgba(255,255,255,.92);margin-bottom:16px;min-height:1.4em}',
+        '.loading-bar-track{width:100%;height:12px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.08)}',
+        '.loading-bar-fill{width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#4a90e2,#6ec6ff);transition:width .25s ease}',
+        '.loading-percent{margin-top:10px;font-size:.9rem;font-weight:600;color:rgba(255,255,255,.88);letter-spacing:.04em}',
+        '.hidden{display:none!important}'
+    ].join('');
     let html = srcHtml
         .replace(
             /href="css\/styles\.css[^"]*"/,
-            `href="${cssUrl}"`
+            `href="${cssUrl}" media="print" onload="this.media='all'"`
         )
         .replace(
             /src="src\/bootstrap\.js[^"]*"/,
             `src="${bootstrapUrl}"`
+        )
+        // Production bundles Three.js, so remove the CDN-only compatibility
+        // shim/import map while retaining them in source HTML for local fallback.
+        .replace(/\s*<script async src="https:\/\/cdn\.jsdelivr\.net\/npm\/es-module-shims[^"]*"><\/script>\s*<script type="importmap">[\s\S]*?<\/script>/, '')
+        .replace(/\s*<link rel="preconnect" href="https:\/\/cdn\.jsdelivr\.net" crossorigin>/, '')
+        .replace(
+            /(<link rel="stylesheet" href="[^"]+" media="print" onload="this\.media='all'">)/,
+            `<style>${criticalCss}</style>\n    $1\n    <noscript><link rel="stylesheet" href="${cssUrl}"></noscript>`
         );
 
     // Point relative poster / icons at site root (dist is served as overlay).
@@ -131,7 +160,8 @@ function writeSwPrecache({ bootstrapUrl, cssUrl, jsUrls }) {
         cssUrl,
         bootstrapUrl,
         ...jsUrls.filter((u) => u !== bootstrapUrl),
-        '/assets/images/loading-poster.png',
+        '/assets/images/loading-poster.avif',
+        '/assets/images/loading-poster.webp',
         '/assets/icons/icon-192.png',
         '/assets/icons/icon-512.png',
         '/images/prologue-background.png'
@@ -160,7 +190,7 @@ async function main() {
     const js = await buildJs();
 
     console.log('[build] Hashing CSS…');
-    const css = buildCss();
+    const css = await buildCss();
 
     console.log('[build] Writing index.html…');
     writeIndexHtml({ bootstrapUrl: js.bootstrapUrl, cssUrl: css.cssUrl });

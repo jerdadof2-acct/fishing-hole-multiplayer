@@ -1,4 +1,3 @@
-import Game from './main.js?v=20260705-congo-banks';
 import { api } from './api.js';
 import { ensureProloguePack, prefetchProloguePack, startDeferredPackDownload } from './assetPack.js';
 import { loadingProgress } from './loadingProgress.js';
@@ -44,6 +43,10 @@ function registerServiceWorker() {
             console.warn('[BOOTSTRAP] Service worker registration failed:', error);
         });
 }
+
+// Register immediately so installation/update work overlaps authentication and
+// the loading screen instead of waiting for the complete 3D game startup.
+registerServiceWorker();
 
 function getAuthStorage() {
     try {
@@ -123,6 +126,9 @@ async function launchGame(gameOptions) {
         pinModal.classList.add('hidden');
     }
 
+    // Keep the large Three.js/game graph out of the authentication screen.
+    // This chunk begins only when the player is actually entering the game.
+    const { default: Game } = await import('./main.js?v=20260705-congo-banks');
     const game = new Game({
         ...gameOptions,
         deferReveal: needsPreEntry
@@ -140,7 +146,6 @@ async function launchGame(gameOptions) {
         loadingProgress.suppress(false);
         game.reveal();
         perfMonitor.markFirstPlayable();
-        registerServiceWorker();
         return game;
     }
 
@@ -154,13 +159,11 @@ async function launchGame(gameOptions) {
         loadingProgress.suppress(false);
         game.reveal();
         perfMonitor.markFirstPlayable();
-        registerServiceWorker();
         return game;
     }
 
     await game.ready;
     perfMonitor.markFirstPlayable();
-    registerServiceWorker();
     return game;
 }
 
